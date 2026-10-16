@@ -61,14 +61,14 @@ class _WhatsNewPageState extends ConsumerState<WhatsNewPage>
   Future<void> _updateInstances() async {
     setState(() => _updating = true);
     try {
-      final changes = await InstanceManager().syncWithDefaults();
+      final result = await InstanceManager().refresh();
       // Upgraders get every search provider back on: a stale saved
       // toggle list must not silently hide a new release's sources.
       await SearchManager().enableAllProviders();
       if (mounted) {
         setState(() {
           _instancesUpdated = true;
-          _changes = changes;
+          _changes = result.changes;
         });
       }
     } finally {

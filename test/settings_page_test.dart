@@ -86,8 +86,6 @@ void main() {
 
     for (final label in [
       'Mirrors & Providers',
-      'Auto-Rank Instances',
-      'Rank Instances Now',
       'Theme',
       'Font Size',
       'Storage Location',

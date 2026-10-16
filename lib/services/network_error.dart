@@ -50,6 +50,12 @@ class NetworkError implements Exception {
       {String? responseBody, String? targetHost}) async {
     final logger = AppLogger();
 
+    // An already-classified error passes through untouched. Re-wrapping
+    // it used to turn e.g. a cloudflareBlock NetworkError into "unknown",
+    // which stripped the type and the blockedUrl - and silently disabled
+    // the webview capture that [searchBooks] and [bookInfo] gate on it.
+    if (error is NetworkError) return error;
+
     // Log technical details for debugging
     logger.error(
       "Network error occurred",
@@ -492,14 +498,9 @@ class NetworkError implements Exception {
 
     final statusCode = response.statusCode;
 
-    // Any HTTP 403 or 503 status code is treated as a DDoS/Security challenge
-    if (statusCode == 403 ||
-        statusCode == 503 ||
-        statusCode == 520 ||
-        statusCode == 521 ||
-        statusCode == 522 ||
-        statusCode == 523 ||
-        statusCode == 524) {
+    // 52x statuses are DDoS-Guard/Cloudflare's own error codes, so they
+    // always indicate the providers' block page.
+    if (statusCode != null && statusCode >= 520 && statusCode <= 524) {
       return true;
     }
 
@@ -507,6 +508,13 @@ class NetworkError implements Exception {
     if (headers.value("server")?.toLowerCase().contains("cloudflare") == true) {
       return true;
     }
+
+    // NOTE: a bare 403/503 is NOT treated as a challenge on its own.
+    // Anna's Archive download mirrors honestly refuse with a plain 403
+    // ("Link expired or invalid...") - mislabeling that as a DDoS block
+    // used to route it into the webview solver, whose capture then
+    // parsed into an empty "no results" instead of an honest error.
+    // Without corroboration it is reported as a normal refusal.
 
     // Check response body for Cloudflare markers
     final body = response.data?.toString() ?? "";

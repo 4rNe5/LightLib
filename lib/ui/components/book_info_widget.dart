@@ -8,12 +8,17 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:openlib/services/instance_manager.dart';
 
 class BookInfoWidget extends StatelessWidget {
-  /// Returns the current fastest Anna's Archive domain for the given md5.
-  static Future<String> _getCurrentAAUrl(String md5) async {
-    final instance = await InstanceManager().getCurrentInstance();
-    final baseUrl = instance.baseUrl.endsWith('/')
-        ? instance.baseUrl.substring(0, instance.baseUrl.length - 1)
-        : instance.baseUrl;
+  /// The best Anna's Archive URL for [md5], built from the mirror list
+  /// open-slum.org publishes (the app hardcodes no mirror address).
+  /// Null when SLUM reports no reachable Anna's Archive mirror - the
+  /// button is then disabled instead of opening a guessed host.
+  static Future<String?> _getCurrentAAUrl(String md5) async {
+    final urls =
+        await InstanceManager().enabledUrls(MirrorService.annasArchive);
+    if (urls.isEmpty) return null;
+    final baseUrl = urls.first.endsWith('/')
+        ? urls.first.substring(0, urls.first.length - 1)
+        : urls.first;
     return "$baseUrl/md5/$md5";
   }
 
@@ -104,7 +109,7 @@ class BookInfoWidget extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    FutureBuilder<String>(
+                    FutureBuilder<String?>(
                       future: _getCurrentAAUrl(data.md5),
                       builder: (context, snapshot) {
                         return OutlinedButton.icon(
@@ -121,7 +126,8 @@ class BookInfoWidget extends StatelessWidget {
                                 horizontal: 10, vertical: 6),
                             visualDensity: VisualDensity.compact,
                           ),
-                          onPressed: snapshot.hasData
+                          onPressed: (snapshot.hasData &&
+                                  snapshot.data != null)
                               ? () async {
                                   final aaUrl = snapshot.data!;
                                   if (await canLaunchUrl(Uri.parse(aaUrl))) {

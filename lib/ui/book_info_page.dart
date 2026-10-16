@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
 import 'package:openlib/services/annas_archieve.dart';
+import 'package:openlib/services/download_target.dart';
 import 'package:openlib/services/search_manager.dart';
 import 'package:openlib/services/download_manager.dart';
 import 'package:openlib/services/platform_utils.dart';
@@ -165,14 +166,17 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                     // the live ids and resolve the first working one.
                     final isZlib =
                         downloadUrl != null && downloadUrl.contains('/dl/');
+                    String? zlibRefusal;
                     if (isZlib && !isDirectLink) {
                       try {
                         final resolved = await ZlibraryProvider()
                             .resolveBookDownload(widget.data.link);
-                        if (resolved != null) {
-                          downloadUrl = resolved;
+                        if (resolved.url != null) {
+                          downloadUrl = resolved.url;
                           isDirectLink = true;
                           isFastDownload = true;
+                        } else {
+                          zlibRefusal = resolved.refusal;
                         }
                       } catch (e) {
                         // Fall through to the slow AA-style flow, which
@@ -183,6 +187,7 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                     // Try to fetch fast download link if key is present and not already fast
                     final donationKey =
                         isDirectLink ? '' : ref.read(donationKeyProvider);
+                    var donationFastLink = false;
                     if (donationKey.isNotEmpty && !isFastDownload) {
                       try {
                         final annasArchive = AnnasArchieve();
@@ -191,13 +196,27 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                         if (fastLink != null) {
                           downloadUrl = fastLink;
                           isFastDownload = true;
+                          donationFastLink = true;
                         }
                       } catch (e) {
                         // Fallback to normal mirror
                       }
                     }
 
-                    if (downloadUrl != null && downloadUrl != '') {
+                    // Every route has run. A mirror that stated why it
+                    // withheld the file ("daily limit reached", "sign in
+                    // required") only wins when nothing else produced a
+                    // link - starting a download against the refused /dl/
+                    // hop could only fail, hiding that message.
+                    final target = chooseDownloadTarget(
+                      url: downloadUrl,
+                      fast: isDirectLink || donationFastLink,
+                      refusal: zlibRefusal,
+                    );
+                    downloadUrl = target.url;
+
+                    if (target.hasUrl) {
+                      final effectiveUrl = downloadUrl!;
                       // On Linux, use WebView UI flow since headless webview is not supported
                       // Unless it is a fast download (isDirectLink), which doesn't need scraping
                       if (PlatformUtils.isLinux && !isFastDownload) {
@@ -207,7 +226,7 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                           context,
                           MaterialPageRoute(
                             builder: (BuildContext context) =>
-                                Webview(url: downloadUrl!),
+                                Webview(url: effectiveUrl),
                           ),
                         );
 
@@ -260,19 +279,23 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                           description: widget.data.description,
                           link: widget.data.link,
                           mirrors: [], // Will be fetched in background
-                          mirrorUrl: downloadUrl, // Store mirror URL for retry
+                          // Store mirror URL for retry
+                          mirrorUrl: effectiveUrl,
                           isDirectLink: isFastDownload,
                           // z-lib's signed CDN link expires after a few
                           // hours; the manager then re-resolves a fresh
                           // one from the book page instead of failing.
                           linkRefresher: isZlib
-                              ? ZlibraryProvider().resolveBookDownload
+                              ? (pageUrl) async =>
+                                  (await ZlibraryProvider()
+                                          .resolveBookDownload(pageUrl))
+                                      .url
                               : null,
                         );
 
                         await downloadManager.addDownloadWithMirrorUrl(
                           task,
-                          downloadUrl,
+                          effectiveUrl,
                         );
 
                         if (context.mounted) {
@@ -288,9 +311,12 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                       }
                     } else {
                       if (context.mounted) {
+                        // A mirror's own reason (daily limit, sign-in
+                        // required) beats the generic "no mirrors".
                         showSnackBar(
                             context: context,
-                            message: AppLocalizations.of(context).noMirrors);
+                            message: target.refusal ??
+                                AppLocalizations.of(context).noMirrors);
                       }
                     }
                   },

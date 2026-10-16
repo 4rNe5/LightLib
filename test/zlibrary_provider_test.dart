@@ -206,16 +206,220 @@ void main() {
       }
     });
 
-    test('default mirror list prefers z-lib.gd and drops z-lib.fm', () {
-      expect(ZlibraryProvider.defaultMirrors.first, 'https://z-lib.gd');
-      expect(ZlibraryProvider.defaultMirrors, isNot(contains('z-lib.fm')));
-      expect(
-          ZlibraryProvider.defaultMirrors
-              .any((m) => m.startsWith('http://z-library.sk')),
-          isTrue);
-      expect(ZlibraryProvider.defaultMirrors, hasLength(5));
+    test('no attemptable mirror means no request at all', () async {
+      // What the provider gets when open-slum.org reports every Z-Library
+      // mirror DOWN (or the user switched them all off): an empty list.
+      // It must then make zero HTTP calls instead of guessing a URL.
+      var requests = 0;
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((request) {
+        requests++;
+        request.response.statusCode = HttpStatus.ok;
+        request.response.close();
+      });
+
+      try {
+        final provider = ZlibraryProvider(
+          mirrors: const [], // SLUM: nothing attemptable
+        );
+        final books = await provider.search(const SearchQuery(text: 'flutter'));
+
+        expect(books, isEmpty);
+        expect(requests, 0,
+            reason: 'a down/unavailable mirror must never be contacted');
+      } finally {
+        await server.close();
+      }
+    });
+
+    test('tries the mirrors in the order it was given', () async {
+      // Auto mode hands the mirror list best-first (unprotected, then
+      // DiamWall, ...). The provider must not reorder it.
+      final hits = <String>[];
+      final first = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      first.listen((request) {
+        hits.add('first');
+        request.response
+          ..statusCode = HttpStatus.serviceUnavailable
+          ..write('')
+          ..close();
+      });
+      final second = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      second.listen((request) {
+        hits.add('second');
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..headers.contentType = ContentType.html
+          ..write(results)
+          ..close();
+      });
+
+      try {
+        final provider = ZlibraryProvider(mirrors: [
+          'http://127.0.0.1:${first.port}',
+          'http://127.0.0.1:${second.port}',
+        ]);
+        final books = await provider.search(const SearchQuery(text: 'flutter'));
+
+        expect(hits, ['first', 'second']);
+        expect(books, isNotEmpty);
+      } finally {
+        await first.close();
+        await second.close();
+      }
     });
   });
+
+  // The /dl/ hop exactly as the mirrors run it: dead ids answer 204, the
+  // live id answers 302 to a signed CDN URL, that URL serves the bytes,
+  // and a throttled mirror answers with its "Daily limit reached" page.
+  // A local server plays the protocol, so the resolver is exercised end
+  // to end without depending on a mirror's mood.
+  group('resolveBookDownload (real protocol, local server)', () {
+    late HttpServer server;
+
+    /// Serves a real book page, a CDN file and /dl/<id> ids.
+    Future<HttpServer> startServer({
+      String cdnPath = '/cdn/book.pdf',
+      Set<String> redirectIds = const {},
+      Set<String> limiterIds = const {},
+      String limiterHtml = '',
+      String bookPageHtml = '',
+    }) async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final port = server.port;
+      server.listen((request) async {
+        final path = request.uri.path;
+        if (path.startsWith('/dl/')) {
+          final id = path.substring(4);
+          if (redirectIds.contains(id)) {
+            request.response
+              ..statusCode = HttpStatus.found
+              ..headers.set('location', 'http://127.0.0.1:$port$cdnPath');
+          } else if (limiterIds.contains(id)) {
+            request.response
+              ..statusCode = HttpStatus.ok
+              ..headers.contentType = ContentType.html
+              ..write(limiterHtml);
+          } else {
+            request.response.statusCode = HttpStatus.noContent;
+          }
+        } else if (path == cdnPath) {
+          request.response
+            ..statusCode = HttpStatus.ok
+            ..headers.contentType = ContentType.binary
+            ..add(List<int>.generate(4096, (i) => i % 251));
+        } else {
+          request.response
+            ..statusCode = HttpStatus.ok
+            ..headers.contentType = ContentType.html
+            ..write(bookPageHtml);
+        }
+        await request.response.close();
+      });
+      return server;
+    }
+
+    final bookPage =
+        File('test/fixtures/zlib_book_page.html').readAsStringSync();
+    final limiter =
+        File('test/fixtures/zlib_daily_limit.html').readAsStringSync();
+
+    /// The /dl/ ids the captured book page links to.
+    List<String> bookPageDlIds(String html) => RegExp(r'href="/dl/([^"]+)"')
+        .allMatches(html)
+        .map((m) => m.group(1)!)
+        .toSet()
+        .toList();
+
+    tearDown(() async {
+      await server.close();
+    });
+
+    test('walks past the dead 204 ids and returns the signed CDN URL',
+        () async {
+      final ids = bookPageDlIds(bookPage);
+      expect(ids.length, greaterThan(1),
+          reason: 'the fixture must carry several /dl/ ids');
+
+      server = await startServer(
+        redirectIds: {ids.last},
+        bookPageHtml: bookPage,
+      );
+      final provider =
+          ZlibraryProvider(mirrors: ['http://127.0.0.1:${server.port}']);
+
+      final result = await provider
+          .resolveBookDownload('http://127.0.0.1:${server.port}/book/x/y.html');
+
+      expect(result.url, 'http://127.0.0.1:${server.port}/cdn/book.pdf',
+          reason: 'the first id that 302s must win');
+    });
+
+    test('the returned URL really serves the file bytes', () async {
+      final ids = bookPageDlIds(bookPage);
+      server = await startServer(
+        redirectIds: {ids.first},
+        bookPageHtml: bookPage,
+      );
+      final provider =
+          ZlibraryProvider(mirrors: ['http://127.0.0.1:${server.port}']);
+
+      final result = await provider
+          .resolveBookDownload('http://127.0.0.1:${server.port}/book/x/y.html');
+      expect(result.url, isNotNull);
+
+      final download = await Dio().get<List<int>>(result.url!,
+          options: Options(responseType: ResponseType.bytes));
+      expect(download.data!.length, 4096);
+      expect(download.data!.take(4).toList(), [0, 1, 2, 3]);
+    });
+
+    test('reports the daily-limit reason from the live limiter page',
+        () async {
+      final ids = bookPageDlIds(bookPage);
+      server = await startServer(
+        limiterIds: ids.toSet(),
+        limiterHtml: limiter,
+        bookPageHtml: bookPage,
+      );
+      final provider =
+          ZlibraryProvider(mirrors: ['http://127.0.0.1:${server.port}']);
+
+      final result = await provider
+          .resolveBookDownload('http://127.0.0.1:${server.port}/book/x/y.html');
+
+      expect(result.url, isNull);
+      expect(result.refusal, isNotNull,
+          reason: 'the limiter page names a reason the user can act on');
+      expect(result.refusal, contains('Daily download limit'));
+    });
+
+    test('invents no reason when the page says nothing recognizable',
+        () async {
+      final ids = bookPageDlIds(bookPage);
+      // A realistic unrecognized page: it carries the site nav, which
+      // includes a "Login" link on every z-lib page. That must not be
+      // mistaken for "sign in required".
+      server = await startServer(
+        limiterIds: ids.toSet(),
+        limiterHtml: '<html><body><nav><a href="/login">Login</a>'
+            '<a href="/registration">Create Account</a></nav>'
+            '<p>Nothing to see here</p></body></html>',
+        bookPageHtml: bookPage,
+      );
+      final provider =
+          ZlibraryProvider(mirrors: ['http://127.0.0.1:${server.port}']);
+
+      final result = await provider
+          .resolveBookDownload('http://127.0.0.1:${server.port}/book/x/y.html');
+
+      expect(result.url, isNull);
+      expect(result.refusal, isNull,
+          reason: 'never show a message the mirror did not give');
+    });
+  });
+
 }
 
 /// SHA1 digest bytes for the PoW verification test.

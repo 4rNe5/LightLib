@@ -11,13 +11,15 @@ import 'package:html/parser.dart' as html_parser;
 
 // Project imports:
 import 'package:openlib/services/annas_archieve.dart';
+import 'package:openlib/services/challenge_html_cache.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/diamwall_solver.dart';
 import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/logger.dart';
+import 'package:openlib/services/webview_challenge_solver.dart';
 
 /// One searchable catalog the app can query.
-enum SearchProviderId { annasArchive, libgen, zlibrary }
+enum SearchProviderId { annasArchive, libgen, zlibrary, welib }
 
 /// A source of [BookData] results. Implementations own their fetching,
 /// parsing and error handling - the manager merges whatever comes back.
@@ -290,7 +292,16 @@ class LibgenProvider implements SearchProvider {
     }
 
     final mirrors = _mirrors ??
-        await InstanceManager().getEnabledUrls(MirrorService.libgen);
+        await InstanceManager().enabledUrls(MirrorService.libgen);
+
+    if (mirrors.isEmpty) {
+      // Every libgen mirror SLUM knows is DOWN (or switched off by the
+      // user). The contract is to never touch a down host, so this ends
+      // here instead of throwing against a dead address.
+      _logger.warning('No attemptable libgen mirror; not searching',
+          tag: 'LibgenProvider');
+      return const [];
+    }
 
     _logger.info('Searching Library Genesis', tag: 'LibgenProvider', metadata: {
       'req': req,
@@ -324,6 +335,23 @@ class LibgenProvider implements SearchProvider {
   }
 }
 
+/// Outcome of asking a Z-Library mirror for a book's file URL.
+///
+/// Exactly one of [url] / [refusal] is meaningful: a resolved signed CDN
+/// URL, or a reason the user can act on.
+@immutable
+class ZlibraryDownload {
+  final String? url;
+
+  /// Human-readable reason the mirror withheld the file. Null when the
+  /// mirror simply had no working link.
+  final String? refusal;
+
+  const ZlibraryDownload({this.url, this.refusal});
+
+  bool get ok => url != null;
+}
+
 /// Z-Library: mirrors sit behind a DiamWall proof-of-work gate, so the
 /// provider solves the 503 challenge headlessly (no webview) before
 /// parsing results. It still yields an empty result when every mirror
@@ -342,48 +370,20 @@ class ZlibraryProvider implements SearchProvider {
 
   final AppLogger _logger = AppLogger();
 
-  /// Default mirror order when no explicit list is given and the
-  /// instance manager has nothing enabled: z-lib.gd first (the only
-  /// mirror with working anonymous book pages and downloads over
-  /// https), then z-lib.gl and articles.sk (https, 503-tier PoW), then
-  /// the plain-http variants of z-library.sk and 1lib.sk whose https
-  /// side sits behind the browser-only DiamWall v2 tier. z-lib.fm is
-  /// v2-only on both schemes and is deliberately absent.
-  static const defaultMirrors = [
-    'https://z-lib.gd',
-    'https://z-lib.gl',
-    'https://articles.sk',
-    'http://z-library.sk',
-    'http://1lib.sk',
-  ];
-
-  /// The enabled Z-Library instances, best mirror first; falls back to
-  /// [defaultMirrors] when the instance manager is unavailable or has
-  /// nothing enabled. Never throws.
+  /// The Z-Library mirrors to try, best first, from open-slum.org.
+  ///
+  /// Nothing here is hardcoded: the instance manager reads SLUM's
+  /// zlibrary page and orders deliberately - unprotected before
+  /// DiamWall before the browser-only gates - and drops mirrors SLUM
+  /// reports DOWN. When no webview solver exists on this platform the
+  /// browser-only gates are filtered out entirely, because a 503 from
+  /// them can never be passed headlessly.
   Future<List<String>> _resolveMirrors() async {
-    try {
-      final enabled =
-          await InstanceManager().getEnabledUrls(MirrorService.zlibrary);
-      if (enabled.isNotEmpty) {
-        // Prefer the known-good order: any default mirror keeps its
-        // default rank, unknown/custom mirrors go after them.
-        enabled.sort((a, b) {
-          final ra = defaultMirrors.indexOf(_normalizeMirror(a));
-          final rb = defaultMirrors.indexOf(_normalizeMirror(b));
-          return _mirrorRank(ra).compareTo(_mirrorRank(rb));
-        });
-        return enabled;
-      }
-    } catch (_) {
-      // Instance manager unavailable; defaults below.
-    }
-    return defaultMirrors;
+    return InstanceManager().enabledUrls(
+      MirrorService.zlibrary,
+      headlessOnly: !WebviewChallengeSolver.isSupported,
+    );
   }
-
-  int _mirrorRank(int defaultIndex) => defaultIndex >= 0 ? defaultIndex : 99;
-
-  String _normalizeMirror(String url) =>
-      url.endsWith('/') ? url.substring(0, url.length - 1) : url;
 
   final Dio _dio;
   final List<String>? _mirrors;
@@ -577,19 +577,33 @@ class ZlibraryProvider implements SearchProvider {
   /// (fresh /dl/ ids), then resolves the first id that answers with
   /// a real CDN redirect. One DiamWall solve for the page plus one
   /// per dead id - usually a single solve in total.
-  Future<String?> resolveBookDownload(String bookPageUrl) async {
+  ///
+  /// Mirrors refuse for reasons the user can act on (the anonymous
+  /// daily download limit, a login wall); [ZlibraryDownload.refusal]
+  /// carries that reason instead of a bare null.
+  Future<ZlibraryDownload> resolveBookDownload(String bookPageUrl) async {
     final links = await _allDownloadLinks(bookPageUrl);
-    if (links.isEmpty) return null;
+    if (links.isEmpty) {
+      return const ZlibraryDownload(
+          refusal: 'No download link found on the book page. '
+              'The book may have no files on this mirror.');
+    }
+
     final acceptAnyStatus = Options(
       validateStatus: (_) => true,
       followRedirects: false,
       maxRedirects: 0,
     );
+
+    String? refusal;
     for (final link in links) {
-      final resolved = await _resolveOneDownloadUrl(link, acceptAnyStatus);
-      if (resolved != null) return resolved;
+      final outcome = await _resolveOneDownloadUrl(link, acceptAnyStatus);
+      if (outcome.url != null) return ZlibraryDownload(url: outcome.url);
+      refusal ??= outcome.refusal;
     }
-    return null;
+    // Only a reason the mirror itself gave is reported; when there is
+    // none the caller's own generic message applies.
+    return ZlibraryDownload(refusal: refusal);
   }
 
   /// Fetches a book page and returns every `/dl/<id>` link on it,
@@ -670,44 +684,80 @@ class ZlibraryProvider implements SearchProvider {
     );
 
     for (final candidate in [dlUrl, ...alternates]) {
-      final resolved = await _resolveOneDownloadUrl(candidate, acceptAnyStatus);
-      if (resolved != null) return resolved;
+      final outcome = await _resolveOneDownloadUrl(candidate, acceptAnyStatus);
+      if (outcome.url != null) return outcome.url;
     }
     return null;
   }
 
   /// One `/dl/<id>` candidate: solve DiamWall if challenged, then read
-  /// the 302 Location. 200 (js/meta redirect page) counts as resolved -
+  /// the 302 Location. 200 that is not an HTML page counts as resolved -
   /// the downloader follows redirects anyway. 204 and 404 mean this id
   /// is dead; the caller tries the next one.
-  Future<String?> _resolveOneDownloadUrl(
+  ///
+  /// A 200 that IS an HTML page is the mirror talking to us: Z-Library
+  /// answers with a "Downloading ..." page carrying a reason
+  /// ("Daily limit reached ... more than 5 downloads from your IP",
+  /// "Please sign in"). That reason is returned so the UI can tell the
+  /// user something actionable instead of a bare failure.
+  Future<({String? url, String? refusal})> _resolveOneDownloadUrl(
       String candidate, Options acceptAnyStatus) async {
     var response = await _dio.get(candidate, options: acceptAnyStatus);
     if (_solver.looksLikeChallenge(
         response.statusCode ?? 0, response.data.toString())) {
       final cookies = await _solver.solve(response.data.toString());
-      if (cookies == null) return null;
+      if (cookies == null) return (url: null, refusal: null);
       final cookieHeader =
           cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
       response = await _dio.get(candidate,
           options: acceptAnyStatus.copyWith(headers: {'Cookie': cookieHeader}));
     }
 
-    if (response.statusCode == 302 || response.statusCode == 301) {
+    final status = response.statusCode ?? 0;
+    if (status == 302 || status == 301) {
       final location = response.headers.value('location');
       if (location != null && location.startsWith('http')) {
-        return location;
+        return (url: location, refusal: null);
       }
     }
-    if (response.statusCode == 200) {
+    if (status == 200) {
       final body = response.data.toString();
-      // A bare 200 from /dl/ is usually the js-redirect landing page,
-      // not the book: only accept it when it is not the challenge and
-      // not an HTML page at all (the CDN serves the book bytes).
-      if (!_solver.looksLikeChallenge(200, body) &&
-          !body.toLowerCase().contains('<html')) {
-        return candidate;
+      if (_solver.looksLikeChallenge(200, body)) {
+        return (url: null, refusal: null);
       }
+      if (!body.toLowerCase().contains('<html')) {
+        // The CDN itself served the bytes.
+        return (url: candidate, refusal: null);
+      }
+      return (url: null, refusal: _refusalFromPage(body));
+    }
+    return (url: null, refusal: null);
+  }
+
+  /// Reads the reason out of a Z-Library download page that withheld the
+  /// file. Returns null when the page says nothing we recognize, so a
+  /// caller never shows an invented message.
+  String? _refusalFromPage(String html) {
+    final text = html_parser
+        .parse(html)
+        .body
+        ?.text
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .trim()
+        .toLowerCase() ??
+        '';
+    if (text.isEmpty) return null;
+
+    if (text.contains('downloads from your ip') ||
+        text.contains('daily limit reached')) {
+      return 'Daily download limit reached for this network. '
+          'Sign in to Z-Library in the app browser, or try again tomorrow.';
+    }
+    // Deliberately specific: every z-lib page carries a "Login" nav link,
+    // so a bare 'login' match would mislabel any unrecognized page.
+    if (text.contains('please sign in to your account') ||
+        text.contains('registration to download')) {
+      return 'Z-Library asks to sign in before serving this file.';
     }
     return null;
   }
@@ -783,6 +833,298 @@ class ZlibraryProvider implements SearchProvider {
   }
 }
 
+/// WeLib (welib.org) - open-slum.org's "other" page.
+///
+/// welib.org gates `/search` behind Cloudflare. A search therefore only
+/// succeeds when a webview solver is available (the same machinery
+/// Anna's Archive uses); without one the provider reports no results
+/// rather than pretending. Book detail (`/md5/<id>`) and the
+/// public-server download page (`/slow_download/<id>/0/0`) need no
+/// browser - but Cloudflare fingerprints a plain HTTP client on some
+/// paths, so the solver path is kept as fallback there too.
+class WelibProvider implements SearchProvider {
+  WelibProvider({Dio? dio, List<String>? mirrors})
+      : _dio = dio ??
+            createDioWithLogging(
+                options: BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 30),
+              headers: _browserHeaders,
+            )),
+        _mirrors = mirrors;
+
+  final Dio _dio;
+  final List<String>? _mirrors;
+  final AppLogger _logger = AppLogger();
+
+  @override
+  SearchProviderId get id => SearchProviderId.welib;
+
+  @override
+  String get displayName => 'WeLib';
+
+  /// Mirrors come from open-slum.org's "other" page; a down mirror is
+  /// never attempted. With a webview solver the Cloudflare-gated search
+  /// is solvable, so the mirror stays in the list.
+  Future<List<String>> _resolveMirrors() =>
+      InstanceManager().enabledUrls(MirrorService.welib);
+
+  @override
+  Future<List<BookData>> search(SearchQuery query) async {
+    final mirrors = _mirrors ?? await _resolveMirrors();
+    if (mirrors.isEmpty) {
+      _logger.warning('No attemptable WeLib mirror; not searching',
+          tag: 'WelibProvider');
+      return const [];
+    }
+
+    for (final mirror in mirrors) {
+      try {
+        final html = await _fetchHtml('$mirror/search${_queryString(query)}');
+        if (html == null) continue;
+        final books = parseResults(html, mirror);
+        if (books.isNotEmpty) return books;
+      } catch (e) {
+        _logger.warning('WeLib mirror failed, trying next',
+            tag: 'WelibProvider', error: e, metadata: {'mirror': mirror});
+      }
+    }
+    _logger.warning('All WeLib mirrors failed for this search',
+        tag: 'WelibProvider');
+    return const [];
+  }
+
+  /// GETs [url] and returns the body, clearing a Cloudflare challenge
+  /// with the webview solver when one appears.
+  ///
+  /// This is not optional for WeLib: Cloudflare fronts both `/search` and
+  /// the book pages, and it fingerprints clients (a plain HTTP request
+  /// from Dart is challenged while the same request from curl is not).
+  /// Without a solver the page is simply unavailable, so this returns
+  /// null rather than pretending.
+  Future<String?> _fetchHtml(String url) async {
+    // A page the solver already captured in a real browser is the best
+    // possible answer for exactly this URL - and skipping the request
+    // avoids a fresh 403 round trip and another solve. (Same policy as
+    // Anna's Archive; the cache self-expires after 10 minutes.)
+    final cached = ChallengeHtmlCache.get(url);
+    if (cached != null) {
+      _logger.debug('Using cached challenge HTML',
+          tag: 'WelibProvider', metadata: {'url': url});
+      return cached;
+    }
+
+    final acceptAnyStatus = Options(validateStatus: (_) => true);
+
+    final Response<String> response;
+    try {
+      response = await _dio.get<String>(url, options: acceptAnyStatus);
+    } catch (e) {
+      _logger.warning('WeLib request failed', tag: 'WelibProvider', error: e);
+      return null;
+    }
+
+    final body = response.data ?? '';
+    if (!_isCloudflareChallenge(response, body)) {
+      final status = response.statusCode ?? 0;
+      return (status >= 200 && status < 300) ? body : null;
+    }
+
+    if (!WebviewChallengeSolver.isSupported) {
+      _logger.warning('WeLib is Cloudflare-gated and no solver is available',
+          tag: 'WelibProvider', metadata: {'url': url});
+      return null;
+    }
+    final html = await WebviewChallengeSolver.fetchHtmlAfterChallenge(url);
+    return (html != null && html.length > 1000) ? html : null;
+  }
+
+  /// welib search params: `q` plus the page number when paging.
+  String _queryString(SearchQuery query) {
+    final params = <String, String>{'q': query.text};
+    if (query.page > 1) params['page'] = query.page.toString();
+    return '?${params.entries.map((e) => '${e.key}=${Uri.encodeQueryComponent(e.value)}').join('&')}';
+  }
+
+  /// Cloudflare's interstitial. Signals in order of conclusiveness:
+  ///
+  /// 1. the `cf-mitigated: challenge` response header - Cloudflare's own
+  ///    statement, status-independent (welib.org serves the challenge as
+  ///    403 against Dart's plain HTTP fingerprint);
+  /// 2. the interstitial's own text, but only on a status a challenge
+  ///    actually uses (403/429/503) - so a normal page that embeds a
+  ///    Cloudflare script (or a Turnstile widget) is never mistaken for
+  ///    a block.
+  bool _isCloudflareChallenge(Response<String> response, String html) {
+    if (response.headers.value('cf-mitigated')?.toLowerCase() == 'challenge') {
+      return true;
+    }
+
+    final status = response.statusCode ?? 0;
+    if (status != 403 && status != 429 && status != 503) return false;
+
+    final lower = html.toLowerCase();
+    if (lower.isEmpty) return false;
+    const markers = [
+      'just a moment',
+      'attention required',
+      'challenges.cloudflare.com',
+      'cf-browser-verification',
+    ];
+    return markers.any(lower.contains);
+  }
+
+  /// Parses welib book cards. Live markup (captured from a book page's
+  /// related-books section) is a `div.book-card` holding an
+  /// `a[href^="/md5/"]` with the title, an `a[href^="/search?q="]<` with
+  /// the author and an `<img>` whose `data-title`/`data-author`
+  /// attributes repeat the same data. Public so tests can feed a
+  /// captured page without network.
+  List<BookData> parseResults(String html, String baseUrl) {
+    final document = html_parser.parse(html);
+    final books = <BookData>[];
+
+    for (final card in document.querySelectorAll('.book-card')) {
+      final link = card.querySelector('a[href^="/md5/"]');
+      final href = link?.attributes['href'];
+      if (href == null || href.isEmpty) continue;
+
+      final img = card.querySelector('img');
+      final title = _firstNonEmpty([
+        link?.querySelector('h2')?.text,
+        link?.text,
+        img?.attributes['data-title'],
+      ]);
+      if (title == null) continue;
+
+      final author = _firstNonEmpty([
+        card.querySelector('a[href^="/search?q="]')?.text,
+        img?.attributes['data-author'],
+      ]);
+
+      final info = _firstNonEmpty([card.querySelector('.text-sm')?.text]);
+
+      books.add(BookData(
+        title: title,
+        author: author,
+        thumbnail: img?.attributes['data-src'] ?? img?.attributes['src'],
+        link: href.startsWith('http') ? href : '$baseUrl$href',
+        md5: _bookIdFromHref(href) ?? href,
+        publisher: null,
+        info: info,
+      ));
+    }
+    return books;
+  }
+
+  String? _firstNonEmpty(List<String?> values) {
+    for (final value in values) {
+      final trimmed = value?.trim() ?? '';
+      if (trimmed.isNotEmpty) return trimmed;
+    }
+    return null;
+  }
+
+  String? _bookIdFromHref(String href) =>
+      RegExp(r'/md5/([0-9a-fA-F]{32})').firstMatch(href)?.group(1);
+
+  /// Fetches a welib `/md5/<id>` page and returns it as [BookInfoData].
+  /// Null when the page cannot be fetched (no attemptable mirror, or
+  /// Cloudflare with no solver) or does not parse.
+  Future<BookInfoData?> bookInfo(String url) async {
+    final mirrors = _mirrors ?? await _resolveMirrors();
+    final id = _bookIdFromHref(url);
+    if (id == null) return null;
+
+    for (final mirror in mirrors) {
+      try {
+        final pageUrl = '$mirror/md5/$id';
+        final html = await _fetchHtml(pageUrl);
+        if (html == null) continue;
+        final data = parseBookPage(html, mirror, pageUrl);
+        if (data != null) return data;
+      } catch (e) {
+        _logger.warning('WeLib book page failed, trying next mirror',
+            tag: 'WelibProvider', error: e, metadata: {'mirror': mirror});
+      }
+    }
+    return null;
+  }
+
+  /// Parses a welib book page. Live markup: `<h1>` is the title, the
+  /// `<title>` tag carries `( FORMAT, SIZE )`, `og:image` the cover,
+  /// and the free download lives at `/slow_download/<md5>/0/0`.
+  BookInfoData? parseBookPage(String html, String baseUrl, String pageUrl) {
+    final document = html_parser.parse(html);
+
+    final title = document.querySelector('h1')?.text.trim() ?? '';
+    if (title.isEmpty) return null;
+
+    final id = _bookIdFromHref(pageUrl) ?? title;
+
+    // "The Score ( PDF, 1.7 MB ) - WeLib"
+    String? format;
+    String? size;
+    final pageTitle = document.querySelector('title')?.text ?? '';
+    final meta = RegExp(r'\(\s*([A-Za-z0-9]+)\s*,\s*([\d.]+\s*[KMGT]?B)\s*\)')
+        .firstMatch(pageTitle);
+    if (meta != null) {
+      format = meta.group(1);
+      size = meta.group(2);
+    }
+
+    final cover = document
+        .querySelector('meta[property="og:image"]')
+        ?.attributes['content'];
+
+    // The description meta reads "Author Downloaded from z-lib.org ...".
+    final description = document
+        .querySelector('meta[name="description"]')
+        ?.attributes['content'];
+    final author = description != null && description.contains('Downloaded from')
+        ? description.split('Downloaded from').first.trim()
+        : null;
+
+    String? language;
+    String? publisher;
+    for (final row in document.querySelectorAll('div')) {
+      final text = row.text;
+      if (text.length > 200) continue;
+      final lower = text.toLowerCase();
+      if (lower.startsWith('language') && language == null) {
+        language = text.replaceFirst(RegExp(r'^language', caseSensitive: false), '').trim();
+      }
+      if (lower.startsWith('publisher') && publisher == null) {
+        publisher = text.replaceFirst(RegExp(r'^publisher', caseSensitive: false), '').trim();
+      }
+    }
+
+    final slowDownload = document.querySelector('a[href^="/slow_download/"]')
+            ?.attributes['href'] ??
+        '/slow_download/$id/0/0';
+
+    final info = [
+      language,
+      format,
+      size,
+    ].whereType<String>().where((s) => s.isNotEmpty).join(', ');
+
+    return BookInfoData(
+      title: title,
+      author: (author == null || author.isEmpty) ? 'Unknown' : author,
+      thumbnail: cover,
+      publisher: publisher,
+      info: info.isEmpty ? null : info,
+      link: pageUrl,
+      md5: id,
+      format: format?.toLowerCase() ?? 'epub',
+      description: null,
+      mirror: slowDownload.startsWith('http') ? slowDownload : '$baseUrl$slowDownload',
+      isFastDownload: false,
+    );
+  }
+}
+
 /// Combined outcome of a fan-out search.
 @immutable
 class SearchManagerResult {
@@ -812,6 +1154,7 @@ class SearchManager {
             [
               LibgenProvider(),
               ZlibraryProvider(),
+              WelibProvider(),
               AnnasArchiveProvider(),
             ];
 
@@ -820,9 +1163,11 @@ class SearchManager {
 
   static const _providerPrefsKey = 'searchProviders';
 
-  /// Which providers the user enabled in settings. Defaults to all three:
-  /// LibGen downloads fast and works without a browser challenge, so it
-  /// leads; Anna's Archive is behind DDoS-Guard and arrives last.
+  /// Which providers the user enabled in settings. Defaults to all four:
+  /// LibGen downloads fast and works without a browser challenge when a
+  /// mirror is up; Z-Library is next (DiamWall solves headlessly); WeLib
+  /// and Anna's Archive sit behind Cloudflare/DDoS-Guard and need the
+  /// browser solver, so they come last.
   Future<Set<SearchProviderId>> enabledProviders() async {
     try {
       final stored = await _database.getPreference(_providerPrefsKey);
@@ -833,11 +1178,7 @@ class SearchManager {
           .whereType<SearchProviderId>()
           .toSet();
     } catch (_) {
-      return {
-        SearchProviderId.libgen,
-        SearchProviderId.zlibrary,
-        SearchProviderId.annasArchive,
-      };
+      return SearchProviderId.values.toSet();
     }
   }
 

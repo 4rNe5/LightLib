@@ -139,14 +139,29 @@ void main() {
       }
     }, timeout: const Timeout(Duration(seconds: 60)));
 
-    test('InstanceManager returns active mirrors', () async {
-      final instances = await instanceManager.getInstances();
+    test('InstanceManager exposes mirrors sourced from open-slum.org',
+        () async {
+      // The app holds no default mirror URLs: this list is parsed from
+      // open-slum.org's per-service pages. SLUM may legitimately have
+      // nothing reachable right now, so the assertion is on the shape -
+      // URLs must be absolute, and nothing reported DOWN may appear in
+      // the list a provider gets.
+      for (final service in MirrorService.values) {
+        final views = await instanceManager.instances(service, force: true);
+        for (final view in views) {
+          expect(Uri.tryParse(view.url)?.hasAuthority, isTrue,
+              reason: '${view.url} must be absolute');
+        }
 
-      expect(instances, isNotEmpty, reason: 'Should have default mirrors');
-
-      final enabledInstances = instances.where((i) => i.enabled).toList();
-      expect(enabledInstances, isNotEmpty,
-          reason: 'Should have at least one enabled mirror');
+        final urls = await instanceManager.enabledUrls(service);
+        for (final url in urls) {
+          final host = Uri.parse(url).host;
+          final site =
+              views.firstWhere((v) => v.host == host, orElse: () => views.first);
+          expect(site.site.isDown, isFalse,
+              reason: 'a mirror SLUM reports DOWN must never be handed out');
+        }
+      }
     });
 
     test('Live response or block is classified correctly by the real client',

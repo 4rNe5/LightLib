@@ -48,6 +48,17 @@ String? getLanguage(String? info) {
   return null;
 }
 
+/// Same-host Referer for libgen cover URLs, null for everything else.
+/// libgen mirrors serve /covers/ only with an ads.php Referer from the
+/// same host; the host is read from the cover URL itself so the app
+/// hardcodes no mirror address.
+Map<String, String>? _coverHeaders(String? coverUrl) {
+  if (coverUrl == null || !coverUrl.contains('libgen')) return null;
+  final origin = Uri.tryParse(coverUrl)?.origin;
+  if (origin == null) return null;
+  return {'Referer': '$origin/ads.php?md5=cover-lookup'};
+}
+
 class BookInfoCard extends ConsumerWidget {
   const BookInfoCard({
     super.key,
@@ -115,14 +126,11 @@ class BookInfoCard extends ConsumerWidget {
                   height: 120,
                   width: 90,
                   imageUrl: coverUrl ?? "",
-                  // libgen.li serves /covers/ only with an ads.php
-                  // Referer; without it the response is 200 but empty.
-                  httpHeaders: coverUrl != null && coverUrl.contains('libgen')
-                      ? const {
-                          'Referer':
-                              'https://libgen.li/ads.php?md5=cover-lookup'
-                        }
-                      : null,
+                  // libgen mirrors serve /covers/ only with a same-host
+                  // ads.php Referer; without it the response is 200 but
+                  // empty. The host comes from the cover URL itself, so
+                  // no mirror address is baked into the app.
+                  httpHeaders: _coverHeaders(coverUrl),
                   imageBuilder: (context, imageProvider) => Container(
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.all(Radius.circular(5)),

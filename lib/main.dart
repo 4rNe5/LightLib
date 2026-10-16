@@ -45,7 +45,6 @@ import 'package:openlib/state/state.dart'
         openEpubWithExternalAppProvider,
         showManualDownloadButtonProvider,
         backgroundVerificationProvider,
-        autoRankInstancesProvider,
         userAgentProvider,
         cookieProvider,
         donationKeyProvider,
@@ -324,9 +323,10 @@ class _MainScreenState extends ConsumerState<MainScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkForUpdatesOnStartup();
     });
-    // Auto-rank instances on startup if enabled
+    // Pull the mirror list from open-slum.org so the first search does
+    // not wait on it.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _autoRankInstancesOnStartup();
+      _refreshMirrorsOnStartup();
     });
   }
 
@@ -347,23 +347,11 @@ class _MainScreenState extends ConsumerState<MainScreen>
     super.dispose();
   }
 
-  Future<void> _autoRankInstancesOnStartup() async {
-    // Small delay to let the UI settle first
+  Future<void> _refreshMirrorsOnStartup() async {
+    // Small delay to let the UI settle first.
     await Future.delayed(const Duration(seconds: 1));
     if (!mounted) return;
-
-    try {
-      final instanceManager = InstanceManager();
-      final didRank = await instanceManager.rankOnStartupIfNeeded();
-      if (didRank) {
-        debugPrint("Instances auto-ranked on startup");
-        // Update the provider state
-        ref.read(autoRankInstancesProvider.notifier).state = true;
-      }
-    } catch (e) {
-      // Silently fail - don't interrupt user flow
-      debugPrint("Auto-ranking failed: $e");
-    }
+    await InstanceManager().refreshOnStartup();
   }
 
   Future<void> _checkForUpdatesOnStartup() async {

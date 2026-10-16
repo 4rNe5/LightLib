@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <meta http-equiv="refresh" content="600">
+    <title>other - Shadow Library Uptime Monitor (SLUM)</title>
+    <link rel="icon" href="assets/logo.png">
+    <link rel="stylesheet" href="static/css/style.css">
+    
+</head>
+<body>
+    <div class="container">
+        
+<a href="index.html" class="back-link">← Back to Dashboard</a>
+
+
+
+<header>
+    <h1>other</h1>
+    <p class="subtitle">
+        Status: <span class="status-badge DOWN">DOWN</span>
+    </p>
+</header>
+<div class="card" id="other.welib">
+    <div class="card-header">
+        <div class="domain-info">
+            
+            <a href="https://welib.org" class="card-title" target="_blank" rel="noopener noreferrer">welib.org</a>
+            
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="log-links">
+                <button class="log-link" data-domain-id="other.welib" data-log-path="logs/other/welib.log" data-domain-url="welib.org" data-archive-links='[{"date": "2026-10", "url": "logs/archive/2026-10/other/welib.log"}, {"date": "2026-09", "url": "logs/archive/2026-09/other/welib.log"}, {"date": "2026-08", "url": "logs/archive/2026-08/other/welib.log"}, {"date": "2026-07", "url": "logs/archive/2026-07/other/welib.log"}]' title="View recent logs">logs</button>
+            </div>
+            <span class="status-badge protected">
+                PROTECTED
+            </span>
+        </div>
+    </div>
+
+    <!-- Expected vs Actual -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.75rem 0; font-size: 0.8rem;">
+        <!-- Expected Configuration -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #58a6ff; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Expected</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                <div>Status: <span style="color: #c9d1d9;">200</span></div>
+                
+                
+                
+                <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #21262d;">
+                    <span style="color: #d29922;">Protection OK if:</span>
+                    
+                    <div style="padding-left: 0.5rem;">• Status: 403</div>
+                    
+                    
+                    <div style="padding-left: 0.5rem;">• Indicator: "cf-ray"</div>
+                    
+                </div>
+                
+                
+            </div>
+        </div>
+
+        <!-- Actual Results -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #f0883e; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Actual</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                <div>Status: <span style="color: #c9d1d9;">403</span></div>
+                
+                
+                <div>Latency: <span style="color: #c9d1d9;">125ms</span></div>
+                
+                
+                
+                
+                <div style="margin-top: 0.5rem;">Cert: Jan 13 (89d) ✓</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="timeline" data-log-path="logs/other/welib.log">
+        
+        <span class="protected" data-timestamp="2026-10-16T07:55:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="90" data-failure="" title="2026-10-16T07:55:00+00:00 - PROTECTED | HTTP 403 | 90ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:00:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="99" data-failure="" title="2026-10-16T08:00:00+00:00 - PROTECTED | HTTP 403 | 99ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:05:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="120" data-failure="" title="2026-10-16T08:05:00+00:00 - PROTECTED | HTTP 403 | 120ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:10:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="144" data-failure="" title="2026-10-16T08:10:00+00:00 - PROTECTED | HTTP 403 | 144ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:15:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="123" data-failure="" title="2026-10-16T08:15:00+00:00 - PROTECTED | HTTP 403 | 123ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:20:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="4092" data-failure="" title="2026-10-16T08:20:00+00:00 - PROTECTED | HTTP 403 | 4092ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:25:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="149" data-failure="" title="2026-10-16T08:25:00+00:00 - PROTECTED | HTTP 403 | 149ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:30:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="125" data-failure="" title="2026-10-16T08:30:00+00:00 - PROTECTED | HTTP 403 | 125ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:35:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="118" data-failure="" title="2026-10-16T08:35:00+00:00 - PROTECTED | HTTP 403 | 118ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:40:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="132" data-failure="" title="2026-10-16T08:40:00+00:00 - PROTECTED | HTTP 403 | 132ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:45:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="115" data-failure="" title="2026-10-16T08:45:00+00:00 - PROTECTED | HTTP 403 | 115ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:50:00+00:00" data-status="PROTECTED" data-http-status="" data-latency="" data-failure="" title="2026-10-16T08:50:00+00:00 - PROTECTED"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T08:55:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="122" data-failure="" title="2026-10-16T08:55:00+00:00 - PROTECTED | HTTP 403 | 122ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:00:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="99" data-failure="" title="2026-10-16T09:00:00+00:00 - PROTECTED | HTTP 403 | 99ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:05:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="122" data-failure="" title="2026-10-16T09:05:00+00:00 - PROTECTED | HTTP 403 | 122ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:10:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="149" data-failure="" title="2026-10-16T09:10:00+00:00 - PROTECTED | HTTP 403 | 149ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:15:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="4133" data-failure="" title="2026-10-16T09:15:00+00:00 - PROTECTED | HTTP 403 | 4133ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:20:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="135" data-failure="" title="2026-10-16T09:20:00+00:00 - PROTECTED | HTTP 403 | 135ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:25:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="153" data-failure="" title="2026-10-16T09:25:00+00:00 - PROTECTED | HTTP 403 | 153ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:30:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="156" data-failure="" title="2026-10-16T09:30:00+00:00 - PROTECTED | HTTP 403 | 156ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:35:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="4247" data-failure="" title="2026-10-16T09:35:00+00:00 - PROTECTED | HTTP 403 | 4247ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:40:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="119" data-failure="" title="2026-10-16T09:40:00+00:00 - PROTECTED | HTTP 403 | 119ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:45:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="96" data-failure="" title="2026-10-16T09:45:00+00:00 - PROTECTED | HTTP 403 | 96ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:50:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="116" data-failure="" title="2026-10-16T09:50:00+00:00 - PROTECTED | HTTP 403 | 116ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T09:55:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="40134" data-failure="" title="2026-10-16T09:55:00+00:00 - PROTECTED | HTTP 403 | 40134ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:00:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="123" data-failure="" title="2026-10-16T10:00:00+00:00 - PROTECTED | HTTP 403 | 123ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:05:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="103" data-failure="" title="2026-10-16T10:05:00+00:00 - PROTECTED | HTTP 403 | 103ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:10:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="133" data-failure="" title="2026-10-16T10:10:00+00:00 - PROTECTED | HTTP 403 | 133ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:15:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="134" data-failure="" title="2026-10-16T10:15:00+00:00 - PROTECTED | HTTP 403 | 134ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:20:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="141" data-failure="" title="2026-10-16T10:20:00+00:00 - PROTECTED | HTTP 403 | 141ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:25:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="131" data-failure="" title="2026-10-16T10:25:00+00:00 - PROTECTED | HTTP 403 | 131ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:30:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="110" data-failure="" title="2026-10-16T10:30:00+00:00 - PROTECTED | HTTP 403 | 110ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:35:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="4108" data-failure="" title="2026-10-16T10:35:00+00:00 - PROTECTED | HTTP 403 | 4108ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:40:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="135" data-failure="" title="2026-10-16T10:40:00+00:00 - PROTECTED | HTTP 403 | 135ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:45:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="134" data-failure="" title="2026-10-16T10:45:00+00:00 - PROTECTED | HTTP 403 | 134ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:50:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="111" data-failure="" title="2026-10-16T10:50:00+00:00 - PROTECTED | HTTP 403 | 111ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T10:55:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="90" data-failure="" title="2026-10-16T10:55:00+00:00 - PROTECTED | HTTP 403 | 90ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:00:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="114" data-failure="" title="2026-10-16T11:00:00+00:00 - PROTECTED | HTTP 403 | 114ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:05:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="103" data-failure="" title="2026-10-16T11:05:00+00:00 - PROTECTED | HTTP 403 | 103ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:10:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="114" data-failure="" title="2026-10-16T11:10:00+00:00 - PROTECTED | HTTP 403 | 114ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:15:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="93" data-failure="" title="2026-10-16T11:15:00+00:00 - PROTECTED | HTTP 403 | 93ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:20:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="92" data-failure="" title="2026-10-16T11:20:00+00:00 - PROTECTED | HTTP 403 | 92ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:25:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="7196" data-failure="" title="2026-10-16T11:25:00+00:00 - PROTECTED | HTTP 403 | 7196ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:30:00+00:00" data-status="PROTECTED" data-http-status="" data-latency="" data-failure="" title="2026-10-16T11:30:00+00:00 - PROTECTED"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:35:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="148" data-failure="" title="2026-10-16T11:35:00+00:00 - PROTECTED | HTTP 403 | 148ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:40:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="4195" data-failure="" title="2026-10-16T11:40:00+00:00 - PROTECTED | HTTP 403 | 4195ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:45:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="4135" data-failure="" title="2026-10-16T11:45:00+00:00 - PROTECTED | HTTP 403 | 4135ms"></span>
+        
+        <span class="protected" data-timestamp="2026-10-16T11:50:00+00:00" data-status="PROTECTED" data-http-status="403" data-latency="125" data-failure="" title="2026-10-16T11:50:00+00:00 - PROTECTED | HTTP 403 | 125ms"></span>
+    </div>
+
+    
+    <div style="margin-top: 0.75rem; padding: 0.5rem; background: #161b22; border: 1px solid #238636; border-radius: 4px; font-size: 0.75rem;">
+        <strong style="color: #3fb950;">Protected Site</strong>
+        
+        <span style="color: #58a6ff; margin-left: 0.5rem;">Cloudflare</span>
+        
+        <p style="margin: 0.25rem 0 0 0; color: #8b949e;">
+            Bot protection active.
+        </p>
+    </div>
+    
+</div>
+<div class="card" id="other.libstc-nexus">
+    <div class="card-header">
+        <div class="domain-info">
+            
+            <a href="https://libstc.nexus" class="card-title" target="_blank" rel="noopener noreferrer">libstc.nexus</a>
+            
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="log-links">
+                <button class="log-link" data-domain-id="other.libstc-nexus" data-log-path="logs/other/libstc-nexus.log" data-domain-url="libstc.nexus" data-archive-links='[{"date": "2026-10", "url": "logs/archive/2026-10/other/libstc-nexus.log"}, {"date": "2026-09", "url": "logs/archive/2026-09/other/libstc-nexus.log"}, {"date": "2026-08", "url": "logs/archive/2026-08/other/libstc-nexus.log"}, {"date": "2026-07", "url": "logs/archive/2026-07/other/libstc-nexus.log"}]' title="View recent logs">logs</button>
+            </div>
+            <span class="status-badge down">
+                DOWN
+            </span>
+        </div>
+    </div>
+
+    <!-- Expected vs Actual -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.75rem 0; font-size: 0.8rem;">
+        <!-- Expected Configuration -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #58a6ff; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Expected</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                <div>Status: <span style="color: #c9d1d9;">200</span></div>
+                
+                
+                <div>Content: <span style="color: #c9d1d9; font-style: italic;">"Library"</span></div>
+                
+                
+                
+            </div>
+        </div>
+
+        <!-- Actual Results -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #f0883e; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Actual</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                
+                
+                
+                
+                <div style="margin-top: 0.5rem; padding-top: 0.5rem; border-top: 1px solid #21262d; color: #da3633; font-size: 0.75rem;">
+                    <strong>DOWN:</strong> 2+ checks failed.
+                    
+                    
+                    
+                    <br><span>Latest: 2026-10-16T07:55:00+00:00 | DOWN | FailureType.CONNECTION_REFUSED</span>
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                    
+                </div>
+                
+                <div style="margin-top: 0.5rem;">Cert: Nov 29 (43d) ✓</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="timeline" data-log-path="logs/other/libstc-nexus.log">
+        
+        <span class="down" data-timestamp="2026-10-16T07:55:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T07:55:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:00:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:00:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:05:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:05:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:10:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:10:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:15:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:15:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:20:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:20:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:25:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:25:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:30:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:30:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:35:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:35:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:40:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:40:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:45:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:45:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:50:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:50:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T08:55:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T08:55:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:00:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:00:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:05:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:05:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:10:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:10:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:15:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:15:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:20:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:20:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:25:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:25:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:30:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:30:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:35:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:35:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:40:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:40:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:45:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:45:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:50:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:50:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T09:55:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T09:55:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:00:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:00:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:05:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:05:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:10:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:10:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:15:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:15:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:20:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:20:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:25:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:25:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:30:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:30:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:35:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:35:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:40:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:40:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:45:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:45:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:50:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:50:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:55:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T10:55:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:00:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:00:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:05:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:05:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:10:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:10:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:15:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:15:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:20:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:20:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:25:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:25:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:30:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:30:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:35:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:35:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:40:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:40:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:45:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:45:00+00:00 - DOWN | connection_refused"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T11:50:00+00:00" data-status="DOWN" data-http-status="" data-latency="" data-failure="FailureType.CONNECTION_REFUSED" title="2026-10-16T11:50:00+00:00 - DOWN | connection_refused"></span>
+    </div>
+
+    
+</div>
+<div class="card" id="other.liber3">
+    <div class="card-header">
+        <div class="domain-info">
+            
+            <a href="https://liber3.eth.limo" class="card-title" target="_blank" rel="noopener noreferrer">liber3.eth.limo</a>
+            
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="log-links">
+                <button class="log-link" data-domain-id="other.liber3" data-log-path="logs/other/liber3.log" data-domain-url="liber3.eth.limo" data-archive-links='[{"date": "2026-10", "url": "logs/archive/2026-10/other/liber3.log"}, {"date": "2026-09", "url": "logs/archive/2026-09/other/liber3.log"}, {"date": "2026-08", "url": "logs/archive/2026-08/other/liber3.log"}, {"date": "2026-07", "url": "logs/archive/2026-07/other/liber3.log"}]' title="View recent logs">logs</button>
+            </div>
+            <span class="status-badge up">
+                UP
+            </span>
+        </div>
+    </div>
+
+    <!-- Expected vs Actual -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.75rem 0; font-size: 0.8rem;">
+        <!-- Expected Configuration -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #58a6ff; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Expected</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                <div>Status: <span style="color: #c9d1d9;">200</span></div>
+                
+                
+                <div>Content: <span style="color: #c9d1d9; font-style: italic;">"Liber3"</span></div>
+                
+                
+                
+            </div>
+        </div>
+
+        <!-- Actual Results -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #f0883e; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Actual</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                <div>Status: <span style="color: #c9d1d9;">200</span></div>
+                
+                
+                <div>Latency: <span style="color: #c9d1d9;">240ms</span></div>
+                
+                
+                
+                
+                <div style="margin-top: 0.5rem;">Cert: Dec 31 (75d) ✓</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="timeline" data-log-path="logs/other/liber3.log">
+        
+        <span class="up" data-timestamp="2026-10-16T07:55:00+00:00" data-status="UP" data-http-status="200" data-latency="308" data-failure="" title="2026-10-16T07:55:00+00:00 - UP | HTTP 200 | 308ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:00:00+00:00" data-status="UP" data-http-status="200" data-latency="289" data-failure="" title="2026-10-16T08:00:00+00:00 - UP | HTTP 200 | 289ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:05:00+00:00" data-status="UP" data-http-status="200" data-latency="306" data-failure="" title="2026-10-16T08:05:00+00:00 - UP | HTTP 200 | 306ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:10:00+00:00" data-status="UP" data-http-status="200" data-latency="339" data-failure="" title="2026-10-16T08:10:00+00:00 - UP | HTTP 200 | 339ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:15:00+00:00" data-status="UP" data-http-status="200" data-latency="4254" data-failure="" title="2026-10-16T08:15:00+00:00 - UP | HTTP 200 | 4254ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:20:00+00:00" data-status="UP" data-http-status="200" data-latency="295" data-failure="" title="2026-10-16T08:20:00+00:00 - UP | HTTP 200 | 295ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:25:00+00:00" data-status="UP" data-http-status="200" data-latency="501" data-failure="" title="2026-10-16T08:25:00+00:00 - UP | HTTP 200 | 501ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:30:00+00:00" data-status="UP" data-http-status="200" data-latency="440" data-failure="" title="2026-10-16T08:30:00+00:00 - UP | HTTP 200 | 440ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:35:00+00:00" data-status="UP" data-http-status="200" data-latency="284" data-failure="" title="2026-10-16T08:35:00+00:00 - UP | HTTP 200 | 284ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:40:00+00:00" data-status="UP" data-http-status="200" data-latency="243" data-failure="" title="2026-10-16T08:40:00+00:00 - UP | HTTP 200 | 243ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:45:00+00:00" data-status="UP" data-http-status="200" data-latency="299" data-failure="" title="2026-10-16T08:45:00+00:00 - UP | HTTP 200 | 299ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:50:00+00:00" data-status="UP" data-http-status="200" data-latency="4314" data-failure="" title="2026-10-16T08:50:00+00:00 - UP | HTTP 200 | 4314ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:55:00+00:00" data-status="UP" data-http-status="200" data-latency="286" data-failure="" title="2026-10-16T08:55:00+00:00 - UP | HTTP 200 | 286ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:00:00+00:00" data-status="UP" data-http-status="200" data-latency="329" data-failure="" title="2026-10-16T09:00:00+00:00 - UP | HTTP 200 | 329ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:05:00+00:00" data-status="UP" data-http-status="200" data-latency="255" data-failure="" title="2026-10-16T09:05:00+00:00 - UP | HTTP 200 | 255ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:10:00+00:00" data-status="UP" data-http-status="200" data-latency="390" data-failure="" title="2026-10-16T09:10:00+00:00 - UP | HTTP 200 | 390ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:15:00+00:00" data-status="UP" data-http-status="200" data-latency="476" data-failure="" title="2026-10-16T09:15:00+00:00 - UP | HTTP 200 | 476ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:20:00+00:00" data-status="UP" data-http-status="200" data-latency="347" data-failure="" title="2026-10-16T09:20:00+00:00 - UP | HTTP 200 | 347ms"></span>
+        
+        <span class="degraded" data-timestamp="2026-10-16T09:25:00+00:00" data-status="DEGRADED" data-http-status="200" data-latency="294" data-failure="" title="2026-10-16T09:25:00+00:00 - DEGRADED | HTTP 200 | 294ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:30:00+00:00" data-status="UP" data-http-status="200" data-latency="470" data-failure="" title="2026-10-16T09:30:00+00:00 - UP | HTTP 200 | 470ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:35:00+00:00" data-status="UP" data-http-status="200" data-latency="395" data-failure="" title="2026-10-16T09:35:00+00:00 - UP | HTTP 200 | 395ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:40:00+00:00" data-status="UP" data-http-status="200" data-latency="4500" data-failure="" title="2026-10-16T09:40:00+00:00 - UP | HTTP 200 | 4500ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:45:00+00:00" data-status="UP" data-http-status="200" data-latency="342" data-failure="" title="2026-10-16T09:45:00+00:00 - UP | HTTP 200 | 342ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:50:00+00:00" data-status="UP" data-http-status="200" data-latency="367" data-failure="" title="2026-10-16T09:50:00+00:00 - UP | HTTP 200 | 367ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:55:00+00:00" data-status="UP" data-http-status="200" data-latency="333" data-failure="" title="2026-10-16T09:55:00+00:00 - UP | HTTP 200 | 333ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:00:00+00:00" data-status="UP" data-http-status="200" data-latency="4441" data-failure="" title="2026-10-16T10:00:00+00:00 - UP | HTTP 200 | 4441ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:05:00+00:00" data-status="UP" data-http-status="200" data-latency="4371" data-failure="" title="2026-10-16T10:05:00+00:00 - UP | HTTP 200 | 4371ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:10:00+00:00" data-status="UP" data-http-status="200" data-latency="4584" data-failure="" title="2026-10-16T10:10:00+00:00 - UP | HTTP 200 | 4584ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:15:00+00:00" data-status="UP" data-http-status="200" data-latency="283" data-failure="" title="2026-10-16T10:15:00+00:00 - UP | HTTP 200 | 283ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:20:00+00:00" data-status="UP" data-http-status="200" data-latency="351" data-failure="" title="2026-10-16T10:20:00+00:00 - UP | HTTP 200 | 351ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:25:00+00:00" data-status="UP" data-http-status="200" data-latency="347" data-failure="" title="2026-10-16T10:25:00+00:00 - UP | HTTP 200 | 347ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:30:00+00:00" data-status="UP" data-http-status="200" data-latency="323" data-failure="" title="2026-10-16T10:30:00+00:00 - UP | HTTP 200 | 323ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:35:00+00:00" data-status="UP" data-http-status="200" data-latency="397" data-failure="" title="2026-10-16T10:35:00+00:00 - UP | HTTP 200 | 397ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:40:00+00:00" data-status="UP" data-http-status="200" data-latency="272" data-failure="" title="2026-10-16T10:40:00+00:00 - UP | HTTP 200 | 272ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:45:00+00:00" data-status="UP" data-http-status="200" data-latency="307" data-failure="" title="2026-10-16T10:45:00+00:00 - UP | HTTP 200 | 307ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:50:00+00:00" data-status="UP" data-http-status="200" data-latency="235" data-failure="" title="2026-10-16T10:50:00+00:00 - UP | HTTP 200 | 235ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:55:00+00:00" data-status="UP" data-http-status="200" data-latency="277" data-failure="" title="2026-10-16T10:55:00+00:00 - UP | HTTP 200 | 277ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:00:00+00:00" data-status="UP" data-http-status="200" data-latency="315" data-failure="" title="2026-10-16T11:00:00+00:00 - UP | HTTP 200 | 315ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:05:00+00:00" data-status="UP" data-http-status="200" data-latency="452" data-failure="" title="2026-10-16T11:05:00+00:00 - UP | HTTP 200 | 452ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:10:00+00:00" data-status="UP" data-http-status="200" data-latency="325" data-failure="" title="2026-10-16T11:10:00+00:00 - UP | HTTP 200 | 325ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:15:00+00:00" data-status="UP" data-http-status="200" data-latency="677" data-failure="" title="2026-10-16T11:15:00+00:00 - UP | HTTP 200 | 677ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:20:00+00:00" data-status="UP" data-http-status="200" data-latency="4289" data-failure="" title="2026-10-16T11:20:00+00:00 - UP | HTTP 200 | 4289ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:25:00+00:00" data-status="UP" data-http-status="200" data-latency="390" data-failure="" title="2026-10-16T11:25:00+00:00 - UP | HTTP 200 | 390ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:30:00+00:00" data-status="UP" data-http-status="200" data-latency="364" data-failure="" title="2026-10-16T11:30:00+00:00 - UP | HTTP 200 | 364ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:35:00+00:00" data-status="UP" data-http-status="200" data-latency="360" data-failure="" title="2026-10-16T11:35:00+00:00 - UP | HTTP 200 | 360ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:40:00+00:00" data-status="UP" data-http-status="200" data-latency="4264" data-failure="" title="2026-10-16T11:40:00+00:00 - UP | HTTP 200 | 4264ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:45:00+00:00" data-status="UP" data-http-status="200" data-latency="564" data-failure="" title="2026-10-16T11:45:00+00:00 - UP | HTTP 200 | 564ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:50:00+00:00" data-status="UP" data-http-status="200" data-latency="240" data-failure="" title="2026-10-16T11:50:00+00:00 - UP | HTTP 200 | 240ms"></span>
+    </div>
+
+    
+</div>
+<div class="card" id="other.motw">
+    <div class="card-header">
+        <div class="domain-info">
+            
+            <a href="https://library.memoryoftheworld.org" class="card-title" target="_blank" rel="noopener noreferrer">library.memoryoftheworld.org</a>
+            
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div class="log-links">
+                <button class="log-link" data-domain-id="other.motw" data-log-path="logs/other/motw.log" data-domain-url="library.memoryoftheworld.org" data-archive-links='[{"date": "2026-10", "url": "logs/archive/2026-10/other/motw.log"}, {"date": "2026-09", "url": "logs/archive/2026-09/other/motw.log"}, {"date": "2026-08", "url": "logs/archive/2026-08/other/motw.log"}, {"date": "2026-07", "url": "logs/archive/2026-07/other/motw.log"}]' title="View recent logs">logs</button>
+            </div>
+            <span class="status-badge up">
+                UP
+            </span>
+        </div>
+    </div>
+
+    <!-- Expected vs Actual -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.75rem 0; font-size: 0.8rem;">
+        <!-- Expected Configuration -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #58a6ff; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Expected</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                <div>Status: <span style="color: #c9d1d9;">200</span></div>
+                
+                
+                <div>Content: <span style="color: #c9d1d9; font-style: italic;">"Memory of the World"</span></div>
+                
+                
+                
+            </div>
+        </div>
+
+        <!-- Actual Results -->
+        <div style="background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 0.75rem;">
+            <div style="color: #f0883e; font-weight: 600; margin-bottom: 0.5rem; text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.05em;">Actual</div>
+            <div style="color: #8b949e; line-height: 1.5;">
+                
+                <div>Status: <span style="color: #c9d1d9;">200</span></div>
+                
+                
+                <div>Latency: <span style="color: #c9d1d9;">107ms</span></div>
+                
+                
+                
+                
+                <div style="margin-top: 0.5rem;">Cert: Dec 21 (65d) ✓</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="timeline" data-log-path="logs/other/motw.log">
+        
+        <span class="up" data-timestamp="2026-10-16T07:55:00+00:00" data-status="UP" data-http-status="200" data-latency="112" data-failure="" title="2026-10-16T07:55:00+00:00 - UP | HTTP 200 | 112ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:00:00+00:00" data-status="UP" data-http-status="200" data-latency="446" data-failure="" title="2026-10-16T08:00:00+00:00 - UP | HTTP 200 | 446ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:05:00+00:00" data-status="UP" data-http-status="200" data-latency="817" data-failure="" title="2026-10-16T08:05:00+00:00 - UP | HTTP 200 | 817ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:10:00+00:00" data-status="UP" data-http-status="200" data-latency="423" data-failure="" title="2026-10-16T08:10:00+00:00 - UP | HTTP 200 | 423ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:15:00+00:00" data-status="UP" data-http-status="200" data-latency="119" data-failure="" title="2026-10-16T08:15:00+00:00 - UP | HTTP 200 | 119ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:20:00+00:00" data-status="UP" data-http-status="200" data-latency="475" data-failure="" title="2026-10-16T08:20:00+00:00 - UP | HTTP 200 | 475ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:25:00+00:00" data-status="UP" data-http-status="200" data-latency="388" data-failure="" title="2026-10-16T08:25:00+00:00 - UP | HTTP 200 | 388ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:30:00+00:00" data-status="UP" data-http-status="200" data-latency="400" data-failure="" title="2026-10-16T08:30:00+00:00 - UP | HTTP 200 | 400ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:35:00+00:00" data-status="UP" data-http-status="200" data-latency="107" data-failure="" title="2026-10-16T08:35:00+00:00 - UP | HTTP 200 | 107ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:40:00+00:00" data-status="UP" data-http-status="200" data-latency="445" data-failure="" title="2026-10-16T08:40:00+00:00 - UP | HTTP 200 | 445ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:45:00+00:00" data-status="UP" data-http-status="200" data-latency="351" data-failure="" title="2026-10-16T08:45:00+00:00 - UP | HTTP 200 | 351ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:50:00+00:00" data-status="UP" data-http-status="200" data-latency="4395" data-failure="" title="2026-10-16T08:50:00+00:00 - UP | HTTP 200 | 4395ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T08:55:00+00:00" data-status="UP" data-http-status="200" data-latency="966" data-failure="" title="2026-10-16T08:55:00+00:00 - UP | HTTP 200 | 966ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:00:00+00:00" data-status="UP" data-http-status="200" data-latency="889" data-failure="" title="2026-10-16T09:00:00+00:00 - UP | HTTP 200 | 889ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:05:00+00:00" data-status="UP" data-http-status="200" data-latency="107" data-failure="" title="2026-10-16T09:05:00+00:00 - UP | HTTP 200 | 107ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:10:00+00:00" data-status="UP" data-http-status="200" data-latency="109" data-failure="" title="2026-10-16T09:10:00+00:00 - UP | HTTP 200 | 109ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:15:00+00:00" data-status="UP" data-http-status="200" data-latency="117" data-failure="" title="2026-10-16T09:15:00+00:00 - UP | HTTP 200 | 117ms"></span>
+        
+        <span class="degraded" data-timestamp="2026-10-16T09:20:00+00:00" data-status="DEGRADED" data-http-status="200" data-latency="108" data-failure="" title="2026-10-16T09:20:00+00:00 - DEGRADED | HTTP 200 | 108ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:25:00+00:00" data-status="UP" data-http-status="200" data-latency="418" data-failure="" title="2026-10-16T09:25:00+00:00 - UP | HTTP 200 | 418ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:30:00+00:00" data-status="UP" data-http-status="200" data-latency="403" data-failure="" title="2026-10-16T09:30:00+00:00 - UP | HTTP 200 | 403ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:35:00+00:00" data-status="UP" data-http-status="200" data-latency="389" data-failure="" title="2026-10-16T09:35:00+00:00 - UP | HTTP 200 | 389ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:40:00+00:00" data-status="UP" data-http-status="200" data-latency="4466" data-failure="" title="2026-10-16T09:40:00+00:00 - UP | HTTP 200 | 4466ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:45:00+00:00" data-status="UP" data-http-status="200" data-latency="431" data-failure="" title="2026-10-16T09:45:00+00:00 - UP | HTTP 200 | 431ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:50:00+00:00" data-status="UP" data-http-status="200" data-latency="106" data-failure="" title="2026-10-16T09:50:00+00:00 - UP | HTTP 200 | 106ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T09:55:00+00:00" data-status="UP" data-http-status="200" data-latency="401" data-failure="" title="2026-10-16T09:55:00+00:00 - UP | HTTP 200 | 401ms"></span>
+        
+        <span class="down" data-timestamp="2026-10-16T10:00:00+00:00" data-status="DOWN" data-http-status="200" data-latency="107" data-failure="" title="2026-10-16T10:00:00+00:00 - DOWN | HTTP 200 | 107ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:05:00+00:00" data-status="UP" data-http-status="200" data-latency="383" data-failure="" title="2026-10-16T10:05:00+00:00 - UP | HTTP 200 | 383ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:10:00+00:00" data-status="UP" data-http-status="200" data-latency="4379" data-failure="" title="2026-10-16T10:10:00+00:00 - UP | HTTP 200 | 4379ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:15:00+00:00" data-status="UP" data-http-status="200" data-latency="394" data-failure="" title="2026-10-16T10:15:00+00:00 - UP | HTTP 200 | 394ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:20:00+00:00" data-status="UP" data-http-status="200" data-latency="407" data-failure="" title="2026-10-16T10:20:00+00:00 - UP | HTTP 200 | 407ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:25:00+00:00" data-status="UP" data-http-status="200" data-latency="114" data-failure="" title="2026-10-16T10:25:00+00:00 - UP | HTTP 200 | 114ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:30:00+00:00" data-status="UP" data-http-status="200" data-latency="110" data-failure="" title="2026-10-16T10:30:00+00:00 - UP | HTTP 200 | 110ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:35:00+00:00" data-status="UP" data-http-status="200" data-latency="388" data-failure="" title="2026-10-16T10:35:00+00:00 - UP | HTTP 200 | 388ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:40:00+00:00" data-status="UP" data-http-status="200" data-latency="422" data-failure="" title="2026-10-16T10:40:00+00:00 - UP | HTTP 200 | 422ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:45:00+00:00" data-status="UP" data-http-status="200" data-latency="974" data-failure="" title="2026-10-16T10:45:00+00:00 - UP | HTTP 200 | 974ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:50:00+00:00" data-status="UP" data-http-status="200" data-latency="365" data-failure="" title="2026-10-16T10:50:00+00:00 - UP | HTTP 200 | 365ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T10:55:00+00:00" data-status="UP" data-http-status="200" data-latency="529" data-failure="" title="2026-10-16T10:55:00+00:00 - UP | HTTP 200 | 529ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:00:00+00:00" data-status="UP" data-http-status="200" data-latency="421" data-failure="" title="2026-10-16T11:00:00+00:00 - UP | HTTP 200 | 421ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:05:00+00:00" data-status="UP" data-http-status="200" data-latency="474" data-failure="" title="2026-10-16T11:05:00+00:00 - UP | HTTP 200 | 474ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:10:00+00:00" data-status="UP" data-http-status="200" data-latency="107" data-failure="" title="2026-10-16T11:10:00+00:00 - UP | HTTP 200 | 107ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:15:00+00:00" data-status="UP" data-http-status="200" data-latency="116" data-failure="" title="2026-10-16T11:15:00+00:00 - UP | HTTP 200 | 116ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:20:00+00:00" data-status="UP" data-http-status="200" data-latency="345" data-failure="" title="2026-10-16T11:20:00+00:00 - UP | HTTP 200 | 345ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:25:00+00:00" data-status="UP" data-http-status="200" data-latency="109" data-failure="" title="2026-10-16T11:25:00+00:00 - UP | HTTP 200 | 109ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:30:00+00:00" data-status="UP" data-http-status="200" data-latency="476" data-failure="" title="2026-10-16T11:30:00+00:00 - UP | HTTP 200 | 476ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:35:00+00:00" data-status="UP" data-http-status="200" data-latency="642" data-failure="" title="2026-10-16T11:35:00+00:00 - UP | HTTP 200 | 642ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:40:00+00:00" data-status="UP" data-http-status="200" data-latency="116" data-failure="" title="2026-10-16T11:40:00+00:00 - UP | HTTP 200 | 116ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:45:00+00:00" data-status="UP" data-http-status="200" data-latency="415" data-failure="" title="2026-10-16T11:45:00+00:00 - UP | HTTP 200 | 415ms"></span>
+        
+        <span class="up" data-timestamp="2026-10-16T11:50:00+00:00" data-status="UP" data-http-status="200" data-latency="107" data-failure="" title="2026-10-16T11:50:00+00:00 - UP | HTTP 200 | 107ms"></span>
+    </div>
+
+    
+</div>
+
+<div class="legend">
+    <div class="legend-item" title="Site is accessible (UP) or behind expected bot protection (PROTECTED)">
+        <div class="legend-color up"></div>
+        <span>Up / Protected</span>
+    </div>
+    <div class="legend-item" title="1 check failed in 5-minute window">
+        <div class="legend-color degraded"></div>
+        <span>Degraded</span>
+    </div>
+    <div class="legend-item" title="2+ failures, unexpected response, or timeout">
+        <div class="legend-color down"></div>
+        <span>Down / Timeout</span>
+    </div>
+    <div class="legend-item" title="No recent check data">
+        <div class="legend-color unknown"></div>
+        <span>Unknown</span>
+    </div>
+</div>
+
+<div style="margin-top: 1rem; font-size: 0.75rem; color: #6e7681; line-height: 1.6;">
+    
+    <strong>How to read:</strong> Green = site is UP or behind expected protection (PROTECTED).
+    Yellow = 1 check failed in 5-minute window (DEGRADED).
+    Red = 2+ failures (DOWN), unexpected response, or timed out (TIMEOUT).
+    Gray = no recent data (UNKNOWN).
+    Timeline shows last 4 hours (newest right).
+    
+</div>
+
+<!-- Log Preview Modal -->
+<div id="logModal" class="log-modal">
+    <div class="log-modal-content">
+        <div class="log-modal-header">
+            <h3 id="logModalTitle">Recent Log Entries</h3>
+            <button class="log-modal-close" onclick="closeLogModal()">&times;</button>
+        </div>
+        <div class="log-modal-body">
+            <div id="logModalLoading" class="log-modal-loading">Loading...</div>
+            <div id="logModalError" class="log-modal-error" style="display: none;"></div>
+            <table id="logModalTable" class="log-modal-table" style="display: none;">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Status</th>
+                        <th>HTTP</th>
+                        <th>Latency</th>
+                        <th>Reason</th>
+                    </tr>
+                </thead>
+                <tbody id="logModalTableBody">
+                </tbody>
+            </table>
+        </div>
+        <div class="log-modal-footer">
+            <a id="logModalFullLog" href="#" target="_blank" rel="noopener noreferrer" class="log-modal-btn">View full log</a>
+            <div id="logModalArchives" class="log-modal-archives" style="display: none;">
+                <span class="log-modal-archives-label">Archives:</span>
+                <div id="logModalArchivesList" class="log-modal-archives-list"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+
+        <div class="footer">
+            
+            <div class="footer-links">
+                
+                <a href="/dmca.html" target="_blank" rel="noopener noreferrer">DMCA</a>
+                
+            </div>
+            
+            <p>Generated at 2026-10-16T11:52:42.816983+00:00 | US-East-Primary | <a href="https://github.com/BrianZbr/flatmonitor" target="_blank" rel="noopener noreferrer" style="color: inherit; text-decoration: none;">built with FlatMonitor</a></p>
+        </div>
+    </div>
+    
+<script>
+let currentArchiveLinks = [];
+
+// Add event listener for log link buttons
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.log-link').forEach(button => {
+        button.addEventListener('click', function() {
+            const domainId = this.dataset.domainId;
+            const logPath = this.dataset.logPath;
+            const domainUrl = this.dataset.domainUrl;
+            const archiveLinks = JSON.parse(this.dataset.archiveLinks || '[]');
+            openLogModal(domainId, logPath, domainUrl, archiveLinks);
+        });
+    });
+});
+
+function openLogModal(domainId, logPath, domainUrl, archiveLinks) {
+    const modal = document.getElementById('logModal');
+    const title = document.getElementById('logModalTitle');
+    const loading = document.getElementById('logModalLoading');
+    const error = document.getElementById('logModalError');
+    const table = document.getElementById('logModalTable');
+    const tbody = document.getElementById('logModalTableBody');
+    const fullLogLink = document.getElementById('logModalFullLog');
+    const archivesSection = document.getElementById('logModalArchives');
+    const archivesList = document.getElementById('logModalArchivesList');
+
+    // Store archive links for potential retry
+    currentArchiveLinks = archiveLinks || [];
+
+    title.textContent = 'Recent Log Entries - ' + domainUrl;
+    loading.style.display = 'block';
+    error.style.display = 'none';
+    table.style.display = 'none';
+    fullLogLink.href = logPath;
+
+    // Populate archive links
+    if (currentArchiveLinks.length > 0) {
+        archivesList.innerHTML = currentArchiveLinks.map(archive =>
+            `<a href="${archive.url}" target="_blank" rel="noopener noreferrer" class="log-modal-archive-link">${archive.date}</a>`
+        ).join('');
+        archivesSection.style.display = 'block';
+    } else {
+        archivesSection.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+
+    fetch(logPath)
+        .then(response => {
+            if (!response.ok) throw new Error('Failed to load log');
+            return response.text();
+        })
+        .then(text => {
+            // Validate log format version
+            const versionLine = text.split('\n').find(line => line.startsWith('# version:'));
+            if (!versionLine) {
+                throw new Error('Unsupported log format: no version header found');
+            }
+            const version = parseInt(versionLine.split(':')[1].trim());
+            if (version !== 2) {
+                throw new Error(`Unsupported log format version: ${version}. Expected version 2.`);
+            }
+            
+            const lines = text.trim().split('\n').filter(line => line.length > 0 && !line.startsWith('#'));
+            if (lines.length === 0) {
+                throw new Error('No log data available');
+            }
+
+            // Skip CSV header row (first row after comments)
+            const dataLines = lines.slice(1);
+            const recentLines = dataLines.slice(-12);
+            
+            // Format timestamp as time ago
+            const formatTimeAgo = (timestamp) => {
+                const date = new Date(timestamp);
+                if (isNaN(date.getTime())) return timestamp;
+                const now = new Date();
+                const diff = Math.floor((now - date) / 1000);
+                if (diff < 60) return diff + 's ago';
+                if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+                if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+                return Math.floor(diff / 86400) + 'd ago';
+            };
+            
+            tbody.innerHTML = '';
+            recentLines.forEach(line => {
+                const parts = line.split(',');
+                if (parts.length >= 5) {
+                    const timestamp = parts[0];
+                    const timeAgo = formatTimeAgo(timestamp);
+                    const status = parts[3];
+                    const httpStatus = parts[4];
+                    const latency = parts[5] ? parts[5] + 'ms' : '';
+                    const failure = parts[6] || '';
+
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = `
+                        <td>${timeAgo}</td>
+                        <td><span class="log-modal-status ${status.toLowerCase()}">${status}</span></td>
+                        <td>${httpStatus}</td>
+                        <td>${latency}</td>
+                        <td>${failure}</td>
+                    `;
+                    tbody.appendChild(tr);
+                }
+            });
+
+            loading.style.display = 'none';
+            table.style.display = 'table';
+        })
+        .catch(err => {
+            loading.style.display = 'none';
+            error.style.display = 'block';
+
+            // Check if this is a CORS error
+            const isCorsError = err.message.includes('Failed to fetch') ||
+                                err.message.includes('NetworkError') ||
+                                err.message.includes('CORS');
+
+            if (isCorsError || err.name === 'TypeError') {
+                error.innerHTML = `
+                    <div style="margin-bottom: 0.5rem;">Unable to preview logs due to browser security (CORS).</div>
+                    <div style="font-size: 0.85rem; color: #8b949e;">
+                        This happens when viewing the dashboard locally. Use the "View full log" button below to access logs directly.
+                    </div>
+                `;
+            } else {
+                error.textContent = 'Error: ' + err.message;
+            }
+        });
+}
+
+function closeLogModal() {
+    const modal = document.getElementById('logModal');
+    modal.style.display = 'none';
+}
+
+// Close modal on ESC key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeLogModal();
+    }
+});
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('logModal');
+    if (event.target === modal) {
+        closeLogModal();
+    }
+}
+</script>
+
+    <script>
+        // Localize timestamps to browser timezone with AM/PM format
+        document.addEventListener('DOMContentLoaded', function() {
+            const formatLocalTime = (isoString) => {
+                if (!isoString) return '';
+                try {
+                    const date = new Date(isoString);
+                    if (isNaN(date.getTime())) return '';
+                    return date.toLocaleTimeString(undefined, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    }).toLowerCase().replace(/\s/g, ''); // "7:30 PM" -> "07:30pm"
+                } catch (e) {
+                    return '';
+                }
+            };
+
+            const localizeTimestamp = (isoString) => {
+                if (!isoString || isoString === 'never' || isoString === 'unknown') return isoString;
+                try {
+                    const date = new Date(isoString);
+                    if (isNaN(date.getTime())) return isoString;
+                    return date.toLocaleString(undefined, {
+                        month: 'short',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: true
+                    });
+                } catch (e) {
+                    return isoString;
+                }
+            };
+
+            // Convert footer generation timestamp
+            // WARNING: Use innerHTML not textContent to preserve footer links
+            const footerTime = document.querySelector('.footer p');
+            if (footerTime) {
+                const html = footerTime.innerHTML;
+                const match = html.match(/Generated at ([^|]+)/);
+                if (match) {
+                    const localTime = localizeTimestamp(match[1].trim());
+                    footerTime.innerHTML = html.replace(match[1], ' ' + localTime + ' ');
+                }
+            }
+
+            // Convert timeline bucket timestamps
+            document.querySelectorAll('[data-timestamp]').forEach(span => {
+                const isoTime = span.getAttribute('data-timestamp');
+                const localTime = formatLocalTime(isoTime);
+                const status = span.getAttribute('data-status');
+                const httpStatus = span.getAttribute('data-http-status');
+                const latency = span.getAttribute('data-latency');
+                const failure = span.getAttribute('data-failure');
+
+                if (localTime && status) {
+                    let tooltip = localTime + ' - ' + status;
+                    if (httpStatus) tooltip += ' | HTTP ' + httpStatus;
+                    if (latency) tooltip += ' | ' + latency + 'ms';
+                    if (failure) tooltip += ' | ' + failure;
+                    span.setAttribute('title', tooltip);
+                }
+            });
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||(a.contentWindow&&a.contentWindow.document);if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'a4b6e0d57cfe7212',t:'MTc5MjE1MTc2NQ=='};var a=document.createElement('script');a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

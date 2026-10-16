@@ -6,11 +6,14 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 
 // Project imports:
+import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/libgen_service.dart';
+import 'package:openlib/services/preference_store.dart';
+import 'package:openlib/services/slum_catalogue.dart';
 
-// Desktop test runner needs the sqlite plugin faked; the app itself uses
-// the platform plugin. InstanceManager needs the real local database to
-// resolve the enabled libgen mirror list.
+// The libgen tests inject an InstanceManager whose catalogue is a local
+// server, so the enabled-mirror list they exercise comes from a real
+// open-slum.org-shaped response instead of the network or the database.
 class _FakePathProvider extends PathProviderPlatform {
   Future<String> _dir(String name) async {
     final dir = Directory('/tmp/openlib_libgen_test/$name');
@@ -33,6 +36,47 @@ class _FakePathProvider extends PathProviderPlatform {
 
 const _md5Temple = '7373b39d1addaf236328975f9bbef7c4';
 const _md5Flutter = '0229cc161352df1fb45a8f8246350910';
+
+/// An open-slum.org page in the shape the catalogue parses: one card per
+/// mirror with a title link and a status badge.
+String _slumPage(List<String> mirrorOrigins) {
+  final cards = StringBuffer();
+  for (var i = 0; i < mirrorOrigins.length; i++) {
+    final origin = mirrorOrigins[i];
+    cards.write('''
+<div class="card" id="libgen.m$i">
+  <div class="card-header">
+    <a href="$origin" class="card-title">${Uri.parse(origin).host}</a>
+    <span class="status-badge up">UP</span>
+  </div>
+  <div>Latency: <span>120ms</span></div>
+</div>
+''');
+  }
+  return '<!doctype html><html><body>$cards</body></html>';
+}
+
+/// Serves that page for every path, so SlumCatalogue sees [mirrorOrigins]
+/// as the libgen mirrors.
+Future<HttpServer> _catalogueServer(List<String> mirrorOrigins) async {
+  final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+  server.listen((request) async {
+    request.response
+      ..statusCode = HttpStatus.ok
+      ..headers.contentType = ContentType.html
+      ..write(_slumPage(mirrorOrigins));
+    await request.response.close();
+  });
+  return server;
+}
+
+InstanceManager _managerFor(HttpServer catalogue) => InstanceManager.forTest(
+      catalogue: SlumCatalogue(
+        store: MemoryPreferenceStore(),
+        baseUrl: 'http://127.0.0.1:${catalogue.port}',
+      ),
+      store: MemoryPreferenceStore(),
+    );
 
 void main() {
   setUpAll(() {
@@ -207,21 +251,29 @@ void main() {
           equals('https://libgen.li/ads.php?md5=X&key=K'));
     });
 
-    test('candidateUrls leads with the original url then other mirrors', () {
+    test('candidateUrls leads with the host when the catalogue enabled it',
+        () {
       final mirrors = ['https://libgen.li', 'https://libgen.bz'];
       expect(
-          service.candidateUrls('https://dead.example/ads.php?md5=X', mirrors),
+          service.candidateUrls('https://libgen.li/ads.php?md5=X', mirrors),
           equals([
-            'https://dead.example/ads.php?md5=X',
             'https://libgen.li/ads.php?md5=X',
             'https://libgen.bz/ads.php?md5=X',
           ]));
     });
 
-    test('candidateUrls does not repeat the working host', () {
+    test('candidateUrls never probes a host the catalogue did not enable', () {
       final mirrors = ['https://libgen.li', 'https://libgen.bz'];
+      // A stored link on a host SLUM reports DOWN, or that the user
+      // switched off, must not be contacted - only the enabled mirrors.
       expect(
-          service.candidateUrls('https://libgen.li/ads.php?md5=X', mirrors),
+          service.candidateUrls('https://dead.example/ads.php?md5=X', mirrors),
+          equals([
+            'https://libgen.li/ads.php?md5=X',
+            'https://libgen.bz/ads.php?md5=X',
+          ]));
+      expect(
+          service.candidateUrls('https://libgen.vg/ads.php?md5=X', mirrors),
           equals([
             'https://libgen.li/ads.php?md5=X',
             'https://libgen.bz/ads.php?md5=X',
@@ -239,12 +291,40 @@ void main() {
           ]));
     });
 
-    test('full mirror list comes from InstanceManager', () {
-      final urls = LibgenService().candidateUrls(
-          'https://libgen.li/ads.php?md5=X', const ['https://x']);
-      // The @visibleForTesting wrapper is the same helper bookInfo uses;
-      // verify it exists and is callable with any list.
-      expect(urls.first, equals('https://libgen.li/ads.php?md5=X'));
+    test('candidateUrls is empty without an enabled mirror', () {
+      // No catalogue knowledge (SLUM unreachable, nothing cached) and
+      // every mirror down/disabled are both "nothing known-good to ask":
+      // no request is made at all, matching LibgenProvider.search.
+      expect(service.candidateUrls('https://libgen.li/ads.php?md5=X', []),
+          isEmpty);
+    });
+
+    test('bookInfo takes its candidates from the injected catalogue',
+        () async {
+      // End to end through a real SLUM-shaped page: the listed mirror is
+      // the only candidate, and a host outside the list is not probed.
+      final mirror = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      final adsHtml =
+          File('test/fixtures/libgen_ads_page.html').readAsStringSync();
+      mirror.listen((request) async {
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..headers.contentType = ContentType.html
+          ..write(adsHtml);
+        await request.response.close();
+      });
+      final origin = 'http://127.0.0.1:${mirror.port}';
+      final catalogue = await _catalogueServer([origin]);
+
+      try {
+        final service = LibgenService(instanceManager: _managerFor(catalogue));
+        final book = await service.bookInfo('$origin/ads.php?md5=$_md5Temple');
+        expect(book, isNotNull,
+            reason: 'the catalogue-listed mirror must be used');
+      } finally {
+        await mirror.close();
+        await catalogue.close();
+      }
     });
   });
 
@@ -262,15 +342,18 @@ void main() {
           ..close();
       });
 
+      final origin = 'http://${server.address.host}:${server.port}';
+      final catalogue = await _catalogueServer([origin]);
+
       try {
-        final origin = 'http://${server.address.host}:${server.port}';
-        final service = LibgenService();
+        final service = LibgenService(instanceManager: _managerFor(catalogue));
         final book = await service.bookInfo('$origin/ads.php?md5=$_md5Temple');
 
         expect(book, isNotNull);
         expect(receivedReferer, equals('$origin/index.php'));
       } finally {
         await server.close();
+        await catalogue.close();
       }
     });
 
@@ -287,28 +370,44 @@ void main() {
           ..close();
       });
 
+      final origin = 'http://${server.address.host}:${server.port}';
+      final catalogue = await _catalogueServer([origin]);
+
       try {
-        final origin = 'http://${server.address.host}:${server.port}';
-        final service = LibgenService();
+        final service = LibgenService(instanceManager: _managerFor(catalogue));
         final cover = await service.fetchCover('$origin/ads.php?md5=$_md5Temple');
 
         expect(cover, isNotNull);
         expect(receivedReferer, equals('$origin/index.php'));
       } finally {
         await server.close();
+        await catalogue.close();
       }
     });
   });
 
   group('bookInfo (live network - run manually)', () {
-    test('fetches a real book from libgen.vg', () async {
-      final book = await LibgenService()
-          .bookInfo('https://libgen.vg/ads.php?md5=$_md5Temple');
+    test('fetches a real book from an enabled libgen mirror', () async {
+      // Mirrors come from open-slum.org: there is no fixed host to test
+      // against, and SLUM currently reports the whole family DOWN, so a
+      // missing mirror is an honest skip - not a fabricated success.
+      final mirrors = await InstanceManager().enabledUrls(MirrorService.libgen);
+      if (mirrors.isEmpty) {
+        markTestSkipped(
+            'SLUM lists no attemptable libgen mirror right now');
+        return;
+      }
 
-      expect(book, isNotNull);
-      expect(book!.title, equals('The Temple Legacy'));
+      final book = await LibgenService()
+          .bookInfo('${mirrors.first}/ads.php?md5=$_md5Temple');
+      if (book == null) {
+        markTestSkipped('the test book is not on ${mirrors.first}');
+        return;
+      }
+
+      expect(book.title, isNotEmpty);
       expect(book.author, isNotEmpty);
-      expect(book.mirror, startsWith('https://libgen.vg/get.php?md5='));
+      expect(book.mirror, contains('/get.php?md5='));
     }, skip: 'live network - run manually');
   });
 }

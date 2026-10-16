@@ -75,10 +75,12 @@ class BookInfoData extends BookData {
 // ====================================================================
 
 class AnnasArchieve {
-  static const String baseUrl = "https://annas-archive.org"; // Fallback default
+  AnnasArchieve({Dio? dio, InstanceManager? instanceManager})
+      : dio = dio ?? Dio(),
+        _instanceManager = instanceManager ?? InstanceManager();
 
-  final Dio dio = Dio();
-  final InstanceManager _instanceManager = InstanceManager();
+  final Dio dio;
+  final InstanceManager _instanceManager;
   final AppLogger _logger = AppLogger();
 
   // Optimized retry settings for faster response
@@ -104,57 +106,78 @@ class AnnasArchieve {
     "upgrade-insecure-requests": "1",
   };
 
-  // Check for Cloudflare/DDoS block in response
-  bool _isCloudflareBlocked(Response response) {
-    // Check cf-mitigated header
-    if (response.headers.value("cf-mitigated") == "challenge") {
+  // True when a response is a bot-protection interstitial rather than the
+  // page we asked for.
+  //
+  // Two families of signal:
+  //  * Cloudflare's own `cf-mitigated: challenge` header - conclusive;
+  //  * the interstitials' own text. Markers that also occur on ordinary
+  //    pages ("cloudflare", "please wait") only count on a status code a
+  //    challenge actually uses (403/503), so a real search result page
+  //    that happens to mention Cloudflare is not mistaken for a block.
+  bool _isChallengeResponse(Response response) {
+    if (response.headers.value('cf-mitigated')?.toLowerCase() == 'challenge') {
       _logger.warning('DDoS protection detected: cf-mitigated header',
           tag: 'AnnasArchive');
       return true;
     }
 
-    // Check response body for Cloudflare and other DDoS protection markers
-    final body = response.data?.toString().toLowerCase() ?? "";
-    final markers = [
-      "checking your browser",
-      "cloudflare",
-      "cf-browser-verification",
-      "just a moment",
-      "enable javascript and cookies",
-      "ray id:",
-      "attention required",
-      "ddos protection",
-      "ddos-guard",
-      "ddos guard",
-      "checking if the site connection is secure",
-      "needs to review the security of your connection",
-      "security check",
-      "verifying you are human",
-      "please wait",
-      "browser check",
-    ];
+    final status = response.statusCode ?? 0;
+    final body = response.data?.toString().toLowerCase() ?? '';
+    if (body.isEmpty) return false;
 
-    for (final marker in markers) {
+    final title =
+        RegExp(r'<title[^>]*>([^<]*)</title>').firstMatch(body)?.group(1)?.trim() ??
+            '';
+    const challengeTitles = [
+      'just a moment',
+      'ddos-guard',
+      'checking your browser',
+      'attention required',
+    ];
+    if (challengeTitles.any(title.startsWith)) {
+      _logger.warning('DDoS protection detected: challenge title',
+          tag: 'AnnasArchive', metadata: {'title': title});
+      return true;
+    }
+
+    // Unambiguous markers of a challenge document, whatever the status.
+    const hardMarkers = [
+      'cf-browser-verification',
+      'cf-challenge-running',
+      '/cdn-cgi/challenge-platform/',
+      'check.ddos-guard.net',
+      'data-ddg-origin',
+      '__ddg',
+    ];
+    for (final marker in hardMarkers) {
       if (body.contains(marker)) {
         _logger.warning('DDoS protection detected in response body',
             tag: 'AnnasArchive',
             metadata: {
               'marker': marker,
               'responseLength': body.length,
-              'statusCode': response.statusCode,
-              'headers': response.headers.map.toString(),
+              'statusCode': status,
             });
-
-        // Log first 500 chars of response for debugging
-        final preview = response.data?.toString().substring(
-            0,
-            response.data.toString().length > 500
-                ? 500
-                : response.data.toString().length);
-        _logger.debug('Response preview',
-            tag: 'AnnasArchive', metadata: {'preview': preview});
-
         return true;
+      }
+    }
+
+    if (status == 403 || status == 503) {
+      const softMarkers = [
+        'checking your browser',
+        'enable javascript and cookies',
+        'needs to review the security of your connection',
+        'verifying you are human',
+        'browser check',
+        'security check',
+      ];
+      for (final marker in softMarkers) {
+        if (body.contains(marker)) {
+          _logger.warning('DDoS protection suspected (HTTP $status)',
+              tag: 'AnnasArchive', metadata: {'marker': marker});
+          return true;
+        }
       }
     }
     return false;
@@ -173,29 +196,34 @@ class AnnasArchieve {
   ) async {
     // Anna's Archive requests must only retry across Anna's mirrors -
     // libgen/zlib mirrors 404 on AA paths and waste every retry slot.
-    final instances = await _instanceManager
-        .getEnabledInstancesByService(MirrorService.annasArchive);
+    // The list comes from open-slum.org; down mirrors are already
+    // filtered out and the easiest (least protected) mirror comes first.
+    final urls =
+        await _instanceManager.enabledUrls(MirrorService.annasArchive);
 
-    if (instances.isEmpty) {
-      // Use default if no instances are enabled
-      return await requestFn(baseUrl);
+    if (urls.isEmpty) {
+      _logger.error('No attemptable Anna\'s Archive mirror', tag: 'AnnasArchive');
+      throw await _handleErrorAsync(
+        Exception('No Anna\'s Archive mirror is available right now'),
+      );
     }
 
     Exception? lastException;
     String? lastUsedHost;
 
-    // Try each instance - they should already be sorted by speed from auto-ranking
-    for (int i = 0; i < instances.length; i++) {
-      final instance = instances[i];
-      lastUsedHost = instance.baseUrl;
+    // Try each mirror - they are already ordered by open-slum.org data
+    // (protection difficulty, then SLUM latency).
+    for (int i = 0; i < urls.length; i++) {
+      final baseUrl = urls[i];
+      lastUsedHost = baseUrl;
 
-      // Fewer retries for subsequent instances (they're slower)
+      // Fewer retries for subsequent mirrors (they're slower)
       final retriesForThis = i == 0 ? maxRetriesPerInstance : 0;
 
       for (int attempt = 0; attempt <= retriesForThis; attempt++) {
         try {
           // Apply timeout to the request function
-          final result = await requestFn(instance.baseUrl).timeout(
+          final result = await requestFn(baseUrl).timeout(
             const Duration(seconds: requestTimeoutSeconds),
             onTimeout: () {
               throw TimeoutException(
@@ -203,16 +231,16 @@ class AnnasArchieve {
             },
           );
 
-          // Success - log which instance worked
+          // Success - log which mirror worked
           _logger.debug('Request succeeded on attempt ${attempt + 1}',
-              tag: 'AnnasArchive', metadata: {'instance': instance.name});
+              tag: 'AnnasArchive', metadata: {'mirror': baseUrl});
 
           return result;
         } catch (e) {
           lastException = e is Exception ? e : Exception(e.toString());
 
           _logger.debug('Instance failed', tag: 'AnnasArchive', metadata: {
-            'instance': instance.name,
+            'mirror': baseUrl,
             'attempt': attempt + 1,
             'error': e.toString().substring(
                 0, (e.toString().length > 50) ? 50 : e.toString().length),
@@ -247,7 +275,35 @@ class AnnasArchieve {
       ...defaultDioHeaders,
       if (headers != null) ...headers,
     };
-    return await dio.get(url, options: Options(headers: requestHeaders));
+    // Accept any status: a Cloudflare 403 challenge must reach
+    // [_isChallengeResponse] and the solver instead of dying as a raw
+    // DioException before the challenge logic ever runs. Non-challenge
+    // error statuses are turned back into a network failure by
+    // [_ensureResponseStatus].
+    return await dio.get(
+      url,
+      options: Options(
+        headers: requestHeaders,
+        validateStatus: (_) => true,
+      ),
+    );
+  }
+
+  /// Turns a non-challenge HTTP error status back into a network
+  /// failure so [_requestWithRetry] moves on to the next mirror (and
+  /// the caller never treats e.g. a 404 or a plain "link expired" 403
+  /// as an empty-but-successful result).
+  void _ensureResponseStatus(Response response, String url) {
+    final status = response.statusCode ?? 0;
+    if (status >= 200 && status < 300) return;
+    _logger.warning('Anna\'s Archive returned an error status',
+        tag: 'AnnasArchive',
+        metadata: {'status': status, 'url': url, 'length': response.data?.toString().length ?? 0});
+    throw DioException.badResponse(
+      statusCode: status,
+      requestOptions: response.requestOptions,
+      response: response,
+    );
   }
 
   String getMd5(String url) {
@@ -672,7 +728,7 @@ class AnnasArchieve {
         });
 
         // Check for Cloudflare block in the response
-        if (_isCloudflareBlocked(response)) {
+        if (_isChallengeResponse(response)) {
           _logger.warning('Cloudflare/DDoS block detected in search response',
               tag: 'AnnasArchive');
           throw NetworkError(
@@ -686,6 +742,10 @@ class AnnasArchieve {
           );
         }
 
+        // Not a challenge: a real error status (404, a plain "link
+        // expired" 403, 5xx) must fail this attempt instead of parsing
+        // into a silently-empty book list.
+        _ensureResponseStatus(response, encodedURL);
         return _parser(response.data, fileType, currentBaseUrl);
       });
 
@@ -812,7 +872,7 @@ class AnnasArchieve {
         final response = await _makeRequest(adjustedUrl);
 
         // Check for Cloudflare block in the response
-        if (_isCloudflareBlocked(response)) {
+        if (_isChallengeResponse(response)) {
           _logger.warning(
               'Cloudflare/DDoS block detected in book info response',
               tag: 'AnnasArchive');
@@ -827,6 +887,10 @@ class AnnasArchieve {
           );
         }
 
+        // Not a challenge: a real error status must fail this attempt
+        // rather than be parsed into a null (handled below) or an
+        // error page mistaken for book details.
+        _ensureResponseStatus(response, adjustedUrl);
         BookInfoData? data =
             await _bookInfoParser(response.data, adjustedUrl, currentBaseUrl);
         if (data != null) {

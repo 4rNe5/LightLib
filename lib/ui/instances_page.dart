@@ -1,20 +1,23 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
-import 'package:openlib/l10n/app_localizations.dart';
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
 import 'package:openlib/services/instance_manager.dart';
-import 'package:openlib/services/slum_health_service.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/page_title_widget.dart';
 
-/// Manages every mirror the app can talk to, grouped by service. Each
-/// mirror can be toggled, reordered within its group, and health-
-/// checked - both directly (ping) and via open-slum.org, which tracks
-/// Cloudflare-protected mirrors the app itself often cannot reach.
+/// Settings > Mirrors.
+///
+/// Every mirror the app can talk to, per service, exactly as
+/// open-slum.org reports it - the app hardcodes no mirror URLs. Each row
+/// shows SLUM's status, the protection gate and its latency, and can be
+/// switched off. Ordering is automatic by default (easiest protection
+/// first, then fastest); flipping the switch to manual lets the user
+/// drag the order themselves. A mirror SLUM reports DOWN is shown greyed
+/// out and is never contacted.
 class InstancesPage extends ConsumerStatefulWidget {
   const InstancesPage({super.key});
 
@@ -23,539 +26,269 @@ class InstancesPage extends ConsumerStatefulWidget {
 }
 
 class _InstancesPageState extends ConsumerState<InstancesPage> {
-  final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _urlController = TextEditingController();
-
-  /// Instance id -> measured ping in ms (null = unreachable).
-  Map<String, int?> _responseTimes = {};
-
-  /// Mirror host -> open-slum.org health.
-  Map<String, SlumHealth> _slumHealth = const {};
-
-  bool _isPinging = false;
-  bool _isFetchingSlum = false;
-
-  static const _serviceOrder = [
-    MirrorService.annasArchive,
-    MirrorService.libgen,
-    MirrorService.zlibrary,
-  ];
-
-  static const _serviceTitles = {
-    MirrorService.annasArchive: "Anna's Archive",
-    MirrorService.libgen: 'Library Genesis',
-    MirrorService.zlibrary: 'Z-Library',
-  };
-
-  static const _serviceSubtitles = {
-    MirrorService.annasArchive: 'Main source for reading and downloads',
-    MirrorService.libgen: 'Additional search results',
-    MirrorService.zlibrary: 'Additional search results',
-  };
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _urlController.dispose();
-    super.dispose();
-  }
+  bool _refreshing = false;
 
   @override
   void initState() {
     super.initState();
-    // SLUM data is cheap and static; load once per visit.
-    _loadSlumHealth();
-  }
-
-  Future<void> _loadSlumHealth() async {
-    if (_isFetchingSlum) return;
-    setState(() => _isFetchingSlum = true);
-    final health = await SlumHealthService().fetchHealth();
-    if (!mounted) return;
-    setState(() {
-      _slumHealth = health;
-      _isFetchingSlum = false;
-    });
-  }
-
-  Future<void> _pingAllInstances() async {
-    if (_isPinging) return;
-
-    setState(() {
-      _isPinging = true;
-      _responseTimes = {};
-    });
-
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final rankL10n = AppLocalizations.of(context);
-    try {
-      final manager = ref.read(instanceManagerProvider);
-      final results = await manager.rankInstancesBySpeed();
-
-      if (!mounted) return;
-      setState(() {
-        _responseTimes = results;
-        _isPinging = false;
-      });
-      ref.invalidate(archiveInstancesProvider);
-      if (mounted) {
-        scaffoldMessenger.showSnackBar(
-          SnackBar(
-            content: Text(rankL10n.mirrorsTestedRanked),
-            duration: const Duration(seconds: 2),
-          ),
-        );
+    // The manager persists the mode; the switch must show the value the
+    // manager will actually apply, or a restart in manual mode displays
+    // "Automatic mirror order" while using the user's pinned order.
+    ref.read(instanceManagerProvider).isAutoMode().then((auto) {
+      if (mounted && auto != ref.read(instanceAutoModeProvider)) {
+        ref.read(instanceAutoModeProvider.notifier).state = auto;
       }
+    });
+  }
+
+  static const _serviceOrder = [
+    MirrorService.libgen,
+    MirrorService.zlibrary,
+    MirrorService.welib,
+    MirrorService.annasArchive,
+  ];
+
+  static const _serviceTitles = {
+    MirrorService.libgen: 'Library Genesis',
+    MirrorService.zlibrary: 'Z-Library',
+    MirrorService.welib: 'WeLib',
+    MirrorService.annasArchive: "Anna's Archive",
+  };
+
+  static const _serviceSubtitles = {
+    MirrorService.libgen: 'Fast, challenge-free downloads when a mirror is up',
+    MirrorService.zlibrary: 'DiamWall mirrors solve headlessly',
+    MirrorService.welib: 'Cloudflare-gated search, open book pages',
+    MirrorService.annasArchive: 'Reading, details and downloads',
+  };
+
+  Future<void> _refresh() async {
+    if (_refreshing) return;
+    setState(() => _refreshing = true);
+    final messenger = ScaffoldMessenger.of(context);
+    try {
+      final result = await ref.read(instanceManagerProvider).refresh();
+      if (!mounted) return;
+      for (final service in _serviceOrder) {
+        ref.invalidate(serviceInstancesProvider(service));
+      }
+      if (!result.hasMirrorList) {
+        // Nothing is known - saying "up to date" would claim the empty
+        // list is SLUM's answer.
+        messenger.showSnackBar(SnackBar(
+          content: const Text(
+              'Could not reach open-slum.org - no mirror list available'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ));
+        return;
+      }
+      messenger.showSnackBar(SnackBar(
+        content: Text(result.changes.isEmpty
+            ? 'Mirror list is up to date'
+            : 'Mirror list updated: ${result.changes.length} change(s)'),
+        duration: const Duration(seconds: 2),
+      ));
     } catch (e) {
       if (!mounted) return;
-      setState(() => _isPinging = false);
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-            content: Text(rankL10n.testingFailed('$e')),
-            backgroundColor: Theme.of(context).colorScheme.error),
-      );
+      messenger.showSnackBar(SnackBar(
+        content: Text('Refresh failed: $e'),
+        backgroundColor: Theme.of(context).colorScheme.error,
+      ));
+    } finally {
+      if (mounted) setState(() => _refreshing = false);
     }
   }
 
-  void _showAddInstanceDialog(MirrorService service) {
-    _nameController.clear();
-    _urlController.clear();
-    var selectedService = service;
-    final dialogL10n = AppLocalizations.of(context);
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) => AlertDialog(
-            title: Text(AppLocalizations.of(context).addCustomMirror),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: dialogL10n.nameLabel,
-                    hintText: dialogL10n.nameHint,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                DropdownButtonFormField<MirrorService>(
-                  initialValue: selectedService,
-                  decoration: InputDecoration(labelText: dialogL10n.serviceLabel),
-                  items: [
-                    for (final entry in _serviceTitles.entries)
-                      DropdownMenuItem(
-                        value: entry.key,
-                        child: Text(entry.value),
-                      ),
-                  ],
-                  onChanged: (value) =>
-                      setDialogState(() => selectedService = value!),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _urlController,
-                  decoration: InputDecoration(
-                    labelText: dialogL10n.urlLabel,
-                    hintText: dialogL10n.urlHint,
-                  ),
-                  keyboardType: TextInputType.url,
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text(dialogL10n.cancel),
-              ),
-              TextButton(
-                onPressed: () async {
-                  final name = _nameController.text.trim();
-                  final url = _urlController.text.trim();
-
-                  if (name.isEmpty || url.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(dialogL10n.pleaseFillAllFields)),
-                    );
-                    return;
-                  }
-
-                  final uri = Uri.tryParse(url);
-                  if (uri == null ||
-                      (uri.scheme != 'http' && uri.scheme != 'https') ||
-                      uri.host.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(dialogL10n.enterValidUrl),
-                      ),
-                    );
-                    return;
-                  }
-
-                  final navigator = Navigator.of(context);
-                  final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-                  await ref
-                      .read(instanceManagerProvider)
-                      .addInstance(name, url, service: selectedService);
-                  ref.invalidate(archiveInstancesProvider);
-
-                  if (mounted) {
-                    if (navigator.canPop()) navigator.pop();
-                    scaffoldMessenger.showSnackBar(
-                      SnackBar(
-                          content: Text(dialogL10n.mirrorAdded)),
-                    );
-                  }
-                },
-                child: Text(dialogL10n.add),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  void _showDeleteConfirmDialog(ArchiveInstance instance) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text(AppLocalizations.of(context).deleteMirror),
-          content: Text(AppLocalizations.of(context)
-              .deleteMirrorConfirm(instance.name)),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(AppLocalizations.of(context).cancel),
-            ),
-            TextButton(
-              onPressed: () async {
-                final navigator = Navigator.of(context);
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-                final success =
-                    await ref.read(instanceManagerProvider).removeInstance(
-                          instance.id,
-                        );
-
-                if (!mounted) return;
-
-                ref.invalidate(archiveInstancesProvider);
-                navigator.pop();
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(success
-                        ? 'Mirror deleted'
-                        : 'Cannot delete default mirrors'),
-                  ),
-                );
-              },
-              child: Text(AppLocalizations.of(context).delete,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final instancesAsync = ref.watch(archiveInstancesProvider);
-    final colorScheme = Theme.of(context).colorScheme;
+    final autoMode = ref.watch(instanceAutoModeProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(AppLocalizations.of(context).manageMirrors),
-        actions: [
-          if (_isFetchingSlum)
-            const Padding(
-              padding: EdgeInsets.all(14),
-              child: SizedBox(
-                  width: 18,
-                  height: 18,
-                  child: CircularProgressIndicator(strokeWidth: 2)),
-            ),
-          IconButton(
-            icon: _isPinging
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.speed),
-            onPressed: _isPinging ? null : _pingAllInstances,
-            tooltip: AppLocalizations.of(context).testRankMirrors,
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              ref.invalidate(archiveInstancesProvider);
-              _loadSlumHealth();
-            },
-            tooltip: AppLocalizations.of(context).reloadHealthData,
-          ),
-        ],
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      appBar: AppBar(title: const TitleText('Mirrors')),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: ListView(
+          padding: const EdgeInsets.only(bottom: 32),
           children: [
-            Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: TitleText(AppLocalizations.of(context)
-                  .mirrorsAndProviders),
-            ),
-            Padding(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      'Drag to reorder priority. Toggles pick which mirrors '
-                      'the app actually searches. Health badges come from '
-                      'open-slum.org.',
-                      style:
-                          TextStyle(fontSize: 12, color: colorScheme.tertiary),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: instancesAsync.when(
-                data: (instances) {
-                  if (instances.isEmpty) {
-                    return Center(
-                        child: Text(
-                            AppLocalizations.of(context).noMirrorsAvailable));
-                  }
-                  return _buildGroupedList(context, instances);
-                },
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (error, stack) => Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.error, color: colorScheme.error, size: 48),
-                      const SizedBox(height: 16),
-                      Text(AppLocalizations.of(context)
-                          .errorLabel('$error')),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () =>
-                            ref.invalidate(archiveInstancesProvider),
-                        child: Text(AppLocalizations.of(context).retry),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _showAddInstanceDialog(MirrorService.annasArchive),
-        icon: const Icon(Icons.add),
-        label: Text(AppLocalizations.of(context).addMirror),
-      ),
-    );
-  }
-
-  Widget _buildGroupedList(
-      BuildContext context, List<ArchiveInstance> instances) {
-    return ListView(
-      children: [
-        for (final service in _serviceOrder) ...[
-          _ServiceHeader(
-            title: _serviceTitles[service]!,
-            subtitle: _serviceSubtitles[service]!,
-            onAdd: () => _showAddInstanceDialog(service),
-          ),
-          for (final instance in instances.where((i) => i.service == service))
-            _MirrorCard(
-              instance: instance,
-              pingMs: _responseTimes[instance.id],
-              hasPingData: _responseTimes.isNotEmpty,
-              slumHealth:
-                  _slumHealth[Uri.tryParse(instance.baseUrl)?.host ?? ''],
-              onToggle: (value) async {
-                await ref
-                    .read(instanceManagerProvider)
-                    .toggleInstance(instance.id, value);
-                ref.invalidate(archiveInstancesProvider);
-              },
-              onDelete: () => _showDeleteConfirmDialog(instance),
-            ),
-          const SizedBox(height: 8),
-        ],
-      ],
-    );
-  }
-}
-
-class _ServiceHeader extends StatelessWidget {
-  const _ServiceHeader(
-      {required this.title, required this.subtitle, required this.onAdd});
-
-  final String title;
-  final String subtitle;
-  final VoidCallback onAdd;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 16, 8, 4),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.bold)),
-                Text(subtitle,
-                    style:
-                        TextStyle(fontSize: 12, color: colorScheme.tertiary)),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add, size: 20),
-            onPressed: onAdd,
-            tooltip: AppLocalizations.of(context)
-                .addServiceMirror(title),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// A single mirror row: drag-free list position mirrors priority;
-/// badges show ping (measured) and SLUM (external) health.
-class _MirrorCard extends StatelessWidget {
-  const _MirrorCard({
-    required this.instance,
-    required this.pingMs,
-    required this.hasPingData,
-    required this.slumHealth,
-    required this.onToggle,
-    required this.onDelete,
-  });
-
-  final ArchiveInstance instance;
-  final int? pingMs;
-  final bool hasPingData;
-  final SlumHealth? slumHealth;
-  final ValueChanged<bool> onToggle;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final host = Uri.tryParse(instance.baseUrl)?.host ?? instance.baseUrl;
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: ListTile(
-        leading: Icon(
-          instance.enabled ? Icons.link : Icons.link_off,
-          color: instance.enabled ? colorScheme.secondary : colorScheme.outline,
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                instance.name,
-                style: const TextStyle(fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (slumHealth != null) ...[
-              const SizedBox(width: 4),
-              _SlumBadge(health: slumHealth!),
+            _buildModeCard(autoMode),
+            for (final service in _serviceOrder) ...[
+              _sectionHeader(context, service),
+              _serviceList(service, autoMode),
             ],
+            const Padding(
+              padding: EdgeInsets.fromLTRB(16, 8, 16, 24),
+              child: Text(
+                'Mirror addresses and their status come from open-slum.org '
+                'and refresh automatically. A mirror reported DOWN is never '
+                'contacted.',
+                style: TextStyle(fontSize: 12),
+              ),
+            ),
           ],
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+      ),
+    );
+  }
+
+  Widget _buildModeCard(bool autoMode) {
+    return Card(
+      margin: const EdgeInsets.fromLTRB(12, 12, 12, 4),
+      child: SwitchListTile(
+        value: autoMode,
+        onChanged: (value) async {
+          await ref.read(instanceManagerProvider).setAutoMode(value);
+          ref.read(instanceAutoModeProvider.notifier).state = value;
+          for (final service in _serviceOrder) {
+            ref.invalidate(serviceInstancesProvider(service));
+          }
+        },
+        title: const Text('Automatic mirror order'),
+        subtitle: Text(autoMode
+            ? 'Easiest protection first, then fastest. Recommended.'
+            : 'Manual: use the arrows to set your own order.'),
+        secondary: Icon(autoMode ? Icons.auto_awesome : Icons.touch_app),
+      ),
+    );
+  }
+
+  Widget _sectionHeader(BuildContext context, MirrorService service) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            _serviceTitles[service] ?? service.name,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          Text(
+            _serviceSubtitles[service] ?? '',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _serviceList(MirrorService service, bool autoMode) {
+    final async = ref.watch(serviceInstancesProvider(service));
+
+    return async.when(
+      data: (views) {
+        if (views.isEmpty) {
+          return ListTile(
+            dense: true,
+            leading: const Icon(Icons.cloud_off),
+            title: const Text('No mirrors reported'),
+            subtitle: const Text(
+                'open-slum.org has no entry (yet) or could not be reached.'),
+            trailing: IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _refresh,
+            ),
+          );
+        }
+        return Column(
           children: [
-            Text(host, style: const TextStyle(fontSize: 12)),
-            if (pingMs != null)
-              Text(
-                '$pingMs ms',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: pingMs! < 500
-                      ? Colors.green
-                      : pingMs! < 1500
-                          ? Colors.orange
-                          : Colors.red,
-                ),
-              )
-            else if (hasPingData)
-              Text(AppLocalizations.of(context).unreachable,
-                  style: TextStyle(fontSize: 11, color: colorScheme.error)),
+            for (var i = 0; i < views.length; i++)
+              _mirrorTile(service, views[i], i, views.length, autoMode),
           ],
+        );
+      },
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: Center(child: CircularProgressIndicator()),
+      ),
+      error: (error, _) => ListTile(
+        dense: true,
+        leading: const Icon(Icons.error_outline),
+        title: const Text('Could not load mirrors'),
+        subtitle: Text('$error'),
+      ),
+    );
+  }
+
+  Widget _mirrorTile(MirrorService service, InstanceView view, int index,
+      int total, bool autoMode) {
+    final site = view.site;
+    final down = site.isDown;
+
+    return Opacity(
+      opacity: down ? 0.55 : 1,
+      child: ListTile(
+        dense: true,
+        leading: _statusDot(site.status),
+        title: Text(
+          site.host,
+          style: TextStyle(
+            decoration: down ? TextDecoration.lineThrough : null,
+          ),
+        ),
+        subtitle: Text(
+          [
+            site.status.name.toUpperCase(),
+            if (site.protection != Protection.none) site.protection.label,
+            if (site.latencyMs != null) '${site.latencyMs}ms',
+            if (down) 'reported down - never contacted',
+          ].join(' · '),
+          style: const TextStyle(fontSize: 12),
         ),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Switch(
-              value: instance.enabled,
-              onChanged: onToggle,
-            ),
-            if (instance.isCustom)
+            if (!autoMode) ...[
               IconButton(
-                icon: Icon(Icons.delete, color: colorScheme.error),
-                onPressed: onDelete,
-                tooltip:
-                    AppLocalizations.of(context).deleteMirrorTooltip,
+                icon: const Icon(Icons.keyboard_arrow_up),
+                iconSize: 20,
+                tooltip: 'Move up',
+                onPressed: index == 0
+                    ? null
+                    : () async {
+                        await ref
+                            .read(instanceManagerProvider)
+                            .move(service, site.host, -1);
+                        ref.invalidate(serviceInstancesProvider(service));
+                      },
               ),
+              IconButton(
+                icon: const Icon(Icons.keyboard_arrow_down),
+                iconSize: 20,
+                tooltip: 'Move down',
+                onPressed: index == total - 1
+                    ? null
+                    : () async {
+                        await ref
+                            .read(instanceManagerProvider)
+                            .move(service, site.host, 1);
+                        ref.invalidate(serviceInstancesProvider(service));
+                      },
+              ),
+            ],
+            Switch(
+              value: view.enabled && !down,
+              onChanged: down
+                  ? null
+                  : (value) async {
+                      await ref
+                          .read(instanceManagerProvider)
+                          .setEnabled(service, site.host, value);
+                      ref.invalidate(serviceInstancesProvider(service));
+                    },
+            ),
           ],
         ),
       ),
     );
   }
-}
 
-class _SlumBadge extends StatelessWidget {
-  const _SlumBadge({required this.health});
-
-  final SlumHealth health;
-
-  @override
-  Widget build(BuildContext context) {
-    final (label, color) = switch (health.status) {
-      SlumStatus.up => ('UP', Colors.green),
-      SlumStatus.protected => ('PROTECTED', Colors.blue),
-      SlumStatus.degraded => ('DEGRADED', Colors.orange),
-      SlumStatus.down => ('DOWN', Colors.red),
-      SlumStatus.unknown => ('?', Colors.grey),
+  Widget _statusDot(SlumStatus status) {
+    final (color, icon) = switch (status) {
+      SlumStatus.up => (Colors.green, Icons.check_circle),
+      SlumStatus.degraded => (Colors.orange, Icons.error_outline),
+      SlumStatus.protected => (Colors.blue, Icons.shield),
+      SlumStatus.down => (Colors.red, Icons.cancel),
+      SlumStatus.unknown => (Colors.grey, Icons.help_outline),
     };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.2),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        label,
-        style:
-            TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: color),
-      ),
-    );
+    return Icon(icon, color: color);
   }
 }

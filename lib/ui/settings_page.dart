@@ -38,10 +38,6 @@ import 'package:openlib/state/state.dart'
         openEpubWithExternalAppProvider,
         showManualDownloadButtonProvider,
         backgroundVerificationProvider,
-        autoRankInstancesProvider,
-        instanceManagerProvider,
-        currentInstanceProvider,
-        archiveInstancesProvider,
         donationKeyProvider,
         myLibraryProvider,
         searchProviderToggles,
@@ -301,10 +297,6 @@ class SettingsPage extends ConsumerWidget {
             _SettingsSectionHeader(l10n.searchProvidersSection),
             const _SearchProvidersWidget(),
             _SettingsSectionHeader(l10n.libraryInstancesSection),
-            _SettingsCard(
-              title: l10n.archiveInstance,
-              child: _InstanceSelectorWidget(),
-            ),
             _SettingsTile(
               title: l10n.mirrorsAndProviders,
               icon: Icons.dns,
@@ -315,7 +307,6 @@ class SettingsPage extends ConsumerWidget {
                         builder: (context) => const InstancesPage()));
               },
             ),
-            const _AutoRankInstancesWidget(),
             const SizedBox(height: 20),
             _SettingsSectionHeader(l10n.appearanceSection),
             _SettingsCard(
@@ -575,248 +566,6 @@ class SettingsPage extends ConsumerWidget {
   }
 }
 
-class _InstanceSelectorWidget extends ConsumerStatefulWidget {
-  const _InstanceSelectorWidget();
-
-  @override
-  ConsumerState<_InstanceSelectorWidget> createState() =>
-      _InstanceSelectorWidgetState();
-}
-
-class _InstanceSelectorWidgetState
-    extends ConsumerState<_InstanceSelectorWidget> {
-  String? _selectedInstanceId;
-
-  @override
-  void initState() {
-    super.initState();
-    // Load selected instance after widget is mounted
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _loadSelectedInstance();
-    });
-  }
-
-  Future<void> _loadSelectedInstance() async {
-    final manager = ref.read(instanceManagerProvider);
-    final id = await manager.getSelectedInstanceId();
-    if (mounted) {
-      setState(() {
-        _selectedInstanceId = id;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final currentInstanceAsync = ref.watch(currentInstanceProvider);
-    final allInstancesAsync = ref.watch(archiveInstancesProvider);
-
-    return currentInstanceAsync.when(
-      data: (currentInstance) {
-        return allInstancesAsync.when(
-          data: (instances) {
-            final selectedId = _selectedInstanceId ?? currentInstance.id;
-
-            // Ensure selected instance is in the list (handle disabled instances)
-            final selectedInstanceExists =
-                instances.any((i) => i.id == selectedId);
-            final effectiveSelectedId =
-                selectedInstanceExists ? selectedId : currentInstance.id;
-
-            return DropdownButton<String>(
-              isExpanded: true,
-              value: effectiveSelectedId,
-              underline: const SizedBox.shrink(),
-              items: instances.map((instance) {
-                return DropdownMenuItem<String>(
-                  value: instance.id,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          instance.name,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      if (!instance.enabled)
-                        Text(
-                          ' (disabled)',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withAlpha(140),
-                          ),
-                        ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              onChanged: (String? newValue) async {
-                if (newValue == null) return;
-                // Capture context-dependent objects before async gap
-                final scaffoldMessenger = ScaffoldMessenger.of(context);
-                final instanceChangedMsg =
-                    AppLocalizations.of(context).instanceChanged;
-
-                setState(() {
-                  _selectedInstanceId = newValue;
-                });
-                final manager = ref.read(instanceManagerProvider);
-                await manager.setSelectedInstanceId(newValue);
-                ref.invalidate(currentInstanceProvider);
-
-                if (!mounted) return;
-                scaffoldMessenger.showSnackBar(
-                  SnackBar(
-                    content: Text(instanceChangedMsg),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
-              },
-            );
-          },
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => _instanceLoadError(context),
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator()),
-      error: (error, stack) => _instanceLoadError(context),
-    );
-  }
-
-  Widget _instanceLoadError(BuildContext context) {
-    return Text(
-      'Error loading instances',
-      style: TextStyle(color: Theme.of(context).colorScheme.error),
-    );
-  }
-}
-
-// Auto-rank instances widget with toggle and manual rank button
-class _AutoRankInstancesWidget extends ConsumerStatefulWidget {
-  const _AutoRankInstancesWidget();
-
-  @override
-  ConsumerState<_AutoRankInstancesWidget> createState() =>
-      _AutoRankInstancesWidgetState();
-}
-
-class _AutoRankInstancesWidgetState
-    extends ConsumerState<_AutoRankInstancesWidget> {
-  bool _isRanking = false;
-  bool _autoRankEnabled = true;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadAutoRankSetting();
-  }
-
-  Future<void> _loadAutoRankSetting() async {
-    final manager = ref.read(instanceManagerProvider);
-    final enabled = await manager.isAutoRankEnabled();
-    if (mounted) {
-      setState(() {
-        _autoRankEnabled = enabled;
-      });
-      ref.read(autoRankInstancesProvider.notifier).state = enabled;
-    }
-  }
-
-  Future<void> _toggleAutoRank(bool value) async {
-    final manager = ref.read(instanceManagerProvider);
-    await manager.setAutoRankEnabled(value);
-    if (mounted) {
-      setState(() {
-        _autoRankEnabled = value;
-      });
-      ref.read(autoRankInstancesProvider.notifier).state = value;
-    }
-  }
-
-  Future<void> _rankNow() async {
-    if (_isRanking) return;
-
-    setState(() {
-      _isRanking = true;
-    });
-
-    final scaffoldMessenger = ScaffoldMessenger.of(context);
-    final rankL10n = AppLocalizations.of(context);
-
-    try {
-      final manager = ref.read(instanceManagerProvider);
-      final results = await manager.rankInstancesBySpeed();
-
-      // Refresh the instances provider to reflect new order
-      ref.invalidate(archiveInstancesProvider);
-      ref.invalidate(currentInstanceProvider);
-
-      if (!mounted) return;
-
-      // Find the fastest instance
-      String fastestName = "Unknown";
-      int? fastestTime;
-      final instances = await manager.getInstances();
-      for (final instance in instances) {
-        final time = results[instance.id];
-        if (time != null && (fastestTime == null || time < fastestTime)) {
-          fastestTime = time;
-          fastestName = instance.name;
-        }
-      }
-
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(
-            fastestTime != null
-                ? rankL10n.rankedFastest(
-                    fastestName, '$fastestTime')
-                : rankL10n.rankingComplete,
-          ),
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } catch (e) {
-      scaffoldMessenger.showSnackBar(
-        SnackBar(
-          content: Text(rankL10n.rankingFailed(e.toString())),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isRanking = false;
-        });
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      children: [
-        _SettingsSwitchTile(
-          title: l10n.autoRankInstances,
-          subtitle: l10n.sortBySpeedOnStartup,
-          value: _autoRankEnabled,
-          onChanged: _toggleAutoRank,
-        ),
-        _SettingsTile(
-          title: l10n.rankInstancesNow,
-          icon: Icons.speed,
-          busy: _isRanking,
-          onTap: _isRanking ? null : _rankNow,
-        ),
-      ],
-    );
-  }
-}
-
 // Update settings widget with prerelease toggle and check button
 class _UpdateSettingsWidget extends StatefulWidget {
   const _UpdateSettingsWidget();
@@ -943,6 +692,11 @@ class _SearchProvidersWidget extends ConsumerWidget {
                 SearchProviderId.zlibrary,
                 'Z-Library',
                 l10n.providerZlibMirrors
+              ),
+              (
+                SearchProviderId.welib,
+                'WeLib',
+                'Cloudflare-gated search and open book pages'
               ),
             ])
               _SettingsSwitchTile(

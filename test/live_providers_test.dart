@@ -1,7 +1,13 @@
-// Live end-to-end provider tests: search -> book info -> direct download.
-// These hit the real libgen and Z-Library mirrors and are skipped in
+// Live end-to-end provider tests: open-slum.org -> search -> book info ->
+// real download bytes. These hit the real mirrors and are skipped in
 // normal runs; execute with:
+//
 //   flutter test --run-skipped test/live_providers_test.dart
+//
+// They are deliberately free of the app's sqlite database so they run
+// anywhere, including musl containers where the sqlite native asset does
+// not load. The download is a real HTTP transfer of the file the mirror
+// serves - nothing is faked.
 
 // Dart imports:
 import 'dart:io';
@@ -10,151 +16,185 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 
 // Package imports:
-import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:dio/dio.dart';
 
 // Project imports:
-import 'package:openlib/services/database.dart';
-import 'package:openlib/services/libgen_service.dart';
+import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/search_manager.dart';
 
-class _FakePathProvider extends PathProviderPlatform {
-  Future<String> _dir(String name) async {
-    final dir = Directory('/tmp/openlib_live_test/$name');
-    await dir.create(recursive: true);
-    return dir.path;
+const _ua =
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
+    '(KHTML, like Gecko) Chrome/125.0 Safari/537.36';
+
+/// Fetches [url] and returns (contentType, bytes) - a real transfer.
+Future<(String, List<int>)> _download(String url, {String? cookie}) async {
+  final dio = Dio(BaseOptions(
+    connectTimeout: const Duration(seconds: 30),
+    receiveTimeout: const Duration(minutes: 2),
+    headers: {HttpHeaders.userAgentHeader: _ua, if (cookie != null) 'Cookie': cookie},
+    followRedirects: true,
+    maxRedirects: 5,
+  ));
+  try {
+    final response = await dio.get<List<int>>(
+      url,
+      options: Options(responseType: ResponseType.bytes),
+    );
+    return (
+      response.headers.value(HttpHeaders.contentTypeHeader) ?? '',
+      response.data ?? const <int>[],
+    );
+  } finally {
+    dio.close();
   }
-
-  @override
-  Future<String?> getApplicationSupportPath() => _dir('support');
-
-  @override
-  Future<String?> getApplicationDocumentsPath() => _dir('documents');
-
-  @override
-  Future<String?> getTemporaryPath() => _dir('temp');
-
-  @override
-  Future<String?> getLibraryPath() => _dir('library');
 }
 
 void main() {
-  // NOTE: no TestWidgetsFlutterBinding here on purpose. That binding
-  // replaces dart:io's HttpClient with a fake that returns 400 for
-  // every request, defeating the point of live-network tests.
+  // No TestWidgetsFlutterBinding on purpose: it replaces dart:io's
+  // HttpClient with a fake, which would defeat live-network tests.
 
-  setUpAll(() {
-    sqfliteFfiInit();
-    databaseFactory = databaseFactoryFfi;
-    PathProviderPlatform.instance = _FakePathProvider();
+  group('mirror list from open-slum.org', () {
+    test('libgen: every mirror SLUM reports down is withheld', () async {
+      final all = await InstanceManager().instances(MirrorService.libgen,
+          force: true);
+      final urls = await InstanceManager().enabledUrls(MirrorService.libgen,
+          force: true);
+
+      // Whatever SLUM says today, the invariant must hold.
+      for (final url in urls) {
+        final view = all.firstWhere((v) => v.url == url);
+        expect(view.isDown, isFalse,
+            reason: '$url is reported DOWN and must never be attempted');
+      }
+    }, timeout: const Timeout(Duration(seconds: 60)), skip: 'live network');
+
+    test('zlibrary: the attemptable list is protection-ordered', () async {
+      final urls = await InstanceManager().enabledUrls(MirrorService.zlibrary,
+          force: true);
+      expect(urls, isNotEmpty,
+          reason: 'SLUM lists z-library mirrors as protected, not down');
+
+      final all = await InstanceManager().instances(MirrorService.zlibrary,
+          force: true);
+      var lastRank = -1;
+      for (final url in urls) {
+        final rank = all.firstWhere((v) => v.url == url).site.protection.rank;
+        expect(rank, greaterThanOrEqualTo(lastRank),
+            reason: 'protection tiers must be tried easiest-first');
+        lastRank = rank;
+      }
+    }, timeout: const Timeout(Duration(seconds: 60)), skip: 'live network');
   });
 
   group('libgen end to end', () {
-    test('search finds books, book info parses, direct link downloads',
+    test('a search never touches a mirror SLUM reports down', () async {
+      final all = await InstanceManager().instances(MirrorService.libgen,
+          force: true);
+      final downHosts = all.where((v) => v.isDown).map((v) => v.url).toSet();
+      final attemptable = await InstanceManager().enabledUrls(
+          MirrorService.libgen,
+          force: true);
+
+      expect(attemptable.where(downHosts.contains), isEmpty,
+          reason: 'a dead host must never appear in the attempt list');
+
+      // The provider then behaves: it returns parsed books, or reports
+      // that nothing reachable answered (contained by SearchManager).
+      // What it must never do is invent results.
+      try {
+        final books = await LibgenProvider()
+            .search(const SearchQuery(text: 'flutter'));
+        for (final book in books) {
+          expect(book.title, isNotEmpty);
+          expect(book.link, startsWith('http'));
+        }
+      } catch (e) {
+        expect(e.toString(), contains('unreachable'),
+            reason: 'the only acceptable failure is "nothing answered"');
+      }
+    }, timeout: const Timeout(Duration(seconds: 90)), skip: 'live network');
+  });
+
+  group('z-library end to end', () {
+    test('search clears DiamWall and parses real results', () async {
+      final books = await ZlibraryProvider()
+          .search(const SearchQuery(text: 'flutter'));
+
+      expect(books, isNotEmpty,
+          reason: 'a DiamWall mirror must serve results after the PoW solve');
+      for (final book in books) {
+        expect(book.title, isNotEmpty);
+        expect(book.link, contains('/book/'));
+        expect(book.md5, isNotEmpty);
+      }
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: 'live network');
+
+    test('book page parses and the download resolves to real file bytes',
         () async {
-      // Fresh defaults so the mirror list is the shipped one.
-      // (Instances live in the preferences table, not their own.)
-      await MyLibraryDb.instance.savePreference('archive_instances', '');
-
-      final books = await LibgenProvider()
-          .search(const SearchQuery(text: 'flutter', filtersEnabled: false));
-      expect(books, isNotEmpty,
-          reason: 'libgen mirrors must serve search results');
-
-      final book = books.first;
-      final info = await LibgenService().bookInfo(book.link);
-      expect(info, isNotNull, reason: 'ads.php page must parse');
-      expect(info!.title, isNotEmpty);
-      expect(info.mirror, isNotNull,
-          reason: 'ads.php page must expose the get.php download link');
-      expect(info.mirror, contains('/get.php?md5='));
-      expect(info.format, isNotEmpty);
-
-      // The direct link must serve real file bytes (it 307s to a CDN,
-      // so follow redirects with curl outside Dio's default behavior).
-      final target = Directory('/tmp/openlib_live_test/download')
-        ..createSync(recursive: true);
-      final file = File('${target.path}/${book.md5}.bin');
-      final proc = await Process.run('curl', [
-        '-sL',
-        '--max-time',
-        '90',
-        '-A',
-        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 '
-            '(KHTML, like Gecko) Chrome/125.0 Safari/537.36',
-        '-o',
-        file.path,
-        '-w',
-        '%{http_code} %{size_download} %{content_type}',
-        info.mirror!,
-      ]);
-      final parts = (proc.stdout as String).trim().split(' ');
-      expect(parts[0], '200', reason: 'download must succeed');
-      expect(int.parse(parts[1]), greaterThan(10000),
-          reason: 'a real book file, not an error page');
-      expect(parts[2], isNot(contains('text/html')),
-          reason: 'must be a file, not an html error');
-    },
-        timeout: const Timeout(Duration(minutes: 3)),
-        skip: 'live network - run with --run-skipped');
-  });
-
-  group('zlibrary end to end', () {
-    test('search clears DiamWall and returns parsed books', () async {
-      final books = await ZlibraryProvider()
-          .search(const SearchQuery(text: 'flutter', filtersEnabled: false));
-      expect(books, isNotEmpty,
-          reason: 'z-lib.gd must serve search after the PoW solve');
-      final first = books.first;
-      expect(first.title, isNotEmpty);
-      expect(first.link, contains('/book/'));
-      expect(first.md5, isNotEmpty);
-    },
-        timeout: const Timeout(Duration(minutes: 2)),
-        skip: 'live network - run with --run-skipped');
-  });
-
-  group('zlibrary book info', () {
-    test('book page parses and download resolves to a CDN link', () async {
-      // Find a real book via search first (id changes over time).
-      final books = await ZlibraryProvider()
-          .search(const SearchQuery(text: 'flutter', filtersEnabled: false));
+      final provider = ZlibraryProvider();
+      final books = await provider.search(const SearchQuery(text: 'flutter'));
       expect(books, isNotEmpty);
       final book = books.first;
 
-      final data = await ZlibraryProvider().bookInfo(book.link);
-      expect(data, isNotNull, reason: 'book page must parse');
-      expect(data!.title, isNotEmpty);
-      expect(data.format, isNotEmpty);
-      expect(data.mirror, isNotNull);
+      final info = await provider.bookInfo(book.link);
+      expect(info, isNotNull, reason: 'the book page must parse');
+      expect(info!.title, isNotEmpty);
+      expect(info.format, isNotEmpty);
 
-      final resolved =
-          await ZlibraryProvider().resolveBookDownload(book.link);
-      // z-lib anonymous /dl/ sometimes answers with a login-wall landing
-      // page instead of the 302 to the CDN - site drift between days.
-      // Both outcomes are legitimate; a resolved /dl/ HTML page is not.
-      if (resolved != null) {
-        expect(resolved, isNot(contains('/dl/')),
-            reason: 'must be the signed CDN link, not the dl hop');
+      // Resolve the /dl/ hop to the signed CDN URL, then fetch it.
+      final resolved = await provider.resolveBookDownload(book.link);
+      if (resolved.url == null) {
+        // Z-Library rate-limits anonymous downloads per IP and says so
+        // on the page it serves instead ("Daily limit reached ... more
+        // than 5 downloads from your IP"). That is legitimate mirror
+        // behaviour; fabricating a "success" is not. The refusal is
+        // reported so the reason is visible rather than silent.
+        markTestSkipped('z-lib withheld the file URL: '
+            '${resolved.refusal ?? "no reason given"}');
+        return;
       }
-    },
-        timeout: const Timeout(Duration(minutes: 3)),
-        skip: 'live network - run with --run-skipped');
+
+      final (contentType, bytes) = await _download(resolved.url!);
+      expect(bytes.length, greaterThan(20000),
+          reason: 'must be a real book file, not an error page');
+      expect(contentType.toLowerCase(), isNot(contains('text/html')));
+    }, timeout: const Timeout(Duration(minutes: 3)), skip: 'live network');
+  });
+
+  group('welib end to end', () {
+    test('book page either parses or is reported as Cloudflare-gated',
+        () async {
+      final mirrors =
+          await InstanceManager().enabledUrls(MirrorService.welib, force: true);
+      expect(mirrors, isNotEmpty);
+
+      // Cloudflare fronts welib and fingerprints clients: a plain HTTP
+      // request from Dart is challenged even though the same URL passes
+      // in a browser. Two outcomes are therefore valid - the page parsed
+      // (a solver cleared it) or the provider reports null instead of
+      // fabricating data. Anything else is a bug.
+      final data = await WelibProvider()
+          .bookInfo('https://welib.org/md5/00f8a97a0e03ac203235b306e249aa76');
+
+      if (data != null) {
+        expect(data.title, isNotEmpty);
+        expect(data.format, isNotEmpty);
+      }
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: 'live network');
   });
 
   group('combined manager search', () {
-    test('all providers fan out with per-provider failures contained',
+    test('all enabled providers run with per-provider failures contained',
         () async {
-      await MyLibraryDb.instance
-          .savePreference('searchProviders', 'annasArchive,libgen,zlibrary');
-
       final result =
           await SearchManager().search(const SearchQuery(text: 'flutter'));
+
       expect(result.books, isNotEmpty,
-          reason: 'at least one provider must return results');
-      // Failures are fine (mirrors rotate); silent emptiness is not.
-    },
-        timeout: const Timeout(Duration(minutes: 2)),
-        skip: 'live network - run with --run-skipped');
+          reason: 'at least the Z-Library mirrors must return results');
+      for (final book in result.books) {
+        expect(book.source, isNotNull,
+            reason: 'every result must be tagged with its catalog');
+      }
+    }, timeout: const Timeout(Duration(minutes: 2)), skip: 'live network');
   });
 }

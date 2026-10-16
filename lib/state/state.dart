@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Project imports:
 // NOTE: These imports are crucial and must exist in your project structure.
 import 'package:openlib/services/annas_archieve.dart';
+import 'package:openlib/services/book_detail_routing.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/libgen_service.dart';
 import 'package:openlib/services/search_manager.dart';
@@ -261,8 +262,10 @@ final showManualDownloadButtonProvider = StateProvider<bool>((ref) => false);
 // window, which the user turns on here.
 final backgroundVerificationProvider = StateProvider<bool>((ref) => true);
 
-// Instance Auto-Ranking Setting (default: enabled)
-final autoRankInstancesProvider = StateProvider<bool>((ref) => true);
+// Mirror ordering mode. Auto (the default) follows open-slum.org's
+// protection/latency priority; the user flips it to manual in
+// Settings > Mirrors and orders the list by hand.
+final instanceAutoModeProvider = StateProvider<bool>((ref) => true);
 
 // Instance Management States
 final instanceManagerProvider =
@@ -281,21 +284,11 @@ final activeDownloadsProvider =
   return manager.downloadsStream;
 });
 
-final archiveInstancesProvider =
-    FutureProvider<List<ArchiveInstance>>((ref) async {
-  final manager = ref.watch(instanceManagerProvider);
-  return await manager.getInstances();
-});
-
-final enabledInstancesProvider =
-    FutureProvider<List<ArchiveInstance>>((ref) async {
-  final manager = ref.watch(instanceManagerProvider);
-  return await manager.getEnabledInstances();
-});
-
-final currentInstanceProvider = FutureProvider<ArchiveInstance>((ref) async {
-  final manager = ref.watch(instanceManagerProvider);
-  return await manager.getCurrentInstance();
+/// Mirrors of one service (SLUM reading + the user's enable choice), as
+/// shown in Settings > Mirrors.
+final serviceInstancesProvider =
+    FutureProvider.family<List<InstanceView>, MirrorService>((ref, service) {
+  return ref.watch(instanceManagerProvider).instances(service);
 });
 
 // ====================================================================
@@ -428,45 +421,41 @@ final searchProviderToggles = FutureProvider<Set<SearchProviderId>>(
 
 // Provider for Book Info Details
 //
-// Routes by URL: libgen detail pages (ads.php?md5=) go to the libgen
-// service, Z-Library book pages (/book/<id>/) to the zlibrary
-// provider, everything else falls through to Anna's Archive. Routing
-// matters: handing a z-lib URL to Anna's used to swap its host for an
-// AA mirror that does not carry the book (404 city).
+// Routes by URL through routeBookDetail: libgen detail pages
+// (ads.php?md5=), Z-Library /book/ pages, WeLib /md5/ pages, everything
+// else to Anna's Archive. The route comes from the open-slum.org
+// catalogue (which mirror belongs to which service), so it keeps working
+// when SLUM lists a mirror this build never shipped - a hardcoded host
+// list made every Z-Library result on a new mirror fail. Routing also
+// matters because handing a provider's URL to Anna's used to swap its
+// host for an AA mirror that does not carry the book (404 city).
 final bookInfoProvider =
     FutureProvider.family<BookInfoData, String>((ref, url) async {
-  if (url.contains('ads.php?md5=')) {
-    final data = await LibgenService().bookInfo(url);
-    if (data == null) {
-      throw Exception('Could not read this libgen book page');
-    }
-    return data;
+  final route = await routeBookDetail(url);
+  switch (route) {
+    case BookDetailRoute.libgen:
+      final data = await LibgenService().bookInfo(url);
+      if (data == null) {
+        throw Exception('Could not read this libgen book page');
+      }
+      return data;
+    case BookDetailRoute.zlibrary:
+      final data = await ZlibraryProvider().bookInfo(url);
+      if (data == null) {
+        throw Exception('Could not read this Z-Library book page');
+      }
+      return data;
+    case BookDetailRoute.welib:
+      final data = await WelibProvider().bookInfo(url);
+      if (data == null) {
+        throw Exception('Could not read this WeLib book page');
+      }
+      return data;
+    case BookDetailRoute.annasArchive:
+      final AnnasArchieve annasArchieve = AnnasArchieve();
+      final donationKey = ref.watch(donationKeyProvider);
+      return annasArchieve.bookInfo(url: url, donationKey: donationKey);
   }
-
-  final Uri parsed = Uri.tryParse(url) ?? Uri.parse('');
-  final zlibHosts = [
-    'z-lib.gd',
-    'z-lib.gl',
-    'z-lib.fm',
-    'z-library.sk',
-    '1lib.sk',
-    'articles.sk',
-  ];
-  final isZlib = zlibHosts.contains(parsed.host) &&
-      RegExp(r'^/book/').hasMatch(parsed.path);
-  if (isZlib) {
-    final data = await ZlibraryProvider().bookInfo(url);
-    if (data == null) {
-      throw Exception('Could not read this Z-Library book page');
-    }
-    return data;
-  }
-
-  final AnnasArchieve annasArchieve = AnnasArchieve();
-  final donationKey = ref.watch(donationKeyProvider);
-  BookInfoData data =
-      await annasArchieve.bookInfo(url: url, donationKey: donationKey);
-  return data;
 });
 
 // My Library Database Providers
