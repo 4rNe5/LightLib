@@ -4,31 +4,27 @@ import 'package:openlib/l10n/app_localizations.dart';
 
 // Package imports:
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:openlib/services/instance_manager.dart';
 
-class BookInfoWidget extends StatelessWidget {
-  /// The best Anna's Archive URL for [md5], built from the mirror list
-  /// open-slum.org publishes (the app hardcodes no mirror address).
-  /// Null when SLUM reports no reachable Anna's Archive mirror - the
-  /// button is then disabled instead of opening a guessed host.
-  static Future<String?> _getCurrentAAUrl(String md5) async {
-    final urls =
-        await InstanceManager().enabledUrls(MirrorService.annasArchive);
-    if (urls.isEmpty) return null;
-    final baseUrl = urls.first.endsWith('/')
-        ? urls.first.substring(0, urls.first.length - 1)
-        : urls.first;
-    return "$baseUrl/md5/$md5";
-  }
+// Project imports:
+import 'package:openlib/state/state.dart' show annaArchiveBaseUrlProvider;
 
+class BookInfoWidget extends ConsumerWidget {
   final Widget child;
   final dynamic data;
 
   const BookInfoWidget({super.key, required this.child, required this.data});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // The mirror comes from the catalogue provider, so build() starts no
+    // I/O of its own (that used to leave pending timers in widget tests)
+    // and a test can stub the resolved mirror. Null when SLUM reports no
+    // attemptable Anna's Archive mirror - the button stays disabled
+    // instead of opening a guessed host.
+    final aaBaseUrl = ref.watch(annaArchiveBaseUrlProvider).valueOrNull;
+    final aaUrl = aaBaseUrl == null ? null : '$aaBaseUrl/md5/${data.md5}';
     String description = data.description.toString().length < 3
         ? "No Description available"
         : data.description.toString();
@@ -109,41 +105,32 @@ class BookInfoWidget extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    FutureBuilder<String?>(
-                      future: _getCurrentAAUrl(data.md5),
-                      builder: (context, snapshot) {
-                        return OutlinedButton.icon(
-                          icon: const Icon(Icons.open_in_new, size: 18),
-                          label: Text(
-                              AppLocalizations.of(context).openInSite,
-                              style: const TextStyle(fontSize: 13)),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor:
-                                Theme.of(context).colorScheme.tertiary,
-                            side: BorderSide(
-                                color: Theme.of(context).colorScheme.tertiary),
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 6),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          onPressed: (snapshot.hasData &&
-                                  snapshot.data != null)
-                              ? () async {
-                                  final aaUrl = snapshot.data!;
-                                  if (await canLaunchUrl(Uri.parse(aaUrl))) {
-                                    await launchUrl(Uri.parse(aaUrl),
-                                        mode: LaunchMode.externalApplication);
-                                  } else if (context.mounted) {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(
-                                          content: Text(
-                                              "Could not open Anna's Archive.")),
-                                    );
-                                  }
-                                }
-                              : null,
-                        );
-                      },
+                    OutlinedButton.icon(
+                      icon: const Icon(Icons.open_in_new, size: 18),
+                      label: Text(AppLocalizations.of(context).openInSite,
+                          style: const TextStyle(fontSize: 13)),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Theme.of(context).colorScheme.tertiary,
+                        side: BorderSide(
+                            color: Theme.of(context).colorScheme.tertiary),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                      onPressed: aaUrl == null
+                          ? null
+                          : () async {
+                              if (await canLaunchUrl(Uri.parse(aaUrl))) {
+                                await launchUrl(Uri.parse(aaUrl),
+                                    mode: LaunchMode.externalApplication);
+                              } else if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                      content: Text(
+                                          "Could not open Anna's Archive.")),
+                                );
+                              }
+                            },
                     ),
                   ],
                 ),

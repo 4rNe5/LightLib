@@ -291,6 +291,23 @@ final serviceInstancesProvider =
   return ref.watch(instanceManagerProvider).instances(service);
 });
 
+/// The Anna's Archive base URL the "open in site" button uses, or null
+/// when no attemptable mirror is known.
+///
+/// Resolved here, not inside a widget's build: mirrors come from the
+/// catalogue (network on a cold cache), and doing that during build
+/// started I/O no widget test could settle - it left pending timers
+/// behind. A bundled value keeps the button free of I/O and lets tests
+/// stub the mirror.
+final annaArchiveBaseUrlProvider = FutureProvider<String?>((ref) async {
+  final urls = await ref
+      .watch(instanceManagerProvider)
+      .enabledUrls(MirrorService.annasArchive);
+  if (urls.isEmpty) return null;
+  final base = urls.first;
+  return base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+});
+
 // ====================================================================
 // DERIVED (COMPUTED) STATE PROVIDERS
 // ====================================================================

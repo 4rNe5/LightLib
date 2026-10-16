@@ -54,3 +54,6 @@ oracleJdk-25.jdk/
 android/.kotlin/
 test/android-test.sh
 .dsh/
+
+# Crash dumps from flutter_tester runs
+/core.*

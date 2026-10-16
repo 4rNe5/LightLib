@@ -12,11 +12,16 @@ import 'dart:io';
 // Flutter imports:
 import 'package:flutter_test/flutter_test.dart';
 
+// Package imports:
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 // Project imports:
 import 'package:openlib/services/book_detail_routing.dart';
 import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/preference_store.dart';
 import 'package:openlib/services/slum_catalogue.dart';
+import 'package:openlib/state/state.dart'
+    show annaArchiveBaseUrlProvider, instanceManagerProvider;
 
 /// An open-slum.org page in the shape the catalogue parses.
 String _slumPage(List<String> origins) {
@@ -139,6 +144,48 @@ void main() {
             manager: offline),
         BookDetailRoute.annasArchive,
       );
+    });
+
+    test("the Anna's Archive button provider resolves the listed mirror",
+        () async {
+      // The "open in site" button used to resolve this inside build(),
+      // which started catalogue I/O that widget tests could not settle.
+      final container = ProviderContainer(
+        overrides: [
+          instanceManagerProvider.overrideWithValue(managerFor(catalogue)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(
+        await container.read(annaArchiveBaseUrlProvider.future),
+        'https://annas-archive.gl',
+        reason: 'the button must use the mirror the catalogue lists',
+      );
+    });
+
+    test("the Anna's Archive button provider reports null without a mirror",
+        () async {
+      // A catalogue that lists no Anna's Archive mirror at all: the
+      // button must be disabled, never pointed at a guessed host.
+      final empty = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      empty.listen((request) async {
+        request.response
+          ..statusCode = HttpStatus.ok
+          ..headers.contentType = ContentType.html
+          ..write('<!doctype html><html><body></body></html>');
+        await request.response.close();
+      });
+      addTearDown(() async => empty.close());
+
+      final container = ProviderContainer(
+        overrides: [
+          instanceManagerProvider.overrideWithValue(managerFor(empty)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      expect(await container.read(annaArchiveBaseUrlProvider.future), isNull);
     });
   });
 }

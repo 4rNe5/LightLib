@@ -6,11 +6,13 @@
 import 'package:flutter/material.dart';
 
 // Package imports:
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Project imports:
-import 'package:openlib/ui/components/book_info_widget.dart';
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/state/state.dart' show annaArchiveBaseUrlProvider;
+import 'package:openlib/ui/components/book_info_widget.dart';
 
 class _FakeBookData {
   final String md5 = '7b2e2c05501894b229e309e39ec0d05d';
@@ -27,15 +29,23 @@ void main() {
   testWidgets('book info text is selectable for copying', (tester) async {
     final data = _FakeBookData();
 
-    await tester.pumpWidget(MaterialApp(
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
-      supportedLocales: AppLocalizations.supportedLocales,
-      home: Scaffold(
-        body: BookInfoWidget(
-          data: data,
-          child: ElevatedButton(
-            onPressed: () {},
-            child: const Text('Add To My Library'),
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        // The "open in site" button resolves its mirror through the
+        // catalogue provider; this test is about text selection, so the
+        // mirror is stubbed instead of letting build() start I/O.
+        annaArchiveBaseUrlProvider.overrideWith((ref) async => null),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Scaffold(
+          body: BookInfoWidget(
+            data: data,
+            child: ElevatedButton(
+              onPressed: () {},
+              child: const Text('Add To My Library'),
+            ),
           ),
         ),
       ),
