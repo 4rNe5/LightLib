@@ -183,6 +183,25 @@ class AnnasArchieve {
     return false;
   }
 
+  /// True when [html] is an Anna's Archive document rather than some other
+  /// site that answers on the same host.
+  ///
+  /// open-slum.org lists a few non-search hosts on its annas page - most
+  /// importantly `software.annas-archive.gl`, which serves a GitLab instance.
+  /// It answers `/search` with a 200 and unrelated markup, so the search
+  /// parser finds nothing and the provider used to accept that as a real
+  /// "no results" answer and stop, hiding the mirrors that would have
+  /// worked. Every Anna's Archive page carries "Anna's Archive" in its
+  /// title; a page that does not is the wrong page, not an empty result.
+  bool _isAnnasArchivePage(String html) {
+    final title = RegExp(r'<title[^>]*>([^<]*)</title>', caseSensitive: false)
+            .firstMatch(html)
+            ?.group(1)
+            ?.toLowerCase() ??
+        '';
+    return title.contains('anna') && title.contains('archive');
+  }
+
   // Convert DioException to user-friendly NetworkError with async diagnostics
   Future<NetworkError> _handleErrorAsync(dynamic error,
       {String? responseBody, String? targetHost}) async {
@@ -746,6 +765,19 @@ class AnnasArchieve {
         // expired" 403, 5xx) must fail this attempt instead of parsing
         // into a silently-empty book list.
         _ensureResponseStatus(response, encodedURL);
+
+        // A 200 from a host that is not Anna's Archive at all (SLUM
+        // lists software.annas-archive.gl, a GitLab) must fail this
+        // mirror too. Otherwise its unrelated markup parses to zero
+        // books and the walk stops, reporting "no results" while the
+        // mirrors that would have answered are never tried.
+        if (!_isAnnasArchivePage(response.data.toString())) {
+          _logger.warning('Mirror did not serve an Anna\'s Archive page',
+              tag: 'AnnasArchive',
+              metadata: {'url': encodedURL, 'mirror': currentBaseUrl});
+          throw Exception(
+              'Mirror $currentBaseUrl did not serve an Anna\'s Archive page');
+        }
         return _parser(response.data, fileType, currentBaseUrl);
       });
 

@@ -142,6 +142,53 @@ void main() {
       }
     }, timeout: const Timeout(Duration(seconds: 60)));
 
+    test('a mirror that is not Anna\'s Archive is skipped, not read as empty',
+        () async {
+      // open-slum.org lists software.annas-archive.gl among the AA mirrors;
+      // it serves a GitLab instance. A 200 from it must fail the mirror and
+      // let the walk continue, instead of parsing to zero books and making
+      // the whole search look empty.
+      const gitlab = '<!doctype html><html><head><title>Search · GitLab'
+          '</title></head><body><div class="content">Search</div>'
+          '</body></html>';
+      final (junk, junkHits) = await mirrorServer(body: gitlab);
+      final (real, realHits) = await mirrorServer(body: searchFixture);
+
+      final (slum, _) = await mirrorServer(
+        body: slumPage([
+          // Unprotected, so the walk reaches the junk mirror first.
+          (url: 'http://127.0.0.1:${junk.port}', status: 'up', vendor: null),
+          (
+            url: 'http://127.0.0.1:${real.port}',
+            status: 'protected',
+            vendor: 'DDoS-Guard'
+          ),
+        ]),
+      );
+
+      try {
+        final manager = InstanceManager.forTest(
+          catalogue: SlumCatalogue(
+            store: MemoryPreferenceStore(),
+            baseUrl: 'http://127.0.0.1:${slum.port}',
+          ),
+          store: MemoryPreferenceStore(),
+        );
+
+        final books = await AnnasArchieve(instanceManager: manager)
+            .searchBooks(searchQuery: 'harry potter');
+
+        expect(junkHits, isNotEmpty, reason: 'the junk mirror is contacted');
+        expect(realHits, isNotEmpty,
+            reason: 'the walk must continue past the non-archive mirror');
+        expect(books, isNotEmpty, reason: 'the real mirror serves results');
+      } finally {
+        await junk.close();
+        await real.close();
+        await slum.close();
+      }
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
     test('a mirror SLUM reports DOWN is never contacted', () async {
       final (down, downHits) = await mirrorServer(body: searchFixture);
       final (up, upHits) = await mirrorServer(body: searchFixture);
