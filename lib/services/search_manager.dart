@@ -833,6 +833,34 @@ class ZlibraryProvider implements SearchProvider {
   }
 }
 
+/// Outcome of asking WeLib for a book's file URL.
+///
+/// Exactly one of [url] / [refusal] is meaningful: a resolved download
+/// link, or a reason the user can act on.
+@immutable
+class WelibDownload {
+  final String? url;
+
+  /// Human-readable reason WeLib did not offer the file. Null when the
+  /// page simply carried no link.
+  final String? refusal;
+
+  const WelibDownload({this.url, this.refusal});
+
+  bool get ok => url != null;
+}
+
+/// True when [url] is a WeLib page, i.e. one [WelibProvider.resolveDownload]
+/// understands.
+///
+/// A single predicate beside the provider, so the UI's routing and the
+/// parser cannot drift apart; the host test is the same admission rule the
+/// catalogue applies to the "other" page's welib mirrors.
+bool isWelibUrl(String? url) {
+  if (url == null || url.isEmpty) return false;
+  return (Uri.tryParse(url)?.host ?? '').contains('welib');
+}
+
 /// WeLib (welib.org) - open-slum.org's "other" page.
 ///
 /// welib.org gates `/search` behind Cloudflare. A search therefore only
@@ -902,7 +930,11 @@ class WelibProvider implements SearchProvider {
   /// from Dart is challenged while the same request from curl is not).
   /// Without a solver the page is simply unavailable, so this returns
   /// null rather than pretending.
-  Future<String?> _fetchHtml(String url) async {
+  Future<String?> _fetchHtml(String url) async => (await _fetchPage(url)).html;
+
+  /// [_fetchHtml] with the HTTP status kept, so a caller can tell a rate
+  /// limit (429) apart from a page that simply carried no link.
+  Future<({String? html, int? status})> _fetchPage(String url) async {
     // A page the solver already captured in a real browser is the best
     // possible answer for exactly this URL - and skipping the request
     // avoids a fresh 403 round trip and another solve. (Same policy as
@@ -911,7 +943,7 @@ class WelibProvider implements SearchProvider {
     if (cached != null) {
       _logger.debug('Using cached challenge HTML',
           tag: 'WelibProvider', metadata: {'url': url});
-      return cached;
+      return (html: cached, status: 200);
     }
 
     final acceptAnyStatus = Options(validateStatus: (_) => true);
@@ -921,22 +953,26 @@ class WelibProvider implements SearchProvider {
       response = await _dio.get<String>(url, options: acceptAnyStatus);
     } catch (e) {
       _logger.warning('WeLib request failed', tag: 'WelibProvider', error: e);
-      return null;
+      return (html: null, status: null);
     }
 
+    final status = response.statusCode;
     final body = response.data ?? '';
     if (!_isCloudflareChallenge(response, body)) {
-      final status = response.statusCode ?? 0;
-      return (status >= 200 && status < 300) ? body : null;
+      final ok = status != null && status >= 200 && status < 300;
+      return (html: ok ? body : null, status: status);
     }
 
     if (!WebviewChallengeSolver.isSupported) {
       _logger.warning('WeLib is Cloudflare-gated and no solver is available',
           tag: 'WelibProvider', metadata: {'url': url});
-      return null;
+      return (html: null, status: status);
     }
     final html = await WebviewChallengeSolver.fetchHtmlAfterChallenge(url);
-    return (html != null && html.length > 1000) ? html : null;
+    return (
+      html: (html != null && html.length > 1000) ? html : null,
+      status: status,
+    );
   }
 
   /// welib search params: `q` plus the page number when paging.
@@ -1122,6 +1158,89 @@ class WelibProvider implements SearchProvider {
       mirror: slowDownload.startsWith('http') ? slowDownload : '$baseUrl$slowDownload',
       isFastDownload: false,
     );
+  }
+
+  /// Resolves a WeLib download page (`/slow_download/<md5>/0/0`) to a
+  /// file URL, or to the reason there is none.
+  ///
+  /// The page carries the partner-server file as a plain anchor:
+  /// `<a class="js-partner-download-link" href="https://x-cdn-x.com/...pdf">`
+  /// inside `<div class="mb-4 text-xl font-bold">`. The old path handed
+  /// the page to the Anna's Archive webview scraper, which looks for that
+  /// class on a `<p>` element - WeLib uses a `<div>` - so it never found
+  /// the link and hung on "detecting the download link".
+  ///
+  /// The page also renders the same "private content" badges and an
+  /// in-app-browser warning template for anonymous visitors; neither
+  /// gates the file - the link is in the HTML.
+  Future<WelibDownload> resolveDownload(String pageUrl) async {
+    final page = await _fetchPage(pageUrl);
+    if (page.html == null) {
+      // WeLib throttles anonymous clients by IP; a 429 is temporary.
+      if (page.status == 429) {
+        return const WelibDownload(
+          refusal: 'WeLib is rate-limiting downloads right now. '
+              'Wait a few minutes and try again.',
+        );
+      }
+      // 403/503 is Cloudflare holding this client: the page is there, the
+      // bot check just did not clear (no solver, or the window was closed).
+      // Say that instead of blaming the book for having no link.
+      if (page.status == 403 || page.status == 503) {
+        return const WelibDownload(
+          refusal: 'WeLib did not let this client through its bot check. '
+              'Try again, or open the book in the app browser.',
+        );
+      }
+      return const WelibDownload();
+    }
+
+    final html = page.html!;
+    // The page is a /slow_download/<md5>/... URL, so the /md5/ helper
+    // does not see the id - read it straight out of either shape.
+    final md5 = RegExp(r'/(?:md5|slow_download|fast_download|auto_download)/'
+            r'([0-9a-fA-F]{32})')
+        .firstMatch(pageUrl)
+        ?.group(1);
+    final origin = Uri.tryParse(pageUrl)?.origin ?? '';
+    final document = html_parser.parse(html);
+
+    // WeLib's own hook first: the partner-server file anchor.
+    final partnerHref = document
+        .querySelector('a.js-partner-download-link[href]')
+        ?.attributes['href'];
+    if (partnerHref != null && partnerHref.isNotEmpty) {
+      return WelibDownload(
+          url: partnerHref.startsWith('http')
+              ? partnerHref
+              : '$origin$partnerHref');
+    }
+
+    // Fallback for a page whose markup varies: this book's own download
+    // route, or a direct file URL.
+    for (final a in document.querySelectorAll('a[href]')) {
+      final href = a.attributes['href'] ?? '';
+      if (_isBookDownloadLink(href, md5)) {
+        return WelibDownload(
+            url: href.startsWith('http') ? href : '$origin$href');
+      }
+    }
+    return const WelibDownload();
+  }
+
+  /// True when [href] is a download link for the book [md5]: WeLib's own
+  /// `/fast_download`/`/auto_download` route for that id, or a direct
+  /// file URL. The `/slow_download/<md5>/0/0` page we came from is
+  /// deliberately not a match - it is the page, not the file.
+  bool _isBookDownloadLink(String href, String? md5) {
+    final lower = href.toLowerCase();
+    if (RegExp(r'\.(epub|pdf|mobi|azw3?|fb2|djvu|cbr|cbz|zip)(\?|$)')
+        .hasMatch(lower)) {
+      return true;
+    }
+    if (md5 == null || !href.contains(md5)) return false;
+    return lower.contains('/fast_download/') ||
+        lower.contains('/auto_download/');
   }
 }
 

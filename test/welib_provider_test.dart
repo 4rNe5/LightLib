@@ -457,4 +457,152 @@ void main() {
     });
   });
 
+  group('resolveDownload', () {
+    /// The download block captured live from welib.org's public-server
+    /// page for `The Score`: the partner file anchor sits under a
+    /// `<div class="mb-4 text-xl font-bold">` (Anna's Archive puts that
+    /// class on a `<p>`), next to the in-app-browser warning template.
+    /// There is no login gate on the markup - the file link is there.
+    final partnerPage = File('test/fixtures/welib_download_page.html')
+        .readAsStringSync();
+
+    /// Serves one page and returns the provider pointed at it.
+    Future<(HttpServer, WelibProvider)> pageServer(String html,
+        {int status = 200}) async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((request) async {
+        request.response
+          ..statusCode = status
+          ..headers.contentType = ContentType.html
+          ..write(html);
+        await request.response.close();
+      });
+      ChallengeHtmlCache.clear();
+      return (server, WelibProvider());
+    }
+
+    test('resolves the partner file link on the real page shape', () async {
+      final (server, provider) = await pageServer(partnerPage);
+      try {
+        final result = await provider.resolveDownload(
+            'http://127.0.0.1:${server.port}/slow_download/$_md5/0/0');
+        expect(
+            result.url,
+            'https://x-cdn-x.com/hs7/zlib2/pilimi-zlib2-19250000-19329999/'
+            '19263581~/1792244044.6TiJ-hGRb5cS6PXg6l6x1A/$_md5/'
+            'The%20Score%20--%20Elle%20Kennedy%20--%20%28%20WeLib.org%20%29.pdf');
+        expect(result.refusal, isNull);
+      } finally {
+        await server.close();
+      }
+    });
+
+    test('reports the rate limit instead of a missing link', () async {
+      // welib.org throttles anonymous clients: a few downloads in a row
+      // and it answers 429. That is temporary and says so.
+      final (server, provider) =
+          await pageServer('<html>Too Many Requests</html>', status: 429);
+      try {
+        final result = await provider.resolveDownload(
+            'http://127.0.0.1:${server.port}/slow_download/$_md5/0/0');
+        expect(result.url, isNull);
+        expect(result.refusal, contains('rate-limiting'));
+      } finally {
+        await server.close();
+      }
+    });
+
+    test('reports a bot check it could not clear', () async {
+      // Cloudflare held the client (no solver, or its window closed):
+      // the page never arrived, and that is not "this book has no link".
+      WebviewChallengeSolver.guiEnabled = false;
+      WebviewChallengeSolver.overrideIsMobile = false;
+      WebviewChallengeSolver.headlessEnabled = false;
+      addTearDown(() {
+        WebviewChallengeSolver.guiEnabled = true;
+        WebviewChallengeSolver.overrideIsMobile = null;
+        WebviewChallengeSolver.headlessEnabled = true;
+      });
+
+      final (server, provider) = await pageServer(
+          '<!DOCTYPE html><html><head><title>Just a moment...'
+          '</title></head><body>challenges.cloudflare.com</body></html>',
+          status: 403);
+      try {
+        final result = await provider.resolveDownload(
+            'http://127.0.0.1:${server.port}/slow_download/$_md5/0/0');
+        expect(result.url, isNull);
+        expect(result.refusal, contains('bot check'));
+      } finally {
+        await server.close();
+      }
+    });
+
+    test('never resolves another book\'s download link', () async {
+      // A related-books grid carries /auto_download/<other md5> links;
+      // picking one would download the wrong book.
+      final (server, provider) =
+          await pageServer('<html><body><a href="/auto_download/'
+              '2b3cf90c84658f55bf8d9abe8532e33e/0/0">Other</a></body></html>');
+      try {
+        final result = await provider.resolveDownload(
+            'http://127.0.0.1:${server.port}/slow_download/$_md5/0/0');
+        expect(result.url, isNull,
+            reason: 'another book\'s link must not be used');
+      } finally {
+        await server.close();
+      }
+    });
+
+    test('resolves this book\'s own auto_download link', () async {
+      final (server, provider) = await pageServer(
+          '<html><body><a href="/auto_download/$_md5/0/0">Download</a>'
+          '</body></html>');
+      try {
+        final result = await provider.resolveDownload(
+            'http://127.0.0.1:${server.port}/slow_download/$_md5/0/0');
+        expect(result.url,
+            'http://127.0.0.1:${server.port}/auto_download/$_md5/0/0');
+      } finally {
+        await server.close();
+      }
+    });
+
+    test('resolves a bare direct file link', () async {
+      final (server, provider) = await pageServer(
+          '<html><body><a href="https://cdn.example/x/book.epub">Get</a>'
+          '</body></html>');
+      try {
+        final result = await provider.resolveDownload(
+            'http://127.0.0.1:${server.port}/slow_download/$_md5/0/0');
+        expect(result.url, 'https://cdn.example/x/book.epub');
+      } finally {
+        await server.close();
+      }
+    });
+  });
+
+  group('isWelibUrl', () {
+    // The book page's download button routes on this predicate; it must
+    // keep agreeing with the provider that parses the page.
+    test('accepts the public-server page welib results carry', () {
+      expect(isWelibUrl('https://welib.org/slow_download/$_md5/0/0'), isTrue);
+      expect(isWelibUrl('https://welib.org/md5/$_md5'), isTrue);
+    });
+
+    test('rejects the other sources\' download pages', () {
+      // Anna's Archive serves the same /slow_download/ path; only the
+      // host decides which parser runs.
+      expect(isWelibUrl('https://annas-archive.gl/slow_download/$_md5'), isFalse);
+      expect(isWelibUrl('https://z-lib.gd/dl/abc'), isFalse);
+      expect(isWelibUrl('https://libgen.la/get.php?md5=$_md5'), isFalse);
+    });
+
+    test('rejects missing or unparseable values', () {
+      expect(isWelibUrl(null), isFalse);
+      expect(isWelibUrl(''), isFalse);
+      expect(isWelibUrl('not a url'), isFalse);
+    });
+  });
+
 }

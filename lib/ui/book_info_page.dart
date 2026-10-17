@@ -184,6 +184,35 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                       }
                     }
 
+                    // WeLib's public-server page carries the partner
+                    // file link, but with the class on a <div> where the
+                    // Anna's Archive scraper looks for a <p>. That is
+                    // why the old path hung on "detecting the download
+                    // link"; resolve it with WeLib's own parser instead.
+                    final isWelib = isWelibUrl(downloadUrl);
+                    // The signed file URL expires within hours, so keep
+                    // the public-server page around: the download
+                    // manager re-resolves a fresh URL from it when the
+                    // stored one dies, exactly like z-lib's /dl/ hop.
+                    final welibPageUrl = isWelib ? downloadUrl : null;
+                    String? welibRefusal;
+                    if (welibPageUrl != null && !isDirectLink) {
+                      try {
+                        final resolved =
+                            await WelibProvider().resolveDownload(welibPageUrl);
+                        if (resolved.url != null) {
+                          downloadUrl = resolved.url;
+                          isDirectLink = true;
+                          isFastDownload = true;
+                        } else {
+                          welibRefusal = resolved.refusal ??
+                              'WeLib did not offer a download link for this book.';
+                        }
+                      } catch (e) {
+                        welibRefusal = 'Could not read the WeLib download page.';
+                      }
+                    }
+
                     // Try to fetch fast download link if key is present and not already fast
                     final donationKey =
                         isDirectLink ? '' : ref.read(donationKeyProvider);
@@ -211,7 +240,7 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                     final target = chooseDownloadTarget(
                       url: downloadUrl,
                       fast: isDirectLink || donationFastLink,
-                      refusal: zlibRefusal,
+                      refusal: zlibRefusal ?? welibRefusal,
                     );
                     downloadUrl = target.url;
 
@@ -282,15 +311,24 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                           // Store mirror URL for retry
                           mirrorUrl: effectiveUrl,
                           isDirectLink: isFastDownload,
-                          // z-lib's signed CDN link expires after a few
-                          // hours; the manager then re-resolves a fresh
-                          // one from the book page instead of failing.
+                          // z-lib's signed CDN link and WeLib's partner
+                          // link both expire after a few hours; the
+                          // manager then re-resolves a fresh one from
+                          // the page instead of failing. The refresher
+                          // takes the task's /md5/ link, but WeLib's
+                          // file URL only comes out of the public-server
+                          // page captured above, so that page is used.
                           linkRefresher: isZlib
                               ? (pageUrl) async =>
                                   (await ZlibraryProvider()
                                           .resolveBookDownload(pageUrl))
                                       .url
-                              : null,
+                              : welibPageUrl != null
+                                  ? (_) async =>
+                                      (await WelibProvider()
+                                              .resolveDownload(welibPageUrl))
+                                          .url
+                                  : null,
                         );
 
                         await downloadManager.addDownloadWithMirrorUrl(
