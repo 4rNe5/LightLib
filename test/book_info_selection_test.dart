@@ -16,6 +16,7 @@ import 'package:openlib/ui/components/book_info_widget.dart';
 
 class _FakeBookData {
   final String md5 = '7b2e2c05501894b229e309e39ec0d05d';
+  final String link = 'https://annas-archive.gl/md5/7b2e2c05501894b229e309e39ec0d05d';
   final String title = 'Structure of Scientific Revolutions';
   final String author = 'Thomas S. Kuhn';
   final String publisher = 'University of Chicago Press';

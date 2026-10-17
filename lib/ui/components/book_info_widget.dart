@@ -10,6 +10,27 @@ import 'package:url_launcher/url_launcher.dart';
 // Project imports:
 import 'package:openlib/state/state.dart' show annaArchiveBaseUrlProvider;
 
+/// The URL the "open in site" button opens for a book.
+///
+/// A real md5 (32 hex) means Anna's Archive carries the book under that
+/// id, so the button opens the AA page. Z-Library results carry a short
+/// book id, not an md5, and have no Anna's Archive page - pointing at AA
+/// for them lands on the error the user sees as "link expired". Those
+/// open their own source page instead. Null (a disabled button) only when
+/// neither target is available.
+@visibleForTesting
+String? openInSiteUrl({
+  required String link,
+  required String md5,
+  String? annaArchiveBaseUrl,
+}) {
+  final hasMd5 = RegExp(r'^[0-9a-f]{32}$', caseSensitive: false).hasMatch(md5);
+  if (hasMd5 && annaArchiveBaseUrl != null && annaArchiveBaseUrl.isNotEmpty) {
+    return '$annaArchiveBaseUrl/md5/$md5';
+  }
+  return link.isEmpty ? null : link;
+}
+
 class BookInfoWidget extends ConsumerWidget {
   final Widget child;
   final dynamic data;
@@ -18,13 +39,17 @@ class BookInfoWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // The mirror comes from the catalogue provider, so build() starts no
-    // I/O of its own (that used to leave pending timers in widget tests)
-    // and a test can stub the resolved mirror. Null when SLUM reports no
-    // attemptable Anna's Archive mirror - the button stays disabled
-    // instead of opening a guessed host.
+    // The Anna's Archive base URL comes from the catalogue provider, so
+    // build() starts no I/O of its own (that used to leave pending timers
+    // in widget tests) and a test can stub the resolved mirror. It is only
+    // used for books that really have an md5; Z-Library books open on
+    // their own page instead (see [openInSiteUrl]).
     final aaBaseUrl = ref.watch(annaArchiveBaseUrlProvider).valueOrNull;
-    final aaUrl = aaBaseUrl == null ? null : '$aaBaseUrl/md5/${data.md5}';
+    final siteUrl = openInSiteUrl(
+      link: (data.link ?? '').toString(),
+      md5: (data.md5 ?? '').toString(),
+      annaArchiveBaseUrl: aaBaseUrl,
+    );
     String description = data.description.toString().length < 3
         ? "No Description available"
         : data.description.toString();
@@ -117,17 +142,17 @@ class BookInfoWidget extends ConsumerWidget {
                             horizontal: 10, vertical: 6),
                         visualDensity: VisualDensity.compact,
                       ),
-                      onPressed: aaUrl == null
+                      onPressed: siteUrl == null
                           ? null
                           : () async {
-                              if (await canLaunchUrl(Uri.parse(aaUrl))) {
-                                await launchUrl(Uri.parse(aaUrl),
+                              if (await canLaunchUrl(Uri.parse(siteUrl))) {
+                                await launchUrl(Uri.parse(siteUrl),
                                     mode: LaunchMode.externalApplication);
                               } else if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text(
-                                          "Could not open Anna's Archive.")),
+                                      content:
+                                          Text('Could not open the link.')),
                                 );
                               }
                             },
