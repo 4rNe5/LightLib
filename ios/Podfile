@@ -1,5 +1,11 @@
-# Uncomment this line to define a global platform for your project
-platform :ios, '17.5'
+# Global platform for the pods. It must not be higher than the app's own
+# minimum (iOS 15 with the current Flutter toolchain), otherwise CocoaPods
+# compiles every pod against that higher target and the Swift compiler may
+# call stdlib pre-specializations that only exist in newer iOS runtimes
+# (e.g. the ...FyXl_Ts5 AnyObject pre-specializations added in iOS 17).
+# Those become undefined symbols at launch on older systems:
+# "Symbol not found ... Expected in libswiftCore.dylib" (issue #105).
+platform :ios, '15.0'
 
 # CocoaPods analytics sends network stats synchronously affecting flutter build latency.
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'

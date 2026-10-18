@@ -222,6 +222,28 @@ jobs:
       - name: Build iOS (no codesign)
         run: flutter build ios --release --no-codesign
 
+      - name: Verify no iOS 17-only Swift runtime symbols
+        run: |
+          # Regression guard for issue #105: if the pods are compiled with a
+          # deployment target above the app's own minimum, the Swift compiler
+          # emits calls to stdlib pre-specializations that only exist from
+          # iOS 17 on (symbols ending in FyXl_Ts5). The app then dies at
+          # launch on iOS 15/16 with "Symbol not found ... libswiftCore".
+          # Keep the Podfile platform in step with the app's minimum.
+          status=0
+          for bin in build/ios/iphoneos/Runner.app/Runner build/ios/iphoneos/Runner.app/Frameworks/*/*; do
+            [ -f "$bin" ] || continue
+            missing=$(nm -u "$bin" 2>/dev/null | grep -o '[^ ]*FyXl_Ts5$' || true)
+            if [ -n "$missing" ]; then
+              echo "::error file=$bin::references iOS 17-only Swift pre-specializations:"
+              echo "$missing"
+              status=1
+            fi
+          done
+          if [ "$status" -eq 0 ]; then
+            echo "No iOS 17-only Swift runtime symbols referenced."
+          fi
+          exit $status
       - name: Create IPA
         run: |
           mkdir -p artifacts
