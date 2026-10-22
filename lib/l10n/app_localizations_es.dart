@@ -727,4 +727,14 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get whatsNewFeatureCovers =>
       'Las portadas de LibGen que faltan se obtienen de la página de detalle del libro.';
+
+  @override
+  String get zlibRecommendationsTitle => 'También te puede interesar';
+
+  @override
+  String get zlibRecommendationsLoadMore => 'Cargar más';
+
+  @override
+  String get zlibRecommendationsLoadFailed =>
+      'No se pudieron cargar más libros';
 }

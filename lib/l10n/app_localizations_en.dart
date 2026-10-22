@@ -718,4 +718,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get whatsNewFeatureCovers =>
       'Missing LibGen covers are fetched from the book\'s detail page.';
+
+  @override
+  String get zlibRecommendationsTitle => 'You may be interested in';
+
+  @override
+  String get zlibRecommendationsLoadMore => 'Load more';
+
+  @override
+  String get zlibRecommendationsLoadFailed => 'Could not load more books';
 }

@@ -16,6 +16,7 @@ import 'package:openlib/ui/components/book_info_widget.dart';
 import 'package:openlib/ui/components/error_widget.dart';
 import 'package:openlib/ui/components/file_buttons_widget.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
+import 'package:openlib/ui/components/zlib_recommendations_widget.dart';
 import 'package:openlib/ui/webview_page.dart';
 import 'package:openlib/state/state.dart'
     show
@@ -67,8 +68,24 @@ class BookInfoPage extends ConsumerWidget {
       body: bookInfo.when(
         skipLoadingOnRefresh: false,
         data: (data) {
+          final recommendations =
+              data is ZlibraryBookInfoData ? data.recommendations : null;
           return BookInfoWidget(
-              data: data, child: ActionButtonWidget(data: data));
+            data: data,
+            footer: recommendations == null
+                ? null
+                : ZlibRecommendationsWidget(
+                    key: ValueKey(data.link),
+                    initial: recommendations,
+                    onOpen: (book) => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => BookInfoPage(url: book.link),
+                      ),
+                    ),
+                  ),
+            child: ActionButtonWidget(data: data),
+          );
         },
         error: (err, _) {
           return CustomErrorWidget(

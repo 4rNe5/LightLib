@@ -955,5 +955,17 @@
   "whatsNewFeatureCovers": "Missing LibGen covers are fetched from the book's detail page.",
   "@whatsNewFeatureCovers": {
     "description": "Release note about the lazy cover fix"
+  },
+  "zlibRecommendationsTitle": "You may be interested in",
+  "@zlibRecommendationsTitle": {
+    "description": "Heading of the Z-Library recommended-books mosaic under a book page"
+  },
+  "zlibRecommendationsLoadMore": "Load more",
+  "@zlibRecommendationsLoadMore": {
+    "description": "Button that loads the next page of Z-Library recommended books"
+  },
+  "zlibRecommendationsLoadFailed": "Could not load more books",
+  "@zlibRecommendationsLoadFailed": {
+    "description": "Shown when loading more Z-Library recommendations failed"
   }
 }

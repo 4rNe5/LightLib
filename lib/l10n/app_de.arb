@@ -222,5 +222,8 @@
   "whatsNewContinue": "Weiter",
   "whatsNewFeatureSpeed": "Downloads starten schneller: keine Mirror-Prüfung mehr, schnelle Hosts zuerst, langsame IPFS-Gateways zuletzt.",
   "whatsNewFeatureSourceLabels": "Jedes Suchergebnis und jeder Download zeigt jetzt, aus welchem Katalog er stammt.",
-  "whatsNewFeatureCovers": "Fehlende LibGen-Cover werden von der Detailseite des Buchs geladen."
+  "whatsNewFeatureCovers": "Fehlende LibGen-Cover werden von der Detailseite des Buchs geladen.",
+  "zlibRecommendationsTitle": "Das könnte dich auch interessieren",
+  "zlibRecommendationsLoadMore": "Mehr laden",
+  "zlibRecommendationsLoadFailed": "Weitere Bücher konnten nicht geladen werden"
 }

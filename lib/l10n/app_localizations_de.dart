@@ -729,4 +729,14 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get whatsNewFeatureCovers =>
       'Fehlende LibGen-Cover werden von der Detailseite des Buchs geladen.';
+
+  @override
+  String get zlibRecommendationsTitle => 'Das könnte dich auch interessieren';
+
+  @override
+  String get zlibRecommendationsLoadMore => 'Mehr laden';
+
+  @override
+  String get zlibRecommendationsLoadFailed =>
+      'Weitere Bücher konnten nicht geladen werden';
 }

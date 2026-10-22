@@ -1403,6 +1403,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Missing LibGen covers are fetched from the book\'s detail page.'**
   String get whatsNewFeatureCovers;
+
+  /// Heading of the Z-Library recommended-books mosaic under a book page
+  ///
+  /// In en, this message translates to:
+  /// **'You may be interested in'**
+  String get zlibRecommendationsTitle;
+
+  /// Button that loads the next page of Z-Library recommended books
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get zlibRecommendationsLoadMore;
+
+  /// Shown when loading more Z-Library recommendations failed
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load more books'**
+  String get zlibRecommendationsLoadFailed;
 }
 
 class _AppLocalizationsDelegate

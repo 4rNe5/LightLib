@@ -731,4 +731,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get whatsNewFeatureCovers =>
       'Les couvertures LibGen manquantes sont récupérées depuis la page détaillée du livre.';
+
+  @override
+  String get zlibRecommendationsTitle => 'Vous pourriez aussi aimer';
+
+  @override
+  String get zlibRecommendationsLoadMore => 'Charger plus';
+
+  @override
+  String get zlibRecommendationsLoadFailed =>
+      'Impossible de charger plus de livres';
 }

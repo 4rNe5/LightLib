@@ -1,5 +1,6 @@
 // Dart imports:
 import 'dart:async';
+import 'dart:convert';
 
 // Flutter imports:
 import 'package:flutter/foundation.dart';
@@ -350,6 +351,80 @@ class ZlibraryDownload {
   const ZlibraryDownload({this.url, this.refusal});
 
   bool get ok => url != null;
+}
+
+/// The "You may be interested in" mosaic under a Z-Library book page.
+///
+/// The page renders the first pages of the mosaic server side
+/// (`.books-mosaic .masonry-endless .item`); its "Load more" button then
+/// POSTs `{"bookIds": [...]}` as JSON to
+/// `/papi/book/recommended/mosaic/<onPage>/<page>` and appends the
+/// returned `books`. This carries both the books shown so far and the
+/// cursor that next request needs.
+@immutable
+class ZlibraryRecommendations {
+  /// Recommended books, in page order, without duplicates.
+  final List<BookData> books;
+
+  /// The `bookIds` list the page's script sends with every "Load more".
+  final List<int> bookIds;
+
+  /// Books per mosaic page (the script's `onPage`).
+  final int onPage;
+
+  /// The last mosaic page already shown (the script's `mosaicPage`).
+  final int page;
+
+  /// Mirror the book page came from; "Load more" must go to the same one.
+  final String mirror;
+
+  /// False once the API answered `nextPage: false` or no books, or when
+  /// the page carried no cursor to ask with.
+  final bool hasMore;
+
+  const ZlibraryRecommendations({
+    required this.books,
+    required this.bookIds,
+    required this.onPage,
+    required this.page,
+    required this.mirror,
+    required this.hasMore,
+  });
+
+  ZlibraryRecommendations copyWith({
+    List<BookData>? books,
+    int? page,
+    bool? hasMore,
+  }) =>
+      ZlibraryRecommendations(
+        books: books ?? this.books,
+        bookIds: bookIds,
+        onPage: onPage,
+        page: page ?? this.page,
+        mirror: mirror,
+        hasMore: hasMore ?? this.hasMore,
+      );
+}
+
+/// A Z-Library book page: the regular detail data plus the page's
+/// recommendation mosaic (null when the page has none).
+class ZlibraryBookInfoData extends BookInfoData {
+  final ZlibraryRecommendations? recommendations;
+
+  ZlibraryBookInfoData({
+    required super.title,
+    required super.author,
+    required super.thumbnail,
+    required super.publisher,
+    required super.info,
+    required super.link,
+    required super.md5,
+    required super.format,
+    required super.mirror,
+    required super.description,
+    super.isFastDownload,
+    this.recommendations,
+  });
 }
 
 /// Z-Library: mirrors sit behind a DiamWall proof-of-work gate, so the
@@ -815,7 +890,7 @@ class ZlibraryProvider implements SearchProvider {
       year,
     ].whereType<String>().where((s) => s.isNotEmpty).join(', ');
 
-    return BookInfoData(
+    return ZlibraryBookInfoData(
       title: title,
       author: author,
       thumbnail: cover,
@@ -829,7 +904,187 @@ class ZlibraryProvider implements SearchProvider {
       description: null,
       mirror: dlHref == null ? null : '$baseUrl$dlHref',
       isFastDownload: false,
+      recommendations: parseRecommendations(document, html, baseUrl),
     );
+  }
+
+  /// Reads the book page's "You may be interested in" mosaic. Public so
+  /// tests can feed a captured page. Null when the page has no mosaic.
+  ///
+  /// Items: `.books-mosaic .masonry-endless .item > a[href^="/book/"]`
+  /// wrapping a `z-cover` whose `title`/`author` attributes carry the
+  /// metadata and whose `<img>` holds the cover (`src`, or `data-src`
+  /// for items the script inserted). The "Load more" cursor lives in the
+  /// inline script: `mosaicPage = parseInt('2')`, `onPage =
+  /// parseInt('21')` and `data = { bookIds: [...] }`.
+  ZlibraryRecommendations? parseRecommendations(
+      dom.Document document, String html, String baseUrl) {
+    final mosaic = document.querySelector('.books-mosaic');
+    if (mosaic == null) return null;
+
+    final books = <BookData>[];
+    final seen = <String>{};
+    for (final a in mosaic.querySelectorAll('.masonry-endless .item a[href]')) {
+      final cover = a.querySelector('z-cover');
+      final img = a.querySelector('img');
+      final book = _recommendedBook(
+        href: a.attributes['href'],
+        title: cover?.attributes['title'],
+        author: cover?.attributes['author'],
+        cover: img?.attributes['src'] ?? img?.attributes['data-src'],
+        baseUrl: baseUrl,
+      );
+      if (book != null && seen.add(book.md5)) books.add(book);
+    }
+    if (books.isEmpty) return null;
+
+    int? scriptInt(String name) =>
+        int.tryParse(RegExp('$name\\s*=\\s*parseInt\\([\'"](\\d+)[\'"]\\)')
+                .firstMatch(html)
+                ?.group(1) ??
+            '');
+    final page = scriptInt('mosaicPage');
+    final onPage = scriptInt('onPage');
+    final idsMatch = RegExp(r'bookIds\s*:\s*\[([\d,\s]*)\]').firstMatch(html);
+    final bookIds = (idsMatch?.group(1) ?? '')
+        .split(',')
+        .map((s) => int.tryParse(s.trim()))
+        .whereType<int>()
+        .toList();
+    // The page hides "Load more" by itself only after an API answer, so
+    // its presence is the signal; without a full cursor it cannot work.
+    final hasMore = page != null &&
+        onPage != null &&
+        bookIds.isNotEmpty &&
+        mosaic.querySelector('.load-more') != null;
+
+    return ZlibraryRecommendations(
+      books: books,
+      bookIds: bookIds,
+      onPage: onPage ?? 0,
+      page: page ?? 0,
+      mirror: baseUrl,
+      hasMore: hasMore,
+    );
+  }
+
+  /// One mosaic entry as [BookData]. The `?dsource=` tracking query is
+  /// dropped so a recommended book has the same link (and id) as the same
+  /// book found by search. Null when the entry has no book link.
+  BookData? _recommendedBook({
+    required String? href,
+    required String? title,
+    required String? author,
+    required String? cover,
+    required String baseUrl,
+  }) {
+    if (href == null || href.isEmpty) return null;
+    final uri = Uri.tryParse(href);
+    if (uri == null) return null;
+    final path = uri.path;
+    final id = _bookIdFromHref(path);
+    if (id == null) return null;
+
+    final cleanTitle = (title ?? '').trim();
+    final cleanAuthor = (author ?? '').trim();
+    final coverUrl = (cover ?? '').trim();
+    final origin = uri.hasScheme ? uri.origin : baseUrl;
+    return BookData(
+      title: cleanTitle.isEmpty ? 'Unknown' : cleanTitle,
+      author: cleanAuthor.isEmpty ? 'Unknown' : cleanAuthor,
+      thumbnail: coverUrl.isEmpty
+          ? null
+          : (coverUrl.startsWith('http') ? coverUrl : '$baseUrl$coverUrl'),
+      link: '$origin$path',
+      md5: id,
+      source: displayName,
+    );
+  }
+
+  /// Parses a `/papi/book/recommended/mosaic/...` answer:
+  /// `{"books": [{"id", "isbn", "author", "title", "cover", "url"}],
+  /// "nextPage": ...}`. [current] gets the new books appended (duplicates
+  /// skipped), its page advanced, and [ZlibraryRecommendations.hasMore]
+  /// cleared exactly where the site's own script hides "Load more":
+  /// `nextPage === false` or no `books`. Public so tests can feed it.
+  ZlibraryRecommendations parseRecommendationsJson(
+      Object? json, ZlibraryRecommendations current) {
+    final map = json is Map ? json : const {};
+    final raw = map['books'];
+    final list = raw is List ? raw : const [];
+
+    final books = [...current.books];
+    final seen = current.books.map((b) => b.md5).toSet();
+    for (final entry in list) {
+      if (entry is! Map) continue;
+      final book = _recommendedBook(
+        href: entry['url']?.toString(),
+        title: entry['title']?.toString(),
+        author: entry['author']?.toString(),
+        cover: entry['cover']?.toString(),
+        baseUrl: current.mirror,
+      );
+      if (book != null && seen.add(book.md5)) books.add(book);
+    }
+
+    final noBooks = raw is! List || raw.isEmpty;
+    return current.copyWith(
+      books: books,
+      page: current.page + 1,
+      hasMore: !(map['nextPage'] == false || noBooks),
+    );
+  }
+
+  /// The site's "Load more": POSTs the page's `bookIds` to the mosaic
+  /// API on the mirror the book page came from and returns [current] with
+  /// the next page appended. Throws when the mirror cannot answer, so the
+  /// UI can offer a retry instead of silently ending the list.
+  Future<ZlibraryRecommendations> loadMoreRecommendations(
+      ZlibraryRecommendations current) async {
+    if (!current.hasMore) return current;
+    final url = '${current.mirror}/papi/book/recommended/mosaic/'
+        '${current.onPage}/${current.page + 1}';
+    final body = jsonEncode({'bookIds': current.bookIds});
+    final options = Options(
+      validateStatus: (_) => true,
+      responseType: ResponseType.plain,
+      headers: {'Content-Type': 'application/json'},
+    );
+
+    var response = await _dio.post<String>(url, data: body, options: options);
+    if (_solver.looksLikeChallenge(
+        response.statusCode ?? 0, response.data ?? '')) {
+      final cookies = await _solver.solve(response.data ?? '');
+      if (cookies == null) {
+        throw Exception('Z-Library challenge could not be passed');
+      }
+      final cookieHeader =
+          cookies.entries.map((e) => '${e.key}=${e.value}').join('; ');
+      response = await _dio.post<String>(url,
+          data: body,
+          options: options.copyWith(headers: {
+            'Content-Type': 'application/json',
+            'Cookie': cookieHeader,
+          }));
+    }
+    if (response.statusCode != 200) {
+      throw Exception(
+          'Z-Library recommendations answered ${response.statusCode}');
+    }
+
+    final Object? json;
+    try {
+      json = jsonDecode(response.data ?? '');
+    } on FormatException {
+      throw Exception('Z-Library recommendations returned no JSON');
+    }
+    if (json is Map && (json['success'] == 0 || json['success'] == '0')) {
+      throw Exception('Z-Library recommendations refused: ${json['error']}');
+    }
+    _logger.debug('Loaded more Z-Library recommendations',
+        tag: 'ZlibraryProvider',
+        metadata: {'mirror': current.mirror, 'page': current.page + 1});
+    return parseRecommendationsJson(json, current);
   }
 }
 

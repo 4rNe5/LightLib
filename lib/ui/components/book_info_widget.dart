@@ -35,7 +35,11 @@ class BookInfoWidget extends ConsumerWidget {
   final Widget child;
   final dynamic data;
 
-  const BookInfoWidget({super.key, required this.child, required this.data});
+  /// Shown below the description (e.g. Z-Library recommendations).
+  final Widget? footer;
+
+  const BookInfoWidget(
+      {super.key, required this.child, required this.data, this.footer});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -217,7 +221,8 @@ class BookInfoWidget extends ConsumerWidget {
                     ),
                   )
                 ],
-              )
+              ),
+              if (footer != null) footer!,
             ],
           ),
         ),

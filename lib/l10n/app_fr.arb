@@ -222,5 +222,8 @@
   "whatsNewContinue": "Continuer",
   "whatsNewFeatureSpeed": "Les téléchargements démarrent plus vite : plus de sondage des miroirs, serveurs rapides d'abord, passerelles IPFS lentes en dernier.",
   "whatsNewFeatureSourceLabels": "Chaque résultat de recherche et chaque téléchargement indique maintenant son catalogue d'origine.",
-  "whatsNewFeatureCovers": "Les couvertures LibGen manquantes sont récupérées depuis la page détaillée du livre."
+  "whatsNewFeatureCovers": "Les couvertures LibGen manquantes sont récupérées depuis la page détaillée du livre.",
+  "zlibRecommendationsTitle": "Vous pourriez aussi aimer",
+  "zlibRecommendationsLoadMore": "Charger plus",
+  "zlibRecommendationsLoadFailed": "Impossible de charger plus de livres"
 }

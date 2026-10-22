@@ -222,5 +222,8 @@
   "whatsNewContinue": "Continuar",
   "whatsNewFeatureSpeed": "Las descargas empiezan más rápido: sin sondear mirrors, servidores rápidos primero y las puertas IPFS lentas al final.",
   "whatsNewFeatureSourceLabels": "Cada resultado de búsqueda y cada descarga muestra ahora de qué catálogo proviene.",
-  "whatsNewFeatureCovers": "Las portadas de LibGen que faltan se obtienen de la página de detalle del libro."
+  "whatsNewFeatureCovers": "Las portadas de LibGen que faltan se obtienen de la página de detalle del libro.",
+  "zlibRecommendationsTitle": "También te puede interesar",
+  "zlibRecommendationsLoadMore": "Cargar más",
+  "zlibRecommendationsLoadFailed": "No se pudieron cargar más libros"
 }
