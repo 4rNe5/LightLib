@@ -14,7 +14,10 @@ import 'package:path_provider/path_provider.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/translation/book_translation_service.dart';
+import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
+import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 
@@ -76,6 +79,19 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
   Future<void> _setTarget(String code) async {
     setState(() => _target = code);
     await _db.savePreference(translationTargetLanguagePref, code);
+    _restartTranslation();
+  }
+
+  /// A new model or language: the loaded engine goes, and the background
+  /// translator starts over with the new settings.
+  Future<void> _restartTranslation() async {
+    await SharedTranslationEngine.instance.reset();
+    BookTranslationService.instance.scanSoon();
+  }
+
+  Future<void> _use(String fileName) async {
+    await _store.select(fileName, database: _db);
+    await _restartTranslation();
   }
 
   Future<void> _confirmDownload(TranslationModelPreset preset) async {
@@ -98,7 +114,12 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
         ],
       ),
     );
-    if (ok == true) await _store.download(preset);
+    if (ok == true) {
+      await _store.download(preset);
+      if (!_store.downloads.containsKey(preset.id)) {
+        await _restartTranslation();
+      }
+    }
   }
 
   Future<void> _import() async {
@@ -119,7 +140,7 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
         return;
       }
       final model = await _store.importFile(path);
-      await _store.select(model.fileName, database: _db);
+      await _use(model.fileName);
       // The picker leaves its own copy in the cache; a model is gigabytes.
       await FilePicker.clearTemporaryFiles().catchError((_) => false);
       if (mounted) {
@@ -153,14 +174,22 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
         ],
       ),
     );
-    if (ok == true) await _store.delete(model.fileName);
+    if (ok == true) {
+      await _store.delete(model.fileName);
+      await _restartTranslation();
+    }
   }
 
   Future<void> _clearCache() async {
     final l10n = AppLocalizations.of(context);
-    final support = await getApplicationSupportDirectory();
-    final dir = Directory(p.join(support.path, 'translations'));
-    if (await dir.exists()) await dir.delete(recursive: true);
+    for (final dir in [
+      await TranslationCache.bookFolderDirectory(),
+      Directory(p.join(
+          (await getApplicationSupportDirectory()).path, 'translations')),
+    ]) {
+      if (await dir.exists()) await dir.delete(recursive: true);
+    }
+    await _restartTranslation();
     if (mounted) {
       showSnackBar(context: context, message: l10n.translationCacheCleared);
     }
@@ -218,7 +247,7 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
               download: _store.downloads[preset.id],
               onDownload: () => _confirmDownload(preset),
               onCancel: () => _store.cancelDownload(preset.id),
-              onUse: () => _store.select(preset.fileName, database: _db),
+              onUse: () => _use(preset.fileName),
               onDelete: () => _delete(
                   _installed.firstWhere((m) => m.fileName == preset.fileName)),
             ),
@@ -230,7 +259,7 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
                   '${formatGigabytes(model.sizeBytes)} · ${model.runtime == TranslationRuntime.liteRtLm ? 'LiteRT-LM' : 'llama.cpp'}',
               installed: true,
               active: _active?.fileName == model.fileName,
-              onUse: () => _store.select(model.fileName, database: _db),
+              onUse: () => _use(model.fileName),
               onDelete: () => _delete(model),
             ),
           const SizedBox(height: 8),
@@ -246,6 +275,8 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
             label: Text(l10n.translationImportModel),
           ),
           const SizedBox(height: 20),
+          const _LibraryTranslationSection(),
+          const SizedBox(height: 12),
           Text(l10n.translationBatteryNote,
               style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
           const SizedBox(height: 8),
@@ -387,6 +418,73 @@ class _ModelCard extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The background library translation switch and each book's progress.
+class _LibraryTranslationSection extends StatelessWidget {
+  const _LibraryTranslationSection();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final service = BookTranslationService.instance;
+    return ListenableBuilder(
+      listenable: service,
+      builder: (context, _) {
+        final books = service.progress.values.toList()
+          ..sort((a, b) => a.title.compareTo(b.title));
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              key: const ValueKey('autoTranslateLibrary'),
+              contentPadding: EdgeInsets.zero,
+              title: Text(l10n.translationAutoLibrary),
+              subtitle: Text(l10n.translationAutoLibraryHint,
+                  style: const TextStyle(fontSize: 12)),
+              value: service.enabled,
+              onChanged: service.setEnabled,
+            ),
+            if (service.error != null)
+              Text(l10n.translationFailed,
+                  style: TextStyle(fontSize: 12, color: scheme.error)),
+            for (final book in books)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(book.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontSize: 13)),
+                        ),
+                        Text(
+                          book.state == BookTranslationState.done
+                              ? l10n.translationBookDone
+                              : '${(book.fraction * 100).toStringAsFixed(0)}% · ${book.done}/${book.total}',
+                          style: TextStyle(
+                              fontSize: 12, color: scheme.onSurfaceVariant),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    LinearProgressIndicator(
+                      value: book.fraction,
+                      minHeight: 3,
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        );
+      },
     );
   }
 }

@@ -863,4 +863,64 @@ class AppLocalizationsEs extends AppLocalizations {
   String importBooksResult(int imported, int existing, int failed) {
     return 'Añadidos $imported · ya en la biblioteca $existing · fallidos $failed';
   }
+
+  @override
+  String get translationAutoLibrary =>
+      'Traducir los libros de la biblioteca en segundo plano';
+
+  @override
+  String get translationAutoLibraryHint =>
+      'Despacio, párrafo a párrafo mientras la app está abierta. Las traducciones se guardan junto a cada libro.';
+
+  @override
+  String get translationBookDone => 'Listo';
+
+  @override
+  String get readerViewOptions => 'Vista';
+
+  @override
+  String get readerLayoutScroll => 'Desplazamiento';
+
+  @override
+  String get readerLayoutPagesLtr => 'Páginas (izquierda a derecha)';
+
+  @override
+  String get readerLayoutPagesRtl => 'Páginas (derecha a izquierda, manga)';
+
+  @override
+  String get readerFonts => 'Fuentes';
+
+  @override
+  String get fontsSettingsSubtitle =>
+      'Fuentes para texto coreano, japonés y latino';
+
+  @override
+  String get fontsHint =>
+      'Cada escritura usa su propia fuente. Las Google Fonts se descargan una vez y luego funcionan sin conexión. También puedes importar un archivo .ttf u .otf.';
+
+  @override
+  String get fontKorean => 'Texto coreano';
+
+  @override
+  String get fontJapanese => 'Texto japonés';
+
+  @override
+  String get fontLatin => 'Texto latino';
+
+  @override
+  String get fontSystem => 'Predeterminada del sistema';
+
+  @override
+  String get fontFile => 'archivo';
+
+  @override
+  String get fontImport => 'Importar un archivo de fuente (.ttf / .otf)';
+
+  @override
+  String fontImported(String family) {
+    return 'Fuente importada: $family';
+  }
+
+  @override
+  String get fontImportFailed => 'No se pudo importar la fuente.';
 }

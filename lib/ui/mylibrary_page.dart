@@ -10,6 +10,7 @@ import 'package:flutter_svg/flutter_svg.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:openlib/services/files.dart' show syncLibraryWithDisk;
 import 'package:openlib/services/local_book_import.dart';
+import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
@@ -39,6 +40,10 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   void initState() {
     super.initState();
     _restoreSortMode();
+    // A book that just finished downloading joins the translation queue.
+    ref.listenManual(myLibraryProvider, (_, __) {
+      BookTranslationService.instance.scanSoon();
+    });
     // On desktop, listen for scroll to bottom to trigger refresh
     if (PlatformUtils.isDesktop) {
       _scrollController.addListener(_onScroll);
@@ -93,6 +98,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     try {
       // Sync library with disk (remove missing files, add new ones)
       await syncLibraryWithDisk();
+      BookTranslationService.instance.scanSoon();
       // Invalidate the provider to force UI refresh
       ref.invalidate(myLibraryProvider);
       ref.invalidate(libraryBooksProvider);
@@ -134,6 +140,8 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
       ref.invalidate(myLibraryProvider);
       ref.invalidate(libraryBooksProvider);
       ref.invalidate(libraryTagsProvider);
+      // New books join the background translation queue.
+      BookTranslationService.instance.scanSoon();
       int count(LocalImportOutcome o) =>
           results.where((r) => r.outcome == o).length;
       messenger.showSnackBar(SnackBar(

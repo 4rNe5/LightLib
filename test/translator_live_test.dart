@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 // Project imports:
 import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/translator.dart';
+import 'package:openlib/services/translation/book_translation_service.dart';
 
 void main() {
   final modelPath = Platform.environment['TRANSLATION_MODEL'] ?? '';
@@ -49,6 +50,25 @@ void main() {
     // Numbers survive.
     expect(outputs.first,
         anyOf(contains('2,400'), contains('2400'), contains('이천사백')));
+  },
+      timeout: const Timeout(Duration(minutes: 10)),
+      skip: 'needs a local model file (TRANSLATION_MODEL)');
+
+  test('extracts and translates EPUB paragraphs', () async {
+    final texts = await epubParagraphTexts(
+        'third_party/epubx/test/res/alicesAdventuresUnderGround.epub');
+    final real = texts.whereType<String>().where((t) => t.length > 40).take(2);
+    expect(real, isNotEmpty);
+    final translator = LocalLlmTranslator(
+        modelPath: modelPath, runtime: runtimeForFile(modelPath)!);
+    for (final text in real) {
+      final out = await translator.translate(text,
+          targetLanguage: 'Korean', sourceLanguage: 'English');
+      // ignore: avoid_print
+      print('${text.substring(0, 60)}...\n  => $out');
+      expect(RegExp(r'[\uAC00-\uD7A3]').hasMatch(out), isTrue);
+    }
+    await translator.dispose();
   },
       timeout: const Timeout(Duration(minutes: 10)),
       skip: 'needs a local model file (TRANSLATION_MODEL)');

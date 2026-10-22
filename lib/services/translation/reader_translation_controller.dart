@@ -174,7 +174,9 @@ class ReaderTranslationController extends ChangeNotifier {
             notifyListeners();
           }
           final out = await _translator.translate(text,
-              targetLanguage: targetLanguage, sourceLanguage: sourceLanguage);
+              targetLanguage: targetLanguage,
+              sourceLanguage: sourceLanguage,
+              urgent: true);
           if (_disposed) return;
           if (out.isEmpty) {
             _failed.add(text);
@@ -213,4 +215,27 @@ class ReaderTranslationController extends ChangeNotifier {
     unawaited(_translator.dispose());
     super.dispose();
   }
+}
+
+/// Up to [maxChars] of the translatable text just before paragraph
+/// [index] - the context a translation is made with, so who speaks and
+/// what things are called stay consistent from paragraph to paragraph.
+String? precedingContext(int index, String? Function(int index)? textAt,
+    {int maxChars = 240}) {
+  if (textAt == null) return null;
+  final parts = <String>[];
+  var length = 0;
+  for (var i = index - 1; i >= 0 && i >= index - 6; i--) {
+    final t = textAt(i);
+    if (t == null || t.isEmpty) continue;
+    if (length + t.length > maxChars && parts.isNotEmpty) break;
+    parts.insert(0, t);
+    length += t.length;
+    if (length >= maxChars) break;
+  }
+  if (parts.isEmpty) return null;
+  final joined = parts.join('\n');
+  return joined.length > maxChars
+      ? joined.substring(joined.length - maxChars)
+      : joined;
 }

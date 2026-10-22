@@ -851,4 +851,64 @@ class AppLocalizationsEn extends AppLocalizations {
   String importBooksResult(int imported, int existing, int failed) {
     return 'Added $imported · already in library $existing · failed $failed';
   }
+
+  @override
+  String get translationAutoLibrary =>
+      'Translate library books in the background';
+
+  @override
+  String get translationAutoLibraryHint =>
+      'Slowly, a paragraph at a time while the app is open. Translations are saved next to each book.';
+
+  @override
+  String get translationBookDone => 'Done';
+
+  @override
+  String get readerViewOptions => 'View';
+
+  @override
+  String get readerLayoutScroll => 'Scroll';
+
+  @override
+  String get readerLayoutPagesLtr => 'Pages (left to right)';
+
+  @override
+  String get readerLayoutPagesRtl => 'Pages (right to left, manga style)';
+
+  @override
+  String get readerFonts => 'Fonts';
+
+  @override
+  String get fontsSettingsSubtitle =>
+      'Fonts for Korean, Japanese and Latin text';
+
+  @override
+  String get fontsHint =>
+      'Each script uses its own font. Google Fonts download once on first use and then work offline. You can also import a .ttf or .otf file.';
+
+  @override
+  String get fontKorean => 'Korean text';
+
+  @override
+  String get fontJapanese => 'Japanese text';
+
+  @override
+  String get fontLatin => 'Latin text';
+
+  @override
+  String get fontSystem => 'System default';
+
+  @override
+  String get fontFile => 'file';
+
+  @override
+  String get fontImport => 'Import a font file (.ttf / .otf)';
+
+  @override
+  String fontImported(String family) {
+    return 'Font imported: $family';
+  }
+
+  @override
+  String get fontImportFailed => 'Could not import the font.';
 }

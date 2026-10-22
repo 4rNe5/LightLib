@@ -1154,5 +1154,82 @@
         "type": "int"
       }
     }
+  },
+  "translationAutoLibrary": "Translate library books in the background",
+  "@translationAutoLibrary": {
+    "description": "Switch: translate library books in the background"
+  },
+  "translationAutoLibraryHint": "Slowly, a paragraph at a time while the app is open. Translations are saved next to each book.",
+  "@translationAutoLibraryHint": {
+    "description": "Hint under the background translation switch"
+  },
+  "translationBookDone": "Done",
+  "@translationBookDone": {
+    "description": "A book is fully translated"
+  },
+  "readerViewOptions": "View",
+  "@readerViewOptions": {
+    "description": "Reader menu: view options"
+  },
+  "readerLayoutScroll": "Scroll",
+  "@readerLayoutScroll": {
+    "description": "Reader layout: continuous scroll"
+  },
+  "readerLayoutPagesLtr": "Pages (left to right)",
+  "@readerLayoutPagesLtr": {
+    "description": "Reader layout: pages turned left to right"
+  },
+  "readerLayoutPagesRtl": "Pages (right to left, manga style)",
+  "@readerLayoutPagesRtl": {
+    "description": "Reader layout: pages turned right to left, as in manga"
+  },
+  "readerFonts": "Fonts",
+  "@readerFonts": {
+    "description": "Title of the font settings"
+  },
+  "fontsSettingsSubtitle": "Fonts for Korean, Japanese and Latin text",
+  "@fontsSettingsSubtitle": {
+    "description": "Settings tile subtitle for fonts"
+  },
+  "fontsHint": "Each script uses its own font. Google Fonts download once on first use and then work offline. You can also import a .ttf or .otf file.",
+  "@fontsHint": {
+    "description": "Explains font options"
+  },
+  "fontKorean": "Korean text",
+  "@fontKorean": {
+    "description": "Font section: Korean"
+  },
+  "fontJapanese": "Japanese text",
+  "@fontJapanese": {
+    "description": "Font section: Japanese"
+  },
+  "fontLatin": "Latin text",
+  "@fontLatin": {
+    "description": "Font section: Latin script"
+  },
+  "fontSystem": "System default",
+  "@fontSystem": {
+    "description": "Font option: system font"
+  },
+  "fontFile": "file",
+  "@fontFile": {
+    "description": "Marks an imported font"
+  },
+  "fontImport": "Import a font file (.ttf / .otf)",
+  "@fontImport": {
+    "description": "Button: import a font file"
+  },
+  "fontImported": "Font imported: {family}",
+  "@fontImported": {
+    "description": "Font import succeeded",
+    "placeholders": {
+      "family": {
+        "type": "String"
+      }
+    }
+  },
+  "fontImportFailed": "Could not import the font.",
+  "@fontImportFailed": {
+    "description": "Font import failed"
   }
 }

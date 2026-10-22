@@ -9,6 +9,8 @@ import 'app_localizations_de.dart';
 import 'app_localizations_en.dart';
 import 'app_localizations_es.dart';
 import 'app_localizations_fr.dart';
+import 'app_localizations_ja.dart';
+import 'app_localizations_ko.dart';
 
 // ignore_for_file: type=lint
 
@@ -99,7 +101,9 @@ abstract class AppLocalizations {
     Locale('de'),
     Locale('en'),
     Locale('es'),
-    Locale('fr')
+    Locale('fr'),
+    Locale('ja'),
+    Locale('ko')
   ];
 
   /// Application name shown in the app bar and about page
@@ -1631,6 +1635,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Added {imported} · already in library {existing} · failed {failed}'**
   String importBooksResult(int imported, int existing, int failed);
+
+  /// Switch: translate library books in the background
+  ///
+  /// In en, this message translates to:
+  /// **'Translate library books in the background'**
+  String get translationAutoLibrary;
+
+  /// Hint under the background translation switch
+  ///
+  /// In en, this message translates to:
+  /// **'Slowly, a paragraph at a time while the app is open. Translations are saved next to each book.'**
+  String get translationAutoLibraryHint;
+
+  /// A book is fully translated
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get translationBookDone;
+
+  /// Reader menu: view options
+  ///
+  /// In en, this message translates to:
+  /// **'View'**
+  String get readerViewOptions;
+
+  /// Reader layout: continuous scroll
+  ///
+  /// In en, this message translates to:
+  /// **'Scroll'**
+  String get readerLayoutScroll;
+
+  /// Reader layout: pages turned left to right
+  ///
+  /// In en, this message translates to:
+  /// **'Pages (left to right)'**
+  String get readerLayoutPagesLtr;
+
+  /// Reader layout: pages turned right to left, as in manga
+  ///
+  /// In en, this message translates to:
+  /// **'Pages (right to left, manga style)'**
+  String get readerLayoutPagesRtl;
+
+  /// Title of the font settings
+  ///
+  /// In en, this message translates to:
+  /// **'Fonts'**
+  String get readerFonts;
+
+  /// Settings tile subtitle for fonts
+  ///
+  /// In en, this message translates to:
+  /// **'Fonts for Korean, Japanese and Latin text'**
+  String get fontsSettingsSubtitle;
+
+  /// Explains font options
+  ///
+  /// In en, this message translates to:
+  /// **'Each script uses its own font. Google Fonts download once on first use and then work offline. You can also import a .ttf or .otf file.'**
+  String get fontsHint;
+
+  /// Font section: Korean
+  ///
+  /// In en, this message translates to:
+  /// **'Korean text'**
+  String get fontKorean;
+
+  /// Font section: Japanese
+  ///
+  /// In en, this message translates to:
+  /// **'Japanese text'**
+  String get fontJapanese;
+
+  /// Font section: Latin script
+  ///
+  /// In en, this message translates to:
+  /// **'Latin text'**
+  String get fontLatin;
+
+  /// Font option: system font
+  ///
+  /// In en, this message translates to:
+  /// **'System default'**
+  String get fontSystem;
+
+  /// Marks an imported font
+  ///
+  /// In en, this message translates to:
+  /// **'file'**
+  String get fontFile;
+
+  /// Button: import a font file
+  ///
+  /// In en, this message translates to:
+  /// **'Import a font file (.ttf / .otf)'**
+  String get fontImport;
+
+  /// Font import succeeded
+  ///
+  /// In en, this message translates to:
+  /// **'Font imported: {family}'**
+  String fontImported(String family);
+
+  /// Font import failed
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import the font.'**
+  String get fontImportFailed;
 }
 
 class _AppLocalizationsDelegate
@@ -1643,8 +1755,14 @@ class _AppLocalizationsDelegate
   }
 
   @override
-  bool isSupported(Locale locale) =>
-      <String>['de', 'en', 'es', 'fr'].contains(locale.languageCode);
+  bool isSupported(Locale locale) => <String>[
+        'de',
+        'en',
+        'es',
+        'fr',
+        'ja',
+        'ko'
+      ].contains(locale.languageCode);
 
   @override
   bool shouldReload(_AppLocalizationsDelegate old) => false;
@@ -1661,6 +1779,10 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
       return AppLocalizationsEs();
     case 'fr':
       return AppLocalizationsFr();
+    case 'ja':
+      return AppLocalizationsJa();
+    case 'ko':
+      return AppLocalizationsKo();
   }
 
   throw FlutterError(

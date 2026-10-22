@@ -21,7 +21,7 @@ Map<String, dynamic> _readArb(String locale) {
 }
 
 void main() {
-  final locales = ['en', 'de', 'fr', 'es'];
+  final locales = ['en', 'de', 'fr', 'es', 'ko', 'ja'];
 
   test('generated delegates expose exactly the shipped locales', () {
     expect(AppLocalizations.supportedLocales.map((l) => l.languageCode),

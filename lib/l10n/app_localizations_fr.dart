@@ -869,4 +869,64 @@ class AppLocalizationsFr extends AppLocalizations {
   String importBooksResult(int imported, int existing, int failed) {
     return 'Ajoutés $imported · déjà présents $existing · échecs $failed';
   }
+
+  @override
+  String get translationAutoLibrary =>
+      'Traduire les livres de la bibliothèque en arrière-plan';
+
+  @override
+  String get translationAutoLibraryHint =>
+      'Lentement, paragraphe par paragraphe tant que l\'app est ouverte. Les traductions sont enregistrées à côté de chaque livre.';
+
+  @override
+  String get translationBookDone => 'Terminé';
+
+  @override
+  String get readerViewOptions => 'Affichage';
+
+  @override
+  String get readerLayoutScroll => 'Défilement';
+
+  @override
+  String get readerLayoutPagesLtr => 'Pages (gauche à droite)';
+
+  @override
+  String get readerLayoutPagesRtl => 'Pages (droite à gauche, manga)';
+
+  @override
+  String get readerFonts => 'Polices';
+
+  @override
+  String get fontsSettingsSubtitle =>
+      'Polices pour le texte coréen, japonais et latin';
+
+  @override
+  String get fontsHint =>
+      'Chaque écriture a sa police. Les Google Fonts se téléchargent une fois puis fonctionnent hors ligne. Vous pouvez aussi importer un fichier .ttf ou .otf.';
+
+  @override
+  String get fontKorean => 'Texte coréen';
+
+  @override
+  String get fontJapanese => 'Texte japonais';
+
+  @override
+  String get fontLatin => 'Texte latin';
+
+  @override
+  String get fontSystem => 'Police du système';
+
+  @override
+  String get fontFile => 'fichier';
+
+  @override
+  String get fontImport => 'Importer un fichier de police (.ttf / .otf)';
+
+  @override
+  String fontImported(String family) {
+    return 'Police importée : $family';
+  }
+
+  @override
+  String get fontImportFailed => 'Impossible d\'importer la police.';
 }

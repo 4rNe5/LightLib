@@ -8,7 +8,10 @@ import 'dart:io';
 // Package imports:
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+
+// Project imports:
+import 'package:openlib/services/database.dart';
+import 'package:openlib/services/translation/translation_models.dart';
 
 /// A JSON file of source-text hash → translation. Keyed by the text, not
 /// the paragraph index, so a re-paginated book or a repeated line reuses
@@ -21,6 +24,28 @@ class TranslationCache {
   Timer? _saveTimer;
   bool _dirty = false;
 
+  static final Map<String, TranslationCache> _open = {};
+
+  /// Where translations are kept: a hidden folder next to the books, so a
+  /// book's translation travels with the book folder (backups, a moved
+  /// storage folder). Library sync only looks at book files, so it never
+  /// mistakes these for books.
+  static Future<Directory> bookFolderDirectory() async {
+    final storage =
+        (await MyLibraryDb.instance.getPreference('bookStorageDirectory'))
+            .toString();
+    final dir = Directory(p.join(storage, '.translations'));
+    if (!await dir.exists()) await dir.create(recursive: true);
+    return dir;
+  }
+
+  static String fileIdFor(
+          String bookFileName, String targetLanguage, String modelId) =>
+      sha1
+          .convert(utf8.encode('$bookFileName|$targetLanguage|$modelId'))
+          .toString()
+          .substring(0, 20);
+
   static String keyFor(String text) =>
       sha1.convert(utf8.encode(text)).toString();
 
@@ -32,15 +57,15 @@ class TranslationCache {
     required String modelId,
     Directory? directory,
   }) async {
-    final base = directory ??
-        Directory(p.join(
-            (await getApplicationSupportDirectory()).path, 'translations'));
+    final base = directory ?? await bookFolderDirectory();
     if (!await base.exists()) await base.create(recursive: true);
-    final id = sha1
-        .convert(utf8.encode('$bookFileName|$targetLanguage|$modelId'))
-        .toString()
-        .substring(0, 20);
-    final file = File(p.join(base.path, '$id.json'));
+    final id = fileIdFor(bookFileName, targetLanguage, modelId);
+    final path = p.join(base.path, '$id.json');
+    // One instance per file: the reader and the background translator
+    // write the same book, and two instances would overwrite each other.
+    final existing = _open[path];
+    if (existing != null) return existing;
+    final file = File(path);
     var entries = <String, String>{};
     if (await file.exists()) {
       try {
@@ -52,7 +77,38 @@ class TranslationCache {
         // A corrupt cache is only lost work; start over.
       }
     }
-    return TranslationCache._(file, entries);
+    return _open[path] ??= TranslationCache._(file, entries);
+  }
+
+  /// Deletes every saved translation of [bookFileName] (all languages and
+  /// models), e.g. when the book is removed from the library.
+  static Future<void> deleteForBook(String bookFileName,
+      {Directory? directory}) async {
+    final base = directory ?? await bookFolderDirectory();
+    for (final language in const [
+      'ko',
+      'en',
+      'ja',
+      'zh',
+      'zh-TW',
+      'es',
+      'fr',
+      'de',
+      'ru',
+      'pt',
+      'it',
+      'vi',
+      'th',
+      'id'
+    ]) {
+      for (final model in translationModelPresets.map((m) => m.fileName)) {
+        final path = p.join(
+            base.path, '${fileIdFor(bookFileName, language, model)}.json');
+        _open.remove(path);
+        final f = File(path);
+        if (await f.exists()) await f.delete();
+      }
+    }
   }
 
   int get length => _entries.length;
@@ -80,6 +136,7 @@ class TranslationCache {
 
   /// Removes every cached translation for this book.
   Future<void> clear() async {
+    _open.remove(_file.path);
     _entries.clear();
     _dirty = false;
     _saveTimer?.cancel();

@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 // Project imports:
+import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/state/state.dart'
     show libraryBooksProvider, libraryTagsProvider, myLibraryProvider;
@@ -225,6 +226,8 @@ Future<void> deleteFileWithDbData(Ref ref, String md5, String format,
     final bookStorageDirectory =
         await dataBase.getPreference('bookStorageDirectory');
     await deleteFile('$bookStorageDirectory/$actualFileName');
+    // The book's saved translations go with it.
+    await TranslationCache.deleteForBook(actualFileName).catchError((_) {});
     await dataBase.delete(md5);
     await dataBase.deleteBookState(actualFileName);
     // ignore: unused_result

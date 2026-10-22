@@ -104,3 +104,66 @@ String cleanTranslation(String raw) {
       '');
   return text.trim();
 }
+
+/// Characters of Japanese (kana) or of Chinese characters left in an
+/// answer that should contain none: kana for any target but Japanese,
+/// and Chinese characters too for targets that do not write them.
+String leftoverSourceScript(String answer, String targetLanguage) {
+  final writesHan =
+      targetLanguage == 'Japanese' || targetLanguage.contains('Chinese');
+  if (targetLanguage == 'Japanese') return '';
+  final pattern = writesHan ? RegExp(r'[぀-ゟ゠-ヿ]') : RegExp(r'[぀-ゟ゠-ヿ㐀-䶿一-鿿]');
+  return pattern.allMatches(answer).map((m) => m.group(0)).join();
+}
+
+/// Final touches on a translation: Japanese corner brackets become the
+/// quotes the target language uses, a quote pair the model wrapped around
+/// the whole answer (when the source had none) is removed, and invisible
+/// characters and doubled spaces are cleaned up.
+String polishTranslation(
+    String translation, String source, String targetLanguage) {
+  var text = translation
+      .replaceAll(RegExp(r'[​-‍﻿]'), '')
+      .replaceAll(RegExp(r'[ \t]{2,}'), ' ')
+      .trim();
+
+  final sourceQuoted = RegExp(r'^[「『"“]').hasMatch(source.trim());
+  if (!sourceQuoted &&
+      text.length > 2 &&
+      RegExp(r'^["“「]').hasMatch(text) &&
+      RegExp(r'["”」]$').hasMatch(text) &&
+      !text.substring(1, text.length - 1).contains(RegExp(r'["“”「」]'))) {
+    text = text.substring(1, text.length - 1).trim();
+  }
+
+  if (targetLanguage != 'Japanese' && !targetLanguage.contains('Chinese')) {
+    // Hanja the model added in brackets after a word (만사(萬死)).
+    text = text.replaceAll(RegExp(r'\s?\([\u3400-\u4DBF\u4E00-\u9FFF]+\)'), '');
+    // Kana the model copied as-is even after the retry (先輩っ！ → 선배っ!,
+    // だって left untranslated): kana is never right in this target, so it
+    // goes rather than showing up as stray Japanese in the middle of a line.
+    text = text.replaceAll(RegExp(r'[\u3040-\u30FF]+\s?'), '');
+    text = text
+        .replaceAll('！', '!')
+        .replaceAll('？', '?')
+        .replaceAll('～', '~')
+        .replaceAll('\u3000', ' ')
+        .replaceAll(RegExp(r' {2,}'), ' ');
+    text = text
+        .replaceAll('「', '“')
+        .replaceAll('」', '”')
+        .replaceAll('『', '‘')
+        .replaceAll('』', '’');
+    // A dialogue line the model quoted with straight quotes: curly ones,
+    // in pairs, as in printed fiction.
+    if (RegExp(r'[「『]').hasMatch(source) && text.contains('"')) {
+      var open = true;
+      text = text.replaceAllMapped(RegExp('"'), (_) {
+        final q = open ? '“' : '”';
+        open = !open;
+        return q;
+      });
+    }
+  }
+  return text;
+}

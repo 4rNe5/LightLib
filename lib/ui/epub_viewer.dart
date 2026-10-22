@@ -19,6 +19,15 @@ import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
 import 'package:openlib/ui/components/translated_chapter_builder.dart';
+import 'package:openlib/ui/components/paged_book_view.dart';
+import 'package:openlib/ui/reader_font_settings_page.dart';
+import 'package:openlib/services/reader_fonts.dart';
+// ignore: implementation_imports
+import 'package:epub_view/src/data/epub_parser.dart'
+    show parseChapters, parseParagraphs;
+// ignore: implementation_imports
+import 'package:epub_view/src/data/models/paragraph.dart';
+import 'dart:async';
 import 'package:openlib/ui/translation_settings_page.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/state/state.dart'
@@ -154,6 +163,19 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   String? _bookLanguage;
   final ParagraphTextMemo _paragraphTexts = ParagraphTextMemo();
   AppLifecycleListener? _lifecycle;
+  String? _targetCode;
+
+  // Reading layout: one long column, or pages turned like an e-reader.
+  ReaderLayout _layout = ReaderLayout.scroll;
+  EpubBook? _pagedBook;
+  List<Paragraph>? _pagedParagraphs;
+  int _pagedParagraph = 0;
+  int _pagedRevision = 0;
+  Timer? _pagedRevisionTimer;
+  int? _pendingScrollIndex;
+  final GlobalKey<PagedBookViewState> _pagedKey = GlobalKey();
+
+  String get _pagedPosPref => 'pagedPos:${widget.fileName}';
 
   @override
   void initState() {
@@ -165,6 +187,9 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
     );
 
     _loadFontSize();
+    _loadLayout();
+    ReaderFonts.instance.addListener(_onFontsChanged);
+    ReaderFonts.instance.load();
 
     if (ttsAvailableOnPlatform()) {
       _tts = TtsService();
@@ -186,6 +211,125 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       _focusNode.requestFocus();
       _restoreTranslation();
     });
+  }
+
+  // ------------------------------------------------------------------
+  // Layout (scroll / pages)
+  // ------------------------------------------------------------------
+
+  static const _layoutPref = 'readerLayout';
+
+  void _onFontsChanged() {
+    if (!mounted) return;
+    setState(() => _pagedRevision++);
+  }
+
+  Future<void> _loadLayout() async {
+    final saved = await MyLibraryDb.instance
+        .getPreference(_layoutPref)
+        .catchError((_) => null);
+    final layout = ReaderLayout.fromName(saved as String?);
+    if (layout.paged) {
+      final pos = await MyLibraryDb.instance
+          .getPreference(_pagedPosPref)
+          .catchError((_) => null);
+      _pagedParagraph = int.tryParse('$pos') ?? 0;
+      await _ensurePagedBook();
+    }
+    if (mounted) setState(() => _layout = layout);
+  }
+
+  /// Loads the book and its paragraphs for the page view (split exactly
+  /// as the scroll view splits them, so positions carry over).
+  Future<void> _ensurePagedBook() async {
+    if (_pagedBook != null) return;
+    final book = await EpubDocument.openFile(File(widget.filePath));
+    final paragraphs =
+        parseParagraphs(parseChapters(book), book.Content).flatParagraphs;
+    final languages = book.Schema?.Package?.Metadata?.Languages;
+    _bookLanguage ??=
+        (languages == null || languages.isEmpty) ? null : languages.first;
+    _pagedBook = book;
+    _pagedParagraphs = paragraphs;
+  }
+
+  Future<void> _setLayout(ReaderLayout layout) async {
+    if (layout == _layout) return;
+    if (layout.paged) {
+      if (!_layout.paged) {
+        _pagedParagraph =
+            _epubReaderController.currentValue?.position.index ?? 0;
+      }
+      await _ensurePagedBook();
+    } else if (_layout.paged) {
+      // Back to scrolling: land on the paragraph the page started with.
+      _pendingScrollIndex = _pagedParagraph;
+    }
+    if (!mounted) return;
+    setState(() => _layout = layout);
+    await MyLibraryDb.instance
+        .savePreference(_layoutPref, layout.name)
+        .catchError((_) {});
+  }
+
+  void _onPagedParagraph(int index) {
+    _pagedParagraph = index;
+    MyLibraryDb.instance
+        .savePreference(_pagedPosPref, index)
+        .catchError((_) {});
+  }
+
+  /// The font script of what the reader shows: the translation's language
+  /// while translating, the book's language otherwise.
+  FontScript get _displayScript => _translateOn && _targetCode != null
+      ? ReaderFonts.scriptForLanguage(_targetCode)
+      : ReaderFonts.scriptForLanguage(_bookLanguage);
+
+  TextStyle _baseTextStyle(bool isDarkMode) => TextStyle(
+        height: 1.6,
+        fontSize: _fontSize,
+        color: isDarkMode ? const Color(0xfff5f5f5) : Colors.black,
+      );
+
+  Widget _buildPaged(BuildContext context, bool isDarkMode) {
+    final book = _pagedBook;
+    final paragraphs = _pagedParagraphs;
+    if (book == null || paragraphs == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final base = _baseTextStyle(isDarkMode);
+    final hanAs =
+        ReaderFonts.scriptForLanguage(_bookLanguage) == FontScript.korean
+            ? FontScript.korean
+            : FontScript.japanese;
+    final translation = _translateOn ? _translation : null;
+    return PagedBookView(
+      key: _pagedKey,
+      book: book,
+      paragraphs: paragraphs,
+      layout: _layout,
+      textStyle: base,
+      revision: _pagedRevision,
+      styleFor: (text, heading) => ReaderFonts.instance.styleFor(
+          text,
+          heading
+              ? base.copyWith(
+                  fontSize: _fontSize * 1.3, fontWeight: FontWeight.bold)
+              : base,
+          hanAs: hanAs),
+      initialParagraph: _pagedParagraph,
+      onParagraphChanged: _onPagedParagraph,
+      translationOf: (i) {
+        if (translation == null) return null;
+        final text = _paragraphTexts.textAt(paragraphs, i);
+        return text == null ? null : translation.translationOf(text);
+      },
+      onPageShown: (first, last) {
+        translation?.ensureAhead(first,
+            textAt: (i) => _paragraphTexts.textAt(paragraphs, i),
+            itemCount: paragraphs.length);
+      },
+    );
   }
 
   // ------------------------------------------------------------------
@@ -248,15 +392,17 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
         targetLanguage: target.code,
         modelId: model.fileName,
       );
-      if (!mounted) {
+      // The shared engine: the background book translator uses the same
+      // loaded model, and the page on screen jumps its queue.
+      final shared = await SharedTranslationEngine.instance.acquire();
+      if (!mounted || shared == null) {
+        if (shared != null) SharedTranslationEngine.instance.release();
         await cache.flush();
         return;
       }
+      _targetCode = target.code;
       final controller = ReaderTranslationController(
-        translator: LocalLlmTranslator(
-          modelPath: model.path,
-          runtime: model.runtime,
-        ),
+        translator: UrgentTranslator(shared),
         cache: cache,
         targetLanguage: target.englishName,
         sourceLanguage: sourceLanguageName(_bookLanguage),
@@ -275,7 +421,16 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   }
 
   void _onTranslationChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    // Pages are laid out again for new translations, at most every
+    // couple of seconds so the page under the finger does not jump.
+    if (_layout.paged && _pagedRevisionTimer == null) {
+      _pagedRevisionTimer = Timer(const Duration(seconds: 2), () {
+        _pagedRevisionTimer = null;
+        if (mounted) setState(() => _pagedRevision++);
+      });
+    }
   }
 
   Future<void> _openTranslationSettings() async {
@@ -526,15 +681,19 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
 
   @override
   void deactivate() {
-    // Save EPUB state when leaving
-    final cfi = _epubReaderController.generateEpubCfi();
-    saveEpubState(widget.fileName, cfi, ref);
+    // Save EPUB state when leaving (the page view keeps its own position).
+    if (!_layout.paged) {
+      final cfi = _epubReaderController.generateEpubCfi();
+      saveEpubState(widget.fileName, cfi, ref);
+    }
     super.deactivate();
   }
 
   @override
   void dispose() {
     _lifecycle?.dispose();
+    _pagedRevisionTimer?.cancel();
+    ReaderFonts.instance.removeListener(_onFontsChanged);
     _translation?.removeListener(_onTranslationChanged);
     _translation?.dispose();
     _tts?.dispose();
@@ -545,11 +704,8 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
 
   EpubViewBuilders<DefaultBuilderOptions> _buildersFor(bool isDarkMode) {
     final options = DefaultBuilderOptions(
-      textStyle: TextStyle(
-        height: 1.25,
-        fontSize: _fontSize,
-        color: isDarkMode ? const Color(0xfff5f5f5) : Colors.black,
-      ),
+      textStyle: ReaderFonts.instance.styleForScript(
+          _displayScript, _baseTextStyle(isDarkMode).copyWith(height: 1.4)),
     );
     final translation = _translation;
     if (_translateOn && translation != null) {
@@ -588,6 +744,43 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          PopupMenuButton<Object>(
+            key: const ValueKey('readerViewMenu'),
+            tooltip: AppLocalizations.of(context).readerViewOptions,
+            icon: Icon(Icons.chrome_reader_mode_outlined,
+                color: Theme.of(context).colorScheme.tertiary),
+            onSelected: (value) {
+              if (value is ReaderLayout) {
+                _setLayout(value);
+              } else if (value == 'fonts') {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const ReaderFontSettingsPage()));
+              }
+            },
+            itemBuilder: (context) {
+              final l10n = AppLocalizations.of(context);
+              final labels = {
+                ReaderLayout.scroll: l10n.readerLayoutScroll,
+                ReaderLayout.pagesLtr: l10n.readerLayoutPagesLtr,
+                ReaderLayout.pagesRtl: l10n.readerLayoutPagesRtl,
+              };
+              return [
+                for (final layout in ReaderLayout.values)
+                  CheckedPopupMenuItem<Object>(
+                    value: layout,
+                    checked: layout == _layout,
+                    child: Text(labels[layout]!),
+                  ),
+                const PopupMenuDivider(),
+                PopupMenuItem<Object>(
+                  value: 'fonts',
+                  child: Text(l10n.readerFonts),
+                ),
+              ];
+            },
+          ),
           IconButton(
             key: const ValueKey('translateToggle'),
             tooltip: _translateOn
@@ -688,48 +881,59 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                   child: Focus(
                     focusNode: _focusNode,
                     autofocus: true,
-                    child: positionAsync.when(
-                      data: (savedCfi) {
-                        return EpubView(
-                          controller: _epubReaderController,
-                          onDocumentLoaded: (document) {
-                            final languages =
-                                document.Schema?.Package?.Metadata?.Languages;
-                            _bookLanguage =
-                                (languages == null || languages.isEmpty)
-                                    ? null
-                                    : languages.first;
-                            // Restore position if available
-                            if (savedCfi != null && savedCfi.isNotEmpty) {
-                              _epubReaderController.gotoEpubCfi(savedCfi);
-                            }
-                          },
-                          onChapterChanged: (value) {
-                            // Land the position on every chapter change: a
-                            // process kill mid-book then loses at most one
-                            // chapter, not the whole session.
-                            final cfi = _epubReaderController.generateEpubCfi();
-                            saveEpubState(widget.fileName, cfi, ref);
-                            // Reading aloud continues into the chapter the
-                            // reader just landed on - whether the user swiped
-                            // there or TTS advanced itself.
-                            if (_tts != null &&
-                                _ttsState != TtsState.idle &&
-                                value?.chapter?.HtmlContent != null) {
-                              _startTts();
-                            }
-                          },
-                          builders: _buildersFor(isDarkMode),
-                        );
-                      },
-                      loading: () => Center(
-                        child: CircularProgressIndicator(
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
-                      ),
-                      error: (err, stack) =>
-                          Center(child: Text("Error loading book: $err")),
-                    ),
+                    child: _layout.paged
+                        ? _buildPaged(context, isDarkMode)
+                        : positionAsync.when(
+                            data: (savedCfi) {
+                              return EpubView(
+                                controller: _epubReaderController,
+                                onDocumentLoaded: (document) {
+                                  final languages = document
+                                      .Schema?.Package?.Metadata?.Languages;
+                                  _bookLanguage =
+                                      (languages == null || languages.isEmpty)
+                                          ? null
+                                          : languages.first;
+                                  // Restore position if available
+                                  final jump = _pendingScrollIndex;
+                                  if (jump != null) {
+                                    _pendingScrollIndex = null;
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) =>
+                                            _epubReaderController.jumpTo(
+                                                index: jump));
+                                  } else if (savedCfi != null &&
+                                      savedCfi.isNotEmpty) {
+                                    _epubReaderController.gotoEpubCfi(savedCfi);
+                                  }
+                                },
+                                onChapterChanged: (value) {
+                                  // Land the position on every chapter change: a
+                                  // process kill mid-book then loses at most one
+                                  // chapter, not the whole session.
+                                  final cfi =
+                                      _epubReaderController.generateEpubCfi();
+                                  saveEpubState(widget.fileName, cfi, ref);
+                                  // Reading aloud continues into the chapter the
+                                  // reader just landed on - whether the user swiped
+                                  // there or TTS advanced itself.
+                                  if (_tts != null &&
+                                      _ttsState != TtsState.idle &&
+                                      value?.chapter?.HtmlContent != null) {
+                                    _startTts();
+                                  }
+                                },
+                                builders: _buildersFor(isDarkMode),
+                              );
+                            },
+                            loading: () => Center(
+                              child: CircularProgressIndicator(
+                                color: Theme.of(context).colorScheme.secondary,
+                              ),
+                            ),
+                            error: (err, stack) =>
+                                Center(child: Text("Error loading book: $err")),
+                          ),
                   ),
                 ),
                 if (_showTutorial)

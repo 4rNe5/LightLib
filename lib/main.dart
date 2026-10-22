@@ -1,3 +1,4 @@
+import 'dart:async';
 // Dart imports:
 import 'dart:io' show Platform;
 
@@ -16,6 +17,8 @@ import 'package:desktop_webview_window/desktop_webview_window.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart' show MyLibraryDb;
+import 'package:openlib/services/translation/book_translation_service.dart';
+import 'package:openlib/services/reader_fonts.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/challenge_html_cache.dart';
 import 'package:openlib/services/webview_challenge_solver.dart';
@@ -149,10 +152,9 @@ void main(List<String> args) async {
 
   // Load saved language override; empty or unknown values follow the
   // system locale.
-  final savedLocaleCode = await dataBase
-          .getPreference('locale')
-          .catchError((e) => '') as String? ??
-      '';
+  final savedLocaleCode =
+      await dataBase.getPreference('locale').catchError((e) => '') as String? ??
+          '';
   Locale? startLocale;
   final supported = AppLocalizations.supportedLocales;
   for (final locale in supported) {
@@ -192,6 +194,13 @@ void main(List<String> args) async {
     );
     return solved == true ? ChallengeHtmlCache.get(url) : null;
   };
+
+  // Fonts chosen per script (and imported font files) before first frame.
+  await ReaderFonts.instance.load().catchError((_) {});
+
+  // Library books are translated in the background, a little at a time,
+  // when a model is installed and the option is on.
+  unawaited(BookTranslationService.instance.start());
 
   runApp(
     ProviderScope(
@@ -268,10 +277,28 @@ class MyApp extends ConsumerWidget {
       locale: ref.watch(localeOverrideProvider),
       builder: (context, child) {
         final scale = ref.watch(fontSizeScaleProvider);
-        return MediaQuery(
-          data: MediaQuery.of(context)
-              .copyWith(textScaler: TextScaler.linear(scale)),
-          child: child!,
+        // Korean and Japanese UI text uses the font chosen for that script.
+        return ListenableBuilder(
+          listenable: ReaderFonts.instance,
+          builder: (context, _) {
+            final family = ReaderFonts.instance
+                .uiFamilyFor(Localizations.localeOf(context).languageCode);
+            final theme = Theme.of(context);
+            return Theme(
+              data: family == null
+                  ? theme
+                  : theme.copyWith(
+                      textTheme: theme.textTheme.apply(fontFamily: family),
+                      primaryTextTheme:
+                          theme.primaryTextTheme.apply(fontFamily: family),
+                    ),
+              child: MediaQuery(
+                data: MediaQuery.of(context)
+                    .copyWith(textScaler: TextScaler.linear(scale)),
+                child: child!,
+              ),
+            );
+          },
         );
       },
       debugShowCheckedModeBanner: false,
@@ -520,8 +547,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
             tabBackgroundColor: Theme.of(context).colorScheme.secondary,
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             tabs: [
-              GButton(
-                  icon: Icons.trending_up, text: l10n.navHome),
+              GButton(icon: Icons.trending_up, text: l10n.navHome),
               GButton(icon: Icons.search, text: l10n.navSearch),
               GButton(
                   icon: Icons.collections_bookmark,

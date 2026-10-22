@@ -159,16 +159,92 @@ String? sourceLanguageName(String? bookLanguage) {
   return null;
 }
 
+/// Whether [text] contains Japanese kana.
+bool containsKana(String text) => RegExp(r'[぀-ゟ゠-ヿｦ-ﾟ]').hasMatch(text);
+
+/// Style rules for fiction, sharpened for Japanese light novels (the
+/// reason this reader translates at all) and for Korean output.
+List<String> _styleRules({
+  required String targetLanguage,
+  required bool japaneseSource,
+}) {
+  final rules = <String>[
+    'Translate everything into natural, fluent $targetLanguage prose, '
+        'as a professional fiction translator would. Leave no word '
+        'untranslated and add nothing.',
+    "Keep each character's voice: casual or polite speech, rough or "
+        'refined, childish or archaic speech must stay that way.',
+    'Keep names, places, skill and item names, numbers and amounts '
+        'exactly. Keep line breaks.',
+    'Render sound effects and onomatopoeia with natural $targetLanguage '
+        'equivalents.',
+  ];
+  if (japaneseSource) {
+    rules.addAll([
+      'This is a Japanese light novel. Keep its lively, conversational '
+          'tone, stammering (せ、先輩), elongated or cut-off words, and '
+          'punctuation such as ……, ――, ！？ and ♪.',
+      'Speech quirks carry character: です/ます is polite, だ/ぜ/ねー is '
+          'casual, っす is a junior\'s casual-polite speech, ですわ/'
+          'ですこと is a noble lady\'s speech, のだ is a cute or haughty '
+          'boast. Reflect each in $targetLanguage.',
+    ]);
+  }
+  if (targetLanguage == 'Korean') {
+    rules.addAll([
+      'Narration outside quotes is written in the plain literary style '
+          'ending in -다 (했다, 있었다, 무너져 내렸다), never in -어/-지 '
+          'chat style. Dialogue inside quotes keeps natural spoken endings '
+          '(해, 할래, 해요, 하거든) - never -다 narration endings.',
+      'Use 반말 for casual speech and 존댓말 for polite speech, matching '
+          'the original. Translate forms of address naturally: 先輩 → '
+          '선배, 〜さん → 〜 씨, 〜くん → 〜 군 or the name alone, 〜ちゃん → '
+          '〜쨩, お兄ちゃん → 오빠 or 형 by context.',
+      'Write Korean sound words (두근, 쾅, 끼잉) and keep sentence-final '
+          'nuance (~거든, ~잖아, ~라고요).',
+    ]);
+  }
+  return rules;
+}
+
 /// The instruction sent with every paragraph. The model answers with the
-/// translation only.
+/// translation only. [context] is the text just before this paragraph,
+/// given so names, tone and who is speaking stay consistent; it is not
+/// translated.
 String translationPrompt({
   required String text,
   required String targetLanguage,
   String? sourceLanguage,
+  String? context,
 }) {
+  final japanese = sourceLanguage == 'Japanese' || containsKana(text);
   final from = sourceLanguage == null ? '' : ' $sourceLanguage';
-  return 'Translate the following$from text into $targetLanguage. '
-      'Keep the meaning, tone, names and numbers exactly. '
-      'Output only the $targetLanguage translation, without notes.\n\n'
-      '$text';
+  final buffer = StringBuffer()
+    ..writeln('Translate the following$from text into $targetLanguage.')
+    ..writeln('Rules:');
+  for (final rule in _styleRules(
+      targetLanguage: targetLanguage, japaneseSource: japanese)) {
+    buffer.writeln('- $rule');
+  }
+  buffer
+      .writeln('- Output only the $targetLanguage translation, without notes, '
+          'quotes around it, or the original.');
+  final ctx = context?.trim() ?? '';
+  if (ctx.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln('Preceding text, for context only (do not translate it):')
+      ..writeln(ctx);
+  }
+  buffer
+    ..writeln()
+    ..writeln('Text to translate:')
+    ..write(text);
+  return buffer.toString();
 }
+
+/// A correction sent when an answer still contained source-language
+/// script: the same request, with the problem named.
+String retryPrompt(String prompt, String badAnswer, String targetLanguage) =>
+    '$prompt\n\nYour previous answer left Japanese text untranslated:\n'
+    '$badAnswer\n\nTranslate again. Every word must be $targetLanguage.';

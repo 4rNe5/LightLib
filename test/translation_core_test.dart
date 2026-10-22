@@ -34,7 +34,10 @@ class FakeTranslator implements Translator {
 
   @override
   Future<String> translate(String text,
-      {required String targetLanguage, String? sourceLanguage}) async {
+      {required String targetLanguage,
+      String? sourceLanguage,
+      String? context,
+      bool urgent = false}) async {
     asked.add(text);
     if (gate != null) await gate!.future;
     return '[KO]$text';
@@ -122,6 +125,10 @@ void main() {
       expect(prompt, contains('Japanese text into Korean'));
       expect(prompt, contains('Output only the Korean translation'));
       expect(prompt.endsWith('本文'), isTrue);
+      // Light-novel and Korean style rules are in.
+      expect(prompt, contains('light novel'));
+      expect(prompt, contains('반말'));
+      expect(prompt, contains('-다'));
       expect(translationPrompt(text: 'x', targetLanguage: 'Korean'),
           contains('following text into Korean'));
     });
@@ -256,5 +263,51 @@ void main() {
       expect(controller.status, ReaderTranslationStatus.idle);
       expect(translator.asked, contains('p0'));
     });
+  });
+
+  group('polishing translations', () {
+    test('corner brackets become Korean quotes; stray marks go', () {
+      expect(
+          polishTranslation('「선배っ！　잠깐만요！」', '「先輩っ！」', 'Korean'), '“선배! 잠깐만요!”');
+    });
+
+    test('straight quotes in a dialogue line become curly pairs', () {
+      expect(polishTranslation('그녀는 "어머"라고 했다.', '彼女は「あら」と言った。', 'Korean'),
+          '그녀는 “어머”라고 했다.');
+    });
+
+    test('quotes wrapped around a narration answer are removed', () {
+      expect(polishTranslation('"그날, 모든 게 무너졌다."', 'その日、全てが崩れた。', 'Korean'),
+          '그날, 모든 게 무너졌다.');
+    });
+
+    test('bracketed hanja is dropped', () {
+      expect(polishTranslation('만사(萬死)에 해당한다', '万死に値する', 'Korean'), '만사에 해당한다');
+    });
+
+    test('Japanese output is left alone', () {
+      expect(polishTranslation('「はい！」', '「はい！」', 'Japanese'), '「はい！」');
+    });
+
+    test('leftover script is detected per target', () {
+      expect(leftoverSourceScript('선배っ 괜찮아', 'Korean'), 'っ');
+      expect(leftoverSourceScript('洛中 지역', 'Korean'), '洛中');
+      expect(leftoverSourceScript('洛中の', 'Simplified Chinese'), 'の');
+      expect(leftoverSourceScript('洛中', 'Simplified Chinese'), '');
+      expect(leftoverSourceScript('はい', 'Japanese'), '');
+    });
+  });
+
+  test('one cache instance per book file', () async {
+    final dir = await Directory.systemTemp.createTemp('tshared');
+    final a = await TranslationCache.open(
+        bookFileName: 'x', targetLanguage: 'ko', modelId: 'm', directory: dir);
+    final b = await TranslationCache.open(
+        bookFileName: 'x', targetLanguage: 'ko', modelId: 'm', directory: dir);
+    expect(identical(a, b), isTrue);
+    a.store('t', 'u');
+    expect(b.lookup('t'), 'u');
+    await a.clear();
+    await dir.delete(recursive: true);
   });
 }

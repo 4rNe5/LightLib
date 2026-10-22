@@ -30,6 +30,7 @@ import 'package:openlib/ui/about_page.dart';
 import 'package:openlib/ui/instances_page.dart';
 import 'package:openlib/ui/onboarding/onboarding_page.dart';
 import 'package:openlib/ui/translation_settings_page.dart';
+import 'package:openlib/ui/reader_font_settings_page.dart';
 
 import 'package:openlib/state/state.dart'
     show
@@ -425,6 +426,13 @@ class SettingsPage extends ConsumerWidget {
                 ref.read(openEpubWithExternalAppProvider.notifier).state = val;
                 dataBase.savePreference('openEpubwithExternalApp', val);
               },
+            ),
+            _SettingsTile(
+              title: l10n.readerFonts,
+              subtitle: l10n.fontsSettingsSubtitle,
+              icon: Icons.font_download_outlined,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const ReaderFontSettingsPage())),
             ),
             _SettingsTile(
               title: l10n.translationSettingsTitle,
@@ -851,6 +859,8 @@ class _LanguageSelectorWidget extends ConsumerWidget {
       'de': 'Deutsch',
       'fr': 'Français',
       'es': 'Español',
+      'ko': '한국어',
+      'ja': '日本語',
     };
 
     return DropdownButtonFormField<Locale?>(
