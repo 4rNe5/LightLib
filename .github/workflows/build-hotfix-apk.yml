@@ -1,0 +1,87 @@
+name: Build Android hotfix APK
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/build-hotfix-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Build arm64 release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: "3.47.2"
+          channel: stable
+          cache: true
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Configure APK signing
+        shell: bash
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          keystore="$GITHUB_WORKSPACE/android/app/ci-upload-keystore.jks"
+          if [[ -n "$KEYSTORE_BASE64" && -n "$KEY_ALIAS" && -n "$STORE_PASSWORD" && -n "$KEY_PASSWORD" ]]; then
+            printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$keystore"
+            echo "Using configured release signing secrets"
+          else
+            echo "::warning::No complete release signing secrets configured; generating a one-time test signing key. The APK will not update official/signed builds in place."
+            KEY_ALIAS="ci-test"
+            STORE_PASSWORD="$(openssl rand -hex 16)"
+            KEY_PASSWORD="$STORE_PASSWORD"
+            keytool -genkeypair -noprompt -keyalg RSA -keysize 2048 -validity 30 \
+              -alias "$KEY_ALIAS" -keystore "$keystore" \
+              -storepass "$STORE_PASSWORD" -keypass "$KEY_PASSWORD" \
+              -dname "CN=LightLib CI Test,O=LightLib,C=KR"
+          fi
+          {
+            printf 'storeFile=%s\n' "$keystore"
+            printf 'keyAlias=%s\n' "$KEY_ALIAS"
+            printf 'storePassword=%s\n' "$STORE_PASSWORD"
+            printf 'keyPassword=%s\n' "$KEY_PASSWORD"
+          } > android/key.properties
+
+      - name: Build release APK for Android arm64
+        run: flutter build apk --release --split-per-abi
+
+      - name: Verify and stage output
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          test -s "$apk"
+          mkdir -p artifacts
+          cp "$apk" "artifacts/LightLib-hotfix-arm64-v8a-${{ github.run_number }}.apk"
+          sha256sum artifacts/*.apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LightLib-hotfix-arm64-v8a
+          path: artifacts/*.apk
+          if-no-files-found: error
+          retention-days: 14
