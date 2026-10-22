@@ -992,5 +992,167 @@
         "type": "String"
       }
     }
+  },
+  "translationTranslate": "Translate",
+  "@translationTranslate": {
+    "description": "Reader toolbar: turn translation on"
+  },
+  "translationShowOriginal": "Show original",
+  "@translationShowOriginal": {
+    "description": "Reader toolbar: turn translation off"
+  },
+  "translationNoModel": "No translation model installed yet.",
+  "@translationNoModel": {
+    "description": "Snackbar when no translation model is installed"
+  },
+  "translationOpenSettings": "Set up",
+  "@translationOpenSettings": {
+    "description": "Snackbar action opening translation settings"
+  },
+  "translationLoadingModel": "Loading translation model…",
+  "@translationLoadingModel": {
+    "description": "Reader status while the model loads"
+  },
+  "translationTranslating": "Translating · {count} left · {device}",
+  "@translationTranslating": {
+    "description": "Reader status while translating",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "translationReady": "Translated on this device · {device}",
+  "@translationReady": {
+    "description": "Reader status when everything visible is translated",
+    "placeholders": {
+      "device": {
+        "type": "String"
+      }
+    }
+  },
+  "translationPaused": "Translation paused",
+  "@translationPaused": {
+    "description": "Reader status while the app is in the background"
+  },
+  "translationFailed": "The translation model could not run.",
+  "@translationFailed": {
+    "description": "Reader status when the model could not run"
+  },
+  "translationSettingsTitle": "On-device translation",
+  "@translationSettingsTitle": {
+    "description": "Title of the translation settings page"
+  },
+  "translationSettingsSubtitle": "Translate books in the reader with a local AI model",
+  "@translationSettingsSubtitle": {
+    "description": "Settings tile subtitle for translation"
+  },
+  "translationTargetLanguage": "Translate into",
+  "@translationTargetLanguage": {
+    "description": "Label for the target language picker"
+  },
+  "translationModels": "Models",
+  "@translationModels": {
+    "description": "Header of the model list"
+  },
+  "translationModelsHint": "LiteRT runs on the GPU and falls back to the CPU. The GGUF file is for phones where LiteRT does not work.",
+  "@translationModelsHint": {
+    "description": "Explains the two model files"
+  },
+  "translationRecommended": "recommended",
+  "@translationRecommended": {
+    "description": "Badge on the recommended model"
+  },
+  "translationDownload": "Download",
+  "@translationDownload": {
+    "description": "Button: download a model"
+  },
+  "translationDownloadConfirm": "This downloads {size}. Use Wi-Fi if you can. The file stays on this device.",
+  "@translationDownloadConfirm": {
+    "description": "Dialog before downloading a model",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "translationVerifying": "Verifying the file…",
+  "@translationVerifying": {
+    "description": "Model download: checksum check"
+  },
+  "translationDownloadFailed": "Download failed: {error}",
+  "@translationDownloadFailed": {
+    "description": "Model download failed",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "translationInUse": "In use",
+  "@translationInUse": {
+    "description": "Chip on the active model"
+  },
+  "translationUse": "Use",
+  "@translationUse": {
+    "description": "Button: use this model"
+  },
+  "translationDeleteConfirm": "Delete this model file from the device?",
+  "@translationDeleteConfirm": {
+    "description": "Dialog before deleting a model"
+  },
+  "translationImportModel": "Import a model file (.litertlm / .gguf)",
+  "@translationImportModel": {
+    "description": "Button: import a model file"
+  },
+  "translationNotAModel": "Pick a .litertlm or .gguf file.",
+  "@translationNotAModel": {
+    "description": "The picked file is not a model"
+  },
+  "translationImported": "Model imported and selected.",
+  "@translationImported": {
+    "description": "Model import succeeded"
+  },
+  "translationImportFailed": "Could not import the model file.",
+  "@translationImportFailed": {
+    "description": "Model import failed"
+  },
+  "translationBatteryNote": "Only the paragraphs on screen and a few ahead are translated, and results are saved, so re-reading costs nothing. Translation pauses when the app is in the background.",
+  "@translationBatteryNote": {
+    "description": "Note about battery use"
+  },
+  "translationClearCache": "Delete saved translations",
+  "@translationClearCache": {
+    "description": "Button: delete saved translations"
+  },
+  "translationCacheCleared": "Saved translations deleted.",
+  "@translationCacheCleared": {
+    "description": "Saved translations deleted"
+  },
+  "importBooks": "Import EPUB / PDF",
+  "@importBooks": {
+    "description": "Library: import EPUB/PDF files from the device"
+  },
+  "importBooksFailed": "Could not open the file picker.",
+  "@importBooksFailed": {
+    "description": "The file picker could not open"
+  },
+  "importBooksResult": "Added {imported} · already in library {existing} · failed {failed}",
+  "@importBooksResult": {
+    "description": "Result of a book import",
+    "placeholders": {
+      "imported": {
+        "type": "int"
+      },
+      "existing": {
+        "type": "int"
+      },
+      "failed": {
+        "type": "int"
+      }
+    }
   }
 }

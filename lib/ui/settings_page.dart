@@ -29,6 +29,7 @@ import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/about_page.dart';
 import 'package:openlib/ui/instances_page.dart';
 import 'package:openlib/ui/onboarding/onboarding_page.dart';
+import 'package:openlib/ui/translation_settings_page.dart';
 
 import 'package:openlib/state/state.dart'
     show
@@ -323,8 +324,7 @@ class SettingsPage extends ConsumerWidget {
                 ),
                 items: [
                   DropdownMenuItem(
-                      value: ThemeMode.system,
-                      child: Text(l10n.followSystem)),
+                      value: ThemeMode.system, child: Text(l10n.followSystem)),
                   DropdownMenuItem(
                       value: ThemeMode.light, child: Text(l10n.lightTheme)),
                   DropdownMenuItem(
@@ -426,6 +426,13 @@ class SettingsPage extends ConsumerWidget {
                 dataBase.savePreference('openEpubwithExternalApp', val);
               },
             ),
+            _SettingsTile(
+              title: l10n.translationSettingsTitle,
+              subtitle: l10n.translationSettingsSubtitle,
+              icon: Icons.translate,
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => const TranslationSettingsPage())),
+            ),
             const SizedBox(height: 20),
             _SettingsSectionHeader(l10n.advancedSection),
             _SettingsSwitchTile(
@@ -444,8 +451,7 @@ class SettingsPage extends ConsumerWidget {
               onChanged: (val) {
                 ref.read(backgroundVerificationProvider.notifier).state = val;
                 WebviewChallengeSolver.headlessEnabled = val;
-                dataBase.savePreference(
-                    'backgroundVerification', val ? 1 : 0);
+                dataBase.savePreference('backgroundVerification', val ? 1 : 0);
               },
             ),
             _SettingsTile(
@@ -498,8 +504,7 @@ class SettingsPage extends ConsumerWidget {
                 } catch (e) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                          content: Text(l10n.failedExportLogs('$e'))),
+                      SnackBar(content: Text(l10n.failedExportLogs('$e'))),
                     );
                   }
                 }
@@ -612,8 +617,7 @@ class _UpdateSettingsWidgetState extends State<_UpdateSettingsWidget> {
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content:
-                Text(updateL10n.onLatestVersion(result.currentVersion)),
+            content: Text(updateL10n.onLatestVersion(result.currentVersion)),
             backgroundColor: Colors.green,
           ),
         );
@@ -706,8 +710,7 @@ class _SearchProvidersWidget extends ConsumerWidget {
                 onChanged: (on) async {
                   if (!on && enabledIds.length == 1) {
                     showSnackBar(
-                        context: context,
-                        message: l10n.atLeastOneSource);
+                        context: context, message: l10n.atLeastOneSource);
                     return;
                   }
                   await manager.setProviderEnabled(provider.$1, on);
@@ -788,9 +791,7 @@ class _BackupSettingsWidget extends ConsumerWidget {
       final restored = await service.restoreBackupFile(path);
       if (!restored) {
         if (context.mounted) {
-          showSnackBar(
-              context: context,
-              message: importL10n.notABackup);
+          showSnackBar(context: context, message: importL10n.notABackup);
         }
         return;
       }

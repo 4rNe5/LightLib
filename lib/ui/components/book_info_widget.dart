@@ -1,3 +1,6 @@
+// Dart imports:
+import 'dart:io';
+
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
@@ -8,6 +11,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Project imports:
+import 'package:openlib/services/local_book_import.dart'
+    show isLocalImagePath, localImageFilePath;
 import 'package:openlib/state/state.dart' show annaArchiveBaseUrlProvider;
 
 /// The URL the "open in site" button opens for a book.
@@ -76,46 +81,63 @@ class BookInfoWidget extends ConsumerWidget {
                 height: 30,
               ),
               Center(
-                child: CachedNetworkImage(
-                  height: 230,
-                  width: 170,
-                  imageUrl: data.thumbnail,
-                  // libgen.li serves /covers/ only with an ads.php
-                  // Referer; the book page itself is a valid one.
-                  httpHeaders: data.thumbnail.contains('libgen')
-                      ? {'Referer': data.link}
-                      : null,
-                  imageBuilder: (context, imageProvider) => Container(
-                    decoration: BoxDecoration(
-                      borderRadius: const BorderRadius.all(Radius.circular(10)),
-                      image: DecorationImage(
-                        image: imageProvider,
-                        fit: BoxFit.fill,
+                child: isLocalImagePath(data.thumbnail?.toString())
+                    // Imported books keep their cover as a file.
+                    ? Container(
+                        height: 230,
+                        width: 170,
+                        decoration: BoxDecoration(
+                          borderRadius:
+                              const BorderRadius.all(Radius.circular(10)),
+                          color: Colors.grey,
+                          image: DecorationImage(
+                            image: FileImage(File(
+                                localImageFilePath(data.thumbnail.toString()))),
+                            fit: BoxFit.fill,
+                          ),
+                        ),
+                      )
+                    : CachedNetworkImage(
+                        height: 230,
+                        width: 170,
+                        imageUrl: data.thumbnail,
+                        // libgen.li serves /covers/ only with an ads.php
+                        // Referer; the book page itself is a valid one.
+                        httpHeaders: data.thumbnail.contains('libgen')
+                            ? {'Referer': data.link}
+                            : null,
+                        imageBuilder: (context, imageProvider) => Container(
+                          decoration: BoxDecoration(
+                            borderRadius:
+                                const BorderRadius.all(Radius.circular(10)),
+                            image: DecorationImage(
+                              image: imageProvider,
+                              fit: BoxFit.fill,
+                            ),
+                          ),
+                        ),
+                        placeholder: (context, url) => Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color: Colors.grey,
+                          ),
+                          height: 230,
+                          width: 170,
+                        ),
+                        errorWidget: (context, url, error) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color: Colors.grey,
+                            ),
+                            height: 230,
+                            width: 170,
+                            child: const Center(
+                              child: Icon(Icons.image_rounded),
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                  ),
-                  placeholder: (context, url) => Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      color: Colors.grey,
-                    ),
-                    height: 230,
-                    width: 170,
-                  ),
-                  errorWidget: (context, url, error) {
-                    return Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        color: Colors.grey,
-                      ),
-                      height: 230,
-                      width: 170,
-                      child: const Center(
-                        child: Icon(Icons.image_rounded),
-                      ),
-                    );
-                  },
-                ),
               ),
               // Title row with AA button inline
               Padding(

@@ -12,7 +12,14 @@ import 'package:open_file/open_file.dart';
 
 // Project imports:
 import 'package:openlib/services/files.dart' show getFilePath;
+import 'package:openlib/services/translation/reader_translation_controller.dart';
+import 'package:openlib/services/translation/translation_cache.dart';
+import 'package:openlib/services/translation/translation_model_store.dart';
+import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
+import 'package:openlib/ui/components/translated_chapter_builder.dart';
+import 'package:openlib/ui/translation_settings_page.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/state/state.dart'
     show
@@ -139,6 +146,15 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   List<String> _speechChunks = const [];
   int _speechChunkIndex = 0;
 
+  // On-device translation: the reader shows translated paragraphs in
+  // place of the originals while this is on.
+  ReaderTranslationController? _translation;
+  bool _translateOn = false;
+  bool _translationStarting = false;
+  String? _bookLanguage;
+  final ParagraphTextMemo _paragraphTexts = ParagraphTextMemo();
+  AppLifecycleListener? _lifecycle;
+
   @override
   void initState() {
     super.initState();
@@ -158,10 +174,192 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       _tts!.onChunkComplete(_speakNextChunk);
     }
 
+    // Translation stops queueing work in the background: the OS would
+    // suspend it anyway, and nobody is reading.
+    _lifecycle = AppLifecycleListener(
+      onHide: () => _translation?.pause(),
+      onShow: () => _translation?.resume(),
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _checkTutorial();
       _focusNode.requestFocus();
+      _restoreTranslation();
     });
+  }
+
+  // ------------------------------------------------------------------
+  // Translation
+  // ------------------------------------------------------------------
+
+  static const _translatePref = 'readerTranslate';
+
+  /// Turns translation back on when the reader left it on last time and a
+  /// model is still installed.
+  Future<void> _restoreTranslation() async {
+    final saved = await MyLibraryDb.instance
+        .getPreference(_translatePref)
+        .catchError((_) => null);
+    if (saved == 1 && mounted) await _setTranslation(true, quiet: true);
+  }
+
+  Future<void> _setTranslation(bool on, {bool quiet = false}) async {
+    if (_translationStarting) return;
+    if (!on) {
+      setState(() => _translateOn = false);
+      _translation?.pause();
+      await MyLibraryDb.instance
+          .savePreference(_translatePref, 0)
+          .catchError((_) {});
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context);
+    if (_translation != null) {
+      _translation!.resume();
+      setState(() => _translateOn = true);
+      await MyLibraryDb.instance
+          .savePreference(_translatePref, 1)
+          .catchError((_) {});
+      return;
+    }
+
+    setState(() => _translationStarting = true);
+    try {
+      final model = await TranslationModelStore.instance.activeModel();
+      if (!mounted) return;
+      if (model == null) {
+        if (!quiet) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.translationNoModel),
+            action: SnackBarAction(
+              label: l10n.translationOpenSettings,
+              onPressed: _openTranslationSettings,
+            ),
+          ));
+        }
+        return;
+      }
+      final target = languageForCode(await MyLibraryDb.instance
+          .getPreference(translationTargetLanguagePref)
+          .catchError((_) => null) as String?);
+      final cache = await TranslationCache.open(
+        bookFileName: widget.fileName,
+        targetLanguage: target.code,
+        modelId: model.fileName,
+      );
+      if (!mounted) {
+        await cache.flush();
+        return;
+      }
+      final controller = ReaderTranslationController(
+        translator: LocalLlmTranslator(
+          modelPath: model.path,
+          runtime: model.runtime,
+        ),
+        cache: cache,
+        targetLanguage: target.englishName,
+        sourceLanguage: sourceLanguageName(_bookLanguage),
+      );
+      controller.addListener(_onTranslationChanged);
+      setState(() {
+        _translation = controller;
+        _translateOn = true;
+      });
+      await MyLibraryDb.instance
+          .savePreference(_translatePref, 1)
+          .catchError((_) {});
+    } finally {
+      if (mounted) setState(() => _translationStarting = false);
+    }
+  }
+
+  void _onTranslationChanged() {
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openTranslationSettings() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const TranslationSettingsPage()),
+    );
+    // A new model or language applies from the next start.
+    final old = _translation;
+    if (old != null && mounted) {
+      final wasOn = _translateOn;
+      old.removeListener(_onTranslationChanged);
+      setState(() {
+        _translation = null;
+        _translateOn = false;
+      });
+      old.dispose();
+      if (wasOn) await _setTranslation(true, quiet: true);
+    }
+  }
+
+  Widget _buildTranslationStatus(BuildContext context) {
+    final controller = _translation;
+    if (!_translateOn || controller == null) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final status = controller.status;
+    final busy = status == ReaderTranslationStatus.loadingModel ||
+        status == ReaderTranslationStatus.translating;
+    final String label;
+    switch (status) {
+      case ReaderTranslationStatus.loadingModel:
+        label = l10n.translationLoadingModel;
+      case ReaderTranslationStatus.translating:
+        label = l10n.translationTranslating(
+            controller.pendingCount, controller.deviceLabel ?? '');
+      case ReaderTranslationStatus.paused:
+        label = l10n.translationPaused;
+      case ReaderTranslationStatus.error:
+        label = l10n.translationFailed;
+      case ReaderTranslationStatus.idle:
+        label = l10n.translationReady(controller.deviceLabel ?? '');
+    }
+    return Material(
+      color: scheme.surfaceContainerHighest.withAlpha(120),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            child: Row(
+              children: [
+                Icon(Icons.translate, size: 14, color: scheme.tertiary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    label,
+                    key: const ValueKey('translationStatus'),
+                    style: TextStyle(fontSize: 12, color: scheme.tertiary),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                if (status == ReaderTranslationStatus.error)
+                  TextButton(
+                    onPressed: controller.retry,
+                    style: TextButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: Text(l10n.retry),
+                  ),
+              ],
+            ),
+          ),
+          if (busy)
+            LinearProgressIndicator(
+              minHeight: 2,
+              color: scheme.secondary,
+              backgroundColor: Colors.transparent,
+            ),
+        ],
+      ),
+    );
   }
 
   Future<void> _loadFontSize() async {
@@ -336,10 +534,38 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
 
   @override
   void dispose() {
+    _lifecycle?.dispose();
+    _translation?.removeListener(_onTranslationChanged);
+    _translation?.dispose();
     _tts?.dispose();
     _focusNode.dispose();
     _epubReaderController.dispose();
     super.dispose();
+  }
+
+  EpubViewBuilders<DefaultBuilderOptions> _buildersFor(bool isDarkMode) {
+    final options = DefaultBuilderOptions(
+      textStyle: TextStyle(
+        height: 1.25,
+        fontSize: _fontSize,
+        color: isDarkMode ? const Color(0xfff5f5f5) : Colors.black,
+      ),
+    );
+    final translation = _translation;
+    if (_translateOn && translation != null) {
+      return EpubViewBuilders<DefaultBuilderOptions>(
+        options: options,
+        chapterDividerBuilder: (_) => const Divider(),
+        chapterBuilder: translatingChapterBuilder(
+          controller: translation,
+          memo: _paragraphTexts,
+        ),
+      );
+    }
+    return EpubViewBuilders<DefaultBuilderOptions>(
+      options: options,
+      chapterDividerBuilder: (_) => const Divider(),
+    );
   }
 
   @override
@@ -362,6 +588,28 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
+          IconButton(
+            key: const ValueKey('translateToggle'),
+            tooltip: _translateOn
+                ? AppLocalizations.of(context).translationShowOriginal
+                : AppLocalizations.of(context).translationTranslate,
+            icon: _translationStarting
+                ? SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Theme.of(context).colorScheme.tertiary,
+                    ),
+                  )
+                : Icon(
+                    _translateOn ? Icons.g_translate : Icons.translate,
+                    color: _translateOn
+                        ? Theme.of(context).colorScheme.secondary
+                        : Theme.of(context).colorScheme.tertiary,
+                  ),
+            onPressed: () => _setTranslation(!_translateOn),
+          ),
           if (_tts != null) ...[
             IconButton(
               tooltip: _ttsState == TtsState.playing
@@ -427,69 +675,71 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
         child: EpubViewTableOfContents(controller: _epubReaderController),
       ),
       // Use standard EpubView without interfering gestures first to ensure it works
-      body: Stack(
+      body: Column(
         children: [
-          // SelectionArea lets readers select and copy text from the book.
-          // Buttons and links inside the Html still work: SelectionArea only
-          // captures drags that start on text.
-          SelectionArea(
-            child: Focus(
-              focusNode: _focusNode,
-              autofocus: true,
-              child: positionAsync.when(
-                data: (savedCfi) {
-                  return EpubView(
-                    controller: _epubReaderController,
-                    onDocumentLoaded: (document) {
-                      // Restore position if available
-                      if (savedCfi != null && savedCfi.isNotEmpty) {
-                        _epubReaderController.gotoEpubCfi(savedCfi);
-                      }
-                    },
-                    onChapterChanged: (value) {
-                      // Land the position on every chapter change: a
-                      // process kill mid-book then loses at most one
-                      // chapter, not the whole session.
-                      final cfi = _epubReaderController.generateEpubCfi();
-                      saveEpubState(widget.fileName, cfi, ref);
-                      // Reading aloud continues into the chapter the
-                      // reader just landed on - whether the user swiped
-                      // there or TTS advanced itself.
-                      if (_tts != null &&
-                          _ttsState != TtsState.idle &&
-                          value?.chapter?.HtmlContent != null) {
-                        _startTts();
-                      }
-                    },
-                    builders: EpubViewBuilders<DefaultBuilderOptions>(
-                      options: DefaultBuilderOptions(
-                        textStyle: TextStyle(
-                          height: 1.25,
-                          fontSize: _fontSize,
-                          color: isDarkMode
-                              ? const Color(0xfff5f5f5)
-                              : Colors.black,
+          _buildTranslationStatus(context),
+          Expanded(
+            child: Stack(
+              children: [
+                // SelectionArea lets readers select and copy text from the book.
+                // Buttons and links inside the Html still work: SelectionArea only
+                // captures drags that start on text.
+                SelectionArea(
+                  child: Focus(
+                    focusNode: _focusNode,
+                    autofocus: true,
+                    child: positionAsync.when(
+                      data: (savedCfi) {
+                        return EpubView(
+                          controller: _epubReaderController,
+                          onDocumentLoaded: (document) {
+                            final languages =
+                                document.Schema?.Package?.Metadata?.Languages;
+                            _bookLanguage =
+                                (languages == null || languages.isEmpty)
+                                    ? null
+                                    : languages.first;
+                            // Restore position if available
+                            if (savedCfi != null && savedCfi.isNotEmpty) {
+                              _epubReaderController.gotoEpubCfi(savedCfi);
+                            }
+                          },
+                          onChapterChanged: (value) {
+                            // Land the position on every chapter change: a
+                            // process kill mid-book then loses at most one
+                            // chapter, not the whole session.
+                            final cfi = _epubReaderController.generateEpubCfi();
+                            saveEpubState(widget.fileName, cfi, ref);
+                            // Reading aloud continues into the chapter the
+                            // reader just landed on - whether the user swiped
+                            // there or TTS advanced itself.
+                            if (_tts != null &&
+                                _ttsState != TtsState.idle &&
+                                value?.chapter?.HtmlContent != null) {
+                              _startTts();
+                            }
+                          },
+                          builders: _buildersFor(isDarkMode),
+                        );
+                      },
+                      loading: () => Center(
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.secondary,
                         ),
                       ),
-                      chapterDividerBuilder: (_) => const Divider(),
+                      error: (err, stack) =>
+                          Center(child: Text("Error loading book: $err")),
                     ),
-                  );
-                },
-                loading: () => Center(
-                  child: CircularProgressIndicator(
-                    color: Theme.of(context).colorScheme.secondary,
                   ),
                 ),
-                error: (err, stack) =>
-                    Center(child: Text("Error loading book: $err")),
-              ),
+                if (_showTutorial)
+                  ReaderHelpOverlay(
+                    isDesktop: PlatformUtils.isDesktop,
+                    onDismiss: () => setState(() => _showTutorial = false),
+                  ),
+              ],
             ),
           ),
-          if (_showTutorial)
-            ReaderHelpOverlay(
-              isDesktop: PlatformUtils.isDesktop,
-              onDismiss: () => setState(() => _showTutorial = false),
-            ),
         ],
       ),
     );

@@ -1439,6 +1439,198 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Nothing on {previous}, trying {source}…'**
   String tryingNextSourceNamed(String previous, String source);
+
+  /// Reader toolbar: turn translation on
+  ///
+  /// In en, this message translates to:
+  /// **'Translate'**
+  String get translationTranslate;
+
+  /// Reader toolbar: turn translation off
+  ///
+  /// In en, this message translates to:
+  /// **'Show original'**
+  String get translationShowOriginal;
+
+  /// Snackbar when no translation model is installed
+  ///
+  /// In en, this message translates to:
+  /// **'No translation model installed yet.'**
+  String get translationNoModel;
+
+  /// Snackbar action opening translation settings
+  ///
+  /// In en, this message translates to:
+  /// **'Set up'**
+  String get translationOpenSettings;
+
+  /// Reader status while the model loads
+  ///
+  /// In en, this message translates to:
+  /// **'Loading translation model…'**
+  String get translationLoadingModel;
+
+  /// Reader status while translating
+  ///
+  /// In en, this message translates to:
+  /// **'Translating · {count} left · {device}'**
+  String translationTranslating(int count, String device);
+
+  /// Reader status when everything visible is translated
+  ///
+  /// In en, this message translates to:
+  /// **'Translated on this device · {device}'**
+  String translationReady(String device);
+
+  /// Reader status while the app is in the background
+  ///
+  /// In en, this message translates to:
+  /// **'Translation paused'**
+  String get translationPaused;
+
+  /// Reader status when the model could not run
+  ///
+  /// In en, this message translates to:
+  /// **'The translation model could not run.'**
+  String get translationFailed;
+
+  /// Title of the translation settings page
+  ///
+  /// In en, this message translates to:
+  /// **'On-device translation'**
+  String get translationSettingsTitle;
+
+  /// Settings tile subtitle for translation
+  ///
+  /// In en, this message translates to:
+  /// **'Translate books in the reader with a local AI model'**
+  String get translationSettingsSubtitle;
+
+  /// Label for the target language picker
+  ///
+  /// In en, this message translates to:
+  /// **'Translate into'**
+  String get translationTargetLanguage;
+
+  /// Header of the model list
+  ///
+  /// In en, this message translates to:
+  /// **'Models'**
+  String get translationModels;
+
+  /// Explains the two model files
+  ///
+  /// In en, this message translates to:
+  /// **'LiteRT runs on the GPU and falls back to the CPU. The GGUF file is for phones where LiteRT does not work.'**
+  String get translationModelsHint;
+
+  /// Badge on the recommended model
+  ///
+  /// In en, this message translates to:
+  /// **'recommended'**
+  String get translationRecommended;
+
+  /// Button: download a model
+  ///
+  /// In en, this message translates to:
+  /// **'Download'**
+  String get translationDownload;
+
+  /// Dialog before downloading a model
+  ///
+  /// In en, this message translates to:
+  /// **'This downloads {size}. Use Wi-Fi if you can. The file stays on this device.'**
+  String translationDownloadConfirm(String size);
+
+  /// Model download: checksum check
+  ///
+  /// In en, this message translates to:
+  /// **'Verifying the file…'**
+  String get translationVerifying;
+
+  /// Model download failed
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed: {error}'**
+  String translationDownloadFailed(String error);
+
+  /// Chip on the active model
+  ///
+  /// In en, this message translates to:
+  /// **'In use'**
+  String get translationInUse;
+
+  /// Button: use this model
+  ///
+  /// In en, this message translates to:
+  /// **'Use'**
+  String get translationUse;
+
+  /// Dialog before deleting a model
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this model file from the device?'**
+  String get translationDeleteConfirm;
+
+  /// Button: import a model file
+  ///
+  /// In en, this message translates to:
+  /// **'Import a model file (.litertlm / .gguf)'**
+  String get translationImportModel;
+
+  /// The picked file is not a model
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a .litertlm or .gguf file.'**
+  String get translationNotAModel;
+
+  /// Model import succeeded
+  ///
+  /// In en, this message translates to:
+  /// **'Model imported and selected.'**
+  String get translationImported;
+
+  /// Model import failed
+  ///
+  /// In en, this message translates to:
+  /// **'Could not import the model file.'**
+  String get translationImportFailed;
+
+  /// Note about battery use
+  ///
+  /// In en, this message translates to:
+  /// **'Only the paragraphs on screen and a few ahead are translated, and results are saved, so re-reading costs nothing. Translation pauses when the app is in the background.'**
+  String get translationBatteryNote;
+
+  /// Button: delete saved translations
+  ///
+  /// In en, this message translates to:
+  /// **'Delete saved translations'**
+  String get translationClearCache;
+
+  /// Saved translations deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Saved translations deleted.'**
+  String get translationCacheCleared;
+
+  /// Library: import EPUB/PDF files from the device
+  ///
+  /// In en, this message translates to:
+  /// **'Import EPUB / PDF'**
+  String get importBooks;
+
+  /// The file picker could not open
+  ///
+  /// In en, this message translates to:
+  /// **'Could not open the file picker.'**
+  String get importBooksFailed;
+
+  /// Result of a book import
+  ///
+  /// In en, this message translates to:
+  /// **'Added {imported} · already in library {existing} · failed {failed}'**
+  String importBooksResult(int imported, int existing, int failed);
 }
 
 class _AppLocalizationsDelegate

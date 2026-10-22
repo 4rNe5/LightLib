@@ -1,3 +1,6 @@
+// Dart imports:
+import 'dart:io';
+
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -6,6 +9,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
+import 'package:openlib/services/local_book_import.dart'
+    show isLocalImagePath, localImageFilePath;
 import 'package:openlib/state/state.dart'
     show checkIdExists, languageCodeToDisplay, resultCoverProvider;
 import 'package:openlib/ui/extensions.dart';
@@ -100,9 +105,8 @@ class BookInfoCard extends ConsumerWidget {
     // LibGen search rows ship without covers; resolve one lazily from
     // the book's ads.php page (it carries the cover URL).
     final hasThumbnail = thumbnail != null && thumbnail!.isNotEmpty;
-    final lazyCover = hasThumbnail
-        ? null
-        : ref.watch(resultCoverProvider(link)).valueOrNull;
+    final lazyCover =
+        hasThumbnail ? null : ref.watch(resultCoverProvider(link)).valueOrNull;
     final coverUrl = hasThumbnail ? thumbnail : lazyCover;
 
     return InkWell(
@@ -122,46 +126,62 @@ class BookInfoCard extends ConsumerWidget {
             // Book thumbnail with download indicator
             Stack(
               children: [
-                CachedNetworkImage(
-                  height: 120,
-                  width: 90,
-                  imageUrl: coverUrl ?? "",
-                  // libgen mirrors serve /covers/ only with a same-host
-                  // ads.php Referer; without it the response is 200 but
-                  // empty. The host comes from the cover URL itself, so
-                  // no mirror address is baked into the app.
-                  httpHeaders: _coverHeaders(coverUrl),
-                  imageBuilder: (context, imageProvider) => Container(
+                if (isLocalImagePath(coverUrl))
+                  // Imported books keep their cover as a file on the device.
+                  Container(
+                    height: 120,
+                    width: 90,
                     decoration: BoxDecoration(
                       borderRadius: const BorderRadius.all(Radius.circular(5)),
+                      color: "#F8C0C8".toColor(),
                       image: DecorationImage(
-                        image: imageProvider,
+                        image: FileImage(File(localImageFilePath(coverUrl!))),
                         fit: BoxFit.fill,
                       ),
                     ),
-                  ),
-                  placeholder: (context, url) => Container(
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(5),
-                      color: "#F8C0C8".toColor(),
-                    ),
+                  )
+                else
+                  CachedNetworkImage(
                     height: 120,
                     width: 90,
-                  ),
-                  errorWidget: (context, url, error) {
-                    return Container(
+                    imageUrl: coverUrl ?? "",
+                    // libgen mirrors serve /covers/ only with a same-host
+                    // ads.php Referer; without it the response is 200 but
+                    // empty. The host comes from the cover URL itself, so
+                    // no mirror address is baked into the app.
+                    httpHeaders: _coverHeaders(coverUrl),
+                    imageBuilder: (context, imageProvider) => Container(
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            const BorderRadius.all(Radius.circular(5)),
+                        image: DecorationImage(
+                          image: imageProvider,
+                          fit: BoxFit.fill,
+                        ),
+                      ),
+                    ),
+                    placeholder: (context, url) => Container(
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(5),
                         color: "#F8C0C8".toColor(),
                       ),
                       height: 120,
                       width: 90,
-                      child: const Center(
-                        child: Icon(Icons.image_rounded),
-                      ),
-                    );
-                  },
-                ),
+                    ),
+                    errorWidget: (context, url, error) {
+                      return Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(5),
+                          color: "#F8C0C8".toColor(),
+                        ),
+                        height: 120,
+                        width: 90,
+                        child: const Center(
+                          child: Icon(Icons.image_rounded),
+                        ),
+                      );
+                    },
+                  ),
                 // Downloaded checkmark indicator
                 if (isDownloaded.valueOrNull == true)
                   Positioned(

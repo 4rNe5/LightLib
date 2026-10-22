@@ -752,4 +752,116 @@ class AppLocalizationsDe extends AppLocalizations {
   String tryingNextSourceNamed(String previous, String source) {
     return 'Nichts in $previous, versuche $source…';
   }
+
+  @override
+  String get translationTranslate => 'Übersetzen';
+
+  @override
+  String get translationShowOriginal => 'Original anzeigen';
+
+  @override
+  String get translationNoModel => 'Noch kein Übersetzungsmodell installiert.';
+
+  @override
+  String get translationOpenSettings => 'Einrichten';
+
+  @override
+  String get translationLoadingModel => 'Übersetzungsmodell wird geladen…';
+
+  @override
+  String translationTranslating(int count, String device) {
+    return 'Übersetze · noch $count · $device';
+  }
+
+  @override
+  String translationReady(String device) {
+    return 'Auf diesem Gerät übersetzt · $device';
+  }
+
+  @override
+  String get translationPaused => 'Übersetzung pausiert';
+
+  @override
+  String get translationFailed => 'Das Übersetzungsmodell konnte nicht laufen.';
+
+  @override
+  String get translationSettingsTitle => 'Übersetzung auf dem Gerät';
+
+  @override
+  String get translationSettingsSubtitle =>
+      'Bücher im Reader mit einem lokalen KI-Modell übersetzen';
+
+  @override
+  String get translationTargetLanguage => 'Übersetzen in';
+
+  @override
+  String get translationModels => 'Modelle';
+
+  @override
+  String get translationModelsHint =>
+      'LiteRT läuft auf der GPU und weicht auf die CPU aus. Die GGUF-Datei ist für Geräte, auf denen LiteRT nicht läuft.';
+
+  @override
+  String get translationRecommended => 'empfohlen';
+
+  @override
+  String get translationDownload => 'Herunterladen';
+
+  @override
+  String translationDownloadConfirm(String size) {
+    return 'Es werden $size heruntergeladen. Nutze nach Möglichkeit WLAN. Die Datei bleibt auf dem Gerät.';
+  }
+
+  @override
+  String get translationVerifying => 'Datei wird geprüft…';
+
+  @override
+  String translationDownloadFailed(String error) {
+    return 'Download fehlgeschlagen: $error';
+  }
+
+  @override
+  String get translationInUse => 'Aktiv';
+
+  @override
+  String get translationUse => 'Verwenden';
+
+  @override
+  String get translationDeleteConfirm => 'Diese Modelldatei vom Gerät löschen?';
+
+  @override
+  String get translationImportModel =>
+      'Modelldatei importieren (.litertlm / .gguf)';
+
+  @override
+  String get translationNotAModel => 'Wähle eine .litertlm- oder .gguf-Datei.';
+
+  @override
+  String get translationImported => 'Modell importiert und ausgewählt.';
+
+  @override
+  String get translationImportFailed =>
+      'Die Modelldatei konnte nicht importiert werden.';
+
+  @override
+  String get translationBatteryNote =>
+      'Übersetzt werden nur die sichtbaren und einige folgende Absätze; Ergebnisse werden gespeichert. Im Hintergrund pausiert die Übersetzung.';
+
+  @override
+  String get translationClearCache => 'Gespeicherte Übersetzungen löschen';
+
+  @override
+  String get translationCacheCleared => 'Gespeicherte Übersetzungen gelöscht.';
+
+  @override
+  String get importBooks => 'EPUB / PDF importieren';
+
+  @override
+  String get importBooksFailed =>
+      'Die Dateiauswahl konnte nicht geöffnet werden.';
+
+  @override
+  String importBooksResult(int imported, int existing, int failed) {
+    return 'Hinzugefügt $imported · schon vorhanden $existing · fehlgeschlagen $failed';
+  }
 }

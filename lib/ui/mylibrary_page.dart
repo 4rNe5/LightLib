@@ -7,7 +7,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 
 // Project imports:
+import 'package:file_picker/file_picker.dart';
 import 'package:openlib/services/files.dart' show syncLibraryWithDisk;
+import 'package:openlib/services/local_book_import.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
@@ -105,6 +107,63 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     }
   }
 
+  bool _importing = false;
+
+  /// Picks EPUB/PDF files from the device and adds them to the library.
+  Future<void> _importLocalBooks() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final List<PlatformFile> picked;
+    try {
+      picked = await FilePicker.pickFiles(
+        dialogTitle: l10n.importBooks,
+        type: FileType.custom,
+        allowedExtensions: importableBookExtensions,
+      );
+    } catch (_) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.importBooksFailed)));
+      return;
+    }
+    final paths = picked.map((f) => f.path).whereType<String>().toList();
+    if (paths.isEmpty) return;
+
+    setState(() => _importing = true);
+    try {
+      final results = await LocalBookImporter().importAll(paths);
+      await FilePicker.clearTemporaryFiles().catchError((_) => false);
+      ref.invalidate(myLibraryProvider);
+      ref.invalidate(libraryBooksProvider);
+      ref.invalidate(libraryTagsProvider);
+      int count(LocalImportOutcome o) =>
+          results.where((r) => r.outcome == o).length;
+      messenger.showSnackBar(SnackBar(
+        content: Text(l10n.importBooksResult(
+          count(LocalImportOutcome.imported),
+          count(LocalImportOutcome.alreadyInLibrary),
+          count(LocalImportOutcome.failed),
+        )),
+      ));
+    } finally {
+      if (mounted) setState(() => _importing = false);
+    }
+  }
+
+  Widget _buildImportButton(BuildContext context) {
+    final color = Theme.of(context).colorScheme.secondary;
+    return IconButton(
+      key: const ValueKey('importLocalBooks'),
+      tooltip: AppLocalizations.of(context).importBooks,
+      onPressed: _importing ? null : _importLocalBooks,
+      icon: _importing
+          ? SizedBox(
+              width: 18,
+              height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: color),
+            )
+          : Icon(Icons.add_circle_outline, color: color),
+    );
+  }
+
   // Builds the title row with sort button and optional refresh for desktop
   Widget _buildTitleWithRefresh(BuildContext context) {
     final sortMode = ref.watch(librarySortModeProvider);
@@ -116,6 +175,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
           TitleText(AppLocalizations.of(context).navMyLibrary),
           Row(
             children: [
+              _buildImportButton(context),
               PopupMenuButton<LibrarySortMode>(
                 tooltip: AppLocalizations.of(context).sortLibrary,
                 icon: Icon(
@@ -133,9 +193,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                           if (mode == sortMode)
                             Icon(Icons.check,
                                 size: 18,
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .secondary)
+                                color: Theme.of(context).colorScheme.secondary)
                           else
                             const SizedBox(width: 18),
                           const SizedBox(width: 8),
@@ -211,7 +269,8 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     final l10n = AppLocalizations.of(context);
     final tagFilter = ref.watch(libraryTagFilterProvider);
     final statusFilter = ref.watch(libraryStatusFilterProvider);
-    final allTags = ref.watch(libraryTagsProvider).valueOrNull ?? const <String>{};
+    final allTags =
+        ref.watch(libraryTagsProvider).valueOrNull ?? const <String>{};
 
     Widget statusChip(String label, ReadingStatus? value) {
       final selected = statusFilter == value;
@@ -272,9 +331,10 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     return libraryBooks.when(
       data: (data) {
         final organized = ref.watch(organizedLibraryProvider);
-        final anyFilterActive = ref.watch(libraryTagFilterProvider).isNotEmpty ||
-            ref.watch(libraryStatusFilterProvider) != null ||
-            ref.watch(librarySearchQueryProvider).trim().isNotEmpty;
+        final anyFilterActive =
+            ref.watch(libraryTagFilterProvider).isNotEmpty ||
+                ref.watch(libraryStatusFilterProvider) != null ||
+                ref.watch(librarySearchQueryProvider).trim().isNotEmpty;
         if (data.isNotEmpty) {
           return RefreshIndicator(
             onRefresh: () => _refreshLibrary(),
@@ -427,6 +487,13 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                         color: "#4D4D4D".toColor(),
                         overflow: TextOverflow.ellipsis,
                       ),
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      key: const ValueKey('importLocalBooksEmpty'),
+                      onPressed: _importing ? null : _importLocalBooks,
+                      icon: const Icon(Icons.file_open_outlined),
+                      label: Text(AppLocalizations.of(context).importBooks),
                     )
                   ],
                 ),
@@ -511,8 +578,7 @@ class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration:
-              InputDecoration(hintText: dialogL10n.collectionNameHint),
+          decoration: InputDecoration(hintText: dialogL10n.collectionNameHint),
         ),
         actions: [
           TextButton(
@@ -533,7 +599,8 @@ class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final allTags = ref.watch(libraryTagsProvider).valueOrNull ?? const <String>{};
+    final allTags =
+        ref.watch(libraryTagsProvider).valueOrNull ?? const <String>{};
     return FutureBuilder<Set<String>>(
       future: _bookTags,
       builder: (context, snapshot) {
@@ -566,9 +633,8 @@ class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
                       FilterChip(
                         label: Text(tag, style: const TextStyle(fontSize: 12)),
                         selected: bookTags.contains(tag),
-                        onSelected: (selected) => selected
-                            ? _addTag(tag)
-                            : _removeTag(tag),
+                        onSelected: (selected) =>
+                            selected ? _addTag(tag) : _removeTag(tag),
                       ),
                     ActionChip(
                       label: Text(AppLocalizations.of(context).newCollection,
