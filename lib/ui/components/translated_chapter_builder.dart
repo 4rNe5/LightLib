@@ -47,6 +47,18 @@ class ParagraphTextMemo {
 ChaptersBuilder translatingChapterBuilder({
   required ReaderTranslationController controller,
   required ParagraphTextMemo memo,
+  TextAlign? textAlign,
+}) =>
+    readerChapterBuilder(
+        controller: controller, memo: memo, textAlign: textAlign);
+
+/// The reader's paragraph builder: epub_view's default (divider, padding,
+/// text style, images) plus text alignment, and translations in place of
+/// the originals when [controller] is given.
+ChaptersBuilder readerChapterBuilder({
+  ReaderTranslationController? controller,
+  required ParagraphTextMemo memo,
+  TextAlign? textAlign,
 }) {
   return (
     BuildContext context,
@@ -64,11 +76,11 @@ ChaptersBuilder translatingChapterBuilder({
     final options =
         (builders as EpubViewBuilders<DefaultBuilderOptions>).options;
     final element = paragraphs[index].element;
-    final text = memo.textAt(paragraphs, index);
+    final text = controller == null ? null : memo.textAt(paragraphs, index);
 
     String data = element.outerHtml;
     var pending = false;
-    if (text != null) {
+    if (text != null && controller != null) {
       controller.ensureAhead(
         index,
         textAt: (i) => memo.textAt(paragraphs, i),
@@ -97,6 +109,8 @@ ChaptersBuilder translatingChapterBuilder({
             left: padding?.left,
           ),
         ).merge(Style.fromTextStyle(options.textStyle)),
+        if (textAlign != null) 'p': Style(textAlign: textAlign),
+        if (textAlign != null) 'div': Style(textAlign: textAlign),
       },
       extensions: [
         TagExtension(

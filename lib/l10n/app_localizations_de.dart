@@ -924,4 +924,160 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get fontImportFailed => 'Die Schrift konnte nicht importiert werden.';
+
+  @override
+  String get readerThemesSettings => 'Themen & Einstellungen';
+
+  @override
+  String get readerThemeOriginal => 'Original';
+
+  @override
+  String get readerThemePaper => 'Papier';
+
+  @override
+  String get readerThemeCalm => 'Ruhig';
+
+  @override
+  String get readerThemeQuiet => 'Leise';
+
+  @override
+  String get readerThemeBold => 'Fett';
+
+  @override
+  String get readerThemeNight => 'Nacht';
+
+  @override
+  String get readerLayout => 'Layout';
+
+  @override
+  String get readerLayoutPagesShort => 'Seiten';
+
+  @override
+  String get readerLayoutMangaShort => 'Manga';
+
+  @override
+  String get readerFont => 'Schrift';
+
+  @override
+  String get readerAllFonts => 'Schriften je Sprache';
+
+  @override
+  String get readerCustomize => 'Anpassen';
+
+  @override
+  String get readerFontSize => 'Textgröße';
+
+  @override
+  String get readerLineSpacing => 'Zeilenabstand';
+
+  @override
+  String get readerLetterSpacing => 'Zeichenabstand';
+
+  @override
+  String get readerMargins => 'Ränder';
+
+  @override
+  String get readerJustify => 'Blocksatz';
+
+  @override
+  String get readerBoldText => 'Fetter Text';
+
+  @override
+  String get readerReset => 'Zurücksetzen';
+
+  @override
+  String get readerContents => 'Inhalt';
+
+  @override
+  String get libraryContinueReading => 'Weiterlesen';
+
+  @override
+  String get libraryAllBooks => 'Alle Bücher';
+
+  @override
+  String libraryBookCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Bücher',
+      one: '1 Buch',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryNoMatches => 'Keine Bücher entsprechen den Filtern';
+
+  @override
+  String get libraryEmpty => 'Deine Bibliothek ist leer';
+
+  @override
+  String get libraryEmptyHint =>
+      'Importiere eigene EPUB- oder PDF-Dateien, um mit dem Lesen zu beginnen.';
+
+  @override
+  String get bookGenre => 'Genre';
+
+  @override
+  String get bookCollections => 'Sammlungen';
+
+  @override
+  String get genreAll => 'Alle';
+
+  @override
+  String get genreNone => 'Kein Genre';
+
+  @override
+  String get genreLightNovel => 'Light Novel';
+
+  @override
+  String get genreComic => 'Comics';
+
+  @override
+  String get genreNovel => 'Roman';
+
+  @override
+  String get genreEnglishNovel => 'Englische Romane';
+
+  @override
+  String get genreEssay => 'Essay';
+
+  @override
+  String get genreScience => 'Wissenschaft';
+
+  @override
+  String get genreHumanities => 'Geisteswissenschaften';
+
+  @override
+  String get genreBusiness => 'Wirtschaft';
+
+  @override
+  String get genrePaper => 'Fachartikel';
+
+  @override
+  String get genreTextbook => 'Lehrbücher';
+
+  @override
+  String get genreOther => 'Sonstiges';
+
+  @override
+  String get translationLightNovelStyle => 'Light-Novel-Stil';
+
+  @override
+  String get translationLightNovelStyleHint =>
+      'Erhält Du- und Sie-Form, Sprechweisen der Figuren, Anreden und Lautmalerei. Für Sachbücher ausschalten. Jeder Stil speichert eigene Übersetzungen.';
+
+  @override
+  String get libraryBookOptions => 'Buchoptionen';
+
+  @override
+  String get libraryRecentlyAdded => 'Zuletzt hinzugefügt';
+
+  @override
+  String get libraryReadingNow => 'Lese ich gerade';
+
+  @override
+  String libraryFinishedCount(int count) {
+    return '$count beendet';
+  }
 }

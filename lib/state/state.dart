@@ -508,6 +508,7 @@ final libraryBooksProvider = FutureProvider<List<LibraryBook>>((ref) async {
   final tags = await dataBase.getTagsForAll();
   final positions = await dataBase.getPositionsForAll();
   final completed = await dataBase.getCompletedForAll();
+  final genres = await dataBase.getGenresForAll();
   return [
     for (final book in books)
       LibraryBook(
@@ -518,6 +519,7 @@ final libraryBooksProvider = FutureProvider<List<LibraryBook>>((ref) async {
           completed: completed[book.getFileName()] ?? false,
         ),
         fileSizeBytes: await _fileSizeOf(book),
+        genre: BookGenre.fromKey(genres[book.id]),
       ),
   ];
 });
@@ -548,6 +550,9 @@ final libraryTagFilterProvider = StateProvider<Set<String>>((ref) => {});
 final libraryStatusFilterProvider =
     StateProvider<ReadingStatus?>((ref) => null);
 
+/// Active genre filter; null means every genre.
+final libraryGenreFilterProvider = StateProvider<BookGenre?>((ref) => null);
+
 /// Free-text filter over library metadata (title, author, publisher,
 /// info line). Empty string means no filter.
 final librarySearchQueryProvider = StateProvider<String>((ref) => "");
@@ -563,10 +568,14 @@ final organizedLibraryProvider = Provider<List<LibraryBook>>((ref) {
   final mode = ref.watch(librarySortModeProvider);
   final tagFilter = ref.watch(libraryTagFilterProvider);
   final statusFilter = ref.watch(libraryStatusFilterProvider);
+  final genreFilter = ref.watch(libraryGenreFilterProvider);
   final searchQuery = ref.watch(librarySearchQueryProvider);
   return sortLibrary(
     filterLibrary(books,
-        tagFilter: tagFilter, statusFilter: statusFilter, query: searchQuery),
+        tagFilter: tagFilter,
+        statusFilter: statusFilter,
+        genreFilter: genreFilter,
+        query: searchQuery),
     mode,
   );
 });

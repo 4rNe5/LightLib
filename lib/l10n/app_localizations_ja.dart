@@ -890,4 +890,153 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get fontImportFailed => 'フォントを読み込めませんでした。';
+
+  @override
+  String get readerThemesSettings => 'テーマと設定';
+
+  @override
+  String get readerThemeOriginal => 'オリジナル';
+
+  @override
+  String get readerThemePaper => 'ペーパー';
+
+  @override
+  String get readerThemeCalm => 'カーム';
+
+  @override
+  String get readerThemeQuiet => 'クワイエット';
+
+  @override
+  String get readerThemeBold => 'ボールド';
+
+  @override
+  String get readerThemeNight => 'ナイト';
+
+  @override
+  String get readerLayout => '表示方式';
+
+  @override
+  String get readerLayoutPagesShort => 'ページ';
+
+  @override
+  String get readerLayoutMangaShort => '右綴じ';
+
+  @override
+  String get readerFont => 'フォント';
+
+  @override
+  String get readerAllFonts => '言語別フォント設定';
+
+  @override
+  String get readerCustomize => 'カスタマイズ';
+
+  @override
+  String get readerFontSize => '文字サイズ';
+
+  @override
+  String get readerLineSpacing => '行間';
+
+  @override
+  String get readerLetterSpacing => '字間';
+
+  @override
+  String get readerMargins => '余白';
+
+  @override
+  String get readerJustify => '両端揃え';
+
+  @override
+  String get readerBoldText => '太字テキスト';
+
+  @override
+  String get readerReset => 'リセット';
+
+  @override
+  String get readerContents => '目次';
+
+  @override
+  String get libraryContinueReading => '続きを読む';
+
+  @override
+  String get libraryAllBooks => 'すべての本';
+
+  @override
+  String libraryBookCount(int count) {
+    return '$count冊';
+  }
+
+  @override
+  String get libraryNoMatches => '条件に合う本がありません';
+
+  @override
+  String get libraryEmpty => 'ライブラリは空です';
+
+  @override
+  String get libraryEmptyHint => 'お手持ちのEPUB・PDFファイルを読み込んで読み始めましょう。';
+
+  @override
+  String get bookGenre => 'ジャンル';
+
+  @override
+  String get bookCollections => 'コレクション';
+
+  @override
+  String get genreAll => 'すべて';
+
+  @override
+  String get genreNone => '未設定';
+
+  @override
+  String get genreLightNovel => 'ライトノベル';
+
+  @override
+  String get genreComic => 'コミック';
+
+  @override
+  String get genreNovel => '小説';
+
+  @override
+  String get genreEnglishNovel => '英語小説';
+
+  @override
+  String get genreEssay => 'エッセイ';
+
+  @override
+  String get genreScience => '科学';
+
+  @override
+  String get genreHumanities => '人文';
+
+  @override
+  String get genreBusiness => 'ビジネス';
+
+  @override
+  String get genrePaper => '論文';
+
+  @override
+  String get genreTextbook => '学習・教材';
+
+  @override
+  String get genreOther => 'その他';
+
+  @override
+  String get translationLightNovelStyle => 'ライトノベル文体';
+
+  @override
+  String get translationLightNovelStyleHint =>
+      'タメ口・敬語、キャラ固有の口調、呼称、擬音を活かします。ノンフィクションではオフにしてください。文体ごとに翻訳は別に保存されます。';
+
+  @override
+  String get libraryBookOptions => '本の設定';
+
+  @override
+  String get libraryRecentlyAdded => '最近追加';
+
+  @override
+  String get libraryReadingNow => '読書中';
+
+  @override
+  String libraryFinishedCount(int count) {
+    return '$count冊読了';
+  }
 }

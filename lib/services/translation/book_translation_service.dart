@@ -103,6 +103,10 @@ class BookTranslationService extends ChangeNotifier
         .getPreference(autoTranslateLibraryPref)
         .catchError((_) => null);
     _enabled = saved != 0;
+    final style = await MyLibraryDb.instance
+        .getPreference(translationLightNovelStylePref)
+        .catchError((_) => null);
+    TranslationStyle.lightNovel = style != 0;
     scanSoon();
   }
 
@@ -166,7 +170,7 @@ class BookTranslationService extends ChangeNotifier
             path: path,
             fileName: fileName,
             title: book.title,
-            modelId: model.fileName,
+            modelId: TranslationStyle.cacheModelId(model.fileName),
             targetLanguage: target,
           );
         }

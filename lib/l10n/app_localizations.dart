@@ -1743,6 +1743,294 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not import the font.'**
   String get fontImportFailed;
+
+  /// readerThemesSettings
+  ///
+  /// In en, this message translates to:
+  /// **'Themes & Settings'**
+  String get readerThemesSettings;
+
+  /// readerThemeOriginal
+  ///
+  /// In en, this message translates to:
+  /// **'Original'**
+  String get readerThemeOriginal;
+
+  /// readerThemePaper
+  ///
+  /// In en, this message translates to:
+  /// **'Paper'**
+  String get readerThemePaper;
+
+  /// readerThemeCalm
+  ///
+  /// In en, this message translates to:
+  /// **'Calm'**
+  String get readerThemeCalm;
+
+  /// readerThemeQuiet
+  ///
+  /// In en, this message translates to:
+  /// **'Quiet'**
+  String get readerThemeQuiet;
+
+  /// readerThemeBold
+  ///
+  /// In en, this message translates to:
+  /// **'Bold'**
+  String get readerThemeBold;
+
+  /// readerThemeNight
+  ///
+  /// In en, this message translates to:
+  /// **'Night'**
+  String get readerThemeNight;
+
+  /// readerLayout
+  ///
+  /// In en, this message translates to:
+  /// **'Layout'**
+  String get readerLayout;
+
+  /// readerLayoutPagesShort
+  ///
+  /// In en, this message translates to:
+  /// **'Pages'**
+  String get readerLayoutPagesShort;
+
+  /// readerLayoutMangaShort
+  ///
+  /// In en, this message translates to:
+  /// **'Manga'**
+  String get readerLayoutMangaShort;
+
+  /// readerFont
+  ///
+  /// In en, this message translates to:
+  /// **'Font'**
+  String get readerFont;
+
+  /// readerAllFonts
+  ///
+  /// In en, this message translates to:
+  /// **'Fonts for each language'**
+  String get readerAllFonts;
+
+  /// readerCustomize
+  ///
+  /// In en, this message translates to:
+  /// **'Customize'**
+  String get readerCustomize;
+
+  /// readerFontSize
+  ///
+  /// In en, this message translates to:
+  /// **'Text size'**
+  String get readerFontSize;
+
+  /// readerLineSpacing
+  ///
+  /// In en, this message translates to:
+  /// **'Line spacing'**
+  String get readerLineSpacing;
+
+  /// readerLetterSpacing
+  ///
+  /// In en, this message translates to:
+  /// **'Character spacing'**
+  String get readerLetterSpacing;
+
+  /// readerMargins
+  ///
+  /// In en, this message translates to:
+  /// **'Margins'**
+  String get readerMargins;
+
+  /// readerJustify
+  ///
+  /// In en, this message translates to:
+  /// **'Justify text'**
+  String get readerJustify;
+
+  /// readerBoldText
+  ///
+  /// In en, this message translates to:
+  /// **'Bold text'**
+  String get readerBoldText;
+
+  /// readerReset
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get readerReset;
+
+  /// readerContents
+  ///
+  /// In en, this message translates to:
+  /// **'Contents'**
+  String get readerContents;
+
+  /// libraryContinueReading
+  ///
+  /// In en, this message translates to:
+  /// **'Continue reading'**
+  String get libraryContinueReading;
+
+  /// libraryAllBooks
+  ///
+  /// In en, this message translates to:
+  /// **'All books'**
+  String get libraryAllBooks;
+
+  /// libraryBookCount
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 book} other{{count} books}}'**
+  String libraryBookCount(int count);
+
+  /// libraryNoMatches
+  ///
+  /// In en, this message translates to:
+  /// **'No books match the current filters'**
+  String get libraryNoMatches;
+
+  /// libraryEmpty
+  ///
+  /// In en, this message translates to:
+  /// **'Your library is empty'**
+  String get libraryEmpty;
+
+  /// libraryEmptyHint
+  ///
+  /// In en, this message translates to:
+  /// **'Import EPUB or PDF files you have to start reading.'**
+  String get libraryEmptyHint;
+
+  /// bookGenre
+  ///
+  /// In en, this message translates to:
+  /// **'Genre'**
+  String get bookGenre;
+
+  /// bookCollections
+  ///
+  /// In en, this message translates to:
+  /// **'Collections'**
+  String get bookCollections;
+
+  /// genreAll
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get genreAll;
+
+  /// genreNone
+  ///
+  /// In en, this message translates to:
+  /// **'No genre'**
+  String get genreNone;
+
+  /// genreLightNovel
+  ///
+  /// In en, this message translates to:
+  /// **'Light novel'**
+  String get genreLightNovel;
+
+  /// genreComic
+  ///
+  /// In en, this message translates to:
+  /// **'Comics'**
+  String get genreComic;
+
+  /// genreNovel
+  ///
+  /// In en, this message translates to:
+  /// **'Novel'**
+  String get genreNovel;
+
+  /// genreEnglishNovel
+  ///
+  /// In en, this message translates to:
+  /// **'English fiction'**
+  String get genreEnglishNovel;
+
+  /// genreEssay
+  ///
+  /// In en, this message translates to:
+  /// **'Essay'**
+  String get genreEssay;
+
+  /// genreScience
+  ///
+  /// In en, this message translates to:
+  /// **'Science'**
+  String get genreScience;
+
+  /// genreHumanities
+  ///
+  /// In en, this message translates to:
+  /// **'Humanities'**
+  String get genreHumanities;
+
+  /// genreBusiness
+  ///
+  /// In en, this message translates to:
+  /// **'Business'**
+  String get genreBusiness;
+
+  /// genrePaper
+  ///
+  /// In en, this message translates to:
+  /// **'Papers'**
+  String get genrePaper;
+
+  /// genreTextbook
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get genreTextbook;
+
+  /// genreOther
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get genreOther;
+
+  /// translationLightNovelStyle
+  ///
+  /// In en, this message translates to:
+  /// **'Light novel style'**
+  String get translationLightNovelStyle;
+
+  /// translationLightNovelStyleHint
+  ///
+  /// In en, this message translates to:
+  /// **'Keeps casual and polite speech, character quirks, honorifics and sound words. Turn off for non-fiction. Each style keeps its own translations.'**
+  String get translationLightNovelStyleHint;
+
+  /// libraryBookOptions
+  ///
+  /// In en, this message translates to:
+  /// **'Book options'**
+  String get libraryBookOptions;
+
+  /// libraryRecentlyAdded
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get libraryRecentlyAdded;
+
+  /// libraryReadingNow
+  ///
+  /// In en, this message translates to:
+  /// **'Reading now'**
+  String get libraryReadingNow;
+
+  /// libraryFinishedCount
+  ///
+  /// In en, this message translates to:
+  /// **'{count} finished'**
+  String libraryFinishedCount(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -923,4 +923,160 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get fontImportFailed => 'No se pudo importar la fuente.';
+
+  @override
+  String get readerThemesSettings => 'Temas y ajustes';
+
+  @override
+  String get readerThemeOriginal => 'Original';
+
+  @override
+  String get readerThemePaper => 'Papel';
+
+  @override
+  String get readerThemeCalm => 'Calma';
+
+  @override
+  String get readerThemeQuiet => 'Silencio';
+
+  @override
+  String get readerThemeBold => 'Negrita';
+
+  @override
+  String get readerThemeNight => 'Noche';
+
+  @override
+  String get readerLayout => 'Diseño';
+
+  @override
+  String get readerLayoutPagesShort => 'Páginas';
+
+  @override
+  String get readerLayoutMangaShort => 'Manga';
+
+  @override
+  String get readerFont => 'Fuente';
+
+  @override
+  String get readerAllFonts => 'Fuentes por idioma';
+
+  @override
+  String get readerCustomize => 'Personalizar';
+
+  @override
+  String get readerFontSize => 'Tamaño del texto';
+
+  @override
+  String get readerLineSpacing => 'Interlineado';
+
+  @override
+  String get readerLetterSpacing => 'Espaciado entre caracteres';
+
+  @override
+  String get readerMargins => 'Márgenes';
+
+  @override
+  String get readerJustify => 'Justificar texto';
+
+  @override
+  String get readerBoldText => 'Texto en negrita';
+
+  @override
+  String get readerReset => 'Restablecer';
+
+  @override
+  String get readerContents => 'Índice';
+
+  @override
+  String get libraryContinueReading => 'Seguir leyendo';
+
+  @override
+  String get libraryAllBooks => 'Todos los libros';
+
+  @override
+  String libraryBookCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count libros',
+      one: '1 libro',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryNoMatches => 'Ningún libro coincide con los filtros';
+
+  @override
+  String get libraryEmpty => 'Tu biblioteca está vacía';
+
+  @override
+  String get libraryEmptyHint =>
+      'Importa tus archivos EPUB o PDF para empezar a leer.';
+
+  @override
+  String get bookGenre => 'Género';
+
+  @override
+  String get bookCollections => 'Colecciones';
+
+  @override
+  String get genreAll => 'Todos';
+
+  @override
+  String get genreNone => 'Sin género';
+
+  @override
+  String get genreLightNovel => 'Novela ligera';
+
+  @override
+  String get genreComic => 'Cómics';
+
+  @override
+  String get genreNovel => 'Novela';
+
+  @override
+  String get genreEnglishNovel => 'Novela en inglés';
+
+  @override
+  String get genreEssay => 'Ensayo';
+
+  @override
+  String get genreScience => 'Ciencia';
+
+  @override
+  String get genreHumanities => 'Humanidades';
+
+  @override
+  String get genreBusiness => 'Negocios';
+
+  @override
+  String get genrePaper => 'Artículos científicos';
+
+  @override
+  String get genreTextbook => 'Libros de texto';
+
+  @override
+  String get genreOther => 'Otros';
+
+  @override
+  String get translationLightNovelStyle => 'Estilo de novela ligera';
+
+  @override
+  String get translationLightNovelStyleHint =>
+      'Conserva el registro formal e informal, las muletillas de los personajes, los honoríficos y las onomatopeyas. Desactívalo para no ficción. Cada estilo guarda sus propias traducciones.';
+
+  @override
+  String get libraryBookOptions => 'Opciones del libro';
+
+  @override
+  String get libraryRecentlyAdded => 'Añadidos recientemente';
+
+  @override
+  String get libraryReadingNow => 'Leyendo ahora';
+
+  @override
+  String libraryFinishedCount(int count) {
+    return '$count terminados';
+  }
 }

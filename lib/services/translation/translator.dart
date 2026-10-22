@@ -198,6 +198,7 @@ class LocalLlmTranslator implements Translator {
       text: job.text,
       targetLanguage: job.targetLanguage,
       sourceLanguage: job.sourceLanguage,
+      lightNovelStyle: TranslationStyle.lightNovel,
     );
     // Translations run about as long as the source; leave room for
     // scripts that need more tokens per character.

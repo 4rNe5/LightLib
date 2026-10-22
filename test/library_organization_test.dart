@@ -86,6 +86,7 @@ void main() {
     await database.delete('mybooks');
     await database.delete('bookposition');
     await database.delete('booktags');
+    await database.delete('bookgenre');
   });
 
   group('sortLibrary', () {
@@ -230,6 +231,86 @@ void main() {
       await db.delete('gone');
       expect(await db.getTags('gone'), isEmpty);
       expect(await db.getAllTags(), isEmpty);
+    });
+  });
+
+  group('genres', () {
+    test('fromKey restores every genre and rejects unknown keys', () {
+      for (final g in BookGenre.values) {
+        expect(BookGenre.fromKey(g.key), g);
+      }
+      expect(BookGenre.fromKey('nope'), isNull);
+      expect(BookGenre.fromKey(null), isNull);
+      expect(BookGenre.values.map((g) => g.key).toSet().length,
+          BookGenre.values.length);
+    });
+
+    test('set, change, clear and bulk-read genres', () async {
+      final db = MyLibraryDb.instance;
+      await db.insert(book('ln', 'Light Novel'));
+      await db.insert(book('paper', 'A Paper'));
+      expect(await db.getGenre('ln'), isNull);
+
+      await db.setGenre('ln', BookGenre.lightNovel.key);
+      await db.setGenre('paper', BookGenre.paper.key);
+      expect(await db.getGenresForAll(),
+          {'ln': 'lightNovel', 'paper': 'paper'});
+
+      await db.setGenre('ln', BookGenre.comic.key);
+      expect(await db.getGenre('ln'), 'comic');
+
+      await db.setGenre('ln', null);
+      expect(await db.getGenre('ln'), isNull);
+      expect(await db.getGenresForAll(), {'paper': 'paper'});
+    });
+
+    test('deleting a book removes its genre', () async {
+      final db = MyLibraryDb.instance;
+      await db.insert(book('gone', 'Gone'));
+      await db.setGenre('gone', BookGenre.essay.key);
+      await db.delete('gone');
+      expect(await db.getGenresForAll(), isEmpty);
+    });
+
+    test('genre filter keeps only that genre and combines with others', () {
+      final books = [
+        LibraryBook(
+            book: book('a', 'A'),
+            genre: BookGenre.lightNovel,
+            status: ReadingStatus.inProgress),
+        LibraryBook(book: book('b', 'B'), genre: BookGenre.lightNovel),
+        LibraryBook(book: book('c', 'C'), genre: BookGenre.paper),
+        LibraryBook(book: book('d', 'D')),
+      ];
+      expect(
+          filterLibrary(books, genreFilter: BookGenre.lightNovel)
+              .map((b) => b.id),
+          ['a', 'b']);
+      expect(
+          filterLibrary(books,
+                  genreFilter: BookGenre.lightNovel,
+                  statusFilter: ReadingStatus.inProgress)
+              .map((b) => b.id),
+          ['a']);
+      expect(filterLibrary(books).length, 4);
+    });
+
+    test('the provider pipeline carries genres and filters by them',
+        () async {
+      final db = MyLibraryDb.instance;
+      await db.insert(book('x', 'X'));
+      await db.insert(book('y', 'Y'));
+      await db.setGenre('y', BookGenre.science.key);
+
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final enriched = await container.read(libraryBooksProvider.future);
+      expect(enriched.firstWhere((b) => b.id == 'y').genre, BookGenre.science);
+      expect(enriched.firstWhere((b) => b.id == 'x').genre, isNull);
+
+      container.read(libraryGenreFilterProvider.notifier).state =
+          BookGenre.science;
+      expect(container.read(organizedLibraryProvider).map((b) => b.id), ['y']);
     });
   });
 

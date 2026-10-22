@@ -56,6 +56,33 @@ enum LibrarySortMode {
 /// anything else is in progress.
 enum ReadingStatus { unread, inProgress, completed }
 
+/// A book's genre, chosen by the user. Stored by [key] so the list can
+/// grow without breaking saved choices.
+enum BookGenre {
+  lightNovel('lightNovel'),
+  comic('comic'),
+  novel('novel'),
+  englishNovel('englishNovel'),
+  essay('essay'),
+  science('science'),
+  humanities('humanities'),
+  business('business'),
+  paper('paper'),
+  textbook('textbook'),
+  other('other');
+
+  const BookGenre(this.key);
+
+  final String key;
+
+  static BookGenre? fromKey(String? key) {
+    for (final g in BookGenre.values) {
+      if (g.key == key) return g;
+    }
+    return null;
+  }
+}
+
 /// A [MyBook] enriched with everything sorting and filtering need: the
 /// tags it carries, its reading status and its file size in bytes.
 @immutable
@@ -64,12 +91,14 @@ class LibraryBook {
   final Set<String> tags;
   final ReadingStatus status;
   final int? fileSizeBytes;
+  final BookGenre? genre;
 
   const LibraryBook({
     required this.book,
     this.tags = const {},
     this.status = ReadingStatus.unread,
     this.fileSizeBytes,
+    this.genre,
   });
 
   String get id => book.id;
@@ -129,10 +158,12 @@ List<LibraryBook> filterLibrary(
   List<LibraryBook> books, {
   Set<String>? tagFilter,
   ReadingStatus? statusFilter,
+  BookGenre? genreFilter,
   String? query,
 }) {
   final needle = query?.trim().toLowerCase();
   return books.where((b) {
+    if (genreFilter != null && b.genre != genreFilter) return false;
     if (tagFilter != null && tagFilter.isNotEmpty) {
       if (!tagFilter.any(b.tags.contains)) return false;
     }

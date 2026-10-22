@@ -892,4 +892,153 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get fontImportFailed => '글꼴을 가져오지 못했습니다.';
+
+  @override
+  String get readerThemesSettings => '테마 및 설정';
+
+  @override
+  String get readerThemeOriginal => '기본';
+
+  @override
+  String get readerThemePaper => '종이';
+
+  @override
+  String get readerThemeCalm => '차분함';
+
+  @override
+  String get readerThemeQuiet => '고요함';
+
+  @override
+  String get readerThemeBold => '굵게';
+
+  @override
+  String get readerThemeNight => '야간';
+
+  @override
+  String get readerLayout => '보기 방식';
+
+  @override
+  String get readerLayoutPagesShort => '페이지';
+
+  @override
+  String get readerLayoutMangaShort => '만화식';
+
+  @override
+  String get readerFont => '글꼴';
+
+  @override
+  String get readerAllFonts => '언어별 글꼴 설정';
+
+  @override
+  String get readerCustomize => '사용자화';
+
+  @override
+  String get readerFontSize => '글자 크기';
+
+  @override
+  String get readerLineSpacing => '줄 간격';
+
+  @override
+  String get readerLetterSpacing => '자간';
+
+  @override
+  String get readerMargins => '여백';
+
+  @override
+  String get readerJustify => '양쪽 정렬';
+
+  @override
+  String get readerBoldText => '굵은 텍스트';
+
+  @override
+  String get readerReset => '초기화';
+
+  @override
+  String get readerContents => '목차';
+
+  @override
+  String get libraryContinueReading => '이어 읽기';
+
+  @override
+  String get libraryAllBooks => '모든 책';
+
+  @override
+  String libraryBookCount(int count) {
+    return '$count권';
+  }
+
+  @override
+  String get libraryNoMatches => '조건에 맞는 책이 없습니다';
+
+  @override
+  String get libraryEmpty => '서재가 비어 있습니다';
+
+  @override
+  String get libraryEmptyHint => '가지고 있는 EPUB·PDF 파일을 가져와 읽기 시작하세요.';
+
+  @override
+  String get bookGenre => '장르';
+
+  @override
+  String get bookCollections => '컬렉션';
+
+  @override
+  String get genreAll => '전체';
+
+  @override
+  String get genreNone => '미지정';
+
+  @override
+  String get genreLightNovel => '라이트노벨';
+
+  @override
+  String get genreComic => '코믹스';
+
+  @override
+  String get genreNovel => '소설';
+
+  @override
+  String get genreEnglishNovel => '영문 소설';
+
+  @override
+  String get genreEssay => '에세이';
+
+  @override
+  String get genreScience => '과학';
+
+  @override
+  String get genreHumanities => '인문';
+
+  @override
+  String get genreBusiness => '경제·경영';
+
+  @override
+  String get genrePaper => '논문';
+
+  @override
+  String get genreTextbook => '학습·교재';
+
+  @override
+  String get genreOther => '기타';
+
+  @override
+  String get translationLightNovelStyle => '라이트노벨 문체';
+
+  @override
+  String get translationLightNovelStyleHint =>
+      '반말·존댓말, 캐릭터 고유 말투, 호칭, 의성어를 살리고 지문은 \'-다\'체로 씁니다. 비문학 책은 끄세요. 문체별 번역은 따로 저장됩니다.';
+
+  @override
+  String get libraryBookOptions => '책 설정';
+
+  @override
+  String get libraryRecentlyAdded => '최근 추가';
+
+  @override
+  String get libraryReadingNow => '읽는 중';
+
+  @override
+  String libraryFinishedCount(int count) {
+    return '$count권 완독';
+  }
 }

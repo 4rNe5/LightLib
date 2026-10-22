@@ -15,10 +15,8 @@ import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
-import 'package:openlib/ui/components/book_card_widget.dart';
 import 'package:openlib/ui/components/error_widget.dart';
-import 'package:openlib/ui/components/page_title_widget.dart';
-import 'package:openlib/ui/extensions.dart';
+import 'package:openlib/ui/components/library_tiles.dart';
 import 'package:openlib/ui/mybook_page.dart';
 
 class MyLibraryPage extends ConsumerStatefulWidget {
@@ -157,8 +155,8 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   }
 
   Widget _buildImportButton(BuildContext context) {
-    final color = Theme.of(context).colorScheme.secondary;
-    return IconButton(
+    final scheme = Theme.of(context).colorScheme;
+    return IconButton.filledTonal(
       key: const ValueKey('importLocalBooks'),
       tooltip: AppLocalizations.of(context).importBooks,
       onPressed: _importing ? null : _importLocalBooks,
@@ -166,71 +164,69 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
           ? SizedBox(
               width: 18,
               height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2, color: color),
+              child: CircularProgressIndicator(
+                  strokeWidth: 2, color: scheme.onSecondaryContainer),
             )
-          : Icon(Icons.add_circle_outline, color: color),
+          : const Icon(Icons.add),
     );
   }
 
-  // Builds the title row with sort button and optional refresh for desktop
-  Widget _buildTitleWithRefresh(BuildContext context) {
+  /// Large title with the book count, then import / sort / sync.
+  Widget _buildHeader(BuildContext context, int count) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final sortMode = ref.watch(librarySortModeProvider);
     return Padding(
-      padding: const EdgeInsets.only(left: 5, right: 5),
+      padding: const EdgeInsets.fromLTRB(4, 4, 0, 8),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.end,
         children: [
-          TitleText(AppLocalizations.of(context).navMyLibrary),
-          Row(
-            children: [
-              _buildImportButton(context),
-              PopupMenuButton<LibrarySortMode>(
-                tooltip: AppLocalizations.of(context).sortLibrary,
-                icon: Icon(
-                  Icons.sort,
-                  color: Theme.of(context).colorScheme.secondary,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.navMyLibrary,
+                  style: const TextStyle(
+                      fontSize: 30,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5),
                 ),
-                initialValue: sortMode,
-                onSelected: _persistSortMode,
-                itemBuilder: (BuildContext context) => [
-                  for (final mode in LibrarySortMode.values)
-                    PopupMenuItem(
-                      value: mode,
-                      child: Row(
-                        children: [
-                          if (mode == sortMode)
-                            Icon(Icons.check,
-                                size: 18,
-                                color: Theme.of(context).colorScheme.secondary)
-                          else
-                            const SizedBox(width: 18),
-                          const SizedBox(width: 8),
-                          Text(mode.label),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-              if (PlatformUtils.isDesktop)
-                IconButton(
-                  onPressed: _isRefreshing ? null : _refreshLibrary,
-                  tooltip: "Sync library with storage folder",
-                  icon: _isRefreshing
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        )
-                      : Icon(
-                          Icons.sync,
-                          color: Theme.of(context).colorScheme.secondary,
-                        ),
+                Text(
+                  l10n.libraryBookCount(count),
+                  style:
+                      TextStyle(fontSize: 13, color: scheme.onSurfaceVariant),
+                ),
+              ],
+            ),
+          ),
+          _buildImportButton(context),
+          PopupMenuButton<LibrarySortMode>(
+            tooltip: l10n.sortLibrary,
+            icon: const Icon(Icons.swap_vert),
+            initialValue: sortMode,
+            onSelected: _persistSortMode,
+            itemBuilder: (BuildContext context) => [
+              for (final mode in LibrarySortMode.values)
+                CheckedPopupMenuItem(
+                  value: mode,
+                  checked: mode == sortMode,
+                  child: Text(mode.label),
                 ),
             ],
           ),
+          if (PlatformUtils.isDesktop)
+            IconButton(
+              onPressed: _isRefreshing ? null : _refreshLibrary,
+              tooltip: "Sync library with storage folder",
+              icon: _isRefreshing
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.sync),
+            ),
         ],
       ),
     );
@@ -239,102 +235,194 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   /// Metadata search box: filters the library by title, author,
   /// publisher or the info line (year, language) as you type.
   Widget _buildSearchField(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 5, right: 5, top: 4),
-      child: TextField(
-        controller: _searchController,
-        showCursor: true,
-        cursorColor: Theme.of(context).colorScheme.secondary,
-        decoration: InputDecoration(
-          isDense: true,
-          hintText: AppLocalizations.of(context).searchLibraryHint,
-          hintStyle: const TextStyle(
-              color: Colors.grey, fontWeight: FontWeight.bold, fontSize: 11),
-          prefixIcon: const Icon(Icons.search, size: 20),
-          enabledBorder: const OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.grey, width: 1.5),
-            borderRadius: BorderRadius.all(Radius.circular(50)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.tertiary, width: 2),
-            borderRadius: const BorderRadius.all(Radius.circular(50)),
-          ),
+    final scheme = Theme.of(context).colorScheme;
+    return TextField(
+      controller: _searchController,
+      cursorColor: scheme.primary,
+      textInputAction: TextInputAction.search,
+      decoration: InputDecoration(
+        isDense: true,
+        filled: true,
+        fillColor: scheme.surfaceContainerHigh,
+        hintText: AppLocalizations.of(context).searchLibraryHint,
+        hintStyle: TextStyle(color: scheme.onSurfaceVariant, fontSize: 14),
+        prefixIcon: const Icon(Icons.search, size: 20),
+        contentPadding: const EdgeInsets.symmetric(vertical: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide.none,
         ),
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.tertiary,
-          fontWeight: FontWeight.bold,
-          fontSize: 12,
-        ),
-        onChanged: (value) =>
-            ref.read(librarySearchQueryProvider.notifier).state = value,
       ),
+      style: const TextStyle(fontSize: 14),
+      onChanged: (value) =>
+          ref.read(librarySearchQueryProvider.notifier).state = value,
     );
   }
 
-  /// The horizontal filter row: reading-status chips followed by tag chips.
-  Widget _buildFilterChips(BuildContext context) {
+  /// The horizontal filter row: genres in the library, reading status,
+  /// then collections.
+  Widget _buildFilterChips(BuildContext context, List<LibraryBook> books) {
     final l10n = AppLocalizations.of(context);
     final tagFilter = ref.watch(libraryTagFilterProvider);
     final statusFilter = ref.watch(libraryStatusFilterProvider);
+    final genreFilter = ref.watch(libraryGenreFilterProvider);
     final allTags =
         ref.watch(libraryTagsProvider).valueOrNull ?? const <String>{};
+    final genres = {for (final b in books) b.genre}.whereType<BookGenre>();
+    final presentGenres = [
+      for (final g in BookGenre.values)
+        if (genres.contains(g)) g
+    ];
 
-    Widget statusChip(String label, ReadingStatus? value) {
-      final selected = statusFilter == value;
-      return Padding(
-        padding: const EdgeInsets.only(right: 6),
-        child: FilterChip(
-          label: Text(label, style: const TextStyle(fontSize: 11)),
-          selected: selected,
-          showCheckmark: false,
-          onSelected: (_) {
-            ref.read(libraryStatusFilterProvider.notifier).state =
-                selected ? null : value;
-          },
-        ),
-      );
-    }
+    Widget chip({
+      required String label,
+      required bool selected,
+      required ValueChanged<bool> onSelected,
+      IconData? icon,
+      Key? key,
+    }) =>
+        Padding(
+          padding: const EdgeInsets.only(right: 6),
+          child: FilterChip(
+            key: key,
+            label: Text(label, style: const TextStyle(fontSize: 12)),
+            avatar: icon == null
+                ? null
+                : Icon(icon,
+                    size: 15, color: Theme.of(context).colorScheme.primary),
+            selected: selected,
+            showCheckmark: false,
+            shape: const StadiumBorder(),
+            onSelected: onSelected,
+          ),
+        );
+
+    Widget statusChip(String label, ReadingStatus value) => chip(
+          label: label,
+          selected: statusFilter == value,
+          onSelected: (_) => ref
+              .read(libraryStatusFilterProvider.notifier)
+              .state = statusFilter == value ? null : value,
+        );
 
     return SizedBox(
       height: 44,
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
+          for (final genre in presentGenres)
+            chip(
+              key: ValueKey('genreFilter-${genre.key}'),
+              label: genreLabel(l10n, genre),
+              icon: genreIcon(genre),
+              selected: genreFilter == genre,
+              onSelected: (_) => ref
+                  .read(libraryGenreFilterProvider.notifier)
+                  .state = genreFilter == genre ? null : genre,
+            ),
           statusChip(l10n.statusUnread, ReadingStatus.unread),
           statusChip(l10n.statusInProgress, ReadingStatus.inProgress),
           statusChip(l10n.statusCompleted, ReadingStatus.completed),
           for (final tag in allTags)
-            Padding(
-              padding: const EdgeInsets.only(right: 6),
-              child: FilterChip(
-                label: Text(tag, style: const TextStyle(fontSize: 11)),
-                avatar: const Icon(Icons.label, size: 13),
-                selected: tagFilter.contains(tag),
-                showCheckmark: false,
-                onSelected: (selected) {
-                  final next = Set<String>.of(tagFilter);
-                  selected ? next.add(tag) : next.remove(tag);
-                  ref.read(libraryTagFilterProvider.notifier).state = next;
-                },
-              ),
+            chip(
+              label: tag,
+              icon: Icons.label_outline,
+              selected: tagFilter.contains(tag),
+              onSelected: (selected) {
+                final next = Set<String>.of(tagFilter);
+                selected ? next.add(tag) : next.remove(tag);
+                ref.read(libraryTagFilterProvider.notifier).state = next;
+              },
             ),
         ],
       ),
     );
   }
 
+  Widget _sectionTitle(BuildContext context, String text, {String? trailing}) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(4, 18, 4, 10),
+      child: Row(
+        children: [
+          Text(text,
+              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            Text(trailing,
+                style:
+                    TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _openBook(LibraryBook book) {
+    Navigator.push(context,
+        MaterialPageRoute(builder: (BuildContext context) {
+      return BookPage(id: book.id);
+    }));
+  }
+
+  /// Cover grid: as many columns as fit (at least three on phones), each
+  /// tile a 2:3 cover plus its caption.
+  Widget _buildGrid(List<LibraryBook> books) {
+    return SliverLayoutBuilder(builder: (context, constraints) {
+      const spacing = 14.0;
+      final width = constraints.crossAxisExtent;
+      final columns = (width / 150).floor().clamp(3, 8);
+      final tileWidth = (width - spacing * (columns - 1)) / columns;
+      return SliverGrid(
+        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: columns,
+          crossAxisSpacing: spacing,
+          mainAxisSpacing: 18,
+          mainAxisExtent: tileWidth * 1.5 + LibraryGridTile.captionHeight,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (context, index) {
+            final book = books[index];
+            return LibraryGridTile(
+              key: ValueKey('libraryBook-${book.id}'),
+              book: book,
+              onTap: () => _openBook(book),
+              onLongPress: () => _openTagEditor(book),
+            );
+          },
+          childCount: books.length,
+        ),
+      );
+    });
+  }
+
   void _openTagEditor(LibraryBook item) {
     showModalBottomSheet<void>(
       context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      showDragHandle: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
+      backgroundColor:
+          modernSurfaceTheme(Theme.of(context)).colorScheme.surfaceContainerLow,
       builder: (BuildContext sheetContext) {
-        return _TagEditorSheet(bookId: item.id, title: item.title);
+        return Theme(
+          data: modernSurfaceTheme(Theme.of(sheetContext)),
+          child: _TagEditorSheet(
+              bookId: item.id, title: item.title, genre: item.genre),
+        );
       },
     );
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Theme(
+        data: modernSurfaceTheme(Theme.of(context)),
+        child: Builder(builder: _buildLibrary),
+      );
+
+  Widget _buildLibrary(BuildContext context) {
     final libraryBooks = ref.watch(libraryBooksProvider);
     return libraryBooks.when(
       data: (data) {
@@ -342,98 +430,88 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
         final anyFilterActive =
             ref.watch(libraryTagFilterProvider).isNotEmpty ||
                 ref.watch(libraryStatusFilterProvider) != null ||
+                ref.watch(libraryGenreFilterProvider) != null ||
                 ref.watch(librarySearchQueryProvider).trim().isNotEmpty;
         if (data.isNotEmpty) {
+          final l10n = AppLocalizations.of(context);
           return RefreshIndicator(
             onRefresh: () => _refreshLibrary(),
-            child: Padding(
-              padding: const EdgeInsets.only(left: 5, right: 5, top: 10),
-              child: CustomScrollView(
-                controller: _scrollController,
-                physics: const AlwaysScrollableScrollPhysics(),
-                slivers: <Widget>[
-                  const SliverToBoxAdapter(
-                    child: SizedBox(height: 8),
-                  ),
-                  const SliverToBoxAdapter(
-                    child: ActiveDownloadsWidget(),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _buildTitleWithRefresh(context),
-                  ),
-                  SliverToBoxAdapter(
-                    child: _buildSearchField(context),
-                  ),
-                  if (data.length > 1 || anyFilterActive)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.only(left: 5, right: 5),
-                        child: _buildFilterChips(context),
+            child: CustomScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              slivers: <Widget>[
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  sliver: SliverList(
+                    delegate: SliverChildListDelegate([
+                      const ActiveDownloadsWidget(),
+                      _buildHeader(context, data.length),
+                      _buildSearchField(context),
+                      const SizedBox(height: 8),
+                      if (data.length > 1 || anyFilterActive)
+                        _buildFilterChips(context, data),
+                      if (!anyFilterActive) ...[
+                        const SizedBox(height: 10),
+                        LibraryBentoPanel(
+                          key: const ValueKey('libraryBento'),
+                          books: data,
+                          onOpen: _openBook,
+                          onLongPress: _openTagEditor,
+                        ),
+                      ],
+                      _sectionTitle(
+                        context,
+                        l10n.libraryAllBooks,
+                        trailing: '${organized.length}',
                       ),
-                    ),
-                  if (organized.isEmpty && anyFilterActive)
-                    const SliverToBoxAdapter(
-                      child: Padding(
-                        padding: EdgeInsets.all(24),
-                        child: Center(
-                          child: Text(
-                            "No books match the current filters",
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                          ),
+                    ]),
+                  ),
+                ),
+                if (organized.isEmpty && anyFilterActive)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Center(
+                        child: Text(
+                          l10n.libraryNoMatches,
+                          style: const TextStyle(
+                              color: Colors.grey, fontSize: 13),
                         ),
                       ),
-                    )
-                  else
-                    SliverPadding(
-                      padding:
-                          const EdgeInsets.only(left: 5, right: 5, top: 10),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate(organized
-                            .map((i) => BookInfoCard(
-                                title: i.title,
-                                author: i.author,
-                                publisher: i.book.publisher ?? "",
-                                thumbnail: i.book.thumbnail,
-                                info: i.book.info,
-                                link: i.book.link,
-                                onClick: () {
-                                  Navigator.push(context, MaterialPageRoute(
-                                      builder: (BuildContext context) {
-                                    return BookPage(id: i.id);
-                                  }));
-                                },
-                                onLongPress: () => _openTagEditor(i)))
-                            .toList()),
-                      ),
                     ),
-                  // Add scroll-to-refresh hint for desktop
-                  if (PlatformUtils.isDesktop)
-                    SliverToBoxAdapter(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Center(
-                          child: _isRefreshing
-                              ? SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color:
-                                        Theme.of(context).colorScheme.secondary,
-                                  ),
-                                )
-                              : Text(
-                                  "Scroll down to sync library",
-                                  style: TextStyle(
-                                    color: Colors.grey[500],
-                                    fontSize: 12,
-                                  ),
+                  )
+                else
+                  SliverPadding(
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    sliver: _buildGrid(organized),
+                  ),
+                // Add scroll-to-refresh hint for desktop
+                if (PlatformUtils.isDesktop)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Center(
+                        child: _isRefreshing
+                            ? SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color:
+                                      Theme.of(context).colorScheme.secondary,
                                 ),
-                        ),
+                              )
+                            : Text(
+                                "Scroll down to sync library",
+                                style: TextStyle(
+                                  color: Colors.grey[500],
+                                  fontSize: 12,
+                                ),
+                              ),
                       ),
                     ),
-                ],
-              ),
+                  ),
+              ],
             ),
           );
         } else {
@@ -487,21 +565,34 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                       height: 30,
                     ),
                     Text(
-                      "My Library Is Empty!",
+                      AppLocalizations.of(context).libraryEmpty,
                       textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: "#4D4D4D".toColor(),
-                        overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      key: const ValueKey('importLocalBooksEmpty'),
-                      onPressed: _importing ? null : _importLocalBooks,
-                      icon: const Icon(Icons.file_open_outlined),
-                      label: Text(AppLocalizations.of(context).importBooks),
+                    const SizedBox(height: 6),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 40),
+                      child: Text(
+                        AppLocalizations.of(context).libraryEmptyHint,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Center(
+                      child: FilledButton.icon(
+                        key: const ValueKey('importLocalBooksEmpty'),
+                        onPressed: _importing ? null : _importLocalBooks,
+                        icon: const Icon(Icons.file_open_outlined),
+                        label: Text(AppLocalizations.of(context).importBooks),
+                      ),
                     )
                   ],
                 ),
@@ -530,10 +621,12 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
 /// Bottom sheet to manage one book's tags: toggle existing tags, create
 /// new ones inline, and see the book's current set at a glance.
 class _TagEditorSheet extends ConsumerStatefulWidget {
-  const _TagEditorSheet({required this.bookId, required this.title});
+  const _TagEditorSheet(
+      {required this.bookId, required this.title, this.genre});
 
   final String bookId;
   final String title;
+  final BookGenre? genre;
 
   @override
   ConsumerState<_TagEditorSheet> createState() => _TagEditorSheetState();
@@ -541,11 +634,26 @@ class _TagEditorSheet extends ConsumerStatefulWidget {
 
 class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
   late Future<Set<String>> _bookTags;
+  late BookGenre? _genre = widget.genre;
 
   @override
   void initState() {
     super.initState();
     _bookTags = dataBase.getTags(widget.bookId);
+  }
+
+  Future<void> _setGenre(BookGenre? genre) async {
+    setState(() => _genre = genre);
+    await dataBase.setGenre(widget.bookId, genre?.key);
+    // The filter would hide the book whose genre just changed.
+    final filter = ref.read(libraryGenreFilterProvider);
+    if (filter != null && filter != genre) {
+      final books = await dataBase.getGenresForAll();
+      if (!books.values.contains(filter.key)) {
+        ref.read(libraryGenreFilterProvider.notifier).state = null;
+      }
+    }
+    ref.invalidate(libraryBooksProvider);
   }
 
   void _reload() {
@@ -613,26 +721,58 @@ class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
       future: _bookTags,
       builder: (context, snapshot) {
         final bookTags = snapshot.data ?? const <String>{};
-        return SafeArea(
+        final l10n = AppLocalizations.of(context);
+        final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+            fontWeight: FontWeight.w600);
+        return SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   widget.title,
-                  maxLines: 1,
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.bold),
+                      fontSize: 18, fontWeight: FontWeight.w700),
                 ),
+                const SizedBox(height: 16),
+                Text(l10n.bookGenre, style: labelStyle),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  children: [
+                    ChoiceChip(
+                      key: const ValueKey('genreChoice-none'),
+                      label: Text(l10n.genreNone,
+                          style: const TextStyle(fontSize: 12)),
+                      selected: _genre == null,
+                      onSelected: (_) => _setGenre(null),
+                    ),
+                    for (final genre in BookGenre.values)
+                      ChoiceChip(
+                        key: ValueKey('genreChoice-${genre.key}'),
+                        avatar: Icon(genreIcon(genre), size: 15),
+                        label: Text(genreLabel(l10n, genre),
+                            style: const TextStyle(fontSize: 12)),
+                        selected: _genre == genre,
+                        showCheckmark: false,
+                        onSelected: (_) => _setGenre(genre),
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(l10n.bookCollections, style: labelStyle),
                 const SizedBox(height: 4),
                 Text(
-                  AppLocalizations.of(context).manageCollectionsHint,
+                  l10n.manageCollectionsHint,
                   style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 10),
                 Wrap(
                   spacing: 6,
                   runSpacing: 6,

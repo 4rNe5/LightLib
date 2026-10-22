@@ -19,9 +19,11 @@ import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
 import 'package:openlib/ui/components/translated_chapter_builder.dart';
+import 'package:flutter/services.dart' show SystemUiOverlayStyle;
 import 'package:openlib/ui/components/paged_book_view.dart';
-import 'package:openlib/ui/reader_font_settings_page.dart';
+import 'package:openlib/ui/components/reader_settings_sheet.dart';
 import 'package:openlib/services/reader_fonts.dart';
+import 'package:openlib/services/reader_settings.dart';
 // ignore: implementation_imports
 import 'package:epub_view/src/data/epub_parser.dart'
     show parseChapters, parseParagraphs;
@@ -142,11 +144,10 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   bool _showTutorial = false;
   final FocusNode _focusNode = FocusNode();
 
-  static const _defaultFontSize = 16.0;
-  static const _minFontSize = 10.0;
-  static const _maxFontSize = 32.0;
-  static const _fontSizeStep = 2.0;
-  double _fontSize = _defaultFontSize;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey();
+  String? _bookTitle;
+
+  ReaderSettingsData get _settings => ReaderSettings.instance.value;
 
   // Text-to-speech (mobile only): speaks the current chapter chunk by
   // chunk and follows the reader along.
@@ -186,7 +187,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       // NOTE: We'll set CFI later in onDocumentLoaded because we need to fetch it async
     );
 
-    _loadFontSize();
+    ReaderSettings.instance.addListener(_onSettingsChanged);
     _loadLayout();
     ReaderFonts.instance.addListener(_onFontsChanged);
     ReaderFonts.instance.load();
@@ -217,24 +218,44 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   // Layout (scroll / pages)
   // ------------------------------------------------------------------
 
-  static const _layoutPref = 'readerLayout';
-
   void _onFontsChanged() {
     if (!mounted) return;
     setState(() => _pagedRevision++);
   }
 
+  /// Settings changed in the sheet: the layout switches, everything else
+  /// re-renders; pages are laid out again once a slider rests.
+  void _onSettingsChanged() {
+    if (!mounted) return;
+    final layout = _settings.layout;
+    if (layout != _layout) {
+      _setLayout(layout);
+      return;
+    }
+    setState(() {});
+    if (_layout.paged) {
+      _settingsRelayoutTimer?.cancel();
+      _settingsRelayoutTimer = Timer(const Duration(milliseconds: 180), () {
+        if (mounted) setState(() => _pagedRevision++);
+      });
+    }
+  }
+
+  Timer? _settingsRelayoutTimer;
+
   Future<void> _loadLayout() async {
-    final saved = await MyLibraryDb.instance
-        .getPreference(_layoutPref)
-        .catchError((_) => null);
-    final layout = ReaderLayout.fromName(saved as String?);
+    await ReaderSettings.instance.load();
+    var layout = _settings.layout;
     if (layout.paged) {
       final pos = await MyLibraryDb.instance
           .getPreference(_pagedPosPref)
           .catchError((_) => null);
       _pagedParagraph = int.tryParse('$pos') ?? 0;
-      await _ensurePagedBook();
+      try {
+        await _ensurePagedBook();
+      } catch (_) {
+        layout = ReaderLayout.scroll;
+      }
     }
     if (mounted) setState(() => _layout = layout);
   }
@@ -249,6 +270,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
     final languages = book.Schema?.Package?.Metadata?.Languages;
     _bookLanguage ??=
         (languages == null || languages.isEmpty) ? null : languages.first;
+    _bookTitle ??= book.Title;
     _pagedBook = book;
     _pagedParagraphs = paragraphs;
   }
@@ -260,16 +282,23 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
         _pagedParagraph =
             _epubReaderController.currentValue?.position.index ?? 0;
       }
-      await _ensurePagedBook();
+      try {
+        await _ensurePagedBook();
+      } catch (_) {
+        // A book the page view cannot parse stays in the scroll view.
+        if (mounted) {
+          showSnackBar(context: context, message: "Unable to open epub!");
+        }
+        await ReaderSettings.instance
+            .update(_settings.copyWith(layout: _layout));
+        return;
+      }
     } else if (_layout.paged) {
       // Back to scrolling: land on the paragraph the page started with.
       _pendingScrollIndex = _pagedParagraph;
     }
     if (!mounted) return;
     setState(() => _layout = layout);
-    await MyLibraryDb.instance
-        .savePreference(_layoutPref, layout.name)
-        .catchError((_) {});
   }
 
   void _onPagedParagraph(int index) {
@@ -285,19 +314,29 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       ? ReaderFonts.scriptForLanguage(_targetCode)
       : ReaderFonts.scriptForLanguage(_bookLanguage);
 
-  TextStyle _baseTextStyle(bool isDarkMode) => TextStyle(
-        height: 1.6,
-        fontSize: _fontSize,
-        color: isDarkMode ? const Color(0xfff5f5f5) : Colors.black,
+  ReaderPalette _paletteOf(BuildContext context) => paletteFor(
+      _settings.theme,
+      appDark: Theme.of(context).brightness == Brightness.dark);
+
+  TextStyle _baseTextStyle(ReaderPalette palette) => TextStyle(
+        height: _settings.lineHeight,
+        fontSize: _settings.fontSize,
+        letterSpacing: _settings.letterSpacing,
+        fontWeight: _settings.boldFor(palette) ? FontWeight.w600 : null,
+        color: palette.text,
       );
 
-  Widget _buildPaged(BuildContext context, bool isDarkMode) {
+  Future<void> _openSettingsSheet() =>
+      showReaderSettingsSheet(context, script: _displayScript);
+
+  Widget _buildPaged(BuildContext context, ReaderPalette palette) {
     final book = _pagedBook;
     final paragraphs = _pagedParagraphs;
     if (book == null || paragraphs == null) {
       return const Center(child: CircularProgressIndicator());
     }
-    final base = _baseTextStyle(isDarkMode);
+    final base = _baseTextStyle(palette);
+    final fontSize = _settings.fontSize;
     final hanAs =
         ReaderFonts.scriptForLanguage(_bookLanguage) == FontScript.korean
             ? FontScript.korean
@@ -310,11 +349,17 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       layout: _layout,
       textStyle: base,
       revision: _pagedRevision,
+      padding: EdgeInsets.fromLTRB(_settings.margin, 18, _settings.margin, 30),
+      textAlign: _settings.justify ? TextAlign.justify : TextAlign.start,
+      footerStyle: TextStyle(
+          fontSize: 11,
+          color: palette.secondaryText,
+          fontFeatures: const [FontFeature.tabularFigures()]),
       styleFor: (text, heading) => ReaderFonts.instance.styleFor(
           text,
           heading
               ? base.copyWith(
-                  fontSize: _fontSize * 1.3, fontWeight: FontWeight.bold)
+                  fontSize: fontSize * 1.3, fontWeight: FontWeight.bold)
               : base,
           hanAs: hanAs),
       initialParagraph: _pagedParagraph,
@@ -390,7 +435,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       final cache = await TranslationCache.open(
         bookFileName: widget.fileName,
         targetLanguage: target.code,
-        modelId: model.fileName,
+        modelId: TranslationStyle.cacheModelId(model.fileName),
       );
       // The shared engine: the background book translator uses the same
       // loaded model, and the page on screen jumps its queue.
@@ -457,6 +502,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
     if (!_translateOn || controller == null) return const SizedBox.shrink();
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final palette = _paletteOf(context);
     final status = controller.status;
     final busy = status == ReaderTranslationStatus.loadingModel ||
         status == ReaderTranslationStatus.translating;
@@ -475,7 +521,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
         label = l10n.translationReady(controller.deviceLabel ?? '');
     }
     return Material(
-      color: scheme.surfaceContainerHighest.withAlpha(120),
+      color: palette.text.withAlpha(14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -483,13 +529,14 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
             child: Row(
               children: [
-                Icon(Icons.translate, size: 14, color: scheme.tertiary),
+                Icon(Icons.translate, size: 14, color: palette.secondaryText),
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
                     label,
                     key: const ValueKey('translationStatus'),
-                    style: TextStyle(fontSize: 12, color: scheme.tertiary),
+                    style:
+                        TextStyle(fontSize: 12, color: palette.secondaryText),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -515,30 +562,6 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
         ],
       ),
     );
-  }
-
-  Future<void> _loadFontSize() async {
-    final saved = await MyLibraryDb.instance
-        .getPreference('readerFontSize')
-        .catchError((_) => null);
-    if (saved != null && mounted) {
-      final parsed = double.tryParse(saved.toString());
-      if (parsed != null && parsed >= _minFontSize && parsed <= _maxFontSize) {
-        setState(() => _fontSize = parsed);
-      }
-    }
-  }
-
-  Future<void> _changeFontSize(double delta) async {
-    final next = (_fontSize + delta).clamp(_minFontSize, _maxFontSize);
-    if (next == _fontSize) return;
-    setState(() => _fontSize = next);
-    // savePreference only accepts bool/int/String, so the double goes in
-    // as text; _loadFontSize parses it back out. Writing here (not on
-    // close) keeps tests free of lifecycle writes.
-    await MyLibraryDb.instance
-        .savePreference('readerFontSize', next.toString())
-        .catchError((_) {});
   }
 
   // ------------------------------------------------------------------
@@ -693,6 +716,8 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   void dispose() {
     _lifecycle?.dispose();
     _pagedRevisionTimer?.cancel();
+    _settingsRelayoutTimer?.cancel();
+    ReaderSettings.instance.removeListener(_onSettingsChanged);
     ReaderFonts.instance.removeListener(_onFontsChanged);
     _translation?.removeListener(_onTranslationChanged);
     _translation?.dispose();
@@ -702,25 +727,24 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
     super.dispose();
   }
 
-  EpubViewBuilders<DefaultBuilderOptions> _buildersFor(bool isDarkMode) {
+  EpubViewBuilders<DefaultBuilderOptions> _buildersFor(ReaderPalette palette) {
     final options = DefaultBuilderOptions(
-      textStyle: ReaderFonts.instance.styleForScript(
-          _displayScript, _baseTextStyle(isDarkMode).copyWith(height: 1.4)),
+      textStyle: ReaderFonts.instance
+          .styleForScript(_displayScript, _baseTextStyle(palette)),
+      paragraphPadding: EdgeInsets.symmetric(horizontal: _settings.margin),
     );
-    final translation = _translation;
-    if (_translateOn && translation != null) {
-      return EpubViewBuilders<DefaultBuilderOptions>(
-        options: options,
-        chapterDividerBuilder: (_) => const Divider(),
-        chapterBuilder: translatingChapterBuilder(
-          controller: translation,
-          memo: _paragraphTexts,
-        ),
-      );
-    }
+    final translation = _translateOn ? _translation : null;
     return EpubViewBuilders<DefaultBuilderOptions>(
       options: options,
-      chapterDividerBuilder: (_) => const Divider(),
+      chapterDividerBuilder: (chapter) => Padding(
+        padding: EdgeInsets.fromLTRB(_settings.margin, 28, _settings.margin, 8),
+        child: Divider(color: palette.secondaryText.withAlpha(70)),
+      ),
+      chapterBuilder: readerChapterBuilder(
+        controller: translation,
+        memo: _paragraphTexts,
+        textAlign: _settings.justify ? TextAlign.justify : null,
+      ),
     );
   }
 
@@ -728,140 +752,108 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   Widget build(BuildContext context) {
     // Watch for saved position
     final positionAsync = ref.watch(getBookPosition(widget.fileName));
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final palette = _paletteOf(context);
+    final l10n = AppLocalizations.of(context);
+    final iconColor = palette.text.withAlpha(215);
 
     return Scaffold(
+      key: _scaffoldKey,
+      backgroundColor: palette.background,
       appBar: AppBar(
-        // Use surface color in dark mode so it's not white
-        backgroundColor: isDarkMode
-            ? Theme.of(context).colorScheme.surface
-            : Theme.of(context).colorScheme.primary,
-        title: Text(AppLocalizations.of(context).appTitle),
-        titleTextStyle: Theme.of(context).textTheme.displayLarge,
+        backgroundColor: palette.background,
+        foregroundColor: palette.text,
+        surfaceTintColor: Colors.transparent,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        systemOverlayStyle: palette.dark
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
+        iconTheme: IconThemeData(color: iconColor),
+        actionsIconTheme: IconThemeData(color: iconColor),
+        titleSpacing: 0,
+        title: Text(
+          _bookTitle ?? l10n.appTitle,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+              fontSize: 16, fontWeight: FontWeight.w600, color: palette.text),
+        ),
         leading: IconButton(
-          icon: Icon(Icons.arrow_back,
-              color: Theme.of(context).colorScheme.tertiary),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          PopupMenuButton<Object>(
-            key: const ValueKey('readerViewMenu'),
-            tooltip: AppLocalizations.of(context).readerViewOptions,
-            icon: Icon(Icons.chrome_reader_mode_outlined,
-                color: Theme.of(context).colorScheme.tertiary),
-            onSelected: (value) {
-              if (value is ReaderLayout) {
-                _setLayout(value);
-              } else if (value == 'fonts') {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (_) => const ReaderFontSettingsPage()));
-              }
-            },
-            itemBuilder: (context) {
-              final l10n = AppLocalizations.of(context);
-              final labels = {
-                ReaderLayout.scroll: l10n.readerLayoutScroll,
-                ReaderLayout.pagesLtr: l10n.readerLayoutPagesLtr,
-                ReaderLayout.pagesRtl: l10n.readerLayoutPagesRtl,
-              };
-              return [
-                for (final layout in ReaderLayout.values)
-                  CheckedPopupMenuItem<Object>(
-                    value: layout,
-                    checked: layout == _layout,
-                    child: Text(labels[layout]!),
-                  ),
-                const PopupMenuDivider(),
-                PopupMenuItem<Object>(
-                  value: 'fonts',
-                  child: Text(l10n.readerFonts),
-                ),
-              ];
-            },
-          ),
           IconButton(
             key: const ValueKey('translateToggle'),
             tooltip: _translateOn
-                ? AppLocalizations.of(context).translationShowOriginal
-                : AppLocalizations.of(context).translationTranslate,
+                ? l10n.translationShowOriginal
+                : l10n.translationTranslate,
             icon: _translationStarting
                 ? SizedBox(
                     width: 18,
                     height: 18,
                     child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Theme.of(context).colorScheme.tertiary,
-                    ),
+                        strokeWidth: 2, color: iconColor),
                   )
                 : Icon(
                     _translateOn ? Icons.g_translate : Icons.translate,
                     color: _translateOn
-                        ? Theme.of(context).colorScheme.secondary
-                        : Theme.of(context).colorScheme.tertiary,
+                        ? Theme.of(context).colorScheme.primary
+                        : iconColor,
                   ),
             onPressed: () => _setTranslation(!_translateOn),
           ),
           if (_tts != null) ...[
             IconButton(
               tooltip: _ttsState == TtsState.playing
-                  ? AppLocalizations.of(context).pauseReadingAloud
-                  : _ttsState == TtsState.paused
-                      ? AppLocalizations.of(context).resumeReadingAloud
-                      : AppLocalizations.of(context).resumeReadingAloud,
+                  ? l10n.pauseReadingAloud
+                  : l10n.resumeReadingAloud,
               icon: Icon(
                 _ttsState == TtsState.playing
                     ? Icons.pause_circle
                     : _ttsState == TtsState.paused
                         ? Icons.play_circle
-                        : Icons.volume_up,
-                color: Theme.of(context).colorScheme.tertiary,
+                        : Icons.headphones_outlined,
               ),
               onPressed: _toggleTts,
             ),
-            if (_ttsState != TtsState.idle)
+            if (_ttsState != TtsState.idle) ...[
               IconButton(
-                tooltip: AppLocalizations.of(context).stopReadingAloud,
-                icon: Icon(Icons.stop_circle,
-                    color: Theme.of(context).colorScheme.tertiary),
+                tooltip: l10n.stopReadingAloud,
+                icon: const Icon(Icons.stop_circle),
                 onPressed: _stopTts,
               ),
-            // Speech rate lives between start/stop so it is reachable
-            // while listening without crowding the bar when idle.
-            IconButton(
-              tooltip: AppLocalizations.of(context).speechSpeed,
-              icon: Text(
-                _ttsRateLabel,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w900,
-                  color: Theme.of(context).colorScheme.tertiary,
+              // Speech rate shows only while listening.
+              IconButton(
+                tooltip: l10n.speechSpeed,
+                icon: Text(
+                  _ttsRateLabel,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                      color: iconColor),
                 ),
+                onPressed: _cycleTtsRate,
               ),
-              onPressed: _cycleTtsRate,
-            ),
+            ],
           ],
           IconButton(
-            tooltip: AppLocalizations.of(context).decreaseFontSize,
-            icon: Icon(Icons.text_decrease,
-                color: Theme.of(context).colorScheme.tertiary),
-            onPressed: () => _changeFontSize(-_fontSizeStep),
-          ),
-          Text(
-            _fontSize.round().toString(),
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w900,
-              color: Theme.of(context).colorScheme.tertiary,
-            ),
+            key: const ValueKey('readerContents'),
+            tooltip: l10n.readerContents,
+            icon: const Icon(Icons.format_list_bulleted),
+            onPressed: () => _scaffoldKey.currentState?.openEndDrawer(),
           ),
           IconButton(
-            tooltip: AppLocalizations.of(context).increaseFontSize,
-            icon: Icon(Icons.text_increase,
-                color: Theme.of(context).colorScheme.tertiary),
-            onPressed: () => _changeFontSize(_fontSizeStep),
+            key: const ValueKey('readerSettingsButton'),
+            tooltip: l10n.readerThemesSettings,
+            icon: Text(
+              'Aa',
+              style: TextStyle(
+                  fontSize: 17, fontWeight: FontWeight.w700, color: iconColor),
+            ),
+            onPressed: _openSettingsSheet,
           ),
+          const SizedBox(width: 4),
         ],
       ),
       endDrawer: Drawer(
@@ -882,7 +874,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                     focusNode: _focusNode,
                     autofocus: true,
                     child: _layout.paged
-                        ? _buildPaged(context, isDarkMode)
+                        ? _buildPaged(context, palette)
                         : positionAsync.when(
                             data: (savedCfi) {
                               return EpubView(
@@ -894,6 +886,16 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                                       (languages == null || languages.isEmpty)
                                           ? null
                                           : languages.first;
+                                  if (_bookTitle == null &&
+                                      document.Title != null) {
+                                    WidgetsBinding.instance
+                                        .addPostFrameCallback((_) {
+                                      if (mounted) {
+                                        setState(() =>
+                                            _bookTitle = document.Title);
+                                      }
+                                    });
+                                  }
                                   // Restore position if available
                                   final jump = _pendingScrollIndex;
                                   if (jump != null) {
@@ -923,7 +925,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                                     _startTts();
                                   }
                                 },
-                                builders: _buildersFor(isDarkMode),
+                                builders: _buildersFor(palette),
                               );
                             },
                             loading: () => Center(

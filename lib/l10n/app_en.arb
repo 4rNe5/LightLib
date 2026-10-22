@@ -1231,5 +1231,207 @@
   "fontImportFailed": "Could not import the font.",
   "@fontImportFailed": {
     "description": "Font import failed"
+  },
+  "readerThemesSettings": "Themes & Settings",
+  "@readerThemesSettings": {
+    "description": "readerThemesSettings"
+  },
+  "readerThemeOriginal": "Original",
+  "@readerThemeOriginal": {
+    "description": "readerThemeOriginal"
+  },
+  "readerThemePaper": "Paper",
+  "@readerThemePaper": {
+    "description": "readerThemePaper"
+  },
+  "readerThemeCalm": "Calm",
+  "@readerThemeCalm": {
+    "description": "readerThemeCalm"
+  },
+  "readerThemeQuiet": "Quiet",
+  "@readerThemeQuiet": {
+    "description": "readerThemeQuiet"
+  },
+  "readerThemeBold": "Bold",
+  "@readerThemeBold": {
+    "description": "readerThemeBold"
+  },
+  "readerThemeNight": "Night",
+  "@readerThemeNight": {
+    "description": "readerThemeNight"
+  },
+  "readerLayout": "Layout",
+  "@readerLayout": {
+    "description": "readerLayout"
+  },
+  "readerLayoutPagesShort": "Pages",
+  "@readerLayoutPagesShort": {
+    "description": "readerLayoutPagesShort"
+  },
+  "readerLayoutMangaShort": "Manga",
+  "@readerLayoutMangaShort": {
+    "description": "readerLayoutMangaShort"
+  },
+  "readerFont": "Font",
+  "@readerFont": {
+    "description": "readerFont"
+  },
+  "readerAllFonts": "Fonts for each language",
+  "@readerAllFonts": {
+    "description": "readerAllFonts"
+  },
+  "readerCustomize": "Customize",
+  "@readerCustomize": {
+    "description": "readerCustomize"
+  },
+  "readerFontSize": "Text size",
+  "@readerFontSize": {
+    "description": "readerFontSize"
+  },
+  "readerLineSpacing": "Line spacing",
+  "@readerLineSpacing": {
+    "description": "readerLineSpacing"
+  },
+  "readerLetterSpacing": "Character spacing",
+  "@readerLetterSpacing": {
+    "description": "readerLetterSpacing"
+  },
+  "readerMargins": "Margins",
+  "@readerMargins": {
+    "description": "readerMargins"
+  },
+  "readerJustify": "Justify text",
+  "@readerJustify": {
+    "description": "readerJustify"
+  },
+  "readerBoldText": "Bold text",
+  "@readerBoldText": {
+    "description": "readerBoldText"
+  },
+  "readerReset": "Reset",
+  "@readerReset": {
+    "description": "readerReset"
+  },
+  "readerContents": "Contents",
+  "@readerContents": {
+    "description": "readerContents"
+  },
+  "libraryContinueReading": "Continue reading",
+  "@libraryContinueReading": {
+    "description": "libraryContinueReading"
+  },
+  "libraryAllBooks": "All books",
+  "@libraryAllBooks": {
+    "description": "libraryAllBooks"
+  },
+  "libraryBookCount": "{count, plural, =1{1 book} other{{count} books}}",
+  "@libraryBookCount": {
+    "description": "libraryBookCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "libraryNoMatches": "No books match the current filters",
+  "@libraryNoMatches": {
+    "description": "libraryNoMatches"
+  },
+  "libraryEmpty": "Your library is empty",
+  "@libraryEmpty": {
+    "description": "libraryEmpty"
+  },
+  "libraryEmptyHint": "Import EPUB or PDF files you have to start reading.",
+  "@libraryEmptyHint": {
+    "description": "libraryEmptyHint"
+  },
+  "bookGenre": "Genre",
+  "@bookGenre": {
+    "description": "bookGenre"
+  },
+  "bookCollections": "Collections",
+  "@bookCollections": {
+    "description": "bookCollections"
+  },
+  "genreAll": "All",
+  "@genreAll": {
+    "description": "genreAll"
+  },
+  "genreNone": "No genre",
+  "@genreNone": {
+    "description": "genreNone"
+  },
+  "genreLightNovel": "Light novel",
+  "@genreLightNovel": {
+    "description": "genreLightNovel"
+  },
+  "genreComic": "Comics",
+  "@genreComic": {
+    "description": "genreComic"
+  },
+  "genreNovel": "Novel",
+  "@genreNovel": {
+    "description": "genreNovel"
+  },
+  "genreEnglishNovel": "English fiction",
+  "@genreEnglishNovel": {
+    "description": "genreEnglishNovel"
+  },
+  "genreEssay": "Essay",
+  "@genreEssay": {
+    "description": "genreEssay"
+  },
+  "genreScience": "Science",
+  "@genreScience": {
+    "description": "genreScience"
+  },
+  "genreHumanities": "Humanities",
+  "@genreHumanities": {
+    "description": "genreHumanities"
+  },
+  "genreBusiness": "Business",
+  "@genreBusiness": {
+    "description": "genreBusiness"
+  },
+  "genrePaper": "Papers",
+  "@genrePaper": {
+    "description": "genrePaper"
+  },
+  "genreTextbook": "Study",
+  "@genreTextbook": {
+    "description": "genreTextbook"
+  },
+  "genreOther": "Other",
+  "@genreOther": {
+    "description": "genreOther"
+  },
+  "translationLightNovelStyle": "Light novel style",
+  "@translationLightNovelStyle": {
+    "description": "translationLightNovelStyle"
+  },
+  "translationLightNovelStyleHint": "Keeps casual and polite speech, character quirks, honorifics and sound words. Turn off for non-fiction. Each style keeps its own translations.",
+  "@translationLightNovelStyleHint": {
+    "description": "translationLightNovelStyleHint"
+  },
+  "libraryBookOptions": "Book options",
+  "@libraryBookOptions": {
+    "description": "libraryBookOptions"
+  },
+  "libraryRecentlyAdded": "Recently added",
+  "@libraryRecentlyAdded": {
+    "description": "libraryRecentlyAdded"
+  },
+  "libraryReadingNow": "Reading now",
+  "@libraryReadingNow": {
+    "description": "libraryReadingNow"
+  },
+  "libraryFinishedCount": "{count} finished",
+  "@libraryFinishedCount": {
+    "description": "libraryFinishedCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

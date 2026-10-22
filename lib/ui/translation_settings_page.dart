@@ -44,6 +44,7 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
   InstalledModel? _active;
   String _target = translationLanguages.first.code;
   bool _importing = false;
+  bool _lightNovelStyle = TranslationStyle.lightNovel;
 
   @override
   void initState() {
@@ -74,6 +75,17 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
       _installed = installed;
       _active = active;
     });
+  }
+
+  /// Light-novel style on/off. Each style keeps its own translations, so
+  /// the reader and the library translator pick up the other set.
+  Future<void> _setLightNovelStyle(bool on) async {
+    setState(() => _lightNovelStyle = on);
+    TranslationStyle.lightNovel = on;
+    await _db
+        .savePreference(translationLightNovelStylePref, on ? 1 : 0)
+        .catchError((_) {});
+    BookTranslationService.instance.scanSoon();
   }
 
   Future<void> _setTarget(String code) async {
@@ -228,7 +240,18 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
               if (code != null) _setTarget(code);
             },
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 8),
+          SwitchListTile(
+            key: const ValueKey('lightNovelStyle'),
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.auto_stories_outlined),
+            title: Text(l10n.translationLightNovelStyle),
+            subtitle: Text(l10n.translationLightNovelStyleHint,
+                style: const TextStyle(fontSize: 12)),
+            value: _lightNovelStyle,
+            onChanged: _setLightNovelStyle,
+          ),
+          const SizedBox(height: 12),
           Text(l10n.translationModels,
               style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 4),

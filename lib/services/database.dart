@@ -106,6 +106,7 @@ class MyLibraryDb {
             'CREATE TABLE browserOptions (name TEXT PRIMARY KEY,value TEXT)');
         await db.execute(
             'CREATE TABLE booktags (bookId TEXT,tag TEXT,PRIMARY KEY (bookId,tag))');
+        await db.execute(_createGenreTable);
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         List<dynamic> isTableExist = await db.query('sqlite_master',
@@ -153,6 +154,8 @@ class MyLibraryDb {
         }
       },
       onOpen: (db) async {
+        // Genres arrived without a schema bump: create on any version.
+        await db.execute(_createGenreTable);
         final bookStorageDefaultDirectory =
             await getBookStorageDefaultDirectory;
         await db.execute(
@@ -171,6 +174,9 @@ class MyLibraryDb {
     );
   }
 
+  static const _createGenreTable =
+      'CREATE TABLE IF NOT EXISTS bookgenre (bookId TEXT PRIMARY KEY,genre TEXT)';
+
   // Database dbInstance;
   String tableName = 'mybooks';
 
@@ -187,6 +193,11 @@ class MyLibraryDb {
     final dbInstance = await instance.database;
     await dbInstance.delete(
       'booktags',
+      where: 'bookId = ?',
+      whereArgs: [id],
+    );
+    await dbInstance.delete(
+      'bookgenre',
       where: 'bookId = ?',
       whereArgs: [id],
     );
@@ -302,6 +313,41 @@ class MyLibraryDb {
       map.putIfAbsent(row['bookId'].toString(), () => {}).add(row['tag'].toString());
     }
     return map;
+  }
+
+  // ------------------------------------------------------------------
+  // Genre: one per book, chosen by the user; no row means "no genre".
+  // ------------------------------------------------------------------
+
+  /// Sets [bookId]'s genre key, or clears it when [genre] is null.
+  Future<void> setGenre(String bookId, String? genre) async {
+    final dbInstance = await instance.database;
+    if (genre == null || genre.isEmpty) {
+      await dbInstance
+          .delete('bookgenre', where: 'bookId = ?', whereArgs: [bookId]);
+      return;
+    }
+    await dbInstance.insert(
+      'bookgenre',
+      {'bookId': bookId, 'genre': genre},
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<String?> getGenre(String bookId) async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance
+        .query('bookgenre', where: 'bookId = ?', whereArgs: [bookId]);
+    return rows.isEmpty ? null : rows.first['genre'] as String?;
+  }
+
+  /// Map of bookId to genre key, in one query.
+  Future<Map<String, String>> getGenresForAll() async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance.query('bookgenre');
+    return {
+      for (final row in rows) row['bookId'].toString(): row['genre'].toString()
+    };
   }
 
   // ------------------------------------------------------------------

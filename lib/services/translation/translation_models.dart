@@ -162,6 +162,31 @@ String? sourceLanguageName(String? bookLanguage) {
 /// Whether [text] contains Japanese kana.
 bool containsKana(String text) => RegExp(r'[぀-ゟ゠-ヿｦ-ﾟ]').hasMatch(text);
 
+/// Whether translations use the light-novel style rules (speech levels,
+/// quirks, honorifics, -다 narration) or plain neutral rules. Loaded from
+/// [translationLightNovelStylePref]; on by default.
+class TranslationStyle {
+  TranslationStyle._();
+
+  static bool lightNovel = true;
+
+  /// Translations made with each style are cached apart, so switching
+  /// shows (and fills) the matching set instead of mixing them.
+  static String cacheModelId(String modelFileName) =>
+      lightNovel ? modelFileName : '$modelFileName+plain';
+}
+
+const translationLightNovelStylePref = 'translationLightNovelStyle';
+
+/// Neutral rules for any book: accurate, natural, nothing added.
+List<String> _plainRules(String targetLanguage) => [
+      'Translate everything into accurate, natural $targetLanguage. '
+          'Leave no word untranslated and add nothing.',
+      'Keep the tone and register of the original.',
+      'Keep names, technical terms, numbers and amounts exactly. Keep line '
+          'breaks.',
+    ];
+
 /// Style rules for fiction, sharpened for Japanese light novels (the
 /// reason this reader translates at all) and for Korean output.
 List<String> _styleRules({
@@ -216,14 +241,17 @@ String translationPrompt({
   required String targetLanguage,
   String? sourceLanguage,
   String? context,
+  bool lightNovelStyle = true,
 }) {
   final japanese = sourceLanguage == 'Japanese' || containsKana(text);
   final from = sourceLanguage == null ? '' : ' $sourceLanguage';
   final buffer = StringBuffer()
     ..writeln('Translate the following$from text into $targetLanguage.')
     ..writeln('Rules:');
-  for (final rule in _styleRules(
-      targetLanguage: targetLanguage, japaneseSource: japanese)) {
+  final rules = lightNovelStyle
+      ? _styleRules(targetLanguage: targetLanguage, japaneseSource: japanese)
+      : _plainRules(targetLanguage);
+  for (final rule in rules) {
     buffer.writeln('- $rule');
   }
   buffer

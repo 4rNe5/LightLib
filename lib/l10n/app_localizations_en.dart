@@ -911,4 +911,160 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get fontImportFailed => 'Could not import the font.';
+
+  @override
+  String get readerThemesSettings => 'Themes & Settings';
+
+  @override
+  String get readerThemeOriginal => 'Original';
+
+  @override
+  String get readerThemePaper => 'Paper';
+
+  @override
+  String get readerThemeCalm => 'Calm';
+
+  @override
+  String get readerThemeQuiet => 'Quiet';
+
+  @override
+  String get readerThemeBold => 'Bold';
+
+  @override
+  String get readerThemeNight => 'Night';
+
+  @override
+  String get readerLayout => 'Layout';
+
+  @override
+  String get readerLayoutPagesShort => 'Pages';
+
+  @override
+  String get readerLayoutMangaShort => 'Manga';
+
+  @override
+  String get readerFont => 'Font';
+
+  @override
+  String get readerAllFonts => 'Fonts for each language';
+
+  @override
+  String get readerCustomize => 'Customize';
+
+  @override
+  String get readerFontSize => 'Text size';
+
+  @override
+  String get readerLineSpacing => 'Line spacing';
+
+  @override
+  String get readerLetterSpacing => 'Character spacing';
+
+  @override
+  String get readerMargins => 'Margins';
+
+  @override
+  String get readerJustify => 'Justify text';
+
+  @override
+  String get readerBoldText => 'Bold text';
+
+  @override
+  String get readerReset => 'Reset';
+
+  @override
+  String get readerContents => 'Contents';
+
+  @override
+  String get libraryContinueReading => 'Continue reading';
+
+  @override
+  String get libraryAllBooks => 'All books';
+
+  @override
+  String libraryBookCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count books',
+      one: '1 book',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get libraryNoMatches => 'No books match the current filters';
+
+  @override
+  String get libraryEmpty => 'Your library is empty';
+
+  @override
+  String get libraryEmptyHint =>
+      'Import EPUB or PDF files you have to start reading.';
+
+  @override
+  String get bookGenre => 'Genre';
+
+  @override
+  String get bookCollections => 'Collections';
+
+  @override
+  String get genreAll => 'All';
+
+  @override
+  String get genreNone => 'No genre';
+
+  @override
+  String get genreLightNovel => 'Light novel';
+
+  @override
+  String get genreComic => 'Comics';
+
+  @override
+  String get genreNovel => 'Novel';
+
+  @override
+  String get genreEnglishNovel => 'English fiction';
+
+  @override
+  String get genreEssay => 'Essay';
+
+  @override
+  String get genreScience => 'Science';
+
+  @override
+  String get genreHumanities => 'Humanities';
+
+  @override
+  String get genreBusiness => 'Business';
+
+  @override
+  String get genrePaper => 'Papers';
+
+  @override
+  String get genreTextbook => 'Study';
+
+  @override
+  String get genreOther => 'Other';
+
+  @override
+  String get translationLightNovelStyle => 'Light novel style';
+
+  @override
+  String get translationLightNovelStyleHint =>
+      'Keeps casual and polite speech, character quirks, honorifics and sound words. Turn off for non-fiction. Each style keeps its own translations.';
+
+  @override
+  String get libraryBookOptions => 'Book options';
+
+  @override
+  String get libraryRecentlyAdded => 'Recently added';
+
+  @override
+  String get libraryReadingNow => 'Reading now';
+
+  @override
+  String libraryFinishedCount(int count) {
+    return '$count finished';
+  }
 }

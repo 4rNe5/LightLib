@@ -35,6 +35,7 @@ class BackupService {
     final bookPositions = await db.query('bookposition');
     final browserOptions = await db.query('browserOptions');
     final bookTags = await db.query('booktags');
+    final bookGenres = await db.query('bookgenre');
 
     String? encode(List<Map<String, Object?>> rows) =>
         jsonEncode(rows.map((row) {
@@ -51,6 +52,7 @@ class BackupService {
       'bookPositions': jsonDecode(encode(bookPositions)!),
       'browserOptions': jsonDecode(encode(browserOptions)!),
       'bookTags': jsonDecode(encode(bookTags)!),
+      'bookGenres': jsonDecode(encode(bookGenres)!),
     };
 
     return const JsonEncoder.withIndent('  ').convert(backup);
@@ -102,6 +104,8 @@ class BackupService {
       // Older backups predate tags; restore nothing rather than fail.
       await _restoreTable(
           txn, 'booktags', backup['bookTags'], ['bookId', 'tag']);
+      await _restoreTable(
+          txn, 'bookgenre', backup['bookGenres'], ['bookId', 'genre']);
     });
 
     AppLogger().info('Backup restored',

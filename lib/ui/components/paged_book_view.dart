@@ -172,6 +172,9 @@ class PagedBookView extends StatefulWidget {
     required this.translationOf,
     this.onPageShown,
     this.revision = 0,
+    this.padding = const EdgeInsets.fromLTRB(22, 18, 22, 30),
+    this.textAlign = TextAlign.start,
+    this.footerStyle,
   });
 
   final EpubBook book;
@@ -195,12 +198,20 @@ class PagedBookView extends StatefulWidget {
   /// Bump to re-lay-out (new translations, font change).
   final int revision;
 
+  /// Page margins; the page number sits in the bottom one.
+  final EdgeInsets padding;
+  final TextAlign textAlign;
+
+  /// Style of the page number; none is shown when null.
+  final TextStyle? footerStyle;
+
   @override
   State<PagedBookView> createState() => PagedBookViewState();
 }
 
 class PagedBookViewState extends State<PagedBookView> {
-  static const _padding = EdgeInsets.fromLTRB(22, 18, 22, 22);
+  EdgeInsets get _padding => widget.padding;
+  EdgeInsets? _laidOutPadding;
 
   late List<({int start, int end})> _chapters = _chapterRanges();
   int _chapter = 0;
@@ -303,6 +314,7 @@ class PagedBookViewState extends State<PagedBookView> {
     _laidOutFor = size;
     _laidOutRevision = widget.revision;
     _laidOutFont = widget.textStyle.fontSize ?? 0;
+    _laidOutPadding = _padding;
 
     var page =
         _pages.lastIndexWhere((p) => p.firstParagraph <= _anchorParagraph);
@@ -349,30 +361,51 @@ class PagedBookViewState extends State<PagedBookView> {
         duration: const Duration(milliseconds: 260), curve: Curves.easeOut);
   }
 
-  Widget _buildPage(BuildContext context, BookPage page) {
+  Widget _buildPage(BuildContext context, BookPage page, int number) {
     final first = page.slices.first;
+    final Widget body;
     if (first.image != null) {
-      return Padding(
+      body = Padding(
         padding: _padding,
         child: Center(child: Image.memory(first.image!, fit: BoxFit.contain)),
       );
-    }
-    final spacing = (widget.textStyle.fontSize ?? 16) * 0.7;
-    return Padding(
-      padding: _padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (final slice in page.slices) ...[
-            Text(
-              slice.text,
-              style: widget.styleFor(slice.text, slice.heading),
-              textDirection: TextDirection.ltr,
-            ),
-            if (slice.endsParagraph) SizedBox(height: spacing),
+    } else {
+      final spacing = (widget.textStyle.fontSize ?? 16) * 0.7;
+      body = Padding(
+        padding: _padding,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            for (final slice in page.slices) ...[
+              Text(
+                slice.text,
+                style: widget.styleFor(slice.text, slice.heading),
+                textAlign: slice.heading ? TextAlign.start : widget.textAlign,
+                textDirection: TextDirection.ltr,
+              ),
+              if (slice.endsParagraph) SizedBox(height: spacing),
+            ],
           ],
-        ],
-      ),
+        ),
+      );
+    }
+    final footer = widget.footerStyle;
+    if (footer == null) return body;
+    return Stack(
+      children: [
+        Positioned.fill(child: body),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: math.max(4, _padding.bottom / 2 - 8),
+          child: Text(
+            '$number / ${_pages.length}',
+            key: const ValueKey('pageNumber'),
+            textAlign: TextAlign.center,
+            style: footer,
+          ),
+        ),
+      ],
     );
   }
 
@@ -383,7 +416,8 @@ class PagedBookViewState extends State<PagedBookView> {
       final size = constraints.biggest;
       if (_laidOutFor != size ||
           _laidOutRevision != widget.revision ||
-          _laidOutFont != (widget.textStyle.fontSize ?? 0)) {
+          _laidOutFont != (widget.textStyle.fontSize ?? 0) ||
+          _laidOutPadding != _padding) {
         _layout(size);
       }
       final count = _pages.length + _offset + (_hasNext ? 1 : 0);
@@ -406,7 +440,7 @@ class PagedBookViewState extends State<PagedBookView> {
               // Edge of a chapter: the next one loads as this settles.
               return const Center(child: CircularProgressIndicator());
             }
-            return _buildPage(context, _pages[page]);
+            return _buildPage(context, _pages[page], page + 1);
           },
         ),
       );
