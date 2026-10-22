@@ -193,7 +193,13 @@ class DownloadManager {
 
     const deadHosts = ['annas-archive.org', '1lib.sk'];
     for (final element in mirrors) {
-      if (deadHosts.any(element.contains)) continue;
+      // Only check the URL's host: a signed CDN link may include a
+      // blocked domain in its filename or query string.
+      final host = Uri.tryParse(element)?.host.toLowerCase() ?? '';
+      if (deadHosts.any(
+          (deadHost) => host == deadHost || host.endsWith('.$deadHost'))) {
+        continue;
+      }
       if (element.contains('ipfs')) {
         ipfsMirrors.add(element);
       } else {
