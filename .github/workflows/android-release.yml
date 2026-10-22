@@ -125,13 +125,29 @@ jobs:
 
       - name: Verify signature and version
         id: apk
+        shell: bash
         run: |
+          set -euo pipefail
           APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          CERT=$("$TOOLS/apksigner" verify --print-certs "$APK" \
-            | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          ls -la "$APK"
+          # The newest build-tools on the runner may need a newer Java than
+          # the JDK 17 set up for Gradle; try versions newest first and
+          # keep the first apksigner that runs.
+          CERT=""
+          for v in $(ls "$ANDROID_HOME/build-tools" | grep -E '^[0-9]+(\.[0-9]+)*$' | sort -rV); do
+            TOOLS="$ANDROID_HOME/build-tools/$v"
+            [ -x "$TOOLS/apksigner" ] || continue
+            if OUTPUT=$("$TOOLS/apksigner" verify --print-certs "$APK" 2>&1); then
+              CERT=$(printf '%s\n' "$OUTPUT" \
+                | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+              echo "apksigner from build-tools $v"
+              break
+            fi
+            echo "apksigner $v failed:"
+            printf '%s\n' "$OUTPUT" | tail -5
+          done
           if [ "$CERT" != "$EXPECTED_CERT_SHA256" ]; then
-            echo "::error::APK signed with $CERT, expected $EXPECTED_CERT_SHA256. Check the KEYSTORE_BASE64 secret."
+            echo "::error::APK signed with '${CERT}', expected $EXPECTED_CERT_SHA256. Check the KEYSTORE_BASE64 secret."
             exit 1
           fi
           "$TOOLS/aapt2" dump badging "$APK" | sed -n 1p
