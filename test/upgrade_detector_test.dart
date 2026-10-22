@@ -36,6 +36,10 @@ void main() {
 
   setUpAll(() {
     if (Platform.isLinux || Platform.isWindows || Platform.isMacOS) {
+      // A database left by an earlier run would already hold a version,
+      // and "first install" would then not be a first install.
+      final stale = Directory('/tmp/openlib_upgrade_test');
+      if (stale.existsSync()) stale.deleteSync(recursive: true);
       sqfliteFfiInit();
       databaseFactory = databaseFactoryFfi;
       PathProviderPlatform.instance = _FakePathProvider();

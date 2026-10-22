@@ -1,0 +1,174 @@
+name: Android Release
+
+# Every push to main: test, build a signed arm64 APK, publish it as a
+# GitHub release (v<version>-build.<n>). Add [skip ci] to a commit
+# message to skip a build.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  FLUTTER_VERSION: "3.47.2"
+  # The arm64 APK's versionCode is 2000 + build number. Builds made
+  # before CI went up to 2016, so CI build numbers start above 16 and
+  # every CI APK installs over the last one.
+  BUILD_NUMBER_OFFSET: "16"
+  # SHA-256 of the release signing certificate (public, not a secret).
+  # A build signed with any other key is refused, so a missing or wrong
+  # secret never publishes an APK that cannot install over the old one.
+  EXPECTED_CERT_SHA256: "663ff5abb728a1bffe57b27170a5a00bdbc0c44c397e3e8f358b4b517efdccfc"
+
+concurrency:
+  group: android-release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+
+      - name: Analyze
+        run: flutter analyze lib test
+
+      - name: Test
+        run: flutter test
+
+  release:
+    name: Build and release
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check signing secrets
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          missing=""
+          for name in KEYSTORE_BASE64 KEY_ALIAS STORE_PASSWORD KEY_PASSWORD; do
+            [ -n "${!name}" ] || missing="$missing $name"
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing repository secrets:$missing (Settings > Secrets and variables > Actions)"
+            exit 1
+          fi
+
+      - name: Version
+        id: version
+        run: |
+          NAME=$(grep '^version:' pubspec.yaml | sed 's/^version: //' | cut -d'+' -f1)
+          BUILD=$(( ${{ github.run_number }} + BUILD_NUMBER_OFFSET ))
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "build=$BUILD" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NAME-build.$BUILD" >> "$GITHUB_OUTPUT"
+          sed -i "s/^version: .*/version: $NAME+$BUILD/" pubspec.yaml
+          echo "Building $NAME+$BUILD"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Decode keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/release.jks"
+          {
+            echo "storeFile=$RUNNER_TEMP/release.jks"
+            echo "keyAlias=$KEY_ALIAS"
+            echo "storePassword=$STORE_PASSWORD"
+            echo "keyPassword=$KEY_PASSWORD"
+          } > android/key.properties
+
+      - run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+
+      - name: Verify signature and version
+        id: apk
+        run: |
+          APK=build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
+          TOOLS=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          CERT=$("$TOOLS/apksigner" verify --print-certs "$APK" \
+            | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
+          if [ "$CERT" != "$EXPECTED_CERT_SHA256" ]; then
+            echo "::error::APK signed with $CERT, expected $EXPECTED_CERT_SHA256. Check the KEYSTORE_BASE64 secret."
+            exit 1
+          fi
+          "$TOOLS/aapt2" dump badging "$APK" | sed -n 1p
+          OUT="LightLib-${{ steps.version.outputs.name }}-build.${{ steps.version.outputs.build }}-arm64.apk"
+          mv "$APK" "$OUT"
+          sha256sum "$OUT" > "$OUT.sha256"
+          echo "file=$OUT" >> "$GITHUB_OUTPUT"
+
+      - name: Release notes
+        run: |
+          PREV=$(git describe --tags --match 'v*-build.*' --abbrev=0 HEAD^ 2>/dev/null || true)
+          {
+            echo "Commit: ${GITHUB_SHA:0:7}"
+            echo
+            if [ -n "$PREV" ]; then
+              echo "Changes since $PREV:"
+              git log --no-merges --format='- %s (%h)' "$PREV..HEAD"
+            else
+              git log --no-merges --format='- %s (%h)' -1
+            fi
+            echo
+            echo "SHA-256: \`$(cut -d' ' -f1 "${{ steps.apk.outputs.file }}.sha256")\`"
+          } > notes.md
+          cat notes.md
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "${{ steps.apk.outputs.file }}" \
+            "${{ steps.apk.outputs.file }}.sha256" \
+            --target "$GITHUB_SHA" \
+            --title "LightLib ${{ steps.version.outputs.name }} (build ${{ steps.version.outputs.build }})" \
+            --notes-file notes.md \
+            --latest
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks" android/key.properties
