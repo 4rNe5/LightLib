@@ -13,6 +13,21 @@ import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/epub_viewer.dart' show launchEpubViewer;
 import 'package:openlib/ui/pdf_viewer.dart' show launchPdfViewer;
 
+// Providers may report uppercase extensions (e.g. Z-Library's "EPUB").
+enum BookOpenTarget { pdf, epub, external }
+
+@visibleForTesting
+BookOpenTarget bookOpenTargetForFormat(String format) {
+  switch (format.trim().toLowerCase()) {
+    case 'pdf':
+      return BookOpenTarget.pdf;
+    case 'epub':
+      return BookOpenTarget.epub;
+    default:
+      return BookOpenTarget.external;
+  }
+}
+
 class FileOpenAndDeleteButtons extends ConsumerWidget {
   final String id;
   final String format;
@@ -46,10 +61,11 @@ class FileOpenAndDeleteButtons extends ConsumerWidget {
                   color: Theme.of(context).colorScheme.primary,
                 )),
             onPressed: () async {
-              if (format == 'pdf') {
+              final target = bookOpenTargetForFormat(format);
+              if (target == BookOpenTarget.pdf) {
                 await launchPdfViewer(
                     fileName: actualFileName, context: context, ref: ref);
-              } else if (format == 'epub') {
+              } else if (target == BookOpenTarget.epub) {
                 await launchEpubViewer(
                     fileName: actualFileName, context: context, ref: ref);
               } else {
