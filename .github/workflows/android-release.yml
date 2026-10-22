@@ -32,7 +32,7 @@ jobs:
     name: Test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - uses: subosito/flutter-action@v2
         with:
@@ -53,7 +53,7 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -84,7 +84,7 @@ jobs:
           sed -i "s/^version: .*/version: $NAME+$BUILD/" pubspec.yaml
           echo "Building $NAME+$BUILD"
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
@@ -138,9 +138,12 @@ jobs:
             TOOLS="$ANDROID_HOME/build-tools/$v"
             [ -x "$TOOLS/apksigner" ] || continue
             if OUTPUT=$("$TOOLS/apksigner" verify --print-certs "$APK" 2>&1); then
+              echo "apksigner from build-tools $v:"
+              printf '%s\n' "$OUTPUT" | grep -i 'digest' || true
+              # "Signer #1 certificate ..." in older build-tools, other
+              # signer labels in newer ones: take the first SHA-256 line.
               CERT=$(printf '%s\n' "$OUTPUT" \
-                | sed -n 's/^Signer #1 certificate SHA-256 digest: //p')
-              echo "apksigner from build-tools $v"
+                | awk -F'SHA-256 digest: ' '/certificate SHA-256 digest: /{print $2; exit}')
               break
             fi
             echo "apksigner $v failed:"
