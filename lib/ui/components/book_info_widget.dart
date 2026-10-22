@@ -54,9 +54,11 @@ class BookInfoWidget extends ConsumerWidget {
       md5: (data.md5 ?? '').toString(),
       annaArchiveBaseUrl: aaBaseUrl,
     );
-    String description = data.description.toString().length < 3
+    // A null description must not print as the word "null".
+    final rawDescription = data.description?.toString().trim() ?? '';
+    String description = rawDescription.length < 3 || rawDescription == 'null'
         ? "No Description available"
-        : data.description.toString();
+        : rawDescription;
     // SelectionArea makes title, author, info and description copyable.
     // The container must not be selectable itself, or taps on buttons in
     // the child slot stop working.

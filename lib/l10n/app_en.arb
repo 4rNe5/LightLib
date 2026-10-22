@@ -967,5 +967,30 @@
   "zlibRecommendationsLoadFailed": "Could not load more books",
   "@zlibRecommendationsLoadFailed": {
     "description": "Shown when loading more Z-Library recommendations failed"
+  },
+  "searchingSources": "Searching…",
+  "@searchingSources": {
+    "description": "Results page while a search starts, before a source is known"
+  },
+  "searchingSource": "Searching {source}…",
+  "@searchingSource": {
+    "description": "Results page while the first source is searched",
+    "placeholders": {
+      "source": {
+        "type": "String"
+      }
+    }
+  },
+  "tryingNextSourceNamed": "Nothing on {previous}, trying {source}…",
+  "@tryingNextSourceNamed": {
+    "description": "Results page when a source found nothing and the next one is tried",
+    "placeholders": {
+      "previous": {
+        "type": "String"
+      },
+      "source": {
+        "type": "String"
+      }
+    }
   }
 }

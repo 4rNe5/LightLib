@@ -1,3 +1,6 @@
+// Dart imports:
+import 'dart:async';
+
 // Real pagination behavior of the results page: page 1 renders, the
 // next page loads as the list scrolls near its end, an empty page stops
 // the pager. The search provider is overridden with deterministic pages;
@@ -77,9 +80,8 @@ void main() {
     // Page 2 items are now in the data: at least one page-2 card must
     // have been built as the list shows them.
     final visiblePage2 = find
-        .byWidgetPredicate((w) =>
-            w is BookInfoCard &&
-            w.title.startsWith('Book 2-'))
+        .byWidgetPredicate(
+            (w) => w is BookInfoCard && w.title.startsWith('Book 2-'))
         .evaluate()
         .length;
     expect(visiblePage2, greaterThan(0),
@@ -105,8 +107,8 @@ void main() {
     // absent, but the empty response proves the fetch ran once and
     // stopped).
     expect(
-        find.byWidgetPredicate((w) =>
-            w is BookInfoCard && w.title.startsWith('Book 3-')),
+        find.byWidgetPredicate(
+            (w) => w is BookInfoCard && w.title.startsWith('Book 3-')),
         findsNothing);
   });
 
@@ -132,13 +134,12 @@ void main() {
     expect(find.text('LibGen'), findsWidgets);
 
     // ...and the list header states where the results came from.
-    final l10n = AppLocalizations.of(
-        tester.element(find.byType(ResultPage).first));
+    final l10n =
+        AppLocalizations.of(tester.element(find.byType(ResultPage).first));
     expect(find.text(l10n.searchingOn('LibGen')), findsOneWidget);
   });
 
-  testWidgets('untagged results render without a source chip',
-      (tester) async {
+  testWidgets('untagged results render without a source chip', (tester) async {
     await tester.pumpWidget(ProviderScope(
       overrides: [
         searchProvider.overrideWith((ref, key) async {
@@ -158,8 +159,52 @@ void main() {
     // No 'LibGen'/'Z-Library' chip anywhere, and no header line for a
     // source that does not exist.
     expect(find.text('LibGen'), findsNothing);
-    final l10n = AppLocalizations.of(
-        tester.element(find.byType(ResultPage).first));
+    final l10n =
+        AppLocalizations.of(tester.element(find.byType(ResultPage).first));
     expect(find.text(l10n.searchingOn('LibGen')), findsNothing);
+  });
+
+  testWidgets('while searching, shows a spinner and never "No results found"',
+      (tester) async {
+    final gate = Completer<List<BookData>>();
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        searchProvider.overrideWith((ref, key) =>
+            key.page == 1 ? gate.future : Future.value(<BookData>[])),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ResultPage(searchQuery: 'docker'),
+      ),
+    ));
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Searching…'), findsOneWidget);
+    expect(find.text('No results found'), findsNothing);
+    expect(find.textContaining('No results here'), findsNothing);
+
+    gate.complete(fakePage(1));
+    await tester.pump();
+    expect(find.text('No results found'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('Book 1-0'), findsOneWidget);
+  });
+
+  testWidgets('an empty search ends on "No results found"', (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        searchProvider.overrideWith((ref, key) async => <BookData>[]),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ResultPage(searchQuery: 'docker'),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.text('No results found'), findsOneWidget);
   });
 }

@@ -103,6 +103,62 @@ void main() {
     expect(find.byKey(const ValueKey('zlibRecommendationsLoadMore')),
         findsNothing);
   });
+
+  testWidgets('an empty mosaic loads its first page by itself', (tester) async {
+    final fake = _FakeProvider((current) => current.copyWith(
+          books: [
+            BookData(title: 'Auto 1', link: '$base/book/X1/x.html', md5: 'X1'),
+          ],
+          page: current.page + 1,
+          hasMore: false,
+        ));
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: ZlibRecommendationsWidget(
+            initial: const ZlibraryRecommendations(
+              books: [],
+              bookIds: [1],
+              onPage: 21,
+              page: 0,
+              mirror: base,
+              hasMore: true,
+            ),
+            onOpen: (_) {},
+            provider: fake,
+          ),
+        ),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump();
+    expect(fake.calls, 1);
+    expect(find.text('Auto 1'), findsOneWidget);
+  });
+
+  testWidgets('nothing to show and nothing to fetch renders nothing',
+      (tester) async {
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(
+        body: ZlibRecommendationsWidget(
+          initial: const ZlibraryRecommendations(
+            books: [],
+            bookIds: [],
+            onPage: 0,
+            page: 0,
+            mirror: base,
+            hasMore: false,
+          ),
+          onOpen: (_) {},
+        ),
+      ),
+    ));
+    expect(find.text('You may be interested in'), findsNothing);
+  });
 }
 
 class _FakeProvider extends ZlibraryProvider {

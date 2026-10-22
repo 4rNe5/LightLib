@@ -1421,6 +1421,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not load more books'**
   String get zlibRecommendationsLoadFailed;
+
+  /// Results page while a search starts, before a source is known
+  ///
+  /// In en, this message translates to:
+  /// **'Searching…'**
+  String get searchingSources;
+
+  /// Results page while the first source is searched
+  ///
+  /// In en, this message translates to:
+  /// **'Searching {source}…'**
+  String searchingSource(String source);
+
+  /// Results page when a source found nothing and the next one is tried
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing on {previous}, trying {source}…'**
+  String tryingNextSourceNamed(String previous, String source);
 }
 
 class _AppLocalizationsDelegate

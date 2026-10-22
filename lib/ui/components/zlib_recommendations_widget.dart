@@ -53,12 +53,29 @@ class _ZlibRecommendationsWidgetState extends State<ZlibRecommendationsWidget> {
   bool _failed = false;
 
   @override
+  void initState() {
+    super.initState();
+    _autoLoadIfEmpty();
+  }
+
+  /// A page that rendered no mosaic items but carries the API cursor gets
+  /// its first page straight from the API, so the section is not blank.
+  void _autoLoadIfEmpty() {
+    if (_data.books.isEmpty && _data.hasMore) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _loadMore();
+      });
+    }
+  }
+
+  @override
   void didUpdateWidget(covariant ZlibRecommendationsWidget oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.initial, widget.initial)) {
       _data = widget.initial;
       _loading = false;
       _failed = false;
+      _autoLoadIfEmpty();
     }
   }
 
@@ -90,6 +107,11 @@ class _ZlibRecommendationsWidgetState extends State<ZlibRecommendationsWidget> {
     final l10n = AppLocalizations.of(context);
     final tertiary = Theme.of(context).colorScheme.tertiary;
 
+    // Nothing to show and nothing left to fetch: no empty section.
+    if (_data.books.isEmpty && !_data.hasMore && !_loading && !_failed) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
       padding: const EdgeInsets.only(top: 18, bottom: 24),
       child: Column(
@@ -106,6 +128,18 @@ class _ZlibRecommendationsWidgetState extends State<ZlibRecommendationsWidget> {
             overflow: TextOverflow.ellipsis,
           ),
           const SizedBox(height: 12),
+          if (_data.books.isEmpty && _loading)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.5, color: tertiary),
+                ),
+              ),
+            ),
           LayoutBuilder(builder: (context, constraints) {
             final columns = recommendationColumns(constraints.maxWidth);
             final count = visibleRecommendationCount(
@@ -116,7 +150,7 @@ class _ZlibRecommendationsWidgetState extends State<ZlibRecommendationsWidget> {
               onOpen: widget.onOpen,
             );
           }),
-          if (_data.hasMore || _failed)
+          if ((_data.hasMore && _data.books.isNotEmpty) || _failed)
             Padding(
               padding: const EdgeInsets.only(top: 14),
               child: Center(

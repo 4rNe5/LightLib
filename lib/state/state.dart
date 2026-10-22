@@ -398,6 +398,11 @@ class SearchPageKey {
 }
 
 // Provider for one page of search results across all enabled providers
+/// The source the search for a page key is currently trying; null until
+/// the first source starts.
+final searchProgressProvider = StateProvider.family
+    .autoDispose<SearchProgress?, SearchPageKey>((ref, key) => null);
+
 final searchProvider = FutureProvider.family
     .autoDispose<List<BookData>, SearchPageKey>((ref, key) async {
   if (key.query.isEmpty) {
@@ -407,6 +412,11 @@ final searchProvider = FutureProvider.family
   // A provider failure must not swallow results from the others: the
   // manager returns what it got and lists the stragglers by name.
   final manager = SearchManager();
+  // Kept alive for as long as this search is, so the results page can
+  // show which source is being tried.
+  ref.listen(searchProgressProvider(key), (_, __) {});
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
   final result = await manager.search(SearchQuery(
     text: key.query,
     content: ref.watch(getTypeValue),
@@ -418,7 +428,13 @@ final searchProvider = FutureProvider.family
     publisher: ref.watch(searchPublisherProvider),
     filtersEnabled: ref.watch(enableFiltersState),
     page: key.page,
-  ));
+  ), onProgress: (progress) {
+    // Called after the first await, so updating another provider here is
+    // allowed.
+    if (!disposed) {
+      ref.read(searchProgressProvider(key).notifier).state = progress;
+    }
+  });
   final enabledCount = (await manager.enabledProviders()).length;
   if (result.books.isEmpty &&
       result.failedProviders.length == enabledCount &&

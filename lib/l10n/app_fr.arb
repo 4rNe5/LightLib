@@ -225,5 +225,8 @@
   "whatsNewFeatureCovers": "Les couvertures LibGen manquantes sont récupérées depuis la page détaillée du livre.",
   "zlibRecommendationsTitle": "Vous pourriez aussi aimer",
   "zlibRecommendationsLoadMore": "Charger plus",
-  "zlibRecommendationsLoadFailed": "Impossible de charger plus de livres"
+  "zlibRecommendationsLoadFailed": "Impossible de charger plus de livres",
+  "searchingSources": "Recherche…",
+  "searchingSource": "Recherche sur {source}…",
+  "tryingNextSourceNamed": "Rien sur {previous}, essai de {source}…"
 }

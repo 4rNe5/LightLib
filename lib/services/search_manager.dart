@@ -901,7 +901,9 @@ class ZlibraryProvider implements SearchProvider {
       link: pageUrl,
       md5: _bookIdFromHref(pageUrl) ?? title,
       format: format ?? '',
-      description: null,
+      // #bookDescriptionBox holds the blurb when the book has one.
+      description: _firstNonBlank(
+          [document.querySelector('#bookDescriptionBox')?.text]),
       mirror: dlHref == null ? null : '$baseUrl$dlHref',
       isFastDownload: false,
       recommendations: parseRecommendations(document, html, baseUrl),
@@ -920,23 +922,41 @@ class ZlibraryProvider implements SearchProvider {
   ZlibraryRecommendations? parseRecommendations(
       dom.Document document, String html, String baseUrl) {
     final mosaic = document.querySelector('.books-mosaic');
-    if (mosaic == null) return null;
+
+    // The mosaic's own items first; when its markup moves, any link the
+    // site tagged as a recommendation (`?dsource=recommend`) still counts.
+    var anchors = mosaic?.querySelectorAll('.item a[href]') ?? const [];
+    if (anchors.isEmpty) {
+      anchors = document.querySelectorAll('a[href*="dsource=recommend"]');
+    }
 
     final books = <BookData>[];
     final seen = <String>{};
-    for (final a in mosaic.querySelectorAll('.masonry-endless .item a[href]')) {
+    for (final a in anchors) {
       final cover = a.querySelector('z-cover');
       final img = a.querySelector('img');
+      // The <img> alt reads "Author — Title" when z-cover carries nothing.
+      final alt = img?.attributes['alt'] ?? '';
+      final altParts = alt.split(' \u2014 ');
       final book = _recommendedBook(
         href: a.attributes['href'],
-        title: cover?.attributes['title'],
-        author: cover?.attributes['author'],
-        cover: img?.attributes['src'] ?? img?.attributes['data-src'],
+        title: _firstNonBlank([
+          cover?.attributes['title'],
+          altParts.length > 1 ? altParts.sublist(1).join(' \u2014 ') : null,
+          a.text,
+        ]),
+        author: _firstNonBlank([
+          cover?.attributes['author'],
+          altParts.length > 1 ? altParts.first : null,
+        ]),
+        cover: _firstNonBlank([
+          img?.attributes['src'],
+          img?.attributes['data-src'],
+        ]),
         baseUrl: baseUrl,
       );
       if (book != null && seen.add(book.md5)) books.add(book);
     }
-    if (books.isEmpty) return null;
 
     int? scriptInt(String name) =>
         int.tryParse(RegExp('$name\\s*=\\s*parseInt\\([\'"](\\d+)[\'"]\\)')
@@ -951,21 +971,67 @@ class ZlibraryProvider implements SearchProvider {
         .map((s) => int.tryParse(s.trim()))
         .whereType<int>()
         .toList();
-    // The page hides "Load more" by itself only after an API answer, so
-    // its presence is the signal; without a full cursor it cannot work.
-    final hasMore = page != null &&
-        onPage != null &&
-        bookIds.isNotEmpty &&
-        mosaic.querySelector('.load-more') != null;
+    final hasCursor = onPage != null && bookIds.isNotEmpty;
+
+    _logger.info('Z-Library recommendations parsed',
+        tag: 'ZlibraryProvider',
+        metadata: {
+          'mirror': baseUrl,
+          'htmlLength': html.length,
+          'mosaic': mosaic != null,
+          'mosaicItems': mosaic?.querySelectorAll('.item').length ?? 0,
+          'recommendLinks':
+              document.querySelectorAll('a[href*="dsource=recommend"]').length,
+          'zCovers': document.querySelectorAll('z-cover').length,
+          'books': books.length,
+          'bookIds': bookIds.length,
+          'mosaicPage': page,
+          'onPage': onPage,
+          if (books.isEmpty) 'snippet': _recommendationSnippet(html),
+        });
+
+    // Nothing rendered and nothing to ask the API with: no section.
+    if (books.isEmpty && !hasCursor) return null;
 
     return ZlibraryRecommendations(
       books: books,
       bookIds: bookIds,
       onPage: onPage ?? 0,
-      page: page ?? 0,
+      // With no items rendered, the first API page is the first page.
+      page: books.isEmpty ? 0 : (page ?? 0),
       mirror: baseUrl,
-      hasMore: hasMore,
+      // The site's "Load more" works off this cursor; the API's own
+      // nextPage answer ends the list.
+      hasMore: hasCursor && (books.isEmpty || page != null),
     );
+  }
+
+  /// A short excerpt of where the mosaic should be, for diagnostics when
+  /// none was found. Tags are stripped of attributes' bulk by length.
+  String _recommendationSnippet(String html) {
+    for (final marker in [
+      'books-mosaic',
+      'booksMosaicBoxContainer',
+      'interested in',
+      'masonry',
+    ]) {
+      final i = html.indexOf(marker);
+      if (i >= 0) {
+        final start = (i - 150).clamp(0, html.length);
+        final end = (i + 450).clamp(0, html.length);
+        return html.substring(start, end).replaceAll(RegExp(r'\s+'), ' ');
+      }
+    }
+    final title = RegExp(r'<title>([^<]*)</title>').firstMatch(html)?.group(1);
+    return 'no mosaic marker; title=${title ?? '-'}';
+  }
+
+  static String? _firstNonBlank(List<String?> values) {
+    for (final v in values) {
+      final t = v?.replaceAll(RegExp(r'\s+'), ' ').trim() ?? '';
+      if (t.isNotEmpty) return t;
+    }
+    return null;
   }
 
   /// One mosaic entry as [BookData]. The `?dsource=` tracking query is
@@ -1067,7 +1133,19 @@ class ZlibraryProvider implements SearchProvider {
             'Cookie': cookieHeader,
           }));
     }
+    String bodyHead() {
+      final body = (response.data ?? '').replaceAll(RegExp(r'\s+'), ' ');
+      return body.length > 300 ? body.substring(0, 300) : body;
+    }
+
     if (response.statusCode != 200) {
+      _logger.warning('Z-Library recommendations request failed',
+          tag: 'ZlibraryProvider',
+          metadata: {
+            'url': url,
+            'status': response.statusCode,
+            'body': bodyHead(),
+          });
       throw Exception(
           'Z-Library recommendations answered ${response.statusCode}');
     }
@@ -1076,6 +1154,8 @@ class ZlibraryProvider implements SearchProvider {
     try {
       json = jsonDecode(response.data ?? '');
     } on FormatException {
+      _logger.warning('Z-Library recommendations returned no JSON',
+          tag: 'ZlibraryProvider', metadata: {'url': url, 'body': bodyHead()});
       throw Exception('Z-Library recommendations returned no JSON');
     }
     if (json is Map && (json['success'] == 0 || json['success'] == '0')) {
@@ -1521,6 +1601,27 @@ class SearchManagerResult {
 
 /// Fan-out search across the enabled providers, merging and de-duplicating
 /// results. One provider failing never takes the rest down.
+/// Where a running search is in the source chain.
+@immutable
+class SearchProgress {
+  /// The source being searched right now.
+  final String source;
+
+  /// The source tried just before, which found nothing or failed; null
+  /// for the first source.
+  final String? previousSource;
+
+  final int index;
+  final int total;
+
+  const SearchProgress({
+    required this.source,
+    required this.previousSource,
+    required this.index,
+    required this.total,
+  });
+}
+
 class SearchManager {
   SearchManager({MyLibraryDb? database, List<SearchProvider>? providers})
       : _database = database ?? MyLibraryDb.instance,
@@ -1583,7 +1684,11 @@ class SearchManager {
   /// Anna's Archive (behind DDoS-Guard). A provider that finds nothing
   /// (empty, not an error) does not stop the chain - the next one runs.
   /// Errors are collected and surface only when every provider fails.
-  Future<SearchManagerResult> search(SearchQuery query) async {
+  ///
+  /// [onProgress] is told which source is being tried as the chain moves,
+  /// so the UI can say what it is waiting on instead of guessing.
+  Future<SearchManagerResult> search(SearchQuery query,
+      {void Function(SearchProgress progress)? onProgress}) async {
     final enabled = await enabledProviders();
     final active = _providers.where((p) => enabled.contains(p.id)).toList();
     if (active.isEmpty) {
@@ -1598,8 +1703,15 @@ class SearchManager {
     final books = <BookData>[];
     final failed = <String>[];
     String resultSource = '';
-    for (final provider in active) {
+    for (var i = 0; i < active.length; i++) {
+      final provider = active[i];
       logger.debug('Trying ${provider.displayName}', tag: 'SearchManager');
+      onProgress?.call(SearchProgress(
+        source: provider.displayName,
+        previousSource: i == 0 ? null : active[i - 1].displayName,
+        index: i,
+        total: active.length,
+      ));
       final outcome = await _searchOne(provider, query, logger);
       if (outcome.error != null) {
         failed.add(provider.displayName);

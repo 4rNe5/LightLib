@@ -55,6 +55,41 @@ void main() {
           (info as ZlibraryBookInfoData).recommendations?.books, hasLength(42));
     });
 
+    test('falls back to dsource=recommend links outside the mosaic', () {
+      const page = '<html><body><h1 itemprop="name">T</h1>'
+          '<div class="other"><a href="/book/QQ11/q.html?dsource=recommend">'
+          '<img data-src="https://c.example/q.jpg" alt="Some Author \u2014 Some Title">'
+          '</a></div></body></html>';
+      final recs =
+          provider.parseRecommendations(html_parser.parse(page), page, base)!;
+      expect(recs.books.single.title, 'Some Title');
+      expect(recs.books.single.author, 'Some Author');
+      expect(recs.books.single.thumbnail, 'https://c.example/q.jpg');
+      expect(recs.books.single.link, '$base/book/QQ11/q.html');
+      expect(recs.hasMore, isFalse);
+    });
+
+    test('an empty mosaic with an API cursor asks the API from page 1', () {
+      const page = '<html><body><div class="books-mosaic">'
+          '<div class="masonry-endless"></div></div><script>'
+          "let mosaicPage = parseInt('2'); let onPage = parseInt('21');"
+          'data = { bookIds: [5,6,7] }</script></body></html>';
+      final recs =
+          provider.parseRecommendations(html_parser.parse(page), page, base)!;
+      expect(recs.books, isEmpty);
+      expect(recs.bookIds, [5, 6, 7]);
+      expect(recs.page, 0);
+      expect(recs.hasMore, isTrue);
+    });
+
+    test('reads the description box when the page has one', () {
+      const page = '<html><body><h1 itemprop="name">T</h1>'
+          '<div id="bookDescriptionBox">  A <b>fine</b>\n book.  </div>'
+          '</body></html>';
+      final info = provider.parseBookPage(page, base, '$base/book/a/b.html');
+      expect(info!.description, 'A fine book.');
+    });
+
     test('a page without the mosaic yields null', () {
       const plain = '<html><body><h1 itemprop="name">T</h1></body></html>';
       expect(

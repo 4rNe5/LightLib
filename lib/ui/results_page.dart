@@ -119,8 +119,7 @@ class _ResultPageState extends ConsumerState<ResultPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)
-            .resultsFor(capitalizedQuery)),
+        title: Text(AppLocalizations.of(context).resultsFor(capitalizedQuery)),
         titleTextStyle: Theme.of(context)
             .textTheme
             .titleLarge
@@ -129,6 +128,9 @@ class _ResultPageState extends ConsumerState<ResultPage> {
       ),
       body: firstPage.when(
         data: (pageOne) {
+          // Page 1 has arrived but the listener has not merged it yet:
+          // still loading, not "no results".
+          if (_loadedPages == 0) return _buildLoading(context);
           if (_books.isNotEmpty) {
             return Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -146,8 +148,8 @@ class _ResultPageState extends ConsumerState<ResultPage> {
                             Padding(
                               padding: const EdgeInsets.only(top: 2),
                               child: Text(
-                                AppLocalizations.of(context).searchingOn(
-                                    _books.first.source!),
+                                AppLocalizations.of(context)
+                                    .searchingOn(_books.first.source!),
                                 style: TextStyle(
                                   fontSize: 12,
                                   fontWeight: FontWeight.bold,
@@ -257,49 +259,60 @@ class _ResultPageState extends ConsumerState<ResultPage> {
             },
           );
         },
-        loading: () {
-          return Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+        loading: () => _buildLoading(context),
+      ),
+    );
+  }
+
+  /// Spinner plus what the search is waiting on. "Nothing on X" only
+  /// appears once a source really came back empty.
+  Widget _buildLoading(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final progress = ref.watch(app_state.searchProgressProvider(
+        app_state.SearchPageKey(widget.searchQuery, 1)));
+    final status = progress == null
+        ? l10n.searchingSources
+        : progress.previousSource == null
+            ? l10n.searchingSource(progress.source)
+            : l10n.tryingNextSourceNamed(
+                progress.previousSource!, progress.source);
+    return Column(
+      key: const ValueKey('resultsLoading'),
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding:
+              const EdgeInsets.only(left: 10, right: 10, top: 10, bottom: 10),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.only(
-                    left: 10, right: 10, top: 10, bottom: 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    TitleText(AppLocalizations.of(context).results),
-                    const SizedBox(height: 4),
-                    // The chain tries LibGen, then Z-Library, then
-                    // Anna's Archive - an empty page is not the end.
-                    Text(
-                      AppLocalizations.of(context).tryingNextSource,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Center(
-                  child: SizedBox(
-                    width: 25,
-                    height: 25,
-                    child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.secondary,
-                      strokeWidth: 3.0,
-                    ),
-                  ),
+              TitleText(l10n.results),
+              const SizedBox(height: 4),
+              Text(
+                status,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        ),
+        Expanded(
+          child: Center(
+            child: SizedBox(
+              width: 25,
+              height: 25,
+              child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.secondary,
+                strokeWidth: 3.0,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -225,5 +225,8 @@
   "whatsNewFeatureCovers": "Las portadas de LibGen que faltan se obtienen de la página de detalle del libro.",
   "zlibRecommendationsTitle": "También te puede interesar",
   "zlibRecommendationsLoadMore": "Cargar más",
-  "zlibRecommendationsLoadFailed": "No se pudieron cargar más libros"
+  "zlibRecommendationsLoadFailed": "No se pudieron cargar más libros",
+  "searchingSources": "Buscando…",
+  "searchingSource": "Buscando en {source}…",
+  "tryingNextSourceNamed": "Nada en {previous}, probando {source}…"
 }

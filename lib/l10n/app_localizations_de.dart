@@ -739,4 +739,17 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get zlibRecommendationsLoadFailed =>
       'Weitere Bücher konnten nicht geladen werden';
+
+  @override
+  String get searchingSources => 'Suche läuft…';
+
+  @override
+  String searchingSource(String source) {
+    return 'Suche in $source…';
+  }
+
+  @override
+  String tryingNextSourceNamed(String previous, String source) {
+    return 'Nichts in $previous, versuche $source…';
+  }
 }

@@ -236,6 +236,26 @@ void main() {
       expect(never.calls, 0); // chain stopped at the first hit
     });
 
+    test('reports each source as the chain reaches it', () async {
+      final empty = _FakeProvider('libgen', []);
+      final hit = _FakeProvider('annasArchive', [
+        BookData(title: 'Hit', link: 'https://a/md5/h', md5: 'md5-h'),
+      ]);
+      final never = _FakeProvider('zlibrary', []);
+      final manager = SearchManager(
+        database: MyLibraryDb.instance,
+        providers: [empty, hit, never],
+      );
+      await manager.enableAllProviders();
+
+      final seen = <String>[];
+      await manager.search(const SearchQuery(text: 'wizard'),
+          onProgress: (p) => seen.add(
+              '${p.previousSource ?? '-'}>${p.source} ${p.index}/${p.total}'));
+
+      expect(seen, ['->libgen 0/3', 'libgen>annasArchive 1/3']);
+    });
+
     test('tags results with the provider that produced them', () async {
       final provider = _FakeProvider('libgen', [
         BookData(title: 'Tagged', link: 'https://l/1', md5: 'tag-1'),

@@ -225,5 +225,8 @@
   "whatsNewFeatureCovers": "Fehlende LibGen-Cover werden von der Detailseite des Buchs geladen.",
   "zlibRecommendationsTitle": "Das könnte dich auch interessieren",
   "zlibRecommendationsLoadMore": "Mehr laden",
-  "zlibRecommendationsLoadFailed": "Weitere Bücher konnten nicht geladen werden"
+  "zlibRecommendationsLoadFailed": "Weitere Bücher konnten nicht geladen werden",
+  "searchingSources": "Suche läuft…",
+  "searchingSource": "Suche in {source}…",
+  "tryingNextSourceNamed": "Nichts in {previous}, versuche {source}…"
 }
