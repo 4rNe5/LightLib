@@ -40,6 +40,16 @@ android {
         versionName = flutter.versionName
     }
 
+    packaging {
+        jniLibs {
+            // LiteRT-LM's GPU samplers. The OpenCL one crashes (SIGSEGV in
+            // LiteRtTopKOpenClSampler_SampleToIdAndScoreBuffer) on Adreno
+            // 830 with Gemma 4; without them LiteRT-LM picks the next token
+            // on the CPU, which costs a millisecond or two per token.
+            excludes += ["**/libLiteRtTopKOpenClSampler.so", "**/libLiteRtTopKWebGpuSampler.so"]
+        }
+    }
+
     dependenciesInfo {
         // Disables dependency metadata when building APKs.
         includeInApk = false

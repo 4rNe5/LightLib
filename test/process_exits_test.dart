@@ -44,5 +44,10 @@ void main() {
     expect(e.timestamp.millisecondsSinceEpoch, 1792760000000);
     expect(e.metadata['pssKb'], 123);
     expect(e.trace, contains('OpenCl'));
+    expect(e.beforeUpdate, isFalse);
+    expect(
+        ProcessExit.fromMap({'reason': 'crash_native', 'beforeUpdate': true})
+            .beforeUpdate,
+        isTrue);
   });
 }

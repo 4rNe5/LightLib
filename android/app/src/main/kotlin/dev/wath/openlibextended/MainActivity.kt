@@ -108,9 +108,14 @@ class MainActivity : FlutterActivity() {
     private fun lastExits(): List<Map<String, Any?>> {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
         val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        val updated = try {
+            packageManager.getPackageInfo(packageName, 0).lastUpdateTime
+        } catch (e: Exception) { 0L }
         return am.getHistoricalProcessExitReasons(packageName, 0, 5).map { info ->
             mapOf(
                 "timestamp" to info.timestamp,
+                // Ended in an older version of the app.
+                "beforeUpdate" to (info.timestamp < updated),
                 "reason" to reasonName(info.reason),
                 "description" to info.description,
                 "status" to info.status,

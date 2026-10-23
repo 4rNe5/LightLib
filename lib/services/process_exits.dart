@@ -19,6 +19,7 @@ class ProcessExit {
     required this.reason,
     this.description,
     this.trace,
+    this.beforeUpdate = false,
     this.metadata = const {},
   });
 
@@ -28,6 +29,7 @@ class ProcessExit {
         reason: m['reason'] as String? ?? 'unknown',
         description: m['description'] as String?,
         trace: m['trace'] as String?,
+        beforeUpdate: m['beforeUpdate'] == true,
         metadata: {
           for (final key in ['status', 'importance', 'pssKb', 'rssKb'])
             if (m[key] != null) key: m[key],
@@ -41,6 +43,9 @@ class ProcessExit {
   final String reason;
   final String? description;
   final String? trace;
+
+  /// Ended in a version of the app older than the one installed now.
+  final bool beforeUpdate;
   final Map<String, Object?> metadata;
 
   /// Ended by the user (swiped away, force-stopped) rather than by a
@@ -109,6 +114,7 @@ class ProcessExits {
       final metadata = <String, dynamic>{
         'at': e.timestamp.toIso8601String(),
         'reason': e.reason,
+        if (e.beforeUpdate) 'beforeUpdate': true,
         if (e.description != null) 'description': e.description,
         ...e.metadata,
         if (e.trace != null && e.trace!.isNotEmpty) 'trace': e.trace,

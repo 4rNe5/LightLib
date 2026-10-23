@@ -183,9 +183,10 @@ class LocalLlmTranslator implements Translator {
 
   int _setupIndex = 0;
 
-  // 2: the GPU could not load the phone's OpenCL driver before the manifest
-  // declared it, so what earlier versions found says nothing about it.
-  static const _setupPrefPrefix = 'translationEngineSetup2:';
+  // What earlier versions found says nothing about this one: 2, the GPU
+  // could not load the phone's OpenCL driver before the manifest declared
+  // it; 3, the GPU's sampler, which crashed the app, is no longer shipped.
+  static const _setupPrefPrefix = 'translationEngineSetup3:';
   static const _failuresPrefPrefix = 'translationEngineFailures:';
 
   /// The setup being started; cleared once it works or fails. Still set
@@ -234,7 +235,8 @@ class LocalLlmTranslator implements Translator {
     _crashChecked = true;
     if (index < 0) return from;
     // Swiped away, or reclaimed in the background: not the setup's fault.
-    if (last != null && !last.likelyCrash) return from;
+    // Crashed in an older version: this one may well have fixed it.
+    if (last != null && (!last.likelyCrash || last.beforeUpdate)) return from;
     final setup = setups[index];
     _logger.warning('Engine setup ${setup.key} closed the app last time',
         tag: 'Translator',
