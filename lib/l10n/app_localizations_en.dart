@@ -1177,4 +1177,29 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recapGenreMix => 'Genre mix';
+
+  @override
+  String get translationPromptFormat => 'Prompt format';
+
+  @override
+  String get translationPromptFormatHint =>
+      'How requests are worded for this model. Dedicated translation models work best with the format they were trained on; Auto picks it from the model.';
+
+  @override
+  String promptFormatAuto(String format) {
+    return 'Auto ($format)';
+  }
+
+  @override
+  String get promptFormatGeneral => 'General (Gemma and others)';
+
+  @override
+  String get promptFormatHyMt => 'Hy-MT translation model';
+
+  @override
+  String get promptFormatJaKo => 'Japanese→Korean dialogue model';
+
+  @override
+  String get promptFormatKoreanOnly =>
+      'This format translates into Korean only. For other languages the general format is used.';
 }

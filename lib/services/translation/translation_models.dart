@@ -1,5 +1,8 @@
 // The on-device translation models the app offers, and the languages.
 
+// Dart imports:
+import 'dart:convert';
+
 // Flutter imports:
 import 'package:flutter/foundation.dart';
 
@@ -35,6 +38,9 @@ class TranslationModelPreset {
   final TranslationRuntime runtime;
   final String license;
 
+  /// The instruction format the model was trained on.
+  final TranslationPromptFormat promptFormat;
+
   const TranslationModelPreset({
     required this.id,
     required this.name,
@@ -44,7 +50,54 @@ class TranslationModelPreset {
     required this.sha256,
     required this.runtime,
     required this.license,
+    this.promptFormat = TranslationPromptFormat.general,
   });
+}
+
+/// How a request is worded for a model: the instruction format it was
+/// trained on. A dedicated translation model asked with another model's
+/// instructions translates worse and slower (measured: Hy-MT2 with the
+/// general rule list left Japanese in 10% of lines and took twice as
+/// long), so each model family gets its own.
+enum TranslationPromptFormat {
+  /// Instruction-following chat models (Gemma): the rule list below.
+  general,
+
+  /// Tencent Hy-MT2: its published translation instructions, with the
+  /// style instruction when light-novel style is on.
+  hyMt,
+
+  /// Japanese-to-Korean dialogue fine-tunes trained on
+  /// `현재 대사:` prompts with the lines around it.
+  jaKoDialogue;
+
+  static TranslationPromptFormat? fromName(String? name) {
+    for (final f in values) {
+      if (f.name == name) return f;
+    }
+    return null;
+  }
+
+  /// Formats that only translate into one language.
+  bool supportsTarget(String targetLanguage) =>
+      this != jaKoDialogue || targetLanguage == 'Korean';
+}
+
+/// The format a model file most likely expects: its preset's, else a
+/// guess from the file name, else [TranslationPromptFormat.general].
+TranslationPromptFormat detectPromptFormat(String fileName) {
+  final preset = presetForFile(fileName);
+  if (preset != null) return preset.promptFormat;
+  final name = fileName.toLowerCase().replaceAll('_', '-');
+  if (name.contains('hy-mt') ||
+      name.contains('hymt') ||
+      name.contains('hunyuan-mt')) {
+    return TranslationPromptFormat.hyMt;
+  }
+  if (name.contains('ja-ko') || name.contains('jako')) {
+    return TranslationPromptFormat.jaKoDialogue;
+  }
+  return TranslationPromptFormat.general;
 }
 
 /// Gemma 4 E2B, the model the benchmark picked: the most accurate of the
@@ -76,7 +129,42 @@ const gemma4E2bGguf = TranslationModelPreset(
   license: 'Apache-2.0',
 );
 
-const translationModelPresets = [gemma4E2bLiteRt, gemma4E2bGguf];
+/// Tencent Hy-MT2 1.8B, a dedicated translation model (33 languages,
+/// Apache-2.0), official llama.cpp build. Q4_K_M: the size of choice on
+/// phones; measured as close to Q8_0 in quality.
+const hyMt2Q4km = TranslationModelPreset(
+  id: 'hy-mt2-1.8b-q4_k_m',
+  name: 'Hy-MT2 1.8B Q4_K_M (llama.cpp, CPU)',
+  fileName: 'Hy-MT2-1.8B-Q4_K_M.gguf',
+  url: 'https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/'
+      'resolve/main/Hy-MT2-1.8B-Q4_K_M.gguf',
+  sizeBytes: 1133080448,
+  sha256: 'dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699',
+  runtime: TranslationRuntime.llamaCpp,
+  license: 'Apache-2.0',
+  promptFormat: TranslationPromptFormat.hyMt,
+);
+
+/// The same model at 8 bits: a little more accurate, 70% larger.
+const hyMt2Q8 = TranslationModelPreset(
+  id: 'hy-mt2-1.8b-q8_0',
+  name: 'Hy-MT2 1.8B Q8_0 (llama.cpp, CPU)',
+  fileName: 'Hy-MT2-1.8B-Q8_0.gguf',
+  url: 'https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/'
+      'resolve/main/Hy-MT2-1.8B-Q8_0.gguf',
+  sizeBytes: 1908528192,
+  sha256: '5c3fe0b1408a5ceb0143184ef247b11b579c525f4b02b060e6c851bb76fef1a4',
+  runtime: TranslationRuntime.llamaCpp,
+  license: 'Apache-2.0',
+  promptFormat: TranslationPromptFormat.hyMt,
+);
+
+const translationModelPresets = [
+  gemma4E2bLiteRt,
+  gemma4E2bGguf,
+  hyMt2Q4km,
+  hyMt2Q8,
+];
 
 TranslationModelPreset? presetForFile(String fileName) {
   for (final preset in translationModelPresets) {
@@ -172,8 +260,45 @@ class TranslationStyle {
 
   /// Translations made with each style are cached apart, so switching
   /// shows (and fills) the matching set instead of mixing them.
-  static String cacheModelId(String modelFileName) =>
-      lightNovel ? modelFileName : '$modelFileName+plain';
+  static String cacheModelId(String modelFileName) {
+    final base = lightNovel ? modelFileName : '$modelFileName+plain';
+    final format = TranslationPromptFormats.formatFor(modelFileName);
+    // General-format ids stay as before so existing caches still match.
+    return format == TranslationPromptFormat.general
+        ? base
+        : '$base+${format.name}';
+  }
+}
+
+/// Prompt formats the user chose for model files (overriding detection),
+/// kept as one JSON preference. Loaded at startup; read synchronously.
+class TranslationPromptFormats {
+  TranslationPromptFormats._();
+
+  static const pref = 'translationPromptFormats';
+
+  static Map<String, TranslationPromptFormat> overrides = {};
+
+  static TranslationPromptFormat formatFor(String fileName) =>
+      overrides[fileName] ?? detectPromptFormat(fileName);
+
+  static Map<String, TranslationPromptFormat> decode(String? json) {
+    if (json == null || json.isEmpty) return {};
+    try {
+      final map = jsonDecode(json);
+      if (map is! Map) return {};
+      return {
+        for (final e in map.entries)
+          if (TranslationPromptFormat.fromName('${e.value}') != null)
+            '${e.key}': TranslationPromptFormat.fromName('${e.value}')!,
+      };
+    } catch (_) {
+      return {};
+    }
+  }
+
+  static String encode(Map<String, TranslationPromptFormat> map) =>
+      jsonEncode({for (final e in map.entries) e.key: e.value.name});
 }
 
 const translationLightNovelStylePref = 'translationLightNovelStyle';
@@ -269,6 +394,113 @@ String translationPrompt({
     ..writeln('Text to translate:')
     ..write(text);
   return buffer.toString();
+}
+
+/// Style asked of Hy-MT2 when light-novel style is on (its "Style"
+/// instruction). Measured: chrF++ 42.9 -> 50.5 on light-novel lines.
+String _hyMtStyle(String targetLanguage) => targetLanguage == 'Korean'
+    ? 'Japanese light novel / manga style: keep each character\'s speech '
+        'level (반말 or 존댓말) and verbal quirks, render honorifics and sound '
+        'words naturally in Korean, narration in the -다 literary form'
+    : 'Japanese light novel / manga style: keep each character\'s voice, '
+        'speech level and verbal quirks, and render honorifics and sound '
+        'words naturally';
+
+/// Hy-MT2's own instructions (from its model card); it has no system
+/// prompt. Context made it worse in tests, so none is sent.
+String hyMtPrompt({
+  required String text,
+  required String targetLanguage,
+  bool lightNovelStyle = true,
+}) {
+  if (lightNovelStyle) {
+    return 'Please translate the following text into $targetLanguage. Note '
+        'that the translation style must strictly conform to '
+        '[${_hyMtStyle(targetLanguage)}]:\n\n$text';
+  }
+  return 'Translate the following text into $targetLanguage. Note that you '
+      'should only output the translated result without any additional '
+      'explanation:\n\n$text';
+}
+
+/// The Japanese-to-Korean dialogue fine-tune's training format: up to two
+/// lines before and one after as reference, then the line to translate.
+String jaKoDialoguePrompt({
+  required String text,
+  List<String> before = const [],
+  List<String> after = const [],
+}) {
+  final prev = before.where((l) => l.trim().isNotEmpty).toList();
+  final next = after.where((l) => l.trim().isNotEmpty).toList();
+  final lines = <String>[];
+  if (prev.isEmpty && next.isEmpty) {
+    lines.add('일본어 만화 대사를 자연스러운 한국어로 번역하세요.');
+  } else {
+    lines.add('일본어 만화 대사를 자연스러운 한국어로 번역하세요. '
+        '앞뒤 대사는 참고용이며, 현재 대사의 번역만 출력하세요.');
+    if (prev.isNotEmpty) {
+      lines.add('이전 대사:');
+      lines.addAll(prev.skip(prev.length > 2 ? prev.length - 2 : 0)
+          .map((l) => '- ${l.trim()}'));
+    }
+    if (next.isNotEmpty) {
+      lines.add('다음 대사:');
+      lines.add('- ${next.first.trim()}');
+    }
+  }
+  lines.add('현재 대사: $text');
+  return lines.join('\n');
+}
+
+/// Context lines for a dialogue prompt: the last [count] non-empty lines
+/// of [text], each cut to [maxChars].
+List<String> contextLines(String? text,
+    {int count = 2, bool fromEnd = true, int maxChars = 120}) {
+  final lines = (text ?? '')
+      .split('\n')
+      .map((l) => l.trim())
+      .where((l) => l.isNotEmpty)
+      .toList();
+  final picked = fromEnd
+      ? lines.skip(lines.length > count ? lines.length - count : 0)
+      : lines.take(count);
+  return [
+    for (final l in picked)
+      l.length > maxChars
+          ? (fromEnd ? l.substring(l.length - maxChars) : l.substring(0, maxChars))
+          : l,
+  ];
+}
+
+/// The request for [format]. [context] is the text just before, [following]
+/// the text just after; formats use them only where they helped.
+String buildTranslationPrompt({
+  required TranslationPromptFormat format,
+  required String text,
+  required String targetLanguage,
+  String? sourceLanguage,
+  String? context,
+  String? following,
+  bool lightNovelStyle = true,
+}) {
+  switch (format) {
+    case TranslationPromptFormat.general:
+      return translationPrompt(
+          text: text,
+          targetLanguage: targetLanguage,
+          sourceLanguage: sourceLanguage,
+          lightNovelStyle: lightNovelStyle);
+    case TranslationPromptFormat.hyMt:
+      return hyMtPrompt(
+          text: text,
+          targetLanguage: targetLanguage,
+          lightNovelStyle: lightNovelStyle);
+    case TranslationPromptFormat.jaKoDialogue:
+      return jaKoDialoguePrompt(
+          text: text,
+          before: contextLines(context),
+          after: contextLines(following, count: 1, fromEnd: false));
+  }
 }
 
 /// A correction sent when an answer still contained source-language

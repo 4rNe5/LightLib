@@ -1577,5 +1577,38 @@
   "recapGenreMix": "Genre mix",
   "@recapGenreMix": {
     "description": "recapGenreMix"
+  },
+  "translationPromptFormat": "Prompt format",
+  "@translationPromptFormat": {
+    "description": "translationPromptFormat"
+  },
+  "translationPromptFormatHint": "How requests are worded for this model. Dedicated translation models work best with the format they were trained on; Auto picks it from the model.",
+  "@translationPromptFormatHint": {
+    "description": "translationPromptFormatHint"
+  },
+  "promptFormatAuto": "Auto ({format})",
+  "@promptFormatAuto": {
+    "description": "promptFormatAuto",
+    "placeholders": {
+      "format": {
+        "type": "String"
+      }
+    }
+  },
+  "promptFormatGeneral": "General (Gemma and others)",
+  "@promptFormatGeneral": {
+    "description": "promptFormatGeneral"
+  },
+  "promptFormatHyMt": "Hy-MT translation model",
+  "@promptFormatHyMt": {
+    "description": "promptFormatHyMt"
+  },
+  "promptFormatJaKo": "Japanese→Korean dialogue model",
+  "@promptFormatJaKo": {
+    "description": "promptFormatJaKo"
+  },
+  "promptFormatKoreanOnly": "This format translates into Korean only. For other languages the general format is used.",
+  "@promptFormatKoreanOnly": {
+    "description": "promptFormatKoreanOnly"
   }
 }

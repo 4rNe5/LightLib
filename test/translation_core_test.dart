@@ -19,6 +19,7 @@ import 'package:openlib/services/translation/translator.dart';
 /// Records what it was asked and answers `[KO]` + the text.
 class FakeTranslator implements Translator {
   final List<String> asked = [];
+  final Map<String, (String?, String?)> around = {};
   bool failLoad = false;
   int loads = 0;
   Completer<void>? gate;
@@ -37,8 +38,10 @@ class FakeTranslator implements Translator {
       {required String targetLanguage,
       String? sourceLanguage,
       String? context,
+      String? following,
       bool urgent = false}) async {
     asked.add(text);
+    around[text] = (context, following);
     if (gate != null) await gate!.future;
     return '[KO]$text';
   }
@@ -216,6 +219,18 @@ void main() {
       expect(controller.translationOf('p12'), '[KO]p12');
       expect(controller.status, ReaderTranslationStatus.idle);
       expect(translator.loads, 1);
+    });
+
+    test('each paragraph is sent with the text around it', () async {
+      show(10);
+      await settle();
+      final (before, after) = translator.around['p11']!;
+      // Preceding paragraphs, nearest last; the next paragraph after.
+      expect(before, endsWith('p10'));
+      expect(before, contains('p8'));
+      expect(after, 'p12');
+      // p13 is followed by a non-text item (index 14).
+      expect(translator.around['p13']!.$2, isNull);
     });
 
     test('cached paragraphs are not asked again', () async {

@@ -173,9 +173,12 @@ class ReaderTranslationController extends ChangeNotifier {
             _modelLoaded = true;
             notifyListeners();
           }
+          final textAt = _textAt;
           final out = await _translator.translate(text,
               targetLanguage: targetLanguage,
               sourceLanguage: sourceLanguage,
+              context: precedingContext(entry.key, textAt),
+              following: textAt == null ? null : textAt(entry.key + 1),
               urgent: true);
           if (_disposed) return;
           if (out.isEmpty) {

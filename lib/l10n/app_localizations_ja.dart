@@ -1142,4 +1142,28 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get recapGenreMix => 'ジャンル構成';
+
+  @override
+  String get translationPromptFormat => 'プロンプト形式';
+
+  @override
+  String get translationPromptFormatHint =>
+      'このモデルへの依頼の書き方です。翻訳専用モデルは学習時と同じ形式で最も良く動きます。自動はモデルに合わせて選びます。';
+
+  @override
+  String promptFormatAuto(String format) {
+    return '自動（$format）';
+  }
+
+  @override
+  String get promptFormatGeneral => '汎用（Gemma など）';
+
+  @override
+  String get promptFormatHyMt => 'Hy-MT 翻訳モデル';
+
+  @override
+  String get promptFormatJaKo => '日→韓 台詞翻訳モデル';
+
+  @override
+  String get promptFormatKoreanOnly => 'この形式は韓国語にのみ翻訳します。他の言語には汎用形式を使います。';
 }

@@ -355,5 +355,12 @@
   "recapReadingDays": "{days, plural, =1{1 jour de lecture} other{{days} jours de lecture}}",
   "recapMonthTitle": "Bilan de {monthName}",
   "recapFinishedThisMonth": "terminés ce mois-ci",
-  "recapGenreMix": "Répartition par genre"
+  "recapGenreMix": "Répartition par genre",
+  "translationPromptFormat": "Format d'instruction",
+  "translationPromptFormatHint": "Formulation des requêtes pour ce modèle. Les modèles de traduction fonctionnent mieux avec leur format d'entraînement ; Auto le choisit selon le modèle.",
+  "promptFormatAuto": "Auto ({format})",
+  "promptFormatGeneral": "Général (Gemma, etc.)",
+  "promptFormatHyMt": "Modèle de traduction Hy-MT",
+  "promptFormatJaKo": "Modèle de dialogue japonais→coréen",
+  "promptFormatKoreanOnly": "Ce format ne traduit qu'en coréen. Pour les autres langues, le format général est utilisé."
 }

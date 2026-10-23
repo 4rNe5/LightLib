@@ -147,6 +147,8 @@ String polishTranslation(
         .replaceAll('！', '!')
         .replaceAll('？', '?')
         .replaceAll('～', '~')
+        .replaceAll('（', '(')
+        .replaceAll('）', ')')
         .replaceAll('\u3000', ' ')
         .replaceAll(RegExp(r' {2,}'), ' ');
     text = text
@@ -164,6 +166,30 @@ String polishTranslation(
         return q;
       });
     }
+    text = _restoreWrapping(text, source.trim());
   }
   return text;
+}
+
+/// A whole line of dialogue (「…」) or inner voice (（…）) that came back
+/// bare - dialogue-trained models drop the brackets, as manga balloons
+/// have none - gets them back, so speech still reads as speech.
+String _restoreWrapping(String text, String source) {
+  if (text.isEmpty) return text;
+  const pairs = {'「': '」', '『': '』', '（': '）', '(': ')'};
+  final open = source.isEmpty ? null : source[0];
+  final close = open == null ? null : pairs[open];
+  if (close == null || !source.endsWith(close)) return text;
+  // Only when the brackets wrap the whole line, once.
+  final inner = source.substring(1, source.length - 1);
+  if (inner.contains(open!) || inner.contains(close)) return text;
+  final wrapped = switch (open) {
+    '「' => ('“', '”'),
+    '『' => ('‘', '’'),
+    _ => ('(', ')'),
+  };
+  final starts = RegExp(r'^["“‘(（「『]').hasMatch(text);
+  final ends = RegExp(r'["”’)）」』]$').hasMatch(text);
+  if (starts || ends) return text;
+  return '${wrapped.$1}$text${wrapped.$2}';
 }

@@ -25,11 +25,13 @@ abstract class Translator {
   /// [context] is the text just before [text], used for consistency and
   /// not translated. [urgent] requests (the page being read) run before
   /// queued background work.
+  /// [following] is the text just after, for formats trained with it.
   Future<String> translate(
     String text, {
     required String targetLanguage,
     String? sourceLanguage,
     String? context,
+    String? following,
     bool urgent = false,
   });
 
@@ -37,11 +39,13 @@ abstract class Translator {
 }
 
 class _Job {
-  _Job(this.text, this.targetLanguage, this.sourceLanguage, this.context);
+  _Job(this.text, this.targetLanguage, this.sourceLanguage, this.context,
+      [this.following]);
   final String text;
   final String targetLanguage;
   final String? sourceLanguage;
   final String? context;
+  final String? following;
   final Completer<String> result = Completer<String>();
 }
 
@@ -60,6 +64,18 @@ class LocalLlmTranslator implements Translator {
   final String modelPath;
   final TranslationRuntime runtime;
   final int contextSize;
+
+  String get _fileName => modelPath.split(RegExp(r'[\\/]')).last;
+
+  /// The prompt format for this model, read per request so a change in
+  /// settings applies without reloading.
+  TranslationPromptFormat get promptFormat =>
+      TranslationPromptFormats.formatFor(_fileName);
+
+  /// LiteRT-LM files with a multi-token-prediction drafter decode faster
+  /// with speculative decoding (Gemma 4: up to 2.2x on GPU). Turned off
+  /// for good after the first refusal.
+  bool _speculative = true;
 
   final AppLogger _logger = AppLogger();
   LlamaEngine? _engine;
@@ -137,10 +153,11 @@ class LocalLlmTranslator implements Translator {
     required String targetLanguage,
     String? sourceLanguage,
     String? context,
+    String? following,
     bool urgent = false,
   }) {
     if (_disposed) return Future.error(StateError('Translator disposed'));
-    final job = _Job(text, targetLanguage, sourceLanguage, context);
+    final job = _Job(text, targetLanguage, sourceLanguage, context, following);
     (urgent ? _urgent : _background).add(job);
     _drain();
     return job.result.future;
@@ -165,13 +182,33 @@ class LocalLlmTranslator implements Translator {
     }
   }
 
-  Future<String> _generate(String prompt, int maxTokens) async {
-    final completion = await _engine!.create(
-      [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)],
-      params: GenerationParams(maxTokens: maxTokens, temp: 0),
-      enableThinking: false,
-    ).collect();
-    return cleanTranslation(completion.text);
+  Future<String> _generate(String prompt, int maxTokens,
+      TranslationPromptFormat format) async {
+    // Dedicated translation models: their recommended repetition penalty
+    // (1.05); the general format keeps llamadart's default it was tuned on.
+    final base = format == TranslationPromptFormat.general
+        ? GenerationParams(maxTokens: maxTokens, temp: 0)
+        : GenerationParams(maxTokens: maxTokens, temp: 0, topK: 1, penalty: 1.05);
+    final speculative =
+        runtime == TranslationRuntime.liteRtLm && _speculative;
+    Future<String> run(bool spec) async {
+      final completion = await _engine!.create(
+        [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)],
+        params: base.copyWith(speculativeDecoding: spec),
+        enableThinking: false,
+      ).collect();
+      return cleanTranslation(completion.text);
+    }
+
+    if (!speculative) return run(false);
+    try {
+      return await run(true);
+    } on LlamaUnsupportedException catch (e) {
+      _speculative = false;
+      _logger.info('Speculative decoding unavailable, turned off',
+          tag: 'Translator', metadata: {'reason': '$e'});
+      return run(false);
+    }
   }
 
   Future<String> _translateNow(_Job job) async {
@@ -181,11 +218,20 @@ class LocalLlmTranslator implements Translator {
     final lines = job.text.split('\n');
     if (lines.length > 1) {
       final out = <String>[];
-      for (final line in lines) {
-        if (line.trim().isEmpty) continue;
+      final kept = lines.where((l) => l.trim().isNotEmpty).toList();
+      for (var i = 0; i < kept.length; i++) {
+        final line = kept[i];
+        // Each line sees the lines around it (and the paragraphs around
+        // the whole) as context, for the formats that use it.
+        final before = [
+          if (job.context != null) job.context!,
+          ...kept.take(i),
+        ].join('\n');
+        final after =
+            i + 1 < kept.length ? kept[i + 1] : job.following;
         out.add(shouldTranslate(line)
-            ? await _translateLine(
-                _Job(line, job.targetLanguage, job.sourceLanguage, null))
+            ? await _translateLine(_Job(line, job.targetLanguage,
+                job.sourceLanguage, before.isEmpty ? null : before, after))
             : line);
       }
       return out.join('\n');
@@ -194,23 +240,42 @@ class LocalLlmTranslator implements Translator {
   }
 
   Future<String> _translateLine(_Job job) async {
-    final prompt = translationPrompt(
+    var format = promptFormat;
+    // A one-language model asked for another language: the general
+    // instructions at least name the target.
+    if (!format.supportsTarget(job.targetLanguage)) {
+      format = TranslationPromptFormat.general;
+    }
+    final prompt = buildTranslationPrompt(
+      format: format,
       text: job.text,
       targetLanguage: job.targetLanguage,
       sourceLanguage: job.sourceLanguage,
+      context: job.context,
+      following: job.following,
       lightNovelStyle: TranslationStyle.lightNovel,
     );
     // Translations run about as long as the source; leave room for
     // scripts that need more tokens per character.
     final maxTokens = (job.text.length * 3 + 32).clamp(64, 1024);
-    var answer = await _generate(prompt, maxTokens);
+    var answer = await _generate(prompt, maxTokens, format);
+    if (format == TranslationPromptFormat.jaKoDialogue) {
+      // Trained to answer with one line; anything after it is noise.
+      answer = answer
+          .split('\n')
+          .firstWhere((l) => l.trim().isNotEmpty, orElse: () => '')
+          .trim();
+    }
 
     // Source script left in the answer (an untranslated word, a name in
     // kana): ask once more, naming the problem, and keep the cleaner one.
+    // Only the general format understands a follow-up instruction.
     final leftover = leftoverSourceScript(answer, job.targetLanguage);
-    if (leftover.isNotEmpty && !_disposed) {
+    if (leftover.isNotEmpty &&
+        !_disposed &&
+        format == TranslationPromptFormat.general) {
       final again = await _generate(
-          retryPrompt(prompt, answer, job.targetLanguage), maxTokens);
+          retryPrompt(prompt, answer, job.targetLanguage), maxTokens, format);
       if (again.isNotEmpty &&
           leftoverSourceScript(again, job.targetLanguage).length <
               leftover.length) {
@@ -313,11 +378,13 @@ class UrgentTranslator implements Translator {
           {required String targetLanguage,
           String? sourceLanguage,
           String? context,
+          String? following,
           bool urgent = true}) =>
       _inner.translate(text,
           targetLanguage: targetLanguage,
           sourceLanguage: sourceLanguage,
           context: context,
+          following: following,
           urgent: true);
 
   @override

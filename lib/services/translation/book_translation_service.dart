@@ -22,6 +22,8 @@ import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/services/translation/reader_translation_controller.dart'
+    show precedingContext;
 import 'package:openlib/services/translation/translator.dart';
 
 /// Preference: translate library books in the background.
@@ -107,6 +109,11 @@ class BookTranslationService extends ChangeNotifier
         .getPreference(translationLightNovelStylePref)
         .catchError((_) => null);
     TranslationStyle.lightNovel = style != 0;
+    final formats = await MyLibraryDb.instance
+        .getPreference(TranslationPromptFormats.pref)
+        .catchError((_) => null);
+    TranslationPromptFormats.overrides =
+        TranslationPromptFormats.decode(formats is String ? formats : null);
     scanSoon();
   }
 
@@ -256,6 +263,8 @@ class BookTranslationService extends ChangeNotifier
           text,
           targetLanguage: targetLanguage.englishName,
           sourceLanguage: source,
+          context: precedingContext(i, (j) => texts[j]),
+          following: i + 1 < texts.length ? texts[i + 1] : null,
         );
         if (out.isNotEmpty) cache.store(text, out);
       } catch (e) {

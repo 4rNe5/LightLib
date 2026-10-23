@@ -2205,6 +2205,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Genre mix'**
   String get recapGenreMix;
+
+  /// translationPromptFormat
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt format'**
+  String get translationPromptFormat;
+
+  /// translationPromptFormatHint
+  ///
+  /// In en, this message translates to:
+  /// **'How requests are worded for this model. Dedicated translation models work best with the format they were trained on; Auto picks it from the model.'**
+  String get translationPromptFormatHint;
+
+  /// promptFormatAuto
+  ///
+  /// In en, this message translates to:
+  /// **'Auto ({format})'**
+  String promptFormatAuto(String format);
+
+  /// promptFormatGeneral
+  ///
+  /// In en, this message translates to:
+  /// **'General (Gemma and others)'**
+  String get promptFormatGeneral;
+
+  /// promptFormatHyMt
+  ///
+  /// In en, this message translates to:
+  /// **'Hy-MT translation model'**
+  String get promptFormatHyMt;
+
+  /// promptFormatJaKo
+  ///
+  /// In en, this message translates to:
+  /// **'Japanese→Korean dialogue model'**
+  String get promptFormatJaKo;
+
+  /// promptFormatKoreanOnly
+  ///
+  /// In en, this message translates to:
+  /// **'This format translates into Korean only. For other languages the general format is used.'**
+  String get promptFormatKoreanOnly;
 }
 
 class _AppLocalizationsDelegate

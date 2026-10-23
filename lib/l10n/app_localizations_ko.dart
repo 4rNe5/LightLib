@@ -1144,4 +1144,28 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get recapGenreMix => '장르 구성';
+
+  @override
+  String get translationPromptFormat => '프롬프트 형식';
+
+  @override
+  String get translationPromptFormatHint =>
+      '이 모델에 요청을 보내는 방식입니다. 번역 전용 모델은 학습 때와 같은 형식에서 품질이 가장 좋습니다. 자동은 모델에 맞춰 고릅니다.';
+
+  @override
+  String promptFormatAuto(String format) {
+    return '자동 ($format)';
+  }
+
+  @override
+  String get promptFormatGeneral => '일반 (Gemma 등)';
+
+  @override
+  String get promptFormatHyMt => 'Hy-MT 번역 모델';
+
+  @override
+  String get promptFormatJaKo => '일→한 대사 번역 모델';
+
+  @override
+  String get promptFormatKoreanOnly => '이 형식은 한국어로만 번역합니다. 다른 언어로는 일반 형식을 씁니다.';
 }
