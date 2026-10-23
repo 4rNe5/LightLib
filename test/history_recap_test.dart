@@ -59,6 +59,17 @@ LibraryBook _book(String id,
       genre: genre,
     );
 
+/// Pumps, letting real database work run, until [done] or a generous
+/// limit (slow CI runners need more than a fixed few frames).
+Future<void> pumpUntil(WidgetTester tester, bool Function() done,
+    {int max = 60}) async {
+  for (var i = 0; i < max && !done(); i++) {
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester.pump();
+  }
+}
+
 void main() {
   setUpAll(() {
     final stale = Directory('/tmp/openlib_history_recap_test');
@@ -379,11 +390,12 @@ void main() {
           home: const Scaffold(body: SearchPage()),
         ),
       ));
-      for (var i = 0; i < 6; i++) {
-        await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 50)));
-        await tester.pump();
-      }
+      await pumpUntil(
+          tester,
+          () => find
+              .byKey(const ValueKey('history-Overlord'))
+              .evaluate()
+              .isNotEmpty);
       expect(find.byKey(const ValueKey('largeTitle')), findsOneWidget);
       expect(find.text('Recent searches'), findsOneWidget);
       expect(find.byKey(const ValueKey('history-Re:Zero')), findsOneWidget);
@@ -398,11 +410,12 @@ void main() {
       await tester.tap(find.descendant(
           of: find.byKey(const ValueKey('history-Overlord')),
           matching: find.byIcon(Icons.close)));
-      for (var i = 0; i < 6; i++) {
-        await tester.runAsync(
-            () => Future<void>.delayed(const Duration(milliseconds: 50)));
-        await tester.pump();
-      }
+      await pumpUntil(
+          tester,
+          () => find
+              .byKey(const ValueKey('history-Overlord'))
+              .evaluate()
+              .isEmpty);
       expect(find.byKey(const ValueKey('history-Overlord')), findsNothing);
       expect(await tester.runAsync(() => db.getSearchHistory()), ['Re:Zero']);
 

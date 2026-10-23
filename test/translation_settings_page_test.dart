@@ -61,11 +61,13 @@ void main() {
     TranslationPromptFormats.overrides = {};
   });
 
-  Future<void> settle(WidgetTester tester) async {
-    for (var i = 0; i < 8; i++) {
+  Future<void> settle(WidgetTester tester, [bool Function()? done]) async {
+    // Until [done] holds (slow CI runners need more frames), at least 8.
+    for (var i = 0; i < 80; i++) {
       await tester.runAsync(
           () => Future<void>.delayed(const Duration(milliseconds: 40)));
       await tester.pump();
+      if (i >= 7 && (done == null || done())) break;
     }
   }
 
@@ -92,7 +94,8 @@ void main() {
       await TranslationModelStore.instance.select(dialogueModel, database: db);
       await Future<void>.delayed(const Duration(milliseconds: 300));
     });
-    await settle(tester);
+    await settle(tester,
+        () => find.byKey(const ValueKey('promptFormat')).evaluate().isNotEmpty);
 
     // E4B is listed first and recommended; every preset is offered.
     for (final preset in translationModelPresets) {
@@ -131,7 +134,12 @@ void main() {
     await tester.tap(find.byKey(const ValueKey('translationTarget')));
     await tester.pump(const Duration(milliseconds: 400));
     await tester.tap(find.text('English').last);
-    await settle(tester);
+    await settle(
+        tester,
+        () => find
+            .byKey(const ValueKey('promptFormatKoreanOnly'))
+            .evaluate()
+            .isNotEmpty);
     expect(
         find.byKey(const ValueKey('promptFormatKoreanOnly')), findsOneWidget);
   });
