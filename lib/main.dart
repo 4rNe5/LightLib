@@ -4,7 +4,6 @@ import 'dart:io' show Platform;
 
 // Flutter imports:
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart'; // <-- REQUIRED
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -334,8 +333,6 @@ class _MainScreenState extends ConsumerState<MainScreen>
     SettingsPage(),
   ];
 
-  bool _showExpandedHeader = true; // <-- ONLY new state
-
   @override
   void initState() {
     super.initState();
@@ -488,41 +485,13 @@ class _MainScreenState extends ConsumerState<MainScreen>
     final selectedIndex = ref.watch(selectedIndexProvider);
     final l10n = AppLocalizations.of(context);
 
-    // Calculate proper header height including status bar on mobile
-    final statusBarHeight = MediaQuery.of(context).padding.top;
-    final expandedHeaderHeight = PlatformUtils.isMobile
-        ? kToolbarHeight + statusBarHeight
-        : kToolbarHeight;
-
+    // No shared app bar: each tab draws its own large title (Home,
+    // Search, My Library, Settings) and pushed pages carry the title of
+    // what they show.
     return Scaffold(
-      body: NotificationListener<UserScrollNotification>(
-        onNotification: (notification) {
-          if (notification.direction == ScrollDirection.reverse &&
-              _showExpandedHeader) {
-            setState(() => _showExpandedHeader = false);
-          } else if (notification.direction == ScrollDirection.forward &&
-              !_showExpandedHeader) {
-            setState(() => _showExpandedHeader = true);
-          }
-          return false;
-        },
-        child: Column(
-          children: [
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              height: _showExpandedHeader ? expandedHeaderHeight : 0,
-              child: AppBar(
-                toolbarHeight: kToolbarHeight,
-                backgroundColor: Theme.of(context).colorScheme.surface,
-                title: Text(l10n.appTitle),
-                titleTextStyle: Theme.of(context).textTheme.displayLarge,
-              ),
-            ),
-            Expanded(
-              child: _widgetOptions.elementAt(selectedIndex),
-            ),
-          ],
-        ),
+      body: SafeArea(
+        bottom: false,
+        child: _widgetOptions.elementAt(selectedIndex),
       ),
       bottomNavigationBar: SafeArea(
         child: Container(

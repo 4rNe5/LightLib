@@ -2031,6 +2031,180 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} finished'**
   String libraryFinishedCount(int count);
+
+  /// recentSearches
+  ///
+  /// In en, this message translates to:
+  /// **'Recent searches'**
+  String get recentSearches;
+
+  /// clearAll
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all'**
+  String get clearAll;
+
+  /// removeFromHistory
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from history'**
+  String get removeFromHistory;
+
+  /// searchHistoryFill
+  ///
+  /// In en, this message translates to:
+  /// **'Edit this search'**
+  String get searchHistoryFill;
+
+  /// showMore
+  ///
+  /// In en, this message translates to:
+  /// **'Show more'**
+  String get showMore;
+
+  /// showLess
+  ///
+  /// In en, this message translates to:
+  /// **'Show less'**
+  String get showLess;
+
+  /// searchHistorySection
+  ///
+  /// In en, this message translates to:
+  /// **'Search History'**
+  String get searchHistorySection;
+
+  /// saveSearchHistory
+  ///
+  /// In en, this message translates to:
+  /// **'Save search history'**
+  String get saveSearchHistory;
+
+  /// saveSearchHistoryHint
+  ///
+  /// In en, this message translates to:
+  /// **'Show recent searches on the Search tab'**
+  String get saveSearchHistoryHint;
+
+  /// clearSearchHistory
+  ///
+  /// In en, this message translates to:
+  /// **'Clear search history'**
+  String get clearSearchHistory;
+
+  /// savedSearchCount
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No saved searches} =1{1 saved search} other{{count} saved searches}}'**
+  String savedSearchCount(int count);
+
+  /// searchHistoryCleared
+  ///
+  /// In en, this message translates to:
+  /// **'Search history cleared'**
+  String get searchHistoryCleared;
+
+  /// themeSystemShort
+  ///
+  /// In en, this message translates to:
+  /// **'System'**
+  String get themeSystemShort;
+
+  /// themeLightShort
+  ///
+  /// In en, this message translates to:
+  /// **'Light'**
+  String get themeLightShort;
+
+  /// themeDarkShort
+  ///
+  /// In en, this message translates to:
+  /// **'Dark'**
+  String get themeDarkShort;
+
+  /// recapTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Reading record'**
+  String get recapTitle;
+
+  /// recapCheckpoints
+  ///
+  /// In en, this message translates to:
+  /// **'Checkpoints'**
+  String get recapCheckpoints;
+
+  /// recapBooksUnit
+  ///
+  /// In en, this message translates to:
+  /// **''**
+  String get recapBooksUnit;
+
+  /// recapDaysUnit
+  ///
+  /// In en, this message translates to:
+  /// **''**
+  String get recapDaysUnit;
+
+  /// recapAllCheckpoints
+  ///
+  /// In en, this message translates to:
+  /// **'Every checkpoint reached!'**
+  String get recapAllCheckpoints;
+
+  /// recapToNextCheckpoint
+  ///
+  /// In en, this message translates to:
+  /// **'{remaining} more to reach {next}'**
+  String recapToNextCheckpoint(int remaining, int next);
+
+  /// recapStreak
+  ///
+  /// In en, this message translates to:
+  /// **'day streak'**
+  String get recapStreak;
+
+  /// recapStreakStart
+  ///
+  /// In en, this message translates to:
+  /// **'Read today to start'**
+  String get recapStreakStart;
+
+  /// recapLongestStreak
+  ///
+  /// In en, this message translates to:
+  /// **'Best: {days} d'**
+  String recapLongestStreak(int days);
+
+  /// recapLastFourWeeks
+  ///
+  /// In en, this message translates to:
+  /// **'Last 4 weeks'**
+  String get recapLastFourWeeks;
+
+  /// recapReadingDays
+  ///
+  /// In en, this message translates to:
+  /// **'{days, plural, =1{1 reading day} other{{days} reading days}}'**
+  String recapReadingDays(int days);
+
+  /// recapMonthTitle
+  ///
+  /// In en, this message translates to:
+  /// **'{monthName} recap'**
+  String recapMonthTitle(String monthName);
+
+  /// recapFinishedThisMonth
+  ///
+  /// In en, this message translates to:
+  /// **'finished this month'**
+  String get recapFinishedThisMonth;
+
+  /// recapGenreMix
+  ///
+  /// In en, this message translates to:
+  /// **'Genre mix'**
+  String get recapGenreMix;
 }
 
 class _AppLocalizationsDelegate

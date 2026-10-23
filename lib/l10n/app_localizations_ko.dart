@@ -1041,4 +1041,107 @@ class AppLocalizationsKo extends AppLocalizations {
   String libraryFinishedCount(int count) {
     return '$count권 완독';
   }
+
+  @override
+  String get recentSearches => '최근 검색';
+
+  @override
+  String get clearAll => '전체 삭제';
+
+  @override
+  String get removeFromHistory => '기록에서 삭제';
+
+  @override
+  String get searchHistoryFill => '검색어 수정';
+
+  @override
+  String get showMore => '더 보기';
+
+  @override
+  String get showLess => '접기';
+
+  @override
+  String get searchHistorySection => '검색 기록';
+
+  @override
+  String get saveSearchHistory => '검색 기록 저장';
+
+  @override
+  String get saveSearchHistoryHint => '검색 탭에 최근 검색어를 표시합니다';
+
+  @override
+  String get clearSearchHistory => '검색 기록 지우기';
+
+  @override
+  String savedSearchCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '저장된 검색어 $count개',
+      zero: '저장된 검색어 없음',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchHistoryCleared => '검색 기록을 지웠습니다';
+
+  @override
+  String get themeSystemShort => '시스템';
+
+  @override
+  String get themeLightShort => '라이트';
+
+  @override
+  String get themeDarkShort => '다크';
+
+  @override
+  String get recapTitle => '독서 기록';
+
+  @override
+  String get recapCheckpoints => '완독 체크포인트';
+
+  @override
+  String get recapBooksUnit => '권';
+
+  @override
+  String get recapDaysUnit => '일';
+
+  @override
+  String get recapAllCheckpoints => '모든 체크포인트 달성!';
+
+  @override
+  String recapToNextCheckpoint(int remaining, int next) {
+    return '$next권까지 $remaining권 남음';
+  }
+
+  @override
+  String get recapStreak => '연속 독서';
+
+  @override
+  String get recapStreakStart => '오늘 읽고 시작해요';
+
+  @override
+  String recapLongestStreak(int days) {
+    return '최장 $days일';
+  }
+
+  @override
+  String get recapLastFourWeeks => '최근 4주';
+
+  @override
+  String recapReadingDays(int days) {
+    return '독서일 $days일';
+  }
+
+  @override
+  String recapMonthTitle(String monthName) {
+    return '$monthName 리캡';
+  }
+
+  @override
+  String get recapFinishedThisMonth => '이번 달 완독';
+
+  @override
+  String get recapGenreMix => '장르 구성';
 }

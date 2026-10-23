@@ -1433,5 +1433,149 @@
         "type": "int"
       }
     }
+  },
+  "recentSearches": "Recent searches",
+  "@recentSearches": {
+    "description": "recentSearches"
+  },
+  "clearAll": "Clear all",
+  "@clearAll": {
+    "description": "clearAll"
+  },
+  "removeFromHistory": "Remove from history",
+  "@removeFromHistory": {
+    "description": "removeFromHistory"
+  },
+  "searchHistoryFill": "Edit this search",
+  "@searchHistoryFill": {
+    "description": "searchHistoryFill"
+  },
+  "showMore": "Show more",
+  "@showMore": {
+    "description": "showMore"
+  },
+  "showLess": "Show less",
+  "@showLess": {
+    "description": "showLess"
+  },
+  "searchHistorySection": "Search History",
+  "@searchHistorySection": {
+    "description": "searchHistorySection"
+  },
+  "saveSearchHistory": "Save search history",
+  "@saveSearchHistory": {
+    "description": "saveSearchHistory"
+  },
+  "saveSearchHistoryHint": "Show recent searches on the Search tab",
+  "@saveSearchHistoryHint": {
+    "description": "saveSearchHistoryHint"
+  },
+  "clearSearchHistory": "Clear search history",
+  "@clearSearchHistory": {
+    "description": "clearSearchHistory"
+  },
+  "savedSearchCount": "{count, plural, =0{No saved searches} =1{1 saved search} other{{count} saved searches}}",
+  "@savedSearchCount": {
+    "description": "savedSearchCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "searchHistoryCleared": "Search history cleared",
+  "@searchHistoryCleared": {
+    "description": "searchHistoryCleared"
+  },
+  "themeSystemShort": "System",
+  "@themeSystemShort": {
+    "description": "themeSystemShort"
+  },
+  "themeLightShort": "Light",
+  "@themeLightShort": {
+    "description": "themeLightShort"
+  },
+  "themeDarkShort": "Dark",
+  "@themeDarkShort": {
+    "description": "themeDarkShort"
+  },
+  "recapTitle": "Reading record",
+  "@recapTitle": {
+    "description": "recapTitle"
+  },
+  "recapCheckpoints": "Checkpoints",
+  "@recapCheckpoints": {
+    "description": "recapCheckpoints"
+  },
+  "recapBooksUnit": "",
+  "@recapBooksUnit": {
+    "description": "recapBooksUnit"
+  },
+  "recapDaysUnit": "",
+  "@recapDaysUnit": {
+    "description": "recapDaysUnit"
+  },
+  "recapAllCheckpoints": "Every checkpoint reached!",
+  "@recapAllCheckpoints": {
+    "description": "recapAllCheckpoints"
+  },
+  "recapToNextCheckpoint": "{remaining} more to reach {next}",
+  "@recapToNextCheckpoint": {
+    "description": "recapToNextCheckpoint",
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "next": {
+        "type": "int"
+      }
+    }
+  },
+  "recapStreak": "day streak",
+  "@recapStreak": {
+    "description": "recapStreak"
+  },
+  "recapStreakStart": "Read today to start",
+  "@recapStreakStart": {
+    "description": "recapStreakStart"
+  },
+  "recapLongestStreak": "Best: {days} d",
+  "@recapLongestStreak": {
+    "description": "recapLongestStreak",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "recapLastFourWeeks": "Last 4 weeks",
+  "@recapLastFourWeeks": {
+    "description": "recapLastFourWeeks"
+  },
+  "recapReadingDays": "{days, plural, =1{1 reading day} other{{days} reading days}}",
+  "@recapReadingDays": {
+    "description": "recapReadingDays",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "recapMonthTitle": "{monthName} recap",
+  "@recapMonthTitle": {
+    "description": "recapMonthTitle",
+    "placeholders": {
+      "monthName": {
+        "type": "String"
+      }
+    }
+  },
+  "recapFinishedThisMonth": "finished this month",
+  "@recapFinishedThisMonth": {
+    "description": "recapFinishedThisMonth"
+  },
+  "recapGenreMix": "Genre mix",
+  "@recapGenreMix": {
+    "description": "recapGenreMix"
   }
 }

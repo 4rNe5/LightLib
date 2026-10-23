@@ -1039,4 +1039,107 @@ class AppLocalizationsJa extends AppLocalizations {
   String libraryFinishedCount(int count) {
     return '$count冊読了';
   }
+
+  @override
+  String get recentSearches => '最近の検索';
+
+  @override
+  String get clearAll => 'すべて削除';
+
+  @override
+  String get removeFromHistory => '履歴から削除';
+
+  @override
+  String get searchHistoryFill => '検索語を編集';
+
+  @override
+  String get showMore => 'もっと見る';
+
+  @override
+  String get showLess => '閉じる';
+
+  @override
+  String get searchHistorySection => '検索履歴';
+
+  @override
+  String get saveSearchHistory => '検索履歴を保存';
+
+  @override
+  String get saveSearchHistoryHint => '検索タブに最近の検索を表示します';
+
+  @override
+  String get clearSearchHistory => '検索履歴を消去';
+
+  @override
+  String savedSearchCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '保存された検索 $count件',
+      zero: '保存された検索はありません',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchHistoryCleared => '検索履歴を消去しました';
+
+  @override
+  String get themeSystemShort => 'システム';
+
+  @override
+  String get themeLightShort => 'ライト';
+
+  @override
+  String get themeDarkShort => 'ダーク';
+
+  @override
+  String get recapTitle => '読書記録';
+
+  @override
+  String get recapCheckpoints => '読了チェックポイント';
+
+  @override
+  String get recapBooksUnit => '冊';
+
+  @override
+  String get recapDaysUnit => '日';
+
+  @override
+  String get recapAllCheckpoints => 'すべてのチェックポイントを達成！';
+
+  @override
+  String recapToNextCheckpoint(int remaining, int next) {
+    return '$next冊まであと$remaining冊';
+  }
+
+  @override
+  String get recapStreak => '連続読書';
+
+  @override
+  String get recapStreakStart => '今日読んで始めよう';
+
+  @override
+  String recapLongestStreak(int days) {
+    return '最長 $days日';
+  }
+
+  @override
+  String get recapLastFourWeeks => '直近4週間';
+
+  @override
+  String recapReadingDays(int days) {
+    return '読書日 $days日';
+  }
+
+  @override
+  String recapMonthTitle(String monthName) {
+    return '$monthNameのまとめ';
+  }
+
+  @override
+  String get recapFinishedThisMonth => '今月の読了';
+
+  @override
+  String get recapGenreMix => 'ジャンル構成';
 }

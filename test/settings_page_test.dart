@@ -104,21 +104,17 @@ void main() {
     }
   });
 
-  testWidgets('theme dropdown updates the provider state', (tester) async {
+  testWidgets('theme segments update the provider state', (tester) async {
     await pumpPage(tester);
 
-    // The provider defaults to light mode, so the closed dropdown shows
-    // "Light theme". The search-provider section pushed it below the
-    // default test viewport - drag it into view first.
+    // The search-provider section pushes the theme row below the default
+    // test viewport - drag it into view first.
     await tester.scrollUntilVisible(
-      find.text('Light theme'),
+      find.byKey(const ValueKey('themeSegments')),
       200,
       scrollable: find.byType(Scrollable).first,
     );
-    await tester.tap(find.text('Light theme'));
-    await tester.pump(const Duration(milliseconds: 600));
-
-    await tester.tap(find.text('Dark theme').last);
+    await tester.tap(find.text('Dark'));
     await tester.pump(const Duration(milliseconds: 600));
 
     // The state change inside setTheme is synchronous; only the disk write

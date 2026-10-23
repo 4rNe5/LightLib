@@ -107,6 +107,9 @@ class MyLibraryDb {
         await db.execute(
             'CREATE TABLE booktags (bookId TEXT,tag TEXT,PRIMARY KEY (bookId,tag))');
         await db.execute(_createGenreTable);
+        for (final sql in _createActivityTables) {
+          await db.execute(sql);
+        }
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         List<dynamic> isTableExist = await db.query('sqlite_master',
@@ -154,8 +157,12 @@ class MyLibraryDb {
         }
       },
       onOpen: (db) async {
-        // Genres arrived without a schema bump: create on any version.
+        // Genres, search history and reading activity arrived without a
+        // schema bump: create on any version.
         await db.execute(_createGenreTable);
+        for (final sql in _createActivityTables) {
+          await db.execute(sql);
+        }
         final bookStorageDefaultDirectory =
             await getBookStorageDefaultDirectory;
         await db.execute(
@@ -176,6 +183,15 @@ class MyLibraryDb {
 
   static const _createGenreTable =
       'CREATE TABLE IF NOT EXISTS bookgenre (bookId TEXT PRIMARY KEY,genre TEXT)';
+
+  static const _createActivityTables = [
+    'CREATE TABLE IF NOT EXISTS searchhistory (query TEXT PRIMARY KEY,searchedAt INTEGER)',
+    'CREATE TABLE IF NOT EXISTS readingdays (day TEXT PRIMARY KEY,hits INTEGER DEFAULT 0)',
+    'CREATE TABLE IF NOT EXISTS completions (fileName TEXT PRIMARY KEY,completedAt INTEGER)',
+  ];
+
+  /// Most recent searches kept; older ones drop off.
+  static const searchHistoryLimit = 50;
 
   // Database dbInstance;
   String tableName = 'mybooks';
@@ -260,6 +276,98 @@ class MyLibraryDb {
       {'fileName': fileName, 'position': position},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    // Saving a position means the book was read today.
+    await recordReadingDay().catchError((_) {});
+  }
+
+  // ------------------------------------------------------------------
+  // Reading activity: one row per local day a book was read (hits =
+  // position saves that day), and when each book was finished.
+  // ------------------------------------------------------------------
+
+  static String dayKey(DateTime time) {
+    String two(int v) => v.toString().padLeft(2, '0');
+    return '${time.year}-${two(time.month)}-${two(time.day)}';
+  }
+
+  Future<void> recordReadingDay([DateTime? now]) async {
+    final dbInstance = await instance.database;
+    final day = dayKey(now ?? DateTime.now());
+    // Two statements instead of an UPSERT: Android's system SQLite
+    // predates ON CONFLICT ... DO UPDATE on older releases.
+    await dbInstance.rawInsert(
+        'INSERT OR IGNORE INTO readingdays (day, hits) VALUES (?, 0)', [day]);
+    await dbInstance.rawUpdate(
+        'UPDATE readingdays SET hits = hits + 1 WHERE day = ?', [day]);
+  }
+
+  /// Map of 'yyyy-MM-dd' to how much reading happened that day.
+  Future<Map<String, int>> getReadingDays() async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance.query('readingdays');
+    return {
+      for (final row in rows)
+        row['day'].toString(): int.tryParse('${row['hits']}') ?? 0
+    };
+  }
+
+  /// Map of fileName to when it was marked finished.
+  Future<Map<String, DateTime>> getCompletionDates() async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance.query('completions');
+    final result = <String, DateTime>{};
+    for (final row in rows) {
+      final ms = int.tryParse('${row['completedAt']}');
+      if (ms != null) {
+        result[row['fileName'].toString()] =
+            DateTime.fromMillisecondsSinceEpoch(ms);
+      }
+    }
+    return result;
+  }
+
+  // ------------------------------------------------------------------
+  // Search history: newest first, one row per distinct query.
+  // ------------------------------------------------------------------
+
+  Future<void> addSearchHistory(String query, [DateTime? now]) async {
+    final clean = query.trim();
+    if (clean.isEmpty) return;
+    final dbInstance = await instance.database;
+    // Same query typed with different case or spacing is one entry.
+    await dbInstance.delete('searchhistory',
+        where: 'lower(query) = ?', whereArgs: [clean.toLowerCase()]);
+    await dbInstance.insert(
+      'searchhistory',
+      {
+        'query': clean,
+        'searchedAt': (now ?? DateTime.now()).millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await dbInstance.rawDelete(
+      'DELETE FROM searchhistory WHERE query NOT IN '
+      '(SELECT query FROM searchhistory ORDER BY searchedAt DESC LIMIT ?)',
+      [searchHistoryLimit],
+    );
+  }
+
+  Future<List<String>> getSearchHistory({int? limit}) async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance.query('searchhistory',
+        orderBy: 'searchedAt DESC', limit: limit);
+    return [for (final row in rows) row['query'].toString()];
+  }
+
+  Future<void> deleteSearchHistory(String query) async {
+    final dbInstance = await instance.database;
+    await dbInstance
+        .delete('searchhistory', where: 'query = ?', whereArgs: [query]);
+  }
+
+  Future<void> clearSearchHistory() async {
+    final dbInstance = await instance.database;
+    await dbInstance.delete('searchhistory');
   }
 
   // ------------------------------------------------------------------
@@ -310,7 +418,9 @@ class MyLibraryDb {
     final rows = await dbInstance.query('booktags');
     final map = <String, Set<String>>{};
     for (final row in rows) {
-      map.putIfAbsent(row['bookId'].toString(), () => {}).add(row['tag'].toString());
+      map
+          .putIfAbsent(row['bookId'].toString(), () => {})
+          .add(row['tag'].toString());
     }
     return map;
   }
@@ -357,20 +467,34 @@ class MyLibraryDb {
 
   /// Marks (or unmarks) a book as finished. The fileName key matches
   /// the bookposition table.
-  Future<void> setCompleted(String fileName, bool completed) async {
+  Future<void> setCompleted(String fileName, bool completed,
+      [DateTime? now]) async {
     final dbInstance = await instance.database;
     await dbInstance.insert(
       'bookposition',
       {'fileName': fileName, 'position': '', 'completed': completed ? 1 : 0},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    if (completed) {
+      await dbInstance.insert(
+        'completions',
+        {
+          'fileName': fileName,
+          'completedAt': (now ?? DateTime.now()).millisecondsSinceEpoch,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    } else {
+      await dbInstance
+          .delete('completions', where: 'fileName = ?', whereArgs: [fileName]);
+    }
   }
 
   /// True when the book is flagged completed.
   Future<bool> isCompleted(String fileName) async {
     final dbInstance = await instance.database;
-    final rows = await dbInstance.query('bookposition',
-        where: 'fileName = ?', whereArgs: [fileName]);
+    final rows = await dbInstance
+        .query('bookposition', where: 'fileName = ?', whereArgs: [fileName]);
     if (rows.isEmpty) return false;
     return rows.first['completed'] == 1;
   }
@@ -380,7 +504,10 @@ class MyLibraryDb {
   Future<Map<String, String?>> getPositionsForAll() async {
     final dbInstance = await instance.database;
     final rows = await dbInstance.query('bookposition');
-    return {for (final row in rows) row['fileName'].toString(): row['position']?.toString()};
+    return {
+      for (final row in rows)
+        row['fileName'].toString(): row['position']?.toString()
+    };
   }
 
   /// Map of fileName to completed flag for the whole library.
@@ -388,8 +515,7 @@ class MyLibraryDb {
     final dbInstance = await instance.database;
     final rows = await dbInstance.query('bookposition');
     return {
-      for (final row in rows)
-        row['fileName'].toString(): row['completed'] == 1
+      for (final row in rows) row['fileName'].toString(): row['completed'] == 1
     };
   }
 
@@ -397,6 +523,11 @@ class MyLibraryDb {
     final dbInstance = await instance.database;
     await dbInstance.delete(
       'bookposition',
+      where: 'fileName = ?',
+      whereArgs: [fileName],
+    );
+    await dbInstance.delete(
+      'completions',
       where: 'fileName = ?',
       whereArgs: [fileName],
     );

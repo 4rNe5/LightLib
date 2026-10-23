@@ -8,6 +8,7 @@ import 'dart:async'; // For Timer/Debounce
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/search_history.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
 import 'package:openlib/ui/components/page_title_widget.dart';
 import 'package:openlib/ui/results_page.dart';
@@ -114,9 +115,23 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     });
   }
 
+  /// Puts [query] in the field without searching (the arrow on a
+  /// history row), so it can be edited first.
+  void _fill(String query) {
+    ref.read(searchQueryProvider.notifier).state = query;
+    _fetchSuggestions(query);
+  }
+
+  void _searchFor(BuildContext context, String query) {
+    ref.read(searchQueryProvider.notifier).state = query;
+    ref.read(searchSuggestionProvider.notifier).state = [];
+    onSubmit(context);
+  }
+
   void onSubmit(BuildContext context) {
     final searchQuery = ref.read(searchQueryProvider);
-    if (searchQuery.isNotEmpty) {
+    if (searchQuery.trim().isNotEmpty) {
+      recordSearch(ref, searchQuery);
       // Clear suggestions list before navigating
       ref.read(searchSuggestionProvider.notifier).state = [];
       ref.read(enableFiltersState.notifier).state = true;
@@ -143,6 +158,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ref.watch(searchSuggestionProvider); // The list of titles
     final isLoadingSuggestions =
         ref.watch(suggestionsLoadingProvider); // Loading state
+    final typed = ref.watch(searchQueryProvider);
+    final history =
+        ref.watch(searchHistoryProvider).valueOrNull ?? const <String>[];
+    final historyMatches = matchingHistory(history, typed);
 
     return SingleChildScrollView(
       scrollDirection: Axis.vertical,
@@ -154,7 +173,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           children: [
             const SizedBox(height: 8),
             const ActiveDownloadsWidget(),
-            TitleText(AppLocalizations.of(context).navSearch),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(7, 0, 7, 0),
+              child: LargeTitle(AppLocalizations.of(context).navSearch,
+                  padding: EdgeInsets.zero),
+            ),
             // Search Input Field
             Padding(
               padding: const EdgeInsets.only(left: 7, right: 7, top: 10),
@@ -210,8 +233,16 @@ class _SearchPageState extends ConsumerState<SearchPage> {
               ),
             ),
 
+            // Recent searches while the field is empty.
+            if (typed.trim().isEmpty && history.isNotEmpty)
+              _RecentSearches(
+                history: history,
+                onSearch: (q) => _searchFor(context, q),
+              ),
+
             // --- Suggestions List (NEW) ---
-            if (suggestions.isNotEmpty && _searchController.text.isNotEmpty)
+            if ((suggestions.isNotEmpty || historyMatches.isNotEmpty) &&
+                typed.trim().isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(left: 15, right: 15, top: 8),
                 child: Material(
@@ -221,34 +252,60 @@ class _SearchPageState extends ConsumerState<SearchPage> {
                   clipBehavior: Clip.antiAlias,
                   child: Container(
                     constraints: const BoxConstraints(maxHeight: 250),
-                    child: ListView.builder(
+                    child: ListView(
                       shrinkWrap: true,
-                      itemCount: suggestions.length,
-                      itemBuilder: (context, index) {
-                        final suggestion = suggestions[index];
-                        return ListTile(
-                          dense: true,
-                          title: Text(
-                            suggestion,
-                            style: TextStyle(
-                                fontSize: 14,
-                                color: Theme.of(context).colorScheme.onSurface),
+                      children: [
+                        // Earlier searches that match come first.
+                        for (final past in historyMatches)
+                          ListTile(
+                            key: ValueKey('historyMatch-$past'),
+                            dense: true,
+                            leading: const Icon(Icons.history, size: 18),
+                            title: Text(
+                              past,
+                              style: TextStyle(
+                                  fontSize: 14,
+                                  color:
+                                      Theme.of(context).colorScheme.onSurface),
+                            ),
+                            trailing: IconButton(
+                              tooltip: AppLocalizations.of(context)
+                                  .searchHistoryFill,
+                              icon: const Icon(Icons.north_west, size: 16),
+                              onPressed: () => _fill(past),
+                            ),
+                            onTap: () => _searchFor(context, past),
                           ),
-                          leading: const Icon(Icons.book, size: 18),
-                          onTap: () {
-                            // 1. Update the state with the selected suggestion
-                            ref.read(searchQueryProvider.notifier).state =
-                                suggestion;
+                        for (final suggestion in suggestions
+                            .where((s) => !historyMatches.contains(s)))
+                          Builder(builder: (context) {
+                            return ListTile(
+                              dense: true,
+                              title: Text(
+                                suggestion,
+                                style: TextStyle(
+                                    fontSize: 14,
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface),
+                              ),
+                              leading: const Icon(Icons.book, size: 18),
+                              onTap: () {
+                                // 1. Update the state with the selected suggestion
+                                ref.read(searchQueryProvider.notifier).state =
+                                    suggestion;
 
-                            // 2. Clear the suggestion list
-                            ref.read(searchSuggestionProvider.notifier).state =
-                                [];
+                                // 2. Clear the suggestion list
+                                ref
+                                    .read(searchSuggestionProvider.notifier)
+                                    .state = [];
 
-                            // 3. Immediately perform search
-                            onSubmit(context);
-                          },
-                        );
-                      },
+                                // 3. Immediately perform search
+                                onSubmit(context);
+                              },
+                            );
+                          }),
+                      ],
                     ),
                   ),
                 ),
@@ -540,8 +597,8 @@ class _AdvancedSearchPanelState extends ConsumerState<_AdvancedSearchPanel> {
         borderRadius: BorderRadius.all(Radius.circular(50)),
       ),
       focusedBorder: OutlineInputBorder(
-        borderSide: BorderSide(
-            color: Theme.of(context).colorScheme.tertiary, width: 2),
+        borderSide:
+            BorderSide(color: Theme.of(context).colorScheme.tertiary, width: 2),
         borderRadius: const BorderRadius.all(Radius.circular(50)),
       ),
     );
@@ -594,17 +651,19 @@ class _AdvancedSearchPanelState extends ConsumerState<_AdvancedSearchPanel> {
                 children: [
                   TextField(
                     controller: _authorController,
-                    decoration: _decoration(AppLocalizations.of(context).author),
+                    decoration:
+                        _decoration(AppLocalizations.of(context).author),
                     style: const TextStyle(
                         fontSize: 12, fontWeight: FontWeight.bold),
-                    onChanged: (value) =>
-                        ref.read(searchAuthorProvider.notifier).state =
-                            value.trim(),
+                    onChanged: (value) => ref
+                        .read(searchAuthorProvider.notifier)
+                        .state = value.trim(),
                   ),
                   const SizedBox(height: 10),
                   TextField(
                     controller: _publisherController,
-                    decoration: _decoration(AppLocalizations.of(context).publisher),
+                    decoration:
+                        _decoration(AppLocalizations.of(context).publisher),
                     style: const TextStyle(
                         fontSize: 12, fontWeight: FontWeight.bold),
                     onChanged: (value) => ref
@@ -615,6 +674,163 @@ class _AdvancedSearchPanelState extends ConsumerState<_AdvancedSearchPanel> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ====================================================================
+// RECENT SEARCHES
+// Shown under the field while it is empty: the last searches as pills,
+// newest first. Tap searches again, the x removes one.
+// ====================================================================
+
+class _RecentSearches extends ConsumerStatefulWidget {
+  const _RecentSearches({required this.history, required this.onSearch});
+
+  final List<String> history;
+  final ValueChanged<String> onSearch;
+
+  @override
+  ConsumerState<_RecentSearches> createState() => _RecentSearchesState();
+}
+
+class _RecentSearchesState extends ConsumerState<_RecentSearches> {
+  static const _collapsed = 10;
+  bool _showAll = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final items =
+        _showAll ? widget.history : widget.history.take(_collapsed).toList();
+
+    return Padding(
+      key: const ValueKey('recentSearches'),
+      padding: const EdgeInsets.fromLTRB(12, 14, 8, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.history, size: 16, color: scheme.onSurfaceVariant),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  l10n.recentSearches,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              TextButton(
+                key: const ValueKey('clearSearchHistory'),
+                onPressed: () => clearSearches(ref),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  foregroundColor: scheme.onSurfaceVariant,
+                ),
+                child:
+                    Text(l10n.clearAll, style: const TextStyle(fontSize: 12)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          AnimatedSize(
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic,
+            alignment: Alignment.topCenter,
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (final query in items)
+                  _HistoryPill(
+                    key: ValueKey('history-$query'),
+                    query: query,
+                    onTap: () => widget.onSearch(query),
+                    onRemove: () => removeSearch(ref, query),
+                    removeTooltip: l10n.removeFromHistory,
+                  ),
+              ],
+            ),
+          ),
+          if (widget.history.length > _collapsed)
+            TextButton.icon(
+              onPressed: () => setState(() => _showAll = !_showAll),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                foregroundColor: scheme.onSurfaceVariant,
+              ),
+              icon: Icon(_showAll ? Icons.expand_less : Icons.expand_more,
+                  size: 18),
+              label: Text(
+                _showAll ? l10n.showLess : l10n.showMore,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HistoryPill extends StatelessWidget {
+  const _HistoryPill({
+    super.key,
+    required this.query,
+    required this.onTap,
+    required this.onRemove,
+    required this.removeTooltip,
+  });
+
+  final String query;
+  final VoidCallback onTap;
+  final VoidCallback onRemove;
+  final String removeTooltip;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return Material(
+      color: dark ? const Color(0xFF242424) : const Color(0xFFF1F1F3),
+      shape: const StadiumBorder(),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 14),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 220),
+                child: Text(
+                  query,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSurface,
+                  ),
+                ),
+              ),
+              IconButton(
+                tooltip: removeTooltip,
+                visualDensity: VisualDensity.compact,
+                iconSize: 15,
+                color: scheme.onSurfaceVariant,
+                onPressed: onRemove,
+                icon: const Icon(Icons.close),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

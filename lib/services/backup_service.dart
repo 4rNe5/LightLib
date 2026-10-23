@@ -36,6 +36,9 @@ class BackupService {
     final browserOptions = await db.query('browserOptions');
     final bookTags = await db.query('booktags');
     final bookGenres = await db.query('bookgenre');
+    final searchHistory = await db.query('searchhistory');
+    final readingDays = await db.query('readingdays');
+    final completions = await db.query('completions');
 
     String? encode(List<Map<String, Object?>> rows) =>
         jsonEncode(rows.map((row) {
@@ -53,6 +56,9 @@ class BackupService {
       'browserOptions': jsonDecode(encode(browserOptions)!),
       'bookTags': jsonDecode(encode(bookTags)!),
       'bookGenres': jsonDecode(encode(bookGenres)!),
+      'searchHistory': jsonDecode(encode(searchHistory)!),
+      'readingDays': jsonDecode(encode(readingDays)!),
+      'completions': jsonDecode(encode(completions)!),
     };
 
     return const JsonEncoder.withIndent('  ').convert(backup);
@@ -106,6 +112,12 @@ class BackupService {
           txn, 'booktags', backup['bookTags'], ['bookId', 'tag']);
       await _restoreTable(
           txn, 'bookgenre', backup['bookGenres'], ['bookId', 'genre']);
+      await _restoreTable(txn, 'searchhistory', backup['searchHistory'],
+          ['query', 'searchedAt']);
+      await _restoreTable(
+          txn, 'readingdays', backup['readingDays'], ['day', 'hits']);
+      await _restoreTable(txn, 'completions', backup['completions'],
+          ['fileName', 'completedAt']);
     });
 
     AppLogger().info('Backup restored',

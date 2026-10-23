@@ -1080,4 +1080,114 @@ class AppLocalizationsDe extends AppLocalizations {
   String libraryFinishedCount(int count) {
     return '$count beendet';
   }
+
+  @override
+  String get recentSearches => 'Letzte Suchen';
+
+  @override
+  String get clearAll => 'Alle löschen';
+
+  @override
+  String get removeFromHistory => 'Aus dem Verlauf entfernen';
+
+  @override
+  String get searchHistoryFill => 'Suche bearbeiten';
+
+  @override
+  String get showMore => 'Mehr anzeigen';
+
+  @override
+  String get showLess => 'Weniger anzeigen';
+
+  @override
+  String get searchHistorySection => 'Suchverlauf';
+
+  @override
+  String get saveSearchHistory => 'Suchverlauf speichern';
+
+  @override
+  String get saveSearchHistoryHint => 'Letzte Suchen im Suche-Tab anzeigen';
+
+  @override
+  String get clearSearchHistory => 'Suchverlauf löschen';
+
+  @override
+  String savedSearchCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count gespeicherte Suchen',
+      one: '1 gespeicherte Suche',
+      zero: 'Keine gespeicherten Suchen',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get searchHistoryCleared => 'Suchverlauf gelöscht';
+
+  @override
+  String get themeSystemShort => 'System';
+
+  @override
+  String get themeLightShort => 'Hell';
+
+  @override
+  String get themeDarkShort => 'Dunkel';
+
+  @override
+  String get recapTitle => 'Lesebilanz';
+
+  @override
+  String get recapCheckpoints => 'Meilensteine';
+
+  @override
+  String get recapBooksUnit => '';
+
+  @override
+  String get recapDaysUnit => '';
+
+  @override
+  String get recapAllCheckpoints => 'Alle Meilensteine erreicht!';
+
+  @override
+  String recapToNextCheckpoint(int remaining, int next) {
+    return 'Noch $remaining bis $next';
+  }
+
+  @override
+  String get recapStreak => 'Tage in Folge';
+
+  @override
+  String get recapStreakStart => 'Heute lesen und starten';
+
+  @override
+  String recapLongestStreak(int days) {
+    return 'Rekord: $days T.';
+  }
+
+  @override
+  String get recapLastFourWeeks => 'Letzte 4 Wochen';
+
+  @override
+  String recapReadingDays(int days) {
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days Lesetage',
+      one: '1 Lesetag',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String recapMonthTitle(String monthName) {
+    return '$monthName im Rückblick';
+  }
+
+  @override
+  String get recapFinishedThisMonth => 'diesen Monat beendet';
+
+  @override
+  String get recapGenreMix => 'Genre-Mix';
 }

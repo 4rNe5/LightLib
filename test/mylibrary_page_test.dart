@@ -70,7 +70,11 @@ void main() {
       await db.saveBookState('b.pdf', '5');
     });
 
-    tester.view.physicalSize = const Size(1080, 2340);
+    // Tall enough for header, bento, reading record and the first grid
+    // row without scrolling (scrolling to the end on desktop syncs the
+    // library with the storage folder, which drops these file-less
+    // books).
+    tester.view.physicalSize = const Size(1080, 4200);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
@@ -96,6 +100,9 @@ void main() {
     expect(find.text('3 books'), findsOneWidget);
     expect(find.byKey(const ValueKey('libraryBento')), findsOneWidget);
     expect(find.text('Continue reading'), findsOneWidget);
+    expect(find.byKey(const ValueKey('libraryRecap')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recapMilestone')), findsOneWidget);
+    expect(find.byKey(const ValueKey('recapStreak')), findsOneWidget);
     for (final id in ['a', 'b', 'c']) {
       expect(find.byKey(ValueKey('libraryBook-$id')), findsOneWidget);
     }
@@ -120,8 +127,8 @@ void main() {
           () => Future<void>.delayed(const Duration(milliseconds: 50)));
       await tester.pump();
     }
-    expect(find.byKey(const ValueKey('genreFilter-lightNovel')),
-        findsOneWidget);
+    expect(
+        find.byKey(const ValueKey('genreFilter-lightNovel')), findsOneWidget);
 
     // Filtering by the genre hides the bento and the other books.
     await tester.tap(find.byKey(const ValueKey('genreFilter-lightNovel')));

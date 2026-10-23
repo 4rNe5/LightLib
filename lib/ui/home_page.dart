@@ -29,24 +29,21 @@ class _HomePageState extends ConsumerState<HomePage> {
           const SizedBox(height: 8),
           const ActiveDownloadsWidget(),
           Padding(
-            padding:
-                const EdgeInsets.only(left: 5, right: 5, top: 10, bottom: 5),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                TitleText(selectedIndex == 0
-        ? AppLocalizations.of(context).trending
-        : AppLocalizations.of(context).genres),
-                PelletContainer(
-                  selectedIndex: selectedIndex,
-                  onTrendingSelected: () => {
-                    ref.read(homePageSelectedIndexProvider.notifier).state = 0
-                  },
-                  onCategoriesSelected: () => {
-                    ref.read(homePageSelectedIndexProvider.notifier).state = 1
-                  },
-                ),
-              ],
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            child: LargeTitle(
+              selectedIndex == 0
+                  ? AppLocalizations.of(context).trending
+                  : AppLocalizations.of(context).genres,
+              padding: EdgeInsets.zero,
+              trailing: PelletContainer(
+                selectedIndex: selectedIndex,
+                onTrendingSelected: () => {
+                  ref.read(homePageSelectedIndexProvider.notifier).state = 0
+                },
+                onCategoriesSelected: () => {
+                  ref.read(homePageSelectedIndexProvider.notifier).state = 1
+                },
+              ),
             ),
           ),
           Expanded(child: _pages[selectedIndex]), // Display the selected page

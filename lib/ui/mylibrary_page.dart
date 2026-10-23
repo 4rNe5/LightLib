@@ -16,6 +16,8 @@ import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
 import 'package:openlib/ui/components/error_widget.dart';
+import 'package:openlib/services/reading_recap.dart';
+import 'package:openlib/ui/components/library_recap.dart';
 import 'package:openlib/ui/components/library_tiles.dart';
 import 'package:openlib/ui/mybook_page.dart';
 
@@ -38,6 +40,10 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   void initState() {
     super.initState();
     _restoreSortMode();
+    // Reading days may have changed since the recap was last built.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) ref.invalidate(readingRecapProvider);
+    });
     // A book that just finished downloading joins the translation queue.
     ref.listenManual(myLibraryProvider, (_, __) {
       BookTranslationService.instance.scanSoon();
@@ -346,12 +352,12 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
       child: Row(
         children: [
           Text(text,
-              style: const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
+              style:
+                  const TextStyle(fontSize: 19, fontWeight: FontWeight.w700)),
           if (trailing != null) ...[
             const SizedBox(width: 8),
             Text(trailing,
-                style:
-                    TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
+                style: TextStyle(fontSize: 13, color: scheme.onSurfaceVariant)),
           ],
         ],
       ),
@@ -359,10 +365,13 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   }
 
   void _openBook(LibraryBook book) {
-    Navigator.push(context,
-        MaterialPageRoute(builder: (BuildContext context) {
+    Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) {
       return BookPage(id: book.id);
-    }));
+    })).then((_) {
+      // Reading moved the position, maybe finished the book, and added
+      // a reading day: refresh statuses, the bento and the recap.
+      if (mounted) ref.invalidate(libraryBooksProvider);
+    });
   }
 
   /// Cover grid: as many columns as fit (at least three on phones), each
@@ -458,6 +467,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                           onOpen: _openBook,
                           onLongPress: _openTagEditor,
                         ),
+                        const LibraryRecapSection(),
                       ],
                       _sectionTitle(
                         context,
@@ -474,8 +484,8 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                       child: Center(
                         child: Text(
                           l10n.libraryNoMatches,
-                          style: const TextStyle(
-                              color: Colors.grey, fontSize: 13),
+                          style:
+                              const TextStyle(color: Colors.grey, fontSize: 13),
                         ),
                       ),
                     ),
@@ -580,9 +590,8 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             fontSize: 13,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant),
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant),
                       ),
                     ),
                     const SizedBox(height: 20),
