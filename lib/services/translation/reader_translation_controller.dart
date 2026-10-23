@@ -38,6 +38,9 @@ class ReaderTranslationController extends ChangeNotifier {
   final String targetLanguage;
   final String? sourceLanguage;
   final int lookahead;
+
+  /// The book's ruby readings ([epubRubyReadings]), once known.
+  Map<String, String> readings = const {};
   final int keepBehind;
   final AppLogger _logger = AppLogger();
 
@@ -47,7 +50,7 @@ class ReaderTranslationController extends ChangeNotifier {
   /// Paragraphs that failed once; they get one more try, at the back of
   /// the queue, before counting as failed.
   final Set<String> _retried = {};
-  String? _inFlight;
+  final Set<String> _inFlight = {};
   bool _running = false;
   bool _paused = false;
   bool _disposed = false;
@@ -66,7 +69,7 @@ class ReaderTranslationController extends ChangeNotifier {
 
   String? get error => _error;
   String? get deviceLabel => _translator.deviceLabel;
-  int get pendingCount => _queue.length + (_inFlight == null ? 0 : 1);
+  int get pendingCount => _queue.length + _inFlight.length;
   int get translatedThisSession => _done;
 
   ReaderTranslationStatus get status {
@@ -81,7 +84,7 @@ class ReaderTranslationController extends ChangeNotifier {
   String? translationOf(String text) => _cache.lookup(text);
 
   bool isPending(String text) =>
-      _inFlight == text || _queue.containsValue(text);
+      _inFlight.contains(text) || _queue.containsValue(text);
 
   /// Queues paragraph [index] and the [lookahead] paragraphs after it.
   /// [textAt] gives a paragraph's translatable text, or null for one that
@@ -120,7 +123,7 @@ class ReaderTranslationController extends ChangeNotifier {
       final text = textAt(i);
       if (text == null || text.isEmpty) continue;
       if (_cache.lookup(text) != null || _failed.contains(text)) continue;
-      if (_inFlight == text) continue;
+      if (_inFlight.contains(text)) continue;
       _queue[i] = text;
       changed = true;
     }
@@ -190,11 +193,25 @@ class ReaderTranslationController extends ChangeNotifier {
           _queue.addAll(_retryLater);
           _retryLater.clear();
         }
-        final entry = _queue.entries.first;
-        _queue.remove(entry.key);
-        final text = entry.value;
-        if (_cache.lookup(text) != null) continue;
-        _inFlight = text;
+        // The first waiting paragraph and the ones right after it, in one
+        // request when the translator takes several (a line-broken
+        // paragraph goes alone: its lines are translated one by one).
+        final first = _queue.entries.first;
+        final batch = <MapEntry<int, String>>[first];
+        final size = first.value.contains('\n') ? 1 : _translator.batchSize;
+        for (final e in _queue.entries.skip(1)) {
+          if (batch.length >= size) break;
+          if (!_adjacent(batch.last.key, e.key) || e.value.contains('\n')) {
+            break;
+          }
+          batch.add(e);
+        }
+        for (final e in batch) {
+          _queue.remove(e.key);
+        }
+        batch.removeWhere((e) => _cache.lookup(e.value) != null);
+        if (batch.isEmpty) continue;
+        _inFlight.addAll(batch.map((e) => e.value));
         notifyListeners();
         try {
           if (!_modelLoaded) {
@@ -203,21 +220,50 @@ class ReaderTranslationController extends ChangeNotifier {
             notifyListeners();
           }
           final textAt = _textAt;
-          final out = await _translator.translate(text,
+          // On screen first; what comes next is paced.
+          final priority = batch.first.key <= (_lastVisibleEnd ?? _lastIndex)
+              ? TranslationPriority.visible
+              : TranslationPriority.ahead;
+          if (batch.length == 1) {
+            final entry = batch.single;
+            final out = await _translator.translate(entry.value,
+                targetLanguage: targetLanguage,
+                sourceLanguage: sourceLanguage,
+                context: precedingContext(entry.key, textAt),
+                following: textAt == null ? null : textAt(entry.key + 1),
+                priority: priority);
+            if (_disposed) return;
+            _settle(entry, out);
+          } else {
+            final before = <String>[];
+            for (var k = batch.first.key - 1;
+                k >= 0 && k >= batch.first.key - 3 && textAt != null;
+                k--) {
+              final t = textAt(k);
+              if (t != null && t.isNotEmpty) before.insert(0, t);
+            }
+            final outs = await _translator.translateBatch(
+              [for (final e in batch) e.value],
               targetLanguage: targetLanguage,
               sourceLanguage: sourceLanguage,
-              context: precedingContext(entry.key, textAt),
-              following: textAt == null ? null : textAt(entry.key + 1),
-              // On screen first; what comes next is paced.
-              priority: entry.key <= (_lastVisibleEnd ?? _lastIndex)
-                  ? TranslationPriority.visible
-                  : TranslationPriority.ahead);
-          if (_disposed) return;
-          if (out.isEmpty) {
-            _failOnce(entry.key, text);
-          } else {
-            _cache.store(text, out);
-            _done++;
+              before: before,
+              beforeTranslations: [for (final t in before) _cache.lookup(t)],
+              readings: readings,
+              priority: priority,
+              onEach: (i, out) {
+                if (_disposed || out.isEmpty) return;
+                // Shown as soon as it is ready, not when the batch ends.
+                _cache.store(batch[i].value, out);
+                _inFlight.remove(batch[i].value);
+                _done++;
+                notifyListeners();
+              },
+            );
+            if (_disposed) return;
+            for (var i = 0; i < batch.length; i++) {
+              if (_cache.lookup(batch[i].value) != null) continue;
+              _settle(batch[i], outs[i]);
+            }
           }
         } catch (e) {
           _logger.warning('Paragraph translation failed',
@@ -226,18 +272,45 @@ class ReaderTranslationController extends ChangeNotifier {
             // The model itself did not load: every paragraph would fail
             // the same way, so stop and say so.
             _error = e.toString();
-            _queue[entry.key] = text;
+            for (final entry in batch) {
+              _queue[entry.key] = entry.value;
+            }
             return;
           }
-          _failOnce(entry.key, text);
+          for (final entry in batch) {
+            if (_cache.lookup(entry.value) == null) {
+              _failOnce(entry.key, entry.value);
+            }
+          }
         } finally {
-          _inFlight = null;
+          _inFlight.removeAll(batch.map((e) => e.value));
           if (!_disposed) notifyListeners();
         }
       }
     } finally {
       _running = false;
       if (!_disposed) notifyListeners();
+    }
+  }
+
+  /// Whether nothing to translate lies between paragraphs [a] and [b]
+  /// (pictures and done paragraphs in between keep them one passage).
+  bool _adjacent(int a, int b) {
+    if (b <= a) return false;
+    final textAt = _textAt;
+    for (var k = a + 1; k < b; k++) {
+      final t = textAt?.call(k);
+      if (t != null && t.isNotEmpty && _cache.lookup(t) == null) return false;
+    }
+    return b - a <= 4;
+  }
+
+  void _settle(MapEntry<int, String> entry, String out) {
+    if (out.isEmpty) {
+      _failOnce(entry.key, entry.value);
+    } else {
+      _cache.store(entry.value, out);
+      _done++;
     }
   }
 

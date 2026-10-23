@@ -50,6 +50,32 @@ class FakeTranslator implements Translator {
     return '[KO]$text';
   }
 
+  int size = 1;
+  final List<List<String>> batches = [];
+
+  @override
+  int get batchSize => size;
+
+  @override
+  Future<List<String>> translateBatch(List<String> texts,
+      {required String targetLanguage,
+      String? sourceLanguage,
+      List<String> before = const [],
+      List<String?> beforeTranslations = const [],
+      Map<String, String> readings = const {},
+      TranslationPriority priority = TranslationPriority.background,
+      void Function(int index, String translation)? onEach}) async {
+    batches.add(texts);
+    final out = <String>[];
+    for (var i = 0; i < texts.length; i++) {
+      final t = await translate(texts[i],
+          targetLanguage: targetLanguage, priority: priority);
+      out.add(t);
+      if (t.isNotEmpty) onEach?.call(i, t);
+    }
+    return out;
+  }
+
   @override
   Future<void> dispose() async {}
 }
@@ -290,6 +316,17 @@ void main() {
       expect(translator.asked.first, 'p0');
       expect(translator.asked.skip(1).first, 'p30');
       expect(translator.asked, isNot(contains('p3')));
+    });
+
+    test('consecutive paragraphs go in one request, pictures in between',
+        () async {
+      translator.size = 4;
+      show(0);
+      await settle();
+      // p4 is a picture (null): p3 and p5 still share a request.
+      expect(translator.batches.first, ['p0', 'p1', 'p2', 'p3']);
+      expect(translator.batches[1], ['p5', 'p6']);
+      expect(controller.translationOf('p6'), '[KO]p6');
     });
 
     test('pause holds the queue until resume', () async {

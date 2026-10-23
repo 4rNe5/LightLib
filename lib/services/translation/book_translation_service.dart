@@ -18,6 +18,7 @@ import 'package:path/path.dart' as p;
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/epub_package.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/translation/background_translation_notice.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
@@ -459,29 +460,65 @@ class BookTranslationService extends ChangeNotifier
     await _updateNotice(force: true);
 
     final source = sourceLanguageName(await _bookLanguage(path));
+    final readings = await Isolate.run(() async {
+      final book = EpubPackage.open(await File(path).readAsBytes());
+      return book == null ? <String, String>{} : epubRubyReadings(book);
+    }).catchError((_) => <String, String>{});
     final seen = <String>{};
+    bool pending(String? t) =>
+        t != null && !seen.contains(t) && cache.lookup(t) == null;
     for (var i = 0; i < texts.length; i++) {
       final text = texts[i];
-      if (text == null || !seen.add(text) || cache.lookup(text) != null) {
-        continue;
-      }
+      if (!pending(text)) continue;
       if (!await _waitForRoom()) {
         report(BookTranslationState.waiting);
         await cache.flush();
         return;
       }
+      // This paragraph and the next ones, as many as one request takes
+      // (a line-broken paragraph goes alone).
+      final batch = <int>[i];
+      final size = text!.contains('\n') ? 1 : translator.batchSize;
+      for (var k = i + 1; k < texts.length && batch.length < size; k++) {
+        final t = texts[k];
+        if (t == null) continue;
+        if (!pending(t) || t.contains('\n')) break;
+        batch.add(k);
+      }
+      for (final k in batch) {
+        seen.add(texts[k]!);
+      }
       final started = DateTime.now();
       try {
-        final out = await translator.translate(
-          text,
-          targetLanguage: targetLanguage.englishName,
-          sourceLanguage: source,
-          context: precedingContext(i, (j) => texts[j]),
-          following: i + 1 < texts.length ? texts[i + 1] : null,
-        );
-        if (out.isNotEmpty) {
-          cache.store(text, out);
-          _translatedThisRun++;
+        if (batch.length == 1) {
+          final out = await translator.translate(
+            text,
+            targetLanguage: targetLanguage.englishName,
+            sourceLanguage: source,
+            context: precedingContext(i, (j) => texts[j]),
+            following: i + 1 < texts.length ? texts[i + 1] : null,
+          );
+          if (out.isNotEmpty) {
+            cache.store(text, out);
+            _translatedThisRun++;
+          }
+        } else {
+          final before = <String>[
+            for (var k = i - 1; k >= 0 && k >= i - 6; k--)
+              if (texts[k] != null) texts[k]!,
+          ].take(3).toList().reversed.toList();
+          await translator.translateBatch(
+            [for (final k in batch) texts[k]!],
+            targetLanguage: targetLanguage.englishName,
+            sourceLanguage: source,
+            before: before,
+            beforeTranslations: [for (final t in before) cache.lookup(t)],
+            readings: readings,
+            onEach: (n, out) {
+              cache.store(texts[batch[n]]!, out);
+              _translatedThisRun++;
+            },
+          );
         }
       } catch (e) {
         _logger.warning('Paragraph translation failed',
@@ -489,7 +526,8 @@ class BookTranslationService extends ChangeNotifier
         // A model that cannot load fails every paragraph alike.
         if (translator.deviceLabel == null) rethrow;
       }
-      if (_translatedThisRun % 20 == 0) await cache.flush();
+      i = batch.last;
+      await cache.flush();
       report(BookTranslationState.translating);
       await _updateNotice();
       // The time includes waiting behind the reader's requests; resting

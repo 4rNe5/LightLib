@@ -9,6 +9,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:url_launcher/url_launcher.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart' show MyLibraryDb;
+import 'package:openlib/services/epub_package.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/reader_fonts.dart';
 import 'package:openlib/services/reader_settings.dart';
@@ -556,6 +558,12 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         sourceLanguage: sourceLanguageName(_language),
       );
       controller.addListener(_onTranslationChanged);
+      // How the book's names are read, from its ruby, for the model.
+      final path = widget.filePath;
+      unawaited(Isolate.run(() async {
+        final book = EpubPackage.open(await File(path).readAsBytes());
+        return book == null ? <String, String>{} : epubRubyReadings(book);
+      }).then((r) => controller.readings = r, onError: (_) {}));
       setState(() {
         _translation = controller;
         _translateOn = true;

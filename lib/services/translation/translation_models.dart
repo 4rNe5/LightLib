@@ -511,6 +511,7 @@ String buildTranslationPrompt({
           text: text,
           targetLanguage: targetLanguage,
           sourceLanguage: sourceLanguage,
+          context: context,
           lightNovelStyle: lightNovelStyle);
     case TranslationPromptFormat.hyMt:
       return hyMtPrompt(
@@ -530,3 +531,107 @@ String buildTranslationPrompt({
 String retryPrompt(String prompt, String badAnswer, String targetLanguage) =>
     '$prompt\n\nYour previous answer left Japanese text untranslated:\n'
     '$badAnswer\n\nTranslate again. Every word must be $targetLanguage.';
+
+// ---------------------------------------------------------------------------
+// Several paragraphs per request
+// ---------------------------------------------------------------------------
+
+/// How a published Korean edition of a light novel reads - the target the
+/// batch prompt aims the model at (measured against a reference
+/// translation of a real light novel; see the commit that added it).
+const _koreanLightNovelStyle = """
+You translate Japanese light novels into Korean for a published Korean edition.
+Write Korean that reads like an officially published light novel: smooth, natural and idiomatic, never word for word.
+
+Style:
+- Narration is in the literary -다 form. Keep the tense of the original: present-tense narration (〜する, 〜いる) stays present (한다, 있다), past stays past.
+- The narrator speaks in the first person: 自分 and 俺 in narration are 나, あいつら is 그 녀석들. Rebuild each sentence in natural Korean word order and drop the subjects and pronouns Korean leaves out (avoid 그녀, 그 when the sentence works without them).
+- Translate idioms by their meaning (おいしい思いをする → 재미를 보다, 腹が立つ → 화가 나다), never literally.
+- Dialogue keeps each speaker's voice: casual stays casual (반말), polite stays polite (존댓말); a teenage girl sounds like one (~거든, ~잖아, 진짜), a parent warm, a joker playful.
+- 「」 become “ ”, 『』 become ‘ ’. Keep ……, ── and !? as they are.
+- Japanese names are written by their Japanese reading in Hangul (翔太 → 쇼타, 美咲 → 미사키), the same way every time. Forms of address: お兄ちゃん is 오빠 from a girl and 형 from a boy; 父さん and 母さん are 아빠 and 엄마 for a young speaker; 先輩 → 선배; 〜さん → 씨; 〜君 after a first name is dropped (翔太君 → 쇼타).
+- Sound words and cries become natural Korean ones (ドキッ → 두근, グチャリ → 철퍽, ジンジン → 욱신욱신, いってぇ → 아파).
+- Translate every sentence, add nothing, explain nothing.""";
+
+String _genericBatchStyle(String targetLanguage, bool lightNovelStyle) =>
+    lightNovelStyle
+        ? 'You translate fiction into $targetLanguage for a published edition. '
+            'Write natural, fluent $targetLanguage prose, never word for word. '
+            "Keep each character's voice and speech level, names exactly and "
+            'the same way every time, sound words as natural $targetLanguage '
+            'ones, and punctuation such as ……, ── and !?. Translate every '
+            'sentence, add nothing, explain nothing.'
+        : 'Translate into accurate, natural $targetLanguage. Keep the tone, '
+            'names, numbers and amounts exactly. Translate every sentence, add '
+            'nothing, explain nothing.';
+
+/// One request for several consecutive paragraphs, answered one numbered
+/// line each (see [parseNumberedTranslations]). [before] are the
+/// paragraphs just before, with their translations where known, for
+/// consistency; they are not translated again.
+String batchTranslationPrompt({
+  required List<String> texts,
+  required String targetLanguage,
+  String? sourceLanguage,
+  List<String> before = const [],
+  List<String?> beforeTranslations = const [],
+  List<MapEntry<String, String>> readings = const [],
+  bool lightNovelStyle = true,
+}) {
+  final japanese =
+      sourceLanguage == 'Japanese' || texts.any((t) => containsKana(t));
+  final buffer = StringBuffer(
+      targetLanguage == 'Korean' && japanese && lightNovelStyle
+          ? _koreanLightNovelStyle.trim()
+          : _genericBatchStyle(targetLanguage, lightNovelStyle));
+  if (readings.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln()
+      ..writeln('Readings of names and words in this book (write names as '
+          'they are read, in $targetLanguage letters; translate ordinary '
+          'words by meaning):');
+    for (final r in readings) {
+      buffer.writeln('${r.key} = ${r.value}');
+    }
+  }
+  if (before.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln()
+      ..writeln('The story just before (context only, do not translate it '
+          'again):');
+    for (var i = 0; i < before.length; i++) {
+      buffer.writeln(before[i]);
+      final done = i < beforeTranslations.length ? beforeTranslations[i] : null;
+      if (done != null && done.isNotEmpty) buffer.writeln('→ $done');
+    }
+  }
+  buffer
+    ..writeln()
+    ..writeln()
+    ..writeln('Translate these paragraphs into $targetLanguage. Answer with '
+        'exactly one line per paragraph: its number in brackets, then the '
+        'translation.')
+    ..writeln();
+  for (var i = 0; i < texts.length; i++) {
+    buffer.writeln('[${i + 1}] ${texts[i]}');
+  }
+  return buffer.toString().trimRight();
+}
+
+final _numbered = RegExp(r'^\s*\[(\d+)\]\s*(.*)$');
+
+/// The translations in a numbered answer, by position; null where a number
+/// is missing (that paragraph is translated again on its own).
+List<String?> parseNumberedTranslations(String answer, int count) {
+  final found = <int, String>{};
+  for (final line in answer.split('\n')) {
+    final m = _numbered.firstMatch(line);
+    if (m == null) continue;
+    final n = int.parse(m.group(1)!);
+    final text = m.group(2)!.trim();
+    if (n >= 1 && n <= count && text.isNotEmpty) found.putIfAbsent(n, () => text);
+  }
+  return [for (var i = 1; i <= count; i++) found[i]];
+}

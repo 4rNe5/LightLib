@@ -106,3 +106,60 @@ class EpubPackage {
         : const Utf8Codec(allowMalformed: true).decode(bytes);
   }
 }
+
+final _ruby = RegExp(r'<ruby\b[^>]*>(.*?)</ruby>', dotAll: true);
+final _rt = RegExp(r'<rt\b[^>]*>(.*?)</rt>', dotAll: true);
+final _rb = RegExp(r'<rb\b[^>]*>(.*?)</rb>', dotAll: true);
+final _tags = RegExp(r'<[^>]+>');
+final _allKanji = RegExp(r'^[一-鿿々]+$');
+final _smallKana = RegExp('[ゃゅょャュョぁぃぅぇぉァィゥェォ]');
+
+/// Readings the book gives in ruby (furigana) for names and rare words:
+/// kanji written at least three times with the same reading, two or more
+/// kanji long (or one with a reading of three or more sounds). They tell
+/// a translation model how a character's name is read - 和希 is かずき,
+/// not わき.
+Map<String, String> epubRubyReadings(EpubPackage book) {
+  final counts = <String, Map<String, int>>{};
+  for (final path in book.spine) {
+    final xhtml = book.text(path);
+    if (xhtml == null || !xhtml.contains('<ruby')) continue;
+    for (final m in _ruby.allMatches(xhtml)) {
+      final inner = m.group(1)!;
+      final reading = _rt
+          .allMatches(inner)
+          .map((r) => r.group(1)!.replaceAll(_tags, ''))
+          .join()
+          .trim();
+      final base = (inner.contains('<rb')
+              ? _rb.allMatches(inner).map((r) => r.group(1)!).join()
+              : inner.replaceAll(_rt, ''))
+          .replaceAll(_tags, '')
+          .trim();
+      if (base.isEmpty || reading.isEmpty || !_allKanji.hasMatch(base)) {
+        continue;
+      }
+      final byReading = counts.putIfAbsent(base, () => {});
+      byReading[reading] = (byReading[reading] ?? 0) + 1;
+    }
+  }
+  final out = <String, String>{};
+  counts.forEach((base, byReading) {
+    final best = byReading.entries.reduce((a, b) => a.value >= b.value ? a : b);
+    final total = byReading.values.fold<int>(0, (a, b) => a + b);
+    final morae = best.key.replaceAll(_smallKana, '').length;
+    if (total >= 3 && (base.length >= 2 || morae >= 3)) out[base] = best.key;
+  });
+  return out;
+}
+
+/// The entries of [readings] that occur in [texts], longest first (so
+/// 石井和希 comes before 和希), at most [limit].
+List<MapEntry<String, String>> readingsIn(
+    Map<String, String> readings, Iterable<String> texts,
+    {int limit = 24}) {
+  final joined = texts.join('\n');
+  final hits = readings.entries.where((e) => joined.contains(e.key)).toList()
+    ..sort((a, b) => b.key.length.compareTo(a.key.length));
+  return hits.take(limit).toList();
+}
