@@ -130,22 +130,9 @@ const gemma4E2bGguf = TranslationModelPreset(
 );
 
 /// Tencent Hy-MT2 1.8B, a dedicated translation model (33 languages,
-/// Apache-2.0), official llama.cpp build. Q4_K_M: the size of choice on
-/// phones; measured as close to Q8_0 in quality.
-const hyMt2Q4km = TranslationModelPreset(
-  id: 'hy-mt2-1.8b-q4_k_m',
-  name: 'Hy-MT2 1.8B Q4_K_M (llama.cpp, CPU)',
-  fileName: 'Hy-MT2-1.8B-Q4_K_M.gguf',
-  url: 'https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/'
-      'resolve/main/Hy-MT2-1.8B-Q4_K_M.gguf',
-  sizeBytes: 1133080448,
-  sha256: 'dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699',
-  runtime: TranslationRuntime.llamaCpp,
-  license: 'Apache-2.0',
-  promptFormat: TranslationPromptFormat.hyMt,
-);
-
-/// The same model at 8 bits: a little more accurate, 70% larger.
+/// Apache-2.0), official llama.cpp build. Q8_0: Hy-MT2 loses noticeably
+/// at 4 bits (chrF++ 50.5 -> 44.3 on light-novel lines), so 8 bits is the
+/// one to use.
 const hyMt2Q8 = TranslationModelPreset(
   id: 'hy-mt2-1.8b-q8_0',
   name: 'Hy-MT2 1.8B Q8_0 (llama.cpp, CPU)',
@@ -159,11 +146,25 @@ const hyMt2Q8 = TranslationModelPreset(
   promptFormat: TranslationPromptFormat.hyMt,
 );
 
+/// The same model at 4 bits, for phones short on storage or memory.
+const hyMt2Q4km = TranslationModelPreset(
+  id: 'hy-mt2-1.8b-q4_k_m',
+  name: 'Hy-MT2 1.8B Q4_K_M (llama.cpp, CPU, smaller)',
+  fileName: 'Hy-MT2-1.8B-Q4_K_M.gguf',
+  url: 'https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF/'
+      'resolve/main/Hy-MT2-1.8B-Q4_K_M.gguf',
+  sizeBytes: 1133080448,
+  sha256: 'dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699',
+  runtime: TranslationRuntime.llamaCpp,
+  license: 'Apache-2.0',
+  promptFormat: TranslationPromptFormat.hyMt,
+);
+
 const translationModelPresets = [
   gemma4E2bLiteRt,
   gemma4E2bGguf,
-  hyMt2Q4km,
   hyMt2Q8,
+  hyMt2Q4km,
 ];
 
 TranslationModelPreset? presetForFile(String fileName) {
