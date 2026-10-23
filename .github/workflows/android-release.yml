@@ -125,7 +125,15 @@ jobs:
       - run: flutter pub get
 
       - name: Build APK
-        run: flutter build apk --release --split-per-abi --target-platform android-arm64
+        shell: bash
+        run: |
+          set -euo pipefail
+          started=$SECONDS
+          flutter build apk --release --split-per-abi --target-platform android-arm64
+          elapsed=$((SECONDS - started))
+          echo "### Android release performance" >> "$GITHUB_STEP_SUMMARY"
+          echo "- APK compilation: ${elapsed}s" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Commit: ${GITHUB_SHA:0:7}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify signature and version
         id: apk
