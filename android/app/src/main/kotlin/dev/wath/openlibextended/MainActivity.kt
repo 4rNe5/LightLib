@@ -1,5 +1,7 @@
 package dev.wath.openlibextended
 
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
@@ -53,6 +55,10 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "deviceState" -> result.success(deviceState())
+                "lastExits" -> Thread {
+                    val exits = try { lastExits() } catch (e: Exception) { emptyList() }
+                    main.post { result.success(exits) }
+                }.start()
                 else -> result.notImplemented()
             }
         }
@@ -92,6 +98,69 @@ class MainActivity : FlutterActivity() {
             "charging" to (plugged || status == BatteryManager.BATTERY_STATUS_CHARGING ||
                 status == BatteryManager.BATTERY_STATUS_FULL),
         )
+    }
+
+    /// How the app's last few processes ended (Android 11+): a native crash,
+    /// the system killing it for memory, an ANR... with the crash's abort
+    /// message and backtrace lines when Android kept them. A crash inside a
+    /// native library (the translation engine) leaves nothing in the app's
+    /// own log, which lives in memory.
+    private fun lastExits(): List<Map<String, Any?>> {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return emptyList()
+        val am = getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
+        return am.getHistoricalProcessExitReasons(packageName, 0, 5).map { info ->
+            mapOf(
+                "timestamp" to info.timestamp,
+                "reason" to reasonName(info.reason),
+                "description" to info.description,
+                "status" to info.status,
+                "importance" to info.importance,
+                "pssKb" to info.pss,
+                "rssKb" to info.rss,
+                "trace" to traceOf(info),
+            )
+        }
+    }
+
+    private fun traceOf(info: ApplicationExitInfo): String? {
+        if (info.reason != ApplicationExitInfo.REASON_CRASH_NATIVE &&
+            info.reason != ApplicationExitInfo.REASON_ANR) return null
+        val bytes = try {
+            info.traceInputStream?.use { it.readBytes() }
+        } catch (e: Exception) { null } ?: return null
+        // Native crashes come as a tombstone protobuf: its readable strings
+        // (signal, abort message, frames' libraries and functions) suffice.
+        val lines = Regex("[\\x20-\\x7e]{6,}")
+            .findAll(String(bytes, Charsets.ISO_8859_1))
+            .map { it.value.trim() }
+            .filter { line ->
+                info.reason == ApplicationExitInfo.REASON_ANR ||
+                    line.contains(".so") || line.contains("SIG") ||
+                    line.contains("abort", ignoreCase = true) ||
+                    line.contains("fault", ignoreCase = true) ||
+                    line.contains("Check failed") || line.contains("error", ignoreCase = true)
+            }
+            .distinct()
+            .take(60)
+            .joinToString("\n")
+        return if (lines.length > 6000) lines.substring(0, 6000) else lines
+    }
+
+    private fun reasonName(reason: Int): String = when (reason) {
+        ApplicationExitInfo.REASON_EXIT_SELF -> "exit_self"
+        ApplicationExitInfo.REASON_SIGNALED -> "signaled"
+        ApplicationExitInfo.REASON_LOW_MEMORY -> "low_memory"
+        ApplicationExitInfo.REASON_CRASH -> "crash"
+        ApplicationExitInfo.REASON_CRASH_NATIVE -> "crash_native"
+        ApplicationExitInfo.REASON_ANR -> "anr"
+        ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> "initialization_failure"
+        ApplicationExitInfo.REASON_PERMISSION_CHANGE -> "permission_change"
+        ApplicationExitInfo.REASON_EXCESSIVE_RESOURCE_USAGE -> "excessive_resource_usage"
+        ApplicationExitInfo.REASON_USER_REQUESTED -> "user_requested"
+        ApplicationExitInfo.REASON_USER_STOPPED -> "user_stopped"
+        ApplicationExitInfo.REASON_DEPENDENCY_DIED -> "dependency_died"
+        ApplicationExitInfo.REASON_OTHER -> "other"
+        else -> "unknown_$reason"
     }
 
     override fun onDestroy() {

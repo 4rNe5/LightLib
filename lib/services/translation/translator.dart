@@ -16,6 +16,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/epub_package.dart' show readingsIn;
 import 'package:openlib/services/logger.dart';
+import 'package:openlib/services/process_exits.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
@@ -149,7 +150,7 @@ class LocalLlmTranslator implements Translator {
   Future<void> _load() async {
     await LlamaLogging.configure(level: LlamaLogLevel.none);
     if (runtime == TranslationRuntime.liteRtLm) {
-      await _loadLiteRt(from: await _savedSetup());
+      await _loadLiteRt(from: await _afterCrash(await _savedSetup()));
       return;
     }
     final model = LlamaModel(ModelSource.path(modelPath));
@@ -186,6 +187,73 @@ class LocalLlmTranslator implements Translator {
   // declared it, so what earlier versions found says nothing about it.
   static const _setupPrefPrefix = 'translationEngineSetup2:';
   static const _failuresPrefPrefix = 'translationEngineFailures:';
+
+  /// The setup being started; cleared once it works or fails. Still set
+  /// at the next launch, the app died starting it - a native crash or the
+  /// system reclaiming memory, which no try/catch sees.
+  static const _tryingPrefPrefix = 'translationEngineTrying:';
+
+  /// Marked with the process id: a mark from this same process (an
+  /// earlier translator, disposed while starting) is not a crash.
+  Future<void> _setTrying(String key) => MyLibraryDb.instance
+      .savePreference(
+          '$_tryingPrefPrefix$_fileName', key.isEmpty ? '' : '$key@$pid')
+      .catchError((_) {});
+
+  /// The previous run's exit was looked at in this process already.
+  static bool _crashChecked = false;
+
+  /// Where to start after the app died starting a setup: the next one,
+  /// and past the GPU entirely when the GPU without extras died too (the
+  /// others only add to what it needs).
+  Future<int> _afterCrash(int from) async {
+    final trying = await MyLibraryDb.instance
+        .getPreference('$_tryingPrefPrefix$_fileName')
+        .catchError((_) => null);
+    final setups = _setups;
+    final int index;
+    final last = await ProcessExits.previous();
+    if (trying is String && trying.isNotEmpty) {
+      await _setTrying('');
+      final at = trying.lastIndexOf('@');
+      if (at < 0 || trying.substring(at + 1) == '$pid') return from;
+      index = setups.indexWhere((s) => s.key == trying.substring(0, at));
+    } else if (last != null &&
+        from < setups.length &&
+        setups[from].gpu &&
+        last.reason == 'crash_native' &&
+        RegExp('litert|opencl', caseSensitive: false)
+            .hasMatch(last.trace ?? '') &&
+        !_crashChecked) {
+      // A crash in the engine from a version that kept no mark: the setup
+      // it would have started with.
+      index = from;
+    } else {
+      return from;
+    }
+    _crashChecked = true;
+    if (index < 0) return from;
+    // Swiped away, or reclaimed in the background: not the setup's fault.
+    if (last != null && !last.likelyCrash) return from;
+    final setup = setups[index];
+    _logger.warning('Engine setup ${setup.key} closed the app last time',
+        tag: 'Translator',
+        metadata: {
+          'exit': last?.reason ?? 'unknown',
+          if (last?.description != null) 'description': last!.description,
+        });
+    await _recordFailure(
+        setup, 'app closed while starting (${last?.reason ?? 'unknown'})', 0);
+    var next = index + 1;
+    if (setup.gpu && !setup.speculative) {
+      next = setups.indexWhere((s) => !s.gpu);
+    }
+    if (next >= setups.length || next < 0) next = setups.length - 1;
+    await MyLibraryDb.instance
+        .savePreference('$_setupPrefPrefix$_fileName', setups[next].key)
+        .catchError((_) {});
+    return next > from ? next : from;
+  }
 
   /// Why setups failed on this device (newest last, a few kept): logged
   /// whenever the engine starts past them, so a report shows the cause
@@ -265,6 +333,7 @@ class LocalLlmTranslator implements Translator {
           : 'CPU';
       final engine = LlamaEngine(LlamaBackend());
       final watch = Stopwatch()..start();
+      await _setTrying(setup.key);
       try {
         await _setModel(
             engine, model, setup.gpu ? ComputeDevice.auto : ComputeDevice.cpu,
@@ -295,6 +364,8 @@ class LocalLlmTranslator implements Translator {
         await MyLibraryDb.instance
             .savePreference('$_setupPrefPrefix$_fileName', setup.key)
             .catchError((_) {});
+        // The mark stays until the first real request is through: a
+        // longer prompt than the test's can still bring the GPU down.
         return;
       } catch (e) {
         lastError = e;
@@ -309,6 +380,7 @@ class LocalLlmTranslator implements Translator {
             .dispose()
             .timeout(const Duration(seconds: 15), onTimeout: () {})
             .catchError((_) {});
+        await _setTrying('');
       }
     }
     _loading = null;
@@ -517,6 +589,7 @@ class LocalLlmTranslator implements Translator {
             })
             .then((_) => buffer.toString());
         final raw = await _withTimeout(engine, work, _limitFor(maxTokens));
+        if (_firstGeneration && liteRt) await _setTrying('');
         _firstGeneration = false;
         // Stopped to make room: the partial text is not a translation.
         token.check();

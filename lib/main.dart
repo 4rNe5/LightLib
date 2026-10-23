@@ -18,6 +18,7 @@ import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/services/reader_fonts.dart';
+import 'package:openlib/services/process_exits.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/challenge_html_cache.dart';
 import 'package:openlib/services/webview_challenge_solver.dart';
@@ -199,6 +200,7 @@ void main(List<String> args) async {
 
   // Library books are translated in the background, a little at a time,
   // when a model is installed and the option is on.
+  unawaited(ProcessExits.logNew());
   unawaited(BookTranslationService.instance.start());
 
   runApp(
