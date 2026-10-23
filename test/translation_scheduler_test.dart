@@ -72,7 +72,7 @@ void main() {
     final a2 = job('a2', TranslationPriority.ahead, 10);
     await a2;
     final gap = times['a2-start']!.difference(times['a1-end']!);
-    // Half as long as the 200 ms request took.
+    // Most of the time the 200 ms request took.
     expect(gap.inMilliseconds, greaterThanOrEqualTo(90));
 
     await job('a3', TranslationPriority.ahead, 200);

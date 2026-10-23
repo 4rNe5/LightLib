@@ -735,7 +735,11 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     return KeyEventResult.handled;
   }
 
-  Widget _webView(ReaderPalette palette) {
+  /// Built once: the page's state changes (position, translation status)
+  /// rebuild the bars around it, never the web view.
+  late final Widget _webViewWidget = RepaintBoundary(child: _webView());
+
+  Widget _webView() {
     final settings = InAppWebViewSettings(
       javaScriptEnabled: true,
       transparentBackground: true,
@@ -1167,7 +1171,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                 child: SafeArea(
                   child: _error != null
                       ? _errorView(palette, l10n)
-                      : _webView(palette),
+                      : _webViewWidget,
                 ),
               ),
               if (!_opened && _error == null)

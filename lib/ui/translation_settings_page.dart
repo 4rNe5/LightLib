@@ -161,7 +161,15 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
                   overflow: TextOverflow.ellipsis)),
         ],
         onChanged: (cpu) async {
-          if (cpu == null || cpu == SharedTranslationEngine.cpuOnly) return;
+          if (cpu == null) return;
+          // Choosing again also gives the GPU another chance after a
+          // stall made this model run on the CPU.
+          final active = _active?.fileName;
+          if (active != null) await LocalLlmTranslator.clearGpuStall(active);
+          if (cpu == SharedTranslationEngine.cpuOnly) {
+            await _restartTranslation();
+            return;
+          }
           SharedTranslationEngine.cpuOnly = cpu;
           setState(() {});
           await _db

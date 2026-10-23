@@ -12,6 +12,7 @@ import 'package:llamadart/llamadart.dart';
 import 'package:path_provider/path_provider.dart';
 
 // Project imports:
+import 'package:openlib/services/database.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
@@ -124,69 +125,122 @@ class LocalLlmTranslator implements Translator {
 
   Future<void> _load() async {
     await LlamaLogging.configure(level: LlamaLogLevel.none);
-    final model = LlamaModel(ModelSource.path(modelPath));
     if (runtime == TranslationRuntime.liteRtLm) {
-      // auto = GPU on Android. A GPU that cannot run the model (driver,
-      // memory) falls back to LiteRT-LM's CPU path with the same file.
-      final devices = cpuOnly
-          ? [ComputeDevice.cpu]
-          : [ComputeDevice.auto, ComputeDevice.cpu];
-      final cacheDir = await _liteRtCacheDir();
-      for (final device in devices) {
-        final engine = LlamaEngine(LlamaBackend());
-        final watch = Stopwatch()..start();
-        try {
-          await _setModel(engine, model, device, cacheDir: cacheDir);
-          final loadedMs = watch.elapsedMilliseconds;
-          // LiteRT-LM starts its engine on the first generation; a GPU
-          // that cannot run the model fails only there. Start it now, so
-          // a failure falls back to the CPU here instead of failing
-          // every paragraph, and "loading" lasts until it can translate
-          // (the first start of a large model compiles GPU programs and
-          // can take minutes; later starts read them from the cache).
-          await _warmUp(engine);
-          _logger
-              .info('Translation engine started', tag: 'Translator', metadata: {
-            'device': device.name,
-            'loadMs': loadedMs,
-            'startMs': watch.elapsedMilliseconds - loadedMs,
-            'speculative': _speculative,
-            'threads': threads,
-          });
-          _engine = engine;
-          // auto means the GPU on Android, iOS and macOS only.
-          _deviceLabel = device == ComputeDevice.auto &&
-                  (Platform.isAndroid || Platform.isIOS || Platform.isMacOS)
-              ? 'GPU'
-              : 'CPU';
-          _logger.info('Translation model loaded',
-              tag: 'Translator',
-              metadata: {'runtime': 'litert_lm', 'device': _deviceLabel});
-          return;
-        } catch (e) {
-          _logger.warning('LiteRT-LM load failed on ${device.name}',
-              tag: 'Translator', error: e);
-          await engine.dispose().catchError((_) {});
-          if (device == ComputeDevice.cpu) {
-            _loading = null;
-            rethrow;
-          }
+      // A GPU that once stalled with this model starts on the CPU.
+      final gpuStalled = !cpuOnly && await _gpuStalled();
+      await _loadLiteRt(cpu: cpuOnly || gpuStalled);
+      return;
+    }
+    final model = LlamaModel(ModelSource.path(modelPath));
+    final engine = LlamaEngine(LlamaBackend());
+    try {
+      await _setModel(engine, model, ComputeDevice.cpu, gpuLayers: 0);
+    } catch (_) {
+      _loading = null;
+      await engine.dispose().catchError((_) {});
+      rethrow;
+    }
+    _engine = engine;
+    _deviceLabel = 'CPU';
+    _logger.info('Translation model loaded',
+        tag: 'Translator', metadata: {'runtime': 'llama_cpp'});
+  }
+
+  /// Loads the LiteRT-LM file, GPU first (unless [cpu]) with the CPU as
+  /// the fallback, and starts the engine with a real translation request.
+  Future<void> _loadLiteRt({required bool cpu}) async {
+    final model = LlamaModel(ModelSource.path(modelPath));
+    // auto = GPU on Android. A GPU that cannot run the model (driver,
+    // memory) falls back to LiteRT-LM's CPU path with the same file.
+    final devices =
+        cpu ? [ComputeDevice.cpu] : [ComputeDevice.auto, ComputeDevice.cpu];
+    final cacheDir = await _liteRtCacheDir();
+    for (final device in devices) {
+      final engine = LlamaEngine(LlamaBackend());
+      final watch = Stopwatch()..start();
+      // auto means the GPU on Android, iOS and macOS only.
+      final label = device == ComputeDevice.auto &&
+              (Platform.isAndroid || Platform.isIOS || Platform.isMacOS)
+          ? 'GPU'
+          : 'CPU';
+      try {
+        await _setModel(engine, model, device, cacheDir: cacheDir);
+        final loadedMs = watch.elapsedMilliseconds;
+        // LiteRT-LM starts its engine on the first generation, and
+        // prepares each prompt length the first time it sees one (on a
+        // GPU: compiling programs, minutes for a large model, cached
+        // afterwards). A request as long as a real one does both now,
+        // while the reader says "preparing", and a GPU that cannot run
+        // the model falls back to the CPU here instead of failing - or
+        // stalling - every paragraph.
+        await _warmUp(engine, gpu: label == 'GPU');
+        _logger
+            .info('Translation engine started', tag: 'Translator', metadata: {
+          'device': label,
+          'loadMs': loadedMs,
+          'startMs': watch.elapsedMilliseconds - loadedMs,
+          'speculative': _speculative,
+          'threads': threads,
+        });
+        _engine = engine;
+        _deviceLabel = label;
+        _firstGeneration = true;
+        return;
+      } catch (e) {
+        _logger.warning('LiteRT-LM start failed on $label',
+            tag: 'Translator',
+            error: e,
+            metadata: {'afterMs': watch.elapsedMilliseconds});
+        await engine
+            .dispose()
+            .timeout(const Duration(seconds: 15), onTimeout: () {})
+            .catchError((_) {});
+        if (label == 'GPU' && e is TimeoutException) {
+          await _rememberGpuStall('start');
+        }
+        if (device == ComputeDevice.cpu) {
+          _loading = null;
+          rethrow;
         }
       }
-    } else {
-      final engine = LlamaEngine(LlamaBackend());
-      try {
-        await _setModel(engine, model, ComputeDevice.cpu, gpuLayers: 0);
-      } catch (_) {
-        _loading = null;
-        await engine.dispose().catchError((_) {});
-        rethrow;
-      }
-      _engine = engine;
-      _deviceLabel = 'CPU';
-      _logger.info('Translation model loaded',
-          tag: 'Translator', metadata: {'runtime': 'llama_cpp'});
     }
+  }
+
+  static const _gpuStallPrefPrefix = 'translationGpuStalled:';
+
+  Future<bool> _gpuStalled() async {
+    final v = await MyLibraryDb.instance
+        .getPreference('$_gpuStallPrefPrefix$_fileName')
+        .catchError((_) => null);
+    return v == 1;
+  }
+
+  Future<void> _rememberGpuStall(String when) async {
+    _logger.warning('GPU stalled; this model runs on the CPU from now on',
+        tag: 'Translator', metadata: {'when': when, 'model': _fileName});
+    await MyLibraryDb.instance
+        .savePreference('$_gpuStallPrefPrefix$_fileName', 1)
+        .catchError((_) {});
+  }
+
+  /// Forgets that the GPU stalled with [fileName] (the reader chose the
+  /// processor again in settings).
+  static Future<void> clearGpuStall(String fileName) => MyLibraryDb.instance
+      .savePreference('$_gpuStallPrefPrefix$fileName', 0)
+      .catchError((_) {});
+
+  /// The engine moves to the CPU for good (the GPU stalled mid-book).
+  Future<void> _switchToCpu() async {
+    final old = _engine;
+    _engine = null;
+    _deviceLabel = null;
+    // A stuck GPU may never finish tearing down; do not wait on it.
+    await old
+        ?.dispose()
+        .timeout(const Duration(seconds: 15), onTimeout: () {})
+        .catchError((_) {});
+    await _rememberGpuStall('generation');
+    await _loadLiteRt(cpu: true);
   }
 
   /// LiteRT-LM's caches (compiled GPU programs, CPU weight layouts) in the
@@ -203,15 +257,30 @@ class LocalLlmTranslator implements Translator {
     }
   }
 
-  /// One token of output, to start the engine (see [_load]). Speculative
-  /// decoding is dropped here when the model has no drafter for it.
-  Future<void> _warmUp(LlamaEngine engine) async {
-    Future<void> run(bool spec) => engine.create(
-          [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: 'Hi')],
-          params: GenerationParams(maxTokens: 1, temp: 0)
+  /// A short translation with a prompt of the real length, to start the
+  /// engine (see [_loadLiteRt]). Speculative decoding is dropped when the
+  /// model has no drafter for it, or when the engine stalls with it.
+  Future<void> _warmUp(LlamaEngine engine, {required bool gpu}) async {
+    final prompt = buildTranslationPrompt(
+      format: TranslationPromptFormat.general,
+      text: '「おはよう。今日もいい天気だね」',
+      targetLanguage: 'Korean',
+      sourceLanguage: 'Japanese',
+      lightNovelStyle: TranslationStyle.lightNovel,
+    );
+    // Generous: the first start of a large model on a GPU compiles for
+    // minutes. Past this it is stuck, not slow.
+    final limit =
+        gpu ? const Duration(minutes: 6) : const Duration(minutes: 10);
+    Future<void> run(bool spec) => _withTimeout(
+        engine,
+        engine.create(
+          [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)],
+          params: GenerationParams(maxTokens: 8, temp: 0)
               .copyWith(speculativeDecoding: spec),
           enableThinking: false,
-        ).collect();
+        ).collect(),
+        limit);
     if (_speculative) {
       try {
         await run(true);
@@ -220,9 +289,38 @@ class LocalLlmTranslator implements Translator {
         _speculative = false;
         _logger.info('Speculative decoding unavailable, turned off',
             tag: 'Translator', metadata: {'reason': '$e'});
+      } on TimeoutException {
+        _speculative = false;
+        _logger.warning(
+            'Start stalled with speculative decoding; retrying without',
+            tag: 'Translator');
       }
     }
     await run(false);
+  }
+
+  /// [work] on [engine], cancelled and failed with a [TimeoutException]
+  /// after [limit].
+  Future<T> _withTimeout<T>(
+      LlamaEngine engine, Future<T> work, Duration limit) async {
+    final timer = Completer<void>();
+    final t = Timer(limit, () {
+      if (!timer.isCompleted) timer.complete();
+    });
+    try {
+      return await Future.any<T>([
+        work,
+        timer.future.then<T>((_) async {
+          engine.cancelGeneration();
+          // Let the cancelled request end before the next one starts.
+          await work.timeout(const Duration(seconds: 10),
+              onTimeout: () => throw TimeoutException('stalled', limit));
+          throw TimeoutException('stalled', limit);
+        }),
+      ]);
+    } finally {
+      t.cancel();
+    }
   }
 
   /// Loads with the CPU thread cap; a runtime that refuses the setting
@@ -269,6 +367,18 @@ class LocalLlmTranslator implements Translator {
     return _scheduler.submit((token) => _translateNow(job, token), priority);
   }
 
+  /// How long one generation may take before it counts as stalled: far
+  /// more than a slow phone needs for [maxTokens] (and the first one after
+  /// a start, which may still be preparing).
+  Duration _limitFor(int maxTokens) {
+    final perToken = _deviceLabel == 'GPU' ? 0.35 : 0.8;
+    final seconds = 40 + maxTokens * perToken + (_firstGeneration ? 90 : 0);
+    return Duration(milliseconds: (seconds * 1000).round());
+  }
+
+  int _generationCount = 0;
+  bool _firstGeneration = true;
+
   Future<String> _generate(String prompt, int maxTokens,
       TranslationPromptFormat format, YieldToken token) async {
     // Dedicated translation models: their recommended repetition penalty
@@ -277,26 +387,62 @@ class LocalLlmTranslator implements Translator {
         ? GenerationParams(maxTokens: maxTokens, temp: 0)
         : GenerationParams(
             maxTokens: maxTokens, temp: 0, topK: 1, penalty: 1.05);
-    final speculative = runtime == TranslationRuntime.liteRtLm && _speculative;
-    Future<String> run(bool spec) async {
-      final completion = await _engine!.create(
-        [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)],
-        params: base.copyWith(speculativeDecoding: spec),
-        enableThinking: false,
-      ).collect();
-      // Stopped to make room: the partial text is not a translation.
-      token.check();
-      return cleanTranslation(completion.text);
-    }
-
-    if (!speculative) return run(false);
-    try {
-      return await run(true);
-    } on LlamaUnsupportedException catch (e) {
-      _speculative = false;
-      _logger.info('Speculative decoding unavailable, turned off',
-          tag: 'Translator', metadata: {'reason': '$e'});
-      return run(false);
+    for (var attempt = 0;; attempt++) {
+      final engine = _engine;
+      if (engine == null) throw StateError('Translator not loaded');
+      final spec = runtime == TranslationRuntime.liteRtLm && _speculative;
+      final watch = Stopwatch()..start();
+      try {
+        final completion = await _withTimeout(
+          engine,
+          engine.create(
+            [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)],
+            params: base.copyWith(speculativeDecoding: spec),
+            enableThinking: false,
+          ).collect(),
+          _limitFor(maxTokens),
+        );
+        _firstGeneration = false;
+        // Stopped to make room: the partial text is not a translation.
+        token.check();
+        final text = cleanTranslation(completion.text);
+        _generationCount++;
+        if (_generationCount <= 3 ||
+            watch.elapsed > const Duration(seconds: 20) ||
+            text.isEmpty) {
+          _logger.info('Generation', tag: 'Translator', metadata: {
+            'n': _generationCount,
+            'ms': watch.elapsedMilliseconds,
+            'device': _deviceLabel,
+            'speculative': spec,
+            'promptChars': prompt.length,
+            'maxTokens': maxTokens,
+            'rawChars': completion.text.length,
+            'outChars': text.length,
+          });
+        }
+        return text;
+      } on LlamaUnsupportedException catch (e) {
+        if (!spec) rethrow;
+        _speculative = false;
+        _logger.info('Speculative decoding unavailable, turned off',
+            tag: 'Translator', metadata: {'reason': '$e'});
+      } on TimeoutException {
+        if (token.yielded) rethrow;
+        _logger.warning('Generation stalled', tag: 'Translator', metadata: {
+          'ms': watch.elapsedMilliseconds,
+          'device': _deviceLabel,
+          'speculative': spec,
+          'attempt': attempt,
+        });
+        if (spec) {
+          _speculative = false;
+        } else if (_deviceLabel == 'GPU' && !cpuOnly) {
+          await _switchToCpu();
+        } else {
+          rethrow;
+        }
+      }
     }
   }
 

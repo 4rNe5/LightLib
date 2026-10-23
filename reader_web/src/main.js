@@ -259,6 +259,7 @@ function listenForTaps(doc) {
             return
         }
         post({ type: 'turn' })
+        if (pendingPaint.size) flushPaint()
         zone === 'left' ? state.view?.goLeft() : state.view?.goRight()
     })
 }
@@ -339,6 +340,26 @@ function paintTranslations(section) {
     }
 }
 
+// Every swapped paragraph lays the section out again; arrivals are
+// gathered and painted together, at most every 1.2 s, and right away on a
+// page turn (the page about to show should be translated).
+const pendingPaint = new Set()
+let paintTimer = null
+let lastPaint = 0
+function flushPaint() {
+    clearTimeout(paintTimer)
+    paintTimer = null
+    lastPaint = Date.now()
+    if (!state.showTranslations) { pendingPaint.clear(); return }
+    for (const s of pendingPaint) paintTranslations(s)
+    pendingPaint.clear()
+}
+function schedulePaint() {
+    if (paintTimer || !pendingPaint.size) return
+    const wait = Math.max(0, 1200 - (Date.now() - lastPaint))
+    paintTimer = setTimeout(() => requestAnimationFrame(flushPaint), wait)
+}
+
 const reader = {
     open,
     next: () => state.view?.next(),
@@ -352,14 +373,13 @@ const reader = {
     /** [entries]: {section, n, text}; shown at once while translating. */
     setTranslations(entries, lang) {
         if (lang) state.translationLang = lang
-        const touched = new Set()
         for (const { section, n, text } of entries) {
             let map = state.translations.get(section)
             if (!map) state.translations.set(section, map = new Map())
             map.set(n, text)
-            touched.add(section)
+            pendingPaint.add(section)
         }
-        if (state.showTranslations) for (const s of touched) paintTranslations(s)
+        schedulePaint()
     },
     showTranslations(on, lang) {
         if (lang) state.translationLang = lang

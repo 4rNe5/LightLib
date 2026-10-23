@@ -46,7 +46,7 @@ class _Request<T> {
 /// rest of the phone:
 /// - after a request the reader only *might* need soon ([TranslationPriority.ahead])
 ///   it rests for [aheadRest] times as long as that request took, so the
-///   GPU/CPU is busy at most 2/3 of the time while reading;
+///   GPU/CPU is busy little more than half the time while reading;
 /// - while the user scrolls or turns pages ([noteInteraction]) nothing new
 ///   starts until they stop ([interactionQuiet]), so the animation gets the
 ///   whole GPU; a paragraph on screen waits at most [maxVisibleHold];
@@ -59,7 +59,7 @@ class TranslationScheduler<T> {
   TranslationScheduler({
     this.onYield,
     DateTime Function()? clock,
-    this.aheadRest = 0.5,
+    this.aheadRest = 0.8,
     this.interactionQuiet = const Duration(milliseconds: 350),
     this.maxVisibleHold = const Duration(seconds: 1),
     this.tick = const Duration(milliseconds: 40),
