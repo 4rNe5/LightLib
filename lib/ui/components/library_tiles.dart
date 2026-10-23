@@ -13,6 +13,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/book_covers.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/local_book_import.dart'
     show isLocalImagePath, localImageFilePath;
@@ -153,16 +154,34 @@ class BookCover extends StatelessWidget {
       );
 
   @override
-  Widget build(BuildContext context) {
-    final url = book.book.thumbnail;
-    if (isLocalImagePath(url)) {
-      return Image.file(
-        File(localImageFilePath(url!)),
-        fit: fit,
-        width: double.infinity,
-        height: double.infinity,
-        errorBuilder: (_, __, ___) => _placeholder(),
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable: BookCovers.instance,
+        builder: (context, _) => _cover(context),
       );
+
+  Widget _cover(BuildContext context) {
+    // The cover read from the book file first (full quality), then the
+    // saved thumbnail.
+    final url =
+        BookCovers.instance.coverFor(book.book.id) ?? book.book.thumbnail;
+    if (isLocalImagePath(url)) {
+      // Decoded at the size it is shown, sharp on dense screens without
+      // holding every full-size picture in memory.
+      return LayoutBuilder(builder: (context, constraints) {
+        final dpr = MediaQuery.devicePixelRatioOf(context);
+        final w = constraints.maxWidth;
+        final cacheWidth =
+            w.isFinite && w > 0 ? (w * dpr).round().clamp(64, 1600) : null;
+        return Image.file(
+          File(localImageFilePath(url!)),
+          fit: fit,
+          width: double.infinity,
+          height: double.infinity,
+          cacheWidth: cacheWidth,
+          filterQuality: FilterQuality.medium,
+          errorBuilder: (_, __, ___) => _placeholder(),
+        );
+      });
     }
     if (url == null || url.isEmpty) return _placeholder();
     return CachedNetworkImage(

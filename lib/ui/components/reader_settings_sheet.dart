@@ -20,6 +20,7 @@ Future<void> showReaderSettingsSheet(
   required FontScript script,
   ReaderSettings? settings,
   ReaderFonts? fonts,
+  bool bookLayout = false,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -37,6 +38,7 @@ Future<void> showReaderSettingsSheet(
         script: script,
         settings: settings ?? ReaderSettings.instance,
         fonts: fonts ?? ReaderFonts.instance,
+        bookLayout: bookLayout,
       ),
     ),
   );
@@ -65,8 +67,12 @@ class ReaderSettingsSheet extends StatelessWidget {
     required this.script,
     required this.settings,
     required this.fonts,
+    this.bookLayout = false,
   });
 
+  /// The book renderer: pages follow the book's own direction (no manga
+  /// option), and the writing direction can be chosen.
+  final bool bookLayout;
   final FontScript script;
   final ReaderSettings settings;
   final ReaderFonts fonts;
@@ -160,18 +166,58 @@ class ReaderSettingsSheet extends StatelessWidget {
                 icon: const Icon(Icons.auto_stories_outlined),
                 label: Text(l10n.readerLayoutPagesShort),
               ),
-              ButtonSegment(
-                value: ReaderLayout.pagesRtl,
-                icon: Transform.flip(
-                    flipX: true,
-                    child: const Icon(Icons.auto_stories_outlined)),
-                label: Text(l10n.readerLayoutMangaShort),
-              ),
+              if (!bookLayout)
+                ButtonSegment(
+                  value: ReaderLayout.pagesRtl,
+                  icon: Transform.flip(
+                      flipX: true,
+                      child: const Icon(Icons.auto_stories_outlined)),
+                  label: Text(l10n.readerLayoutMangaShort),
+                ),
             ],
-            selected: {s.layout},
+            selected: {
+              bookLayout && s.layout == ReaderLayout.pagesRtl
+                  ? ReaderLayout.pagesLtr
+                  : s.layout
+            },
             onSelectionChanged: (v) => _set(s.copyWith(layout: v.first)),
           ),
         ),
+        if (bookLayout) ...[
+          const SizedBox(height: 16),
+          _Label(l10n.readerWriting),
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<ReaderWriting>(
+              key: const ValueKey('readerWritingSegments'),
+              showSelectedIcon: false,
+              style: SegmentedButton.styleFrom(
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+              ),
+              segments: [
+                ButtonSegment(
+                  value: ReaderWriting.auto,
+                  icon: const Icon(Icons.menu_book_outlined),
+                  label: Text(l10n.readerWritingAuto),
+                ),
+                ButtonSegment(
+                  value: ReaderWriting.horizontal,
+                  icon: const Icon(Icons.notes),
+                  label: Text(l10n.readerWritingHorizontal),
+                ),
+                ButtonSegment(
+                  value: ReaderWriting.vertical,
+                  icon: Transform.rotate(
+                      angle: 1.5708, child: const Icon(Icons.notes)),
+                  label: Text(l10n.readerWritingVertical),
+                ),
+              ],
+              selected: {s.writing},
+              onSelectionChanged: (v) => _set(s.copyWith(writing: v.first)),
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         _Group(children: [
           ListTile(
@@ -267,7 +313,8 @@ class ReaderSettingsSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final options = <FontChoice>[
       FontChoice.system,
-      for (final name in googleFontsByScript[script]!) FontChoice('google:$name'),
+      for (final name in googleFontsByScript[script]!)
+        FontChoice('google:$name'),
       for (final family in fonts.importedFamilies) FontChoice('file:$family'),
     ];
     const samples = {
@@ -281,7 +328,7 @@ class ReaderSettingsSheet extends StatelessWidget {
       useSafeArea: true,
       showDragHandle: true,
       backgroundColor:
-        modernSurfaceTheme(Theme.of(context)).colorScheme.surfaceContainerLow,
+          modernSurfaceTheme(Theme.of(context)).colorScheme.surfaceContainerLow,
       builder: (sheetContext) => ConstrainedBox(
         constraints: BoxConstraints(
             maxHeight: MediaQuery.sizeOf(sheetContext).height * 0.7),

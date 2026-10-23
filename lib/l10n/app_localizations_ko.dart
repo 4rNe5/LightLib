@@ -740,7 +740,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get translationOpenSettings => '설정';
 
   @override
-  String get translationLoadingModel => '번역 모델 불러오는 중…';
+  String get translationLoadingModel => '번역 모델 준비 중… (처음 한 번은 몇 분 걸릴 수 있어요)';
 
   @override
   String translationTranslating(int count, String device) {
@@ -840,7 +840,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get translationAutoLibraryHint =>
-      '앱이 열려 있는 동안 한 문단씩 천천히 번역합니다. 번역은 각 책 옆에 저장됩니다.';
+      '켜야만 동작합니다. 문단마다 쉬어 가며 천천히 번역하고, 책을 읽는 중이거나 기기가 뜨겁거나 배터리가 부족하면 기다립니다. 앱을 나가도 알림과 함께 계속됩니다. 번역은 각 책 옆에 저장됩니다.';
 
   @override
   String get translationBookDone => '완료';
@@ -1184,4 +1184,104 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get translationFaster => '더 빠름';
+
+  @override
+  String get translationChargingOnly => '충전 중에만';
+
+  @override
+  String get translationChargingOnlyHint => '충전기가 연결될 때까지 기다려 배터리를 쓰지 않습니다.';
+
+  @override
+  String get translationDevice => '연산 장치';
+
+  @override
+  String get translationDeviceAuto => 'GPU 우선 (더 빠름)';
+
+  @override
+  String get translationDeviceCpu => 'CPU (GPU는 화면용으로 비움)';
+
+  @override
+  String get translationDeviceHint =>
+      '번역 중 화면이 끊기면 CPU를 써 보세요. 느리지만 GPU를 화면 그리기에 남겨 둡니다.';
+
+  @override
+  String get translationNoticeChannel => '백그라운드 번역';
+
+  @override
+  String get translationNoticeTitle => '서재의 책 번역 중';
+
+  @override
+  String translationNoticeProgress(String title, int percent) {
+    return '$title · $percent%';
+  }
+
+  @override
+  String translationNoticeCount(int done, int total, int book, int books) {
+    return '$done/$total 문단 · $books권 중 $book번째';
+  }
+
+  @override
+  String get translationNoticeStop => '중지';
+
+  @override
+  String get translationNoticeDone => '서재 번역 완료';
+
+  @override
+  String translationNoticeDoneCount(int count) {
+    return '번역된 책 $count권';
+  }
+
+  @override
+  String get translationWaitReading => '책을 읽는 동안 대기 중';
+
+  @override
+  String get translationWaitAppClosed => '앱을 열면 이어서 번역';
+
+  @override
+  String get translationWaitWarm => '기기가 뜨거워 쉬는 중';
+
+  @override
+  String get translationWaitBattery => '배터리 부족, 충전 시 재개';
+
+  @override
+  String get translationWaitPowerSave => '절전 모드라 일시정지';
+
+  @override
+  String get translationWaitCharger => '충전기 연결 대기 중';
+
+  @override
+  String get readerWriting => '글 방향';
+
+  @override
+  String get readerWritingAuto => '책 설정';
+
+  @override
+  String get readerWritingHorizontal => '가로쓰기';
+
+  @override
+  String get readerWritingVertical => '세로쓰기';
+
+  @override
+  String get readerLoadFailed => '이 책을 표시하지 못했습니다.';
+
+  @override
+  String get readerOpenSimple => '기본 리더로 열기';
+
+  @override
+  String get ok => '확인';
+
+  @override
+  String get downloadPreparing => '준비 중…';
+
+  @override
+  String get downloadStartedTitle => '다운로드를 시작했어요';
+
+  @override
+  String get downloadStartedBody => '완료되면 내 서재에 추가돼요. 진행 상황은 알림에서 볼 수 있어요.';
+
+  @override
+  String get downloadFastBadge => '빠른 다운로드';
+
+  @override
+  String get downloadNotStartedTitle => '다운로드를 시작하지 못했어요';
 }

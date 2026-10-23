@@ -99,6 +99,16 @@ ReaderPalette paletteFor(ReaderThemeId theme, {required bool appDark}) {
   }
 }
 
+/// Which way the text runs: as the book says, or always across / down.
+enum ReaderWriting {
+  auto,
+  horizontal,
+  vertical;
+
+  static ReaderWriting fromName(String? name) => ReaderWriting.values
+      .firstWhere((w) => w.name == name, orElse: () => ReaderWriting.auto);
+}
+
 /// One immutable set of reader settings.
 @immutable
 class ReaderSettingsData {
@@ -119,6 +129,7 @@ class ReaderSettingsData {
   final bool boldText;
   final ReaderThemeId theme;
   final ReaderLayout layout;
+  final ReaderWriting writing;
 
   const ReaderSettingsData({
     this.fontSize = 17,
@@ -129,6 +140,7 @@ class ReaderSettingsData {
     this.boldText = false,
     this.theme = ReaderThemeId.original,
     this.layout = ReaderLayout.scroll,
+    this.writing = ReaderWriting.auto,
   });
 
   ReaderSettingsData copyWith({
@@ -140,6 +152,7 @@ class ReaderSettingsData {
     bool? boldText,
     ReaderThemeId? theme,
     ReaderLayout? layout,
+    ReaderWriting? writing,
   }) {
     return ReaderSettingsData(
       fontSize: (fontSize ?? this.fontSize).clamp(minFontSize, maxFontSize),
@@ -152,12 +165,13 @@ class ReaderSettingsData {
       boldText: boldText ?? this.boldText,
       theme: theme ?? this.theme,
       layout: layout ?? this.layout,
+      writing: writing ?? this.writing,
     );
   }
 
   /// Everything except the layout and theme back to defaults.
   ReaderSettingsData resetTypography() =>
-      ReaderSettingsData(theme: theme, layout: layout);
+      ReaderSettingsData(theme: theme, layout: layout, writing: writing);
 
   Map<String, Object> toJson() => {
         'fontSize': fontSize,
@@ -168,6 +182,7 @@ class ReaderSettingsData {
         'boldText': boldText,
         'theme': theme.name,
         'layout': layout.name,
+        'writing': writing.name,
       };
 
   static ReaderSettingsData fromJson(Map<String, dynamic> json) {
@@ -196,6 +211,7 @@ class ReaderSettingsData {
       boldText: b('boldText'),
       theme: ReaderThemeId.fromName(str('theme')),
       layout: ReaderLayout.fromName(str('layout')),
+      writing: ReaderWriting.fromName(str('writing')),
     );
   }
 

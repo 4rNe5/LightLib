@@ -16,6 +16,8 @@ import 'package:pdfrx/pdfrx.dart';
 
 // Project imports:
 import 'package:openlib/services/files.dart' show getFilePath;
+import 'package:openlib/services/translation/translator.dart'
+    show SharedTranslationEngine;
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 
 import 'package:openlib/state/state.dart'
@@ -82,6 +84,8 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
   @override
   void initState() {
     super.initState();
+    // Library books wait while a book is open.
+    SharedTranslationEngine.instance.enterReader();
     // A dead process must not eat the reading position: save on a timer
     // while reading, on background, and on leave (deactivate).
     _positionSaveTimer = Timer.periodic(_saveInterval, (_) => _savePosition());
@@ -89,6 +93,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
 
   @override
   void dispose() {
+    SharedTranslationEngine.instance.leaveReader();
     _positionSaveTimer?.cancel();
     super.dispose();
   }

@@ -97,6 +97,8 @@ dependencies:
   flutter_html: 3.0.0
   # Cover thumbnails for imported EPUBs (pinned by the override below).
   image: ^4.12.0
+  # Reading covers straight out of EPUB files (pinned by the override).
+  archive: ^4.5.2
 
 # permission_handler 13.x resolves permission_handler_android 14.0.0,
 # whose Kotlin-DSL build file needs the Android 37 platform and a
@@ -170,6 +172,8 @@ flutter:
   assets:
     - assets/
     - assets/icons/
+    # The book renderer page (built from reader_web/).
+    - assets/reader/
     - google_fonts/
     - pubspec.yaml
   # An image asset can refer to one or more resolution-specific "variants", see

@@ -41,6 +41,7 @@ import 'package:openlib/state/state.dart'
 import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/ui/components/reader_help_overlay.dart';
+import 'package:openlib/ui/book_reader_page.dart';
 
 Future<void> launchEpubViewer({
   required String fileName,
@@ -57,11 +58,23 @@ Future<void> launchEpubViewer({
           linuxByProcess: true, type: "application/epub+zip");
     } else {
       try {
-        // Use internal Epub Viewer for all platforms (epub_view supports desktop)
+        // The web-view renderer where the platform has one; the
+        // Flutter-drawn reader elsewhere, and as its fallback.
         if (context.mounted) {
           Navigator.push(context,
-              MaterialPageRoute(builder: (BuildContext context) {
-            return EpubViewerWidget(fileName: fileName);
+              MaterialPageRoute(builder: (BuildContext routeContext) {
+            if (!bookReaderSupported()) {
+              return EpubViewerWidget(fileName: fileName);
+            }
+            return BookReaderPage(
+              fileName: fileName,
+              filePath: path,
+              onFallback: () => Navigator.pushReplacement(
+                routeContext,
+                MaterialPageRoute(
+                    builder: (_) => EpubViewerWidget(fileName: fileName)),
+              ),
+            );
           }));
         }
       } catch (e) {
@@ -181,6 +194,8 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   @override
   void initState() {
     super.initState();
+    // Library books wait while a book is open.
+    SharedTranslationEngine.instance.enterReader();
     // Initialize with standard options
     _epubReaderController = EpubController(
       document: EpubDocument.openFile(File(widget.filePath)),
@@ -722,6 +737,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
 
   @override
   void dispose() {
+    SharedTranslationEngine.instance.leaveReader();
     _lifecycle?.dispose();
     _pagedRevisionTimer?.cancel();
     _settingsRelayoutTimer?.cancel();
@@ -874,76 +890,90 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
           Expanded(
             child: Stack(
               children: [
-                // SelectionArea lets readers select and copy text from the book.
-                // Buttons and links inside the Html still work: SelectionArea only
-                // captures drags that start on text.
-                SelectionArea(
-                  child: Focus(
-                    focusNode: _focusNode,
-                    autofocus: true,
-                    child: _layout.paged
-                        ? _buildPaged(context, palette)
-                        : positionAsync.when(
-                            data: (savedCfi) {
-                              return EpubView(
-                                controller: _epubReaderController,
-                                onDocumentLoaded: (document) {
-                                  final languages = document
-                                      .Schema?.Package?.Metadata?.Languages;
-                                  _bookLanguage =
-                                      (languages == null || languages.isEmpty)
-                                          ? null
-                                          : languages.first;
-                                  if (_bookTitle == null &&
-                                      document.Title != null) {
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) {
-                                      if (mounted) {
-                                        setState(() =>
-                                            _bookTitle = document.Title);
-                                      }
-                                    });
-                                  }
-                                  // Restore position if available
-                                  final jump = _pendingScrollIndex;
-                                  if (jump != null) {
-                                    _pendingScrollIndex = null;
-                                    WidgetsBinding.instance
-                                        .addPostFrameCallback((_) =>
-                                            _epubReaderController.jumpTo(
-                                                index: jump));
-                                  } else if (savedCfi != null &&
-                                      savedCfi.isNotEmpty) {
-                                    _epubReaderController.gotoEpubCfi(savedCfi);
-                                  }
-                                },
-                                onChapterChanged: (value) {
-                                  // Land the position on every chapter change: a
-                                  // process kill mid-book then loses at most one
-                                  // chapter, not the whole session.
-                                  final cfi =
-                                      _epubReaderController.generateEpubCfi();
-                                  saveEpubState(widget.fileName, cfi, ref);
-                                  // Reading aloud continues into the chapter the
-                                  // reader just landed on - whether the user swiped
-                                  // there or TTS advanced itself.
-                                  if (_tts != null &&
-                                      _ttsState != TtsState.idle &&
-                                      value?.chapter?.HtmlContent != null) {
-                                    _startTts();
-                                  }
-                                },
-                                builders: _buildersFor(palette),
-                              );
-                            },
-                            loading: () => Center(
-                              child: CircularProgressIndicator(
-                                color: Theme.of(context).colorScheme.secondary,
+                // Scrolling and page turns get the GPU to themselves:
+                // the translator starts nothing new until they stop.
+                NotificationListener<ScrollNotification>(
+                  onNotification: (n) {
+                    if (n is ScrollStartNotification ||
+                        n is ScrollUpdateNotification) {
+                      SharedTranslationEngine.instance.noteInteraction();
+                    }
+                    return false;
+                  },
+                  // SelectionArea lets readers select and copy text from
+                  // the book. Buttons and links inside the Html still
+                  // work: SelectionArea only captures drags that start on
+                  // text.
+                  child: SelectionArea(
+                    child: Focus(
+                      focusNode: _focusNode,
+                      autofocus: true,
+                      child: _layout.paged
+                          ? _buildPaged(context, palette)
+                          : positionAsync.when(
+                              data: (savedCfi) {
+                                return EpubView(
+                                  controller: _epubReaderController,
+                                  onDocumentLoaded: (document) {
+                                    final languages = document
+                                        .Schema?.Package?.Metadata?.Languages;
+                                    _bookLanguage =
+                                        (languages == null || languages.isEmpty)
+                                            ? null
+                                            : languages.first;
+                                    if (_bookTitle == null &&
+                                        document.Title != null) {
+                                      WidgetsBinding.instance
+                                          .addPostFrameCallback((_) {
+                                        if (mounted) {
+                                          setState(() =>
+                                              _bookTitle = document.Title);
+                                        }
+                                      });
+                                    }
+                                    // Restore position if available
+                                    final jump = _pendingScrollIndex;
+                                    if (jump != null) {
+                                      _pendingScrollIndex = null;
+                                      WidgetsBinding.instance
+                                          .addPostFrameCallback((_) =>
+                                              _epubReaderController.jumpTo(
+                                                  index: jump));
+                                    } else if (savedCfi != null &&
+                                        savedCfi.isNotEmpty) {
+                                      _epubReaderController
+                                          .gotoEpubCfi(savedCfi);
+                                    }
+                                  },
+                                  onChapterChanged: (value) {
+                                    // Land the position on every chapter change: a
+                                    // process kill mid-book then loses at most one
+                                    // chapter, not the whole session.
+                                    final cfi =
+                                        _epubReaderController.generateEpubCfi();
+                                    saveEpubState(widget.fileName, cfi, ref);
+                                    // Reading aloud continues into the chapter the
+                                    // reader just landed on - whether the user swiped
+                                    // there or TTS advanced itself.
+                                    if (_tts != null &&
+                                        _ttsState != TtsState.idle &&
+                                        value?.chapter?.HtmlContent != null) {
+                                      _startTts();
+                                    }
+                                  },
+                                  builders: _buildersFor(palette),
+                                );
+                              },
+                              loading: () => Center(
+                                child: CircularProgressIndicator(
+                                  color:
+                                      Theme.of(context).colorScheme.secondary,
+                                ),
                               ),
+                              error: (err, stack) => Center(
+                                  child: Text("Error loading book: $err")),
                             ),
-                            error: (err, stack) =>
-                                Center(child: Text("Error loading book: $err")),
-                          ),
+                    ),
                   ),
                 ),
                 if (_showTutorial)

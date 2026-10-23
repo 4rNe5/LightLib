@@ -1468,10 +1468,10 @@ abstract class AppLocalizations {
   /// **'Set up'**
   String get translationOpenSettings;
 
-  /// Reader status while the model loads
+  /// translationLoadingModel
   ///
   /// In en, this message translates to:
-  /// **'Loading translation model…'**
+  /// **'Preparing the translation model… (the first time can take a few minutes)'**
   String get translationLoadingModel;
 
   /// Reader status while translating
@@ -1642,10 +1642,10 @@ abstract class AppLocalizations {
   /// **'Translate library books in the background'**
   String get translationAutoLibrary;
 
-  /// Hint under the background translation switch
+  /// translationAutoLibraryHint
   ///
   /// In en, this message translates to:
-  /// **'Slowly, a paragraph at a time while the app is open. Translations are saved next to each book.'**
+  /// **'Off unless turned on. Slow and gentle: rests after every paragraph, waits while you read or when the phone is warm or low on battery, and keeps going with a notification after you leave the app. Translations are saved next to each book.'**
   String get translationAutoLibraryHint;
 
   /// A book is fully translated
@@ -2271,6 +2271,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'faster'**
   String get translationFaster;
+
+  /// translationChargingOnly
+  ///
+  /// In en, this message translates to:
+  /// **'Only while charging'**
+  String get translationChargingOnly;
+
+  /// translationChargingOnlyHint
+  ///
+  /// In en, this message translates to:
+  /// **'Waits for a charger, so the battery is never spent on it.'**
+  String get translationChargingOnlyHint;
+
+  /// translationDevice
+  ///
+  /// In en, this message translates to:
+  /// **'Processor'**
+  String get translationDevice;
+
+  /// translationDeviceAuto
+  ///
+  /// In en, this message translates to:
+  /// **'GPU first (faster)'**
+  String get translationDeviceAuto;
+
+  /// translationDeviceCpu
+  ///
+  /// In en, this message translates to:
+  /// **'CPU (GPU left for the screen)'**
+  String get translationDeviceCpu;
+
+  /// translationDeviceHint
+  ///
+  /// In en, this message translates to:
+  /// **'If scrolling stutters while translating, try the CPU: slower, but the screen keeps the GPU.'**
+  String get translationDeviceHint;
+
+  /// translationNoticeChannel
+  ///
+  /// In en, this message translates to:
+  /// **'Background translation'**
+  String get translationNoticeChannel;
+
+  /// translationNoticeTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Translating library books'**
+  String get translationNoticeTitle;
+
+  /// translationNoticeProgress
+  ///
+  /// In en, this message translates to:
+  /// **'{title} · {percent}%'**
+  String translationNoticeProgress(String title, int percent);
+
+  /// translationNoticeCount
+  ///
+  /// In en, this message translates to:
+  /// **'{done}/{total} paragraphs · book {book} of {books}'**
+  String translationNoticeCount(int done, int total, int book, int books);
+
+  /// translationNoticeStop
+  ///
+  /// In en, this message translates to:
+  /// **'Stop'**
+  String get translationNoticeStop;
+
+  /// translationNoticeDone
+  ///
+  /// In en, this message translates to:
+  /// **'Library translation finished'**
+  String get translationNoticeDone;
+
+  /// translationNoticeDoneCount
+  ///
+  /// In en, this message translates to:
+  /// **'Books translated: {count}'**
+  String translationNoticeDoneCount(int count);
+
+  /// translationWaitReading
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting while you read'**
+  String get translationWaitReading;
+
+  /// translationWaitAppClosed
+  ///
+  /// In en, this message translates to:
+  /// **'Continues when the app is open'**
+  String get translationWaitAppClosed;
+
+  /// translationWaitWarm
+  ///
+  /// In en, this message translates to:
+  /// **'Phone is warm, resting'**
+  String get translationWaitWarm;
+
+  /// translationWaitBattery
+  ///
+  /// In en, this message translates to:
+  /// **'Battery low, paused until charging'**
+  String get translationWaitBattery;
+
+  /// translationWaitPowerSave
+  ///
+  /// In en, this message translates to:
+  /// **'Battery saver is on, paused'**
+  String get translationWaitPowerSave;
+
+  /// translationWaitCharger
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting for a charger'**
+  String get translationWaitCharger;
+
+  /// readerWriting
+  ///
+  /// In en, this message translates to:
+  /// **'Text direction'**
+  String get readerWriting;
+
+  /// readerWritingAuto
+  ///
+  /// In en, this message translates to:
+  /// **'Book'**
+  String get readerWritingAuto;
+
+  /// readerWritingHorizontal
+  ///
+  /// In en, this message translates to:
+  /// **'Across'**
+  String get readerWritingHorizontal;
+
+  /// readerWritingVertical
+  ///
+  /// In en, this message translates to:
+  /// **'Vertical'**
+  String get readerWritingVertical;
+
+  /// readerLoadFailed
+  ///
+  /// In en, this message translates to:
+  /// **'This book could not be shown.'**
+  String get readerLoadFailed;
+
+  /// readerOpenSimple
+  ///
+  /// In en, this message translates to:
+  /// **'Open in the simple reader'**
+  String get readerOpenSimple;
+
+  /// ok
+  ///
+  /// In en, this message translates to:
+  /// **'OK'**
+  String get ok;
+
+  /// downloadPreparing
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing…'**
+  String get downloadPreparing;
+
+  /// downloadStartedTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Download started'**
+  String get downloadStartedTitle;
+
+  /// downloadStartedBody
+  ///
+  /// In en, this message translates to:
+  /// **'It joins your library when it finishes. The notification shows the progress.'**
+  String get downloadStartedBody;
+
+  /// downloadFastBadge
+  ///
+  /// In en, this message translates to:
+  /// **'Fast download'**
+  String get downloadFastBadge;
+
+  /// downloadNotStartedTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t start the download'**
+  String get downloadNotStartedTitle;
 }
 
 class _AppLocalizationsDelegate

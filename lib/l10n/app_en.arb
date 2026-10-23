@@ -1009,9 +1009,9 @@
   "@translationOpenSettings": {
     "description": "Snackbar action opening translation settings"
   },
-  "translationLoadingModel": "Loading translation model…",
+  "translationLoadingModel": "Preparing the translation model… (the first time can take a few minutes)",
   "@translationLoadingModel": {
-    "description": "Reader status while the model loads"
+    "description": "translationLoadingModel"
   },
   "translationTranslating": "Translating · {count} left · {device}",
   "@translationTranslating": {
@@ -1159,9 +1159,9 @@
   "@translationAutoLibrary": {
     "description": "Switch: translate library books in the background"
   },
-  "translationAutoLibraryHint": "Slowly, a paragraph at a time while the app is open. Translations are saved next to each book.",
+  "translationAutoLibraryHint": "Off unless turned on. Slow and gentle: rests after every paragraph, waits while you read or when the phone is warm or low on battery, and keeps going with a notification after you leave the app. Translations are saved next to each book.",
   "@translationAutoLibraryHint": {
-    "description": "Hint under the background translation switch"
+    "description": "translationAutoLibraryHint"
   },
   "translationBookDone": "Done",
   "@translationBookDone": {
@@ -1636,5 +1636,156 @@
   "translationFaster": "faster",
   "@translationFaster": {
     "description": "translationFaster"
+  },
+  "translationChargingOnly": "Only while charging",
+  "@translationChargingOnly": {
+    "description": "translationChargingOnly"
+  },
+  "translationChargingOnlyHint": "Waits for a charger, so the battery is never spent on it.",
+  "@translationChargingOnlyHint": {
+    "description": "translationChargingOnlyHint"
+  },
+  "translationDevice": "Processor",
+  "@translationDevice": {
+    "description": "translationDevice"
+  },
+  "translationDeviceAuto": "GPU first (faster)",
+  "@translationDeviceAuto": {
+    "description": "translationDeviceAuto"
+  },
+  "translationDeviceCpu": "CPU (GPU left for the screen)",
+  "@translationDeviceCpu": {
+    "description": "translationDeviceCpu"
+  },
+  "translationDeviceHint": "If scrolling stutters while translating, try the CPU: slower, but the screen keeps the GPU.",
+  "@translationDeviceHint": {
+    "description": "translationDeviceHint"
+  },
+  "translationNoticeChannel": "Background translation",
+  "@translationNoticeChannel": {
+    "description": "translationNoticeChannel"
+  },
+  "translationNoticeTitle": "Translating library books",
+  "@translationNoticeTitle": {
+    "description": "translationNoticeTitle"
+  },
+  "translationNoticeProgress": "{title} · {percent}%",
+  "@translationNoticeProgress": {
+    "description": "translationNoticeProgress",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "translationNoticeCount": "{done}/{total} paragraphs · book {book} of {books}",
+  "@translationNoticeCount": {
+    "description": "translationNoticeCount",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "book": {
+        "type": "int"
+      },
+      "books": {
+        "type": "int"
+      }
+    }
+  },
+  "translationNoticeStop": "Stop",
+  "@translationNoticeStop": {
+    "description": "translationNoticeStop"
+  },
+  "translationNoticeDone": "Library translation finished",
+  "@translationNoticeDone": {
+    "description": "translationNoticeDone"
+  },
+  "translationNoticeDoneCount": "Books translated: {count}",
+  "@translationNoticeDoneCount": {
+    "description": "translationNoticeDoneCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "translationWaitReading": "Waiting while you read",
+  "@translationWaitReading": {
+    "description": "translationWaitReading"
+  },
+  "translationWaitAppClosed": "Continues when the app is open",
+  "@translationWaitAppClosed": {
+    "description": "translationWaitAppClosed"
+  },
+  "translationWaitWarm": "Phone is warm, resting",
+  "@translationWaitWarm": {
+    "description": "translationWaitWarm"
+  },
+  "translationWaitBattery": "Battery low, paused until charging",
+  "@translationWaitBattery": {
+    "description": "translationWaitBattery"
+  },
+  "translationWaitPowerSave": "Battery saver is on, paused",
+  "@translationWaitPowerSave": {
+    "description": "translationWaitPowerSave"
+  },
+  "translationWaitCharger": "Waiting for a charger",
+  "@translationWaitCharger": {
+    "description": "translationWaitCharger"
+  },
+  "readerWriting": "Text direction",
+  "@readerWriting": {
+    "description": "readerWriting"
+  },
+  "readerWritingAuto": "Book",
+  "@readerWritingAuto": {
+    "description": "readerWritingAuto"
+  },
+  "readerWritingHorizontal": "Across",
+  "@readerWritingHorizontal": {
+    "description": "readerWritingHorizontal"
+  },
+  "readerWritingVertical": "Vertical",
+  "@readerWritingVertical": {
+    "description": "readerWritingVertical"
+  },
+  "readerLoadFailed": "This book could not be shown.",
+  "@readerLoadFailed": {
+    "description": "readerLoadFailed"
+  },
+  "readerOpenSimple": "Open in the simple reader",
+  "@readerOpenSimple": {
+    "description": "readerOpenSimple"
+  },
+  "ok": "OK",
+  "@ok": {
+    "description": "ok"
+  },
+  "downloadPreparing": "Preparing…",
+  "@downloadPreparing": {
+    "description": "downloadPreparing"
+  },
+  "downloadStartedTitle": "Download started",
+  "@downloadStartedTitle": {
+    "description": "downloadStartedTitle"
+  },
+  "downloadStartedBody": "It joins your library when it finishes. The notification shows the progress.",
+  "@downloadStartedBody": {
+    "description": "downloadStartedBody"
+  },
+  "downloadFastBadge": "Fast download",
+  "@downloadFastBadge": {
+    "description": "downloadFastBadge"
+  },
+  "downloadNotStartedTitle": "Couldn't start the download",
+  "@downloadNotStartedTitle": {
+    "description": "downloadNotStartedTitle"
   }
 }

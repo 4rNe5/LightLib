@@ -208,7 +208,10 @@ class ReaderTranslationController extends ChangeNotifier {
               sourceLanguage: sourceLanguage,
               context: precedingContext(entry.key, textAt),
               following: textAt == null ? null : textAt(entry.key + 1),
-              urgent: true);
+              // On screen first; what comes next is paced.
+              priority: entry.key <= (_lastVisibleEnd ?? _lastIndex)
+                  ? TranslationPriority.visible
+                  : TranslationPriority.ahead);
           if (_disposed) return;
           if (out.isEmpty) {
             _failOnce(entry.key, text);

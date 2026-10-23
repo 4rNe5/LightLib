@@ -1,5 +1,6 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 
 // Package imports:
@@ -13,6 +14,7 @@ import 'package:openlib/services/download_manager.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/share_book.dart';
 import 'package:openlib/ui/components/book_info_widget.dart';
+import 'package:openlib/ui/components/download_outcome_sheet.dart';
 import 'package:openlib/ui/components/error_widget.dart';
 import 'package:openlib/ui/components/file_buttons_widget.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
@@ -122,6 +124,74 @@ class ActionButtonWidget extends ConsumerStatefulWidget {
 }
 
 class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
+  bool _adding = false;
+
+  /// Runs [work] with the button showing its spinner, and a light tap of
+  /// the haptics so the press is felt before anything is ready.
+  Future<void> _busy(Future<void> Function() work) async {
+    HapticFeedback.selectionClick();
+    setState(() => _adding = true);
+    try {
+      await work();
+    } finally {
+      if (mounted) setState(() => _adding = false);
+    }
+  }
+
+  Widget _addLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 180),
+      child: _adding
+          ? Row(
+              key: const ValueKey('adding'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                Text(l10n.downloadPreparing),
+              ],
+            )
+          : Row(
+              key: const ValueKey('add'),
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.library_add_outlined, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.addToMyLibrary),
+              ],
+            ),
+    );
+  }
+
+  void _showStarted({required bool fast}) {
+    final l10n = AppLocalizations.of(context);
+    showDownloadOutcomeSheet(
+      context,
+      success: true,
+      title: l10n.downloadStartedTitle,
+      bookTitle: widget.data.title,
+      message: l10n.downloadStartedBody,
+      badge: fast ? l10n.downloadFastBadge : null,
+    );
+  }
+
+  void _showNotStarted(String reason) {
+    final l10n = AppLocalizations.of(context);
+    showDownloadOutcomeSheet(
+      context,
+      success: false,
+      title: l10n.downloadNotStartedTitle,
+      bookTitle: widget.data.title,
+      message: reason,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isBookExist = ref.watch(checkIdExists(widget.data.md5));
@@ -153,19 +223,29 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                // Button for "Add To My Library" (background download)
-                TextButton(
-                  style: TextButton.styleFrom(
+                // Button for "Add To My Library" (background download):
+                // answers the tap at once and shows a spinner until the
+                // download is under way or the reason it is not.
+                FilledButton(
+                  key: const ValueKey('addToLibrary'),
+                  style: FilledButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.secondary,
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    foregroundColor: Colors.white,
+                    disabledBackgroundColor: Theme.of(context)
+                        .colorScheme
+                        .secondary
+                        .withValues(alpha: 0.75),
+                    disabledForegroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 18, vertical: 10),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
                     textStyle: const TextStyle(
                       fontSize: 13,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
                     ),
                   ),
-                  onPressed: () async {
+                  onPressed: _adding ? null : () => _busy(() async {
                     String? downloadUrl = widget.data.mirror;
                     bool isFastDownload = widget.data.isFastDownload;
 
@@ -299,13 +379,7 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                           await downloadManager.addDownload(task);
 
                           if (context.mounted) {
-                            final message = isFastDownload
-                                ? 'Fast download started in background 🚀'
-                                : 'Download started in background';
-                            showSnackBar(
-                              context: context,
-                              message: message,
-                            );
+                            _showStarted(fast: isFastDownload);
                           }
                           ref.invalidate(myLibraryProvider);
                         }
@@ -354,13 +428,7 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                         );
 
                         if (context.mounted) {
-                          final message = isFastDownload
-                              ? 'Fast download started in background 🚀'
-                              : 'Download started in background';
-                          showSnackBar(
-                            context: context,
-                            message: message,
-                          );
+                          _showStarted(fast: isFastDownload);
                           ref.invalidate(myLibraryProvider);
                         }
                       }
@@ -368,14 +436,12 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                       if (context.mounted) {
                         // A mirror's own reason (daily limit, sign-in
                         // required) beats the generic "no mirrors".
-                        showSnackBar(
-                            context: context,
-                            message: target.refusal ??
-                                AppLocalizations.of(context).noMirrors);
+                        _showNotStarted(target.refusal ??
+                            AppLocalizations.of(context).noMirrors);
                       }
                     }
-                  },
-                  child: Text(AppLocalizations.of(context).addToMyLibrary),
+                  }),
+                  child: _addLabel(context),
                 ),
                 // Button for "Manual Download" (opens webview for captcha) - only shown if setting is enabled
                 if (showManualButton)
@@ -426,19 +492,12 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
 
                           await downloadManager.addDownload(task);
 
-                          if (context.mounted) {
-                            showSnackBar(
-                              context: context,
-                              message: AppLocalizations.of(context)
-                                  .downloadStartedBackground,
-                            );
-                          }
+                          if (context.mounted) _showStarted(fast: false);
                           ref.invalidate(myLibraryProvider);
                         }
                       } else {
-                        showSnackBar(
-                            context: context,
-                            message: AppLocalizations.of(context).noMirrors);
+                        _showNotStarted(
+                            AppLocalizations.of(context).noMirrors);
                       }
                     },
                     child: Text(

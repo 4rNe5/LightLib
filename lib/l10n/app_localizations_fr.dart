@@ -768,7 +768,8 @@ class AppLocalizationsFr extends AppLocalizations {
   String get translationOpenSettings => 'Configurer';
 
   @override
-  String get translationLoadingModel => 'Chargement du modèle de traduction…';
+  String get translationLoadingModel =>
+      'Préparation du modèle de traduction… (la première fois peut prendre quelques minutes)';
 
   @override
   String translationTranslating(int count, String device) {
@@ -876,7 +877,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get translationAutoLibraryHint =>
-      'Lentement, paragraphe par paragraphe tant que l\'app est ouverte. Les traductions sont enregistrées à côté de chaque livre.';
+      'Désactivé tant que vous ne l\'activez pas. Lent et doux : pause après chaque paragraphe, attend pendant la lecture ou si le téléphone chauffe ou manque de batterie, et continue avec une notification quand vous quittez l\'app. Les traductions sont enregistrées à côté de chaque livre.';
 
   @override
   String get translationBookDone => 'Terminé';
@@ -1243,4 +1244,110 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get translationFaster => 'plus rapide';
+
+  @override
+  String get translationChargingOnly => 'Uniquement en charge';
+
+  @override
+  String get translationChargingOnlyHint =>
+      'Attend un chargeur, pour ne jamais y consacrer la batterie.';
+
+  @override
+  String get translationDevice => 'Processeur';
+
+  @override
+  String get translationDeviceAuto => 'GPU d\'abord (plus rapide)';
+
+  @override
+  String get translationDeviceCpu => 'CPU (GPU laissé à l\'écran)';
+
+  @override
+  String get translationDeviceHint =>
+      'Si le défilement saccade pendant la traduction, essayez le CPU : plus lent, mais l\'écran garde le GPU.';
+
+  @override
+  String get translationNoticeChannel => 'Traduction en arrière-plan';
+
+  @override
+  String get translationNoticeTitle =>
+      'Traduction des livres de la bibliothèque';
+
+  @override
+  String translationNoticeProgress(String title, int percent) {
+    return '$title · $percent %';
+  }
+
+  @override
+  String translationNoticeCount(int done, int total, int book, int books) {
+    return '$done/$total paragraphes · livre $book sur $books';
+  }
+
+  @override
+  String get translationNoticeStop => 'Arrêter';
+
+  @override
+  String get translationNoticeDone => 'Traduction de la bibliothèque terminée';
+
+  @override
+  String translationNoticeDoneCount(int count) {
+    return 'Livres traduits : $count';
+  }
+
+  @override
+  String get translationWaitReading => 'En attente pendant la lecture';
+
+  @override
+  String get translationWaitAppClosed => 'Reprend quand l\'app est ouverte';
+
+  @override
+  String get translationWaitWarm => 'Téléphone chaud, en pause';
+
+  @override
+  String get translationWaitBattery =>
+      'Batterie faible, en pause jusqu\'à la charge';
+
+  @override
+  String get translationWaitPowerSave =>
+      'Économiseur de batterie activé, en pause';
+
+  @override
+  String get translationWaitCharger => 'En attente d\'un chargeur';
+
+  @override
+  String get readerWriting => 'Sens du texte';
+
+  @override
+  String get readerWritingAuto => 'Livre';
+
+  @override
+  String get readerWritingHorizontal => 'Horizontal';
+
+  @override
+  String get readerWritingVertical => 'Vertical';
+
+  @override
+  String get readerLoadFailed => 'Impossible d\'afficher ce livre.';
+
+  @override
+  String get readerOpenSimple => 'Ouvrir dans le lecteur simple';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get downloadPreparing => 'Préparation…';
+
+  @override
+  String get downloadStartedTitle => 'Téléchargement lancé';
+
+  @override
+  String get downloadStartedBody =>
+      'Il rejoindra votre bibliothèque une fois terminé. La notification affiche la progression.';
+
+  @override
+  String get downloadFastBadge => 'Téléchargement rapide';
+
+  @override
+  String get downloadNotStartedTitle =>
+      'Impossible de lancer le téléchargement';
 }

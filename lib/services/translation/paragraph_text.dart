@@ -1,7 +1,14 @@
 // Turning EPUB paragraphs into translatable text and back into HTML.
 
+// Dart imports:
+import 'dart:typed_data';
+
 // Package imports:
 import 'package:html/dom.dart' as dom;
+import 'package:html/parser.dart' as html_parser;
+
+// Project imports:
+import 'package:openlib/services/epub_package.dart';
 
 /// Tags whose content is never part of the readable text: ruby
 /// annotations (furigana would otherwise be translated twice, as
@@ -192,4 +199,37 @@ String _restoreWrapping(String text, String source) {
   final ends = RegExp(r'["”’)）」』]$').hasMatch(text);
   if (starts || ends) return text;
   return '${wrapped.$1}$text${wrapped.$2}';
+}
+
+/// Block elements the book reader treats as paragraphs (its
+/// reader_web/src/paragraphs.js): the innermost ones with text.
+const readerParagraphBlocks =
+    'p,h1,h2,h3,h4,h5,h6,li,blockquote,dt,dd,figcaption,td,th,div,caption';
+
+/// The paragraphs of one XHTML document as the book reader splits them:
+/// leaf blocks with letters, pictures skipped, text as [paragraphText].
+List<String> readerParagraphs(String xhtml) {
+  final doc = html_parser.parse(xhtml);
+  final body = doc.body;
+  if (body == null) return const [];
+  final out = <String>[];
+  for (final el in body.querySelectorAll(readerParagraphBlocks)) {
+    if (el.querySelector(readerParagraphBlocks) != null) continue;
+    if (el.querySelector('img, svg, image, video') != null) continue;
+    final text = paragraphText(el);
+    if (text.isEmpty || !shouldTranslate(text)) continue;
+    out.add(text);
+  }
+  return out;
+}
+
+/// Every paragraph of the EPUB in [bytes], in reading order, split like
+/// the book reader splits them (so both share one translation cache).
+/// Null when the file is not an EPUB this can read.
+List<String>? epubReaderParagraphs(Uint8List bytes) {
+  final book = EpubPackage.open(bytes);
+  if (book == null) return null;
+  return [
+    for (final path in book.spine) ...readerParagraphs(book.text(path) ?? ''),
+  ];
 }

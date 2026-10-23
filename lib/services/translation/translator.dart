@@ -2,17 +2,28 @@
 
 // Dart imports:
 import 'dart:async';
-import 'dart:collection';
 import 'dart:io';
+
+// Flutter imports:
+import 'package:flutter/foundation.dart';
 
 // Package imports:
 import 'package:llamadart/llamadart.dart';
+import 'package:path_provider/path_provider.dart';
 
 // Project imports:
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/services/translation/translation_scheduler.dart';
+
+export 'package:openlib/services/translation/translation_scheduler.dart'
+    show TranslationPriority;
+
+/// Preference: where LiteRT-LM models run - `auto` (GPU, then CPU) or
+/// `cpu` (keeps the GPU free for drawing the screen).
+const translationDevicePref = 'translationDevice';
 
 /// Translates one piece of text at a time.
 abstract class Translator {
@@ -23,16 +34,16 @@ abstract class Translator {
   Future<void> load();
 
   /// [context] is the text just before [text], used for consistency and
-  /// not translated. [urgent] requests (the page being read) run before
-  /// queued background work.
-  /// [following] is the text just after, for formats trained with it.
+  /// not translated. [following] is the text just after, for formats
+  /// trained with it. [priority] orders the requests: the page on screen,
+  /// then what the reader reaches next, then library books.
   Future<String> translate(
     String text, {
     required String targetLanguage,
     String? sourceLanguage,
     String? context,
     String? following,
-    bool urgent = false,
+    TranslationPriority priority = TranslationPriority.background,
   });
 
   Future<void> dispose();
@@ -46,24 +57,37 @@ class _Job {
   final String? sourceLanguage;
   final String? context;
   final String? following;
-  final Completer<String> result = Completer<String>();
 }
 
 /// [Translator] on llamadart: LiteRT-LM for `.litertlm` files (GPU first,
 /// then CPU), llama.cpp on the CPU for `.gguf` files.
 ///
-/// One generation runs at a time. Urgent requests jump ahead of the
-/// background queue (but never interrupt a generation in progress).
+/// One generation runs at a time, ordered and paced by a
+/// [TranslationScheduler]: the page on screen first, the rest with pauses
+/// that keep the phone responsive, a library book stopped as soon as the
+/// reader needs the engine.
 class LocalLlmTranslator implements Translator {
   LocalLlmTranslator({
     required this.modelPath,
     required this.runtime,
     this.contextSize = 2048,
-  });
+    this.cpuOnly = false,
+    int? threads,
+  }) : threads = threads ?? recommendedThreads() {
+    _scheduler = TranslationScheduler<String>(
+        onYield: () => _engine?.cancelGeneration());
+  }
 
   final String modelPath;
   final TranslationRuntime runtime;
   final int contextSize;
+
+  /// LiteRT-LM on the CPU only, never the GPU.
+  final bool cpuOnly;
+
+  /// CPU threads (0: the runtime decides).
+  final int threads;
+  late final TranslationScheduler<String> _scheduler;
 
   String get _fileName => modelPath.split(RegExp(r'[\\/]')).last;
 
@@ -83,14 +107,17 @@ class LocalLlmTranslator implements Translator {
   String? _deviceLabel;
   bool _disposed = false;
 
-  final Queue<_Job> _urgent = Queue();
-  final Queue<_Job> _background = Queue();
-  bool _working = false;
-
   @override
   String? get deviceLabel => _deviceLabel;
 
-  bool get isIdle => !_working && _urgent.isEmpty && _background.isEmpty;
+  bool get isIdle => _scheduler.isIdle;
+
+  /// The user is scrolling or turning pages: nothing new starts until
+  /// they stop, and a library book in progress steps aside.
+  void noteInteraction() => _scheduler.noteInteraction();
+
+  /// Stops a library book's paragraph in progress (the reader opened).
+  void yieldBackground() => _scheduler.yieldBackground();
 
   @override
   Future<void> load() => _loading ??= _load();
@@ -101,11 +128,31 @@ class LocalLlmTranslator implements Translator {
     if (runtime == TranslationRuntime.liteRtLm) {
       // auto = GPU on Android. A GPU that cannot run the model (driver,
       // memory) falls back to LiteRT-LM's CPU path with the same file.
-      for (final device in [ComputeDevice.auto, ComputeDevice.cpu]) {
+      final devices = cpuOnly
+          ? [ComputeDevice.cpu]
+          : [ComputeDevice.auto, ComputeDevice.cpu];
+      final cacheDir = await _liteRtCacheDir();
+      for (final device in devices) {
         final engine = LlamaEngine(LlamaBackend());
+        final watch = Stopwatch()..start();
         try {
-          await engine.setModel(model,
-              params: ModelParams(contextSize: contextSize, device: device));
+          await _setModel(engine, model, device, cacheDir: cacheDir);
+          final loadedMs = watch.elapsedMilliseconds;
+          // LiteRT-LM starts its engine on the first generation; a GPU
+          // that cannot run the model fails only there. Start it now, so
+          // a failure falls back to the CPU here instead of failing
+          // every paragraph, and "loading" lasts until it can translate
+          // (the first start of a large model compiles GPU programs and
+          // can take minutes; later starts read them from the cache).
+          await _warmUp(engine);
+          _logger
+              .info('Translation engine started', tag: 'Translator', metadata: {
+            'device': device.name,
+            'loadMs': loadedMs,
+            'startMs': watch.elapsedMilliseconds - loadedMs,
+            'speculative': _speculative,
+            'threads': threads,
+          });
           _engine = engine;
           // auto means the GPU on Android, iOS and macOS only.
           _deviceLabel = device == ComputeDevice.auto &&
@@ -129,12 +176,7 @@ class LocalLlmTranslator implements Translator {
     } else {
       final engine = LlamaEngine(LlamaBackend());
       try {
-        await engine.setModel(model,
-            params: ModelParams(
-              contextSize: contextSize,
-              device: ComputeDevice.cpu,
-              gpuLayers: 0,
-            ));
+        await _setModel(engine, model, ComputeDevice.cpu, gpuLayers: 0);
       } catch (_) {
         _loading = null;
         await engine.dispose().catchError((_) {});
@@ -147,6 +189,72 @@ class LocalLlmTranslator implements Translator {
     }
   }
 
+  /// LiteRT-LM's caches (compiled GPU programs, CPU weight layouts) in the
+  /// app's support directory, which Android does not clear like the
+  /// temporary one: a large model is then prepared only once.
+  static Future<String?> _liteRtCacheDir() async {
+    try {
+      final dir = Directory(
+          '${(await getApplicationSupportDirectory()).path}/litert_cache');
+      if (!await dir.exists()) await dir.create(recursive: true);
+      return dir.path;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// One token of output, to start the engine (see [_load]). Speculative
+  /// decoding is dropped here when the model has no drafter for it.
+  Future<void> _warmUp(LlamaEngine engine) async {
+    Future<void> run(bool spec) => engine.create(
+          [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: 'Hi')],
+          params: GenerationParams(maxTokens: 1, temp: 0)
+              .copyWith(speculativeDecoding: spec),
+          enableThinking: false,
+        ).collect();
+    if (_speculative) {
+      try {
+        await run(true);
+        return;
+      } on LlamaUnsupportedException catch (e) {
+        _speculative = false;
+        _logger.info('Speculative decoding unavailable, turned off',
+            tag: 'Translator', metadata: {'reason': '$e'});
+      }
+    }
+    await run(false);
+  }
+
+  /// Loads with the CPU thread cap; a runtime that refuses the setting
+  /// loads with its own.
+  Future<void> _setModel(
+      LlamaEngine engine, LlamaModel model, ComputeDevice device,
+      {int? gpuLayers, String? cacheDir}) async {
+    ModelParams params(int n) => gpuLayers == null
+        ? ModelParams(
+            contextSize: contextSize,
+            device: device,
+            numberOfThreads: n,
+            liteRtLmCacheDir: cacheDir,
+            // Room for E4B's compiled GPU programs next to another model's;
+            // the 1 GiB default could prune them before every start.
+            liteRtLmMaxProgramCacheBytes: 3 << 30)
+        : ModelParams(
+            contextSize: contextSize,
+            device: device,
+            gpuLayers: gpuLayers,
+            numberOfThreads: n,
+            numberOfThreadsBatch: n);
+    if (threads <= 0) return engine.setModel(model, params: params(0));
+    try {
+      await engine.setModel(model, params: params(threads));
+    } catch (e) {
+      _logger.info('Thread count not accepted, runtime default used',
+          tag: 'Translator', metadata: {'reason': '$e'});
+      await engine.setModel(model, params: params(0));
+    }
+  }
+
   @override
   Future<String> translate(
     String text, {
@@ -154,36 +262,15 @@ class LocalLlmTranslator implements Translator {
     String? sourceLanguage,
     String? context,
     String? following,
-    bool urgent = false,
+    TranslationPriority priority = TranslationPriority.background,
   }) {
     if (_disposed) return Future.error(StateError('Translator disposed'));
     final job = _Job(text, targetLanguage, sourceLanguage, context, following);
-    (urgent ? _urgent : _background).add(job);
-    _drain();
-    return job.result.future;
+    return _scheduler.submit((token) => _translateNow(job, token), priority);
   }
 
-  Future<void> _drain() async {
-    if (_working) return;
-    _working = true;
-    try {
-      while (!_disposed && (_urgent.isNotEmpty || _background.isNotEmpty)) {
-        final job = _urgent.isNotEmpty
-            ? _urgent.removeFirst()
-            : _background.removeFirst();
-        try {
-          job.result.complete(await _translateNow(job));
-        } catch (e, st) {
-          job.result.completeError(e, st);
-        }
-      }
-    } finally {
-      _working = false;
-    }
-  }
-
-  Future<String> _generate(
-      String prompt, int maxTokens, TranslationPromptFormat format) async {
+  Future<String> _generate(String prompt, int maxTokens,
+      TranslationPromptFormat format, YieldToken token) async {
     // Dedicated translation models: their recommended repetition penalty
     // (1.05); the general format keeps llamadart's default it was tuned on.
     final base = format == TranslationPromptFormat.general
@@ -197,6 +284,8 @@ class LocalLlmTranslator implements Translator {
         params: base.copyWith(speculativeDecoding: spec),
         enableThinking: false,
       ).collect();
+      // Stopped to make room: the partial text is not a translation.
+      token.check();
       return cleanTranslation(completion.text);
     }
 
@@ -211,8 +300,9 @@ class LocalLlmTranslator implements Translator {
     }
   }
 
-  Future<String> _translateNow(_Job job) async {
+  Future<String> _translateNow(_Job job, YieldToken token) async {
     await load();
+    token.check();
     // Small models drop the second line of a two-line paragraph; each
     // line goes on its own and the breaks are put back.
     final lines = job.text.split('\n');
@@ -229,16 +319,19 @@ class LocalLlmTranslator implements Translator {
         ].join('\n');
         final after = i + 1 < kept.length ? kept[i + 1] : job.following;
         out.add(shouldTranslate(line)
-            ? await _translateLine(_Job(line, job.targetLanguage,
-                job.sourceLanguage, before.isEmpty ? null : before, after))
+            ? await _translateLine(
+                _Job(line, job.targetLanguage, job.sourceLanguage,
+                    before.isEmpty ? null : before, after),
+                token)
             : line);
+        token.check();
       }
       return out.join('\n');
     }
-    return _translateLine(job);
+    return _translateLine(job, token);
   }
 
-  Future<String> _translateLine(_Job job) async {
+  Future<String> _translateLine(_Job job, YieldToken token) async {
     var format = promptFormat;
     // A one-language model asked for another language: the general
     // instructions at least name the target.
@@ -257,7 +350,7 @@ class LocalLlmTranslator implements Translator {
     // Translations run about as long as the source; leave room for
     // scripts that need more tokens per character.
     final maxTokens = (job.text.length * 3 + 32).clamp(64, 1024);
-    var answer = await _generate(prompt, maxTokens, format);
+    var answer = await _generate(prompt, maxTokens, format, token);
     if (format == TranslationPromptFormat.jaKoDialogue) {
       // Trained to answer with one line; anything after it is noise.
       answer = answer
@@ -274,7 +367,10 @@ class LocalLlmTranslator implements Translator {
         !_disposed &&
         format == TranslationPromptFormat.general) {
       final again = await _generate(
-          retryPrompt(prompt, answer, job.targetLanguage), maxTokens, format);
+          retryPrompt(prompt, answer, job.targetLanguage),
+          maxTokens,
+          format,
+          token);
       if (again.isNotEmpty &&
           leftoverSourceScript(again, job.targetLanguage).length <
               leftover.length) {
@@ -287,11 +383,7 @@ class LocalLlmTranslator implements Translator {
   @override
   Future<void> dispose() async {
     _disposed = true;
-    for (final job in [..._urgent, ..._background]) {
-      job.result.completeError(StateError('Translator disposed'));
-    }
-    _urgent.clear();
-    _background.clear();
+    _scheduler.close();
     final engine = _engine;
     _engine = null;
     _loading = null;
@@ -308,10 +400,27 @@ class SharedTranslationEngine {
 
   static const idleRelease = Duration(minutes: 3);
 
+  /// LiteRT-LM models on the CPU only ([translationDevicePref]).
+  static bool cpuOnly = false;
+
   LocalLlmTranslator? _translator;
   String? _modelFile;
+  bool _cpuOnly = false;
   Timer? _idleTimer;
   int _users = 0;
+
+  /// How many readers are open; library books wait while one is, so the
+  /// page turns stay smooth.
+  final ValueNotifier<int> readers = ValueNotifier(0);
+
+  void enterReader() {
+    readers.value++;
+    _translator?.yieldBackground();
+  }
+
+  void leaveReader() {
+    if (readers.value > 0) readers.value--;
+  }
 
   /// The translator for the active model, created (not yet loaded) on
   /// first use. Null when no model is installed.
@@ -319,11 +428,14 @@ class SharedTranslationEngine {
     final model = await TranslationModelStore.instance.activeModel();
     if (model == null) return null;
     _idleTimer?.cancel();
-    if (_translator == null || _modelFile != model.fileName) {
+    if (_translator == null ||
+        _modelFile != model.fileName ||
+        _cpuOnly != cpuOnly) {
       final old = _translator;
-      _translator =
-          LocalLlmTranslator(modelPath: model.path, runtime: model.runtime);
+      _translator = LocalLlmTranslator(
+          modelPath: model.path, runtime: model.runtime, cpuOnly: cpuOnly);
       _modelFile = model.fileName;
+      _cpuOnly = cpuOnly;
       await old?.dispose();
     }
     _users++;
@@ -331,6 +443,10 @@ class SharedTranslationEngine {
   }
 
   String? get activeModelFile => _modelFile;
+
+  /// The user is scrolling or turning pages (see
+  /// [LocalLlmTranslator.noteInteraction]).
+  void noteInteraction() => _translator?.noteInteraction();
 
   void release() {
     if (_users > 0) _users--;
@@ -358,11 +474,13 @@ class SharedTranslationEngine {
   }
 }
 
-/// A [Translator] handle on the shared engine that marks every request
-/// urgent - what the reader uses for the page on screen. Disposing it only
-/// releases the handle.
+/// The reader's handle on the shared engine: its requests are never
+/// background work, and a library book's paragraph in progress steps
+/// aside at once. Disposing it only releases the handle.
 class UrgentTranslator implements Translator {
-  UrgentTranslator(this._inner);
+  UrgentTranslator(this._inner) {
+    _inner.yieldBackground();
+  }
   final LocalLlmTranslator _inner;
   bool _released = false;
 
@@ -378,13 +496,15 @@ class UrgentTranslator implements Translator {
           String? sourceLanguage,
           String? context,
           String? following,
-          bool urgent = true}) =>
+          TranslationPriority priority = TranslationPriority.visible}) =>
       _inner.translate(text,
           targetLanguage: targetLanguage,
           sourceLanguage: sourceLanguage,
           context: context,
           following: following,
-          urgent: true);
+          priority: priority == TranslationPriority.background
+              ? TranslationPriority.ahead
+              : priority);
 
   @override
   Future<void> dispose() async {

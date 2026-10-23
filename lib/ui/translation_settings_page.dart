@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
@@ -134,6 +135,42 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
       case TranslationPromptFormat.jaKoDialogue:
         return l10n.promptFormatJaKo;
     }
+  }
+
+  /// GPU first, or the CPU only (the GPU stays free for the screen).
+  Widget _devicePicker(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: DropdownButtonFormField<bool>(
+        key: const ValueKey('translationDevice'),
+        initialValue: SharedTranslationEngine.cpuOnly,
+        isExpanded: true,
+        decoration: InputDecoration(
+          labelText: l10n.translationDevice,
+          helperText: l10n.translationDeviceHint,
+          helperMaxLines: 3,
+        ),
+        items: [
+          DropdownMenuItem(
+              value: false,
+              child: Text(l10n.translationDeviceAuto,
+                  overflow: TextOverflow.ellipsis)),
+          DropdownMenuItem(
+              value: true,
+              child: Text(l10n.translationDeviceCpu,
+                  overflow: TextOverflow.ellipsis)),
+        ],
+        onChanged: (cpu) async {
+          if (cpu == null || cpu == SharedTranslationEngine.cpuOnly) return;
+          SharedTranslationEngine.cpuOnly = cpu;
+          setState(() {});
+          await _db
+              .savePreference(translationDevicePref, cpu ? 'cpu' : 'auto')
+              .catchError((_) {});
+          await _restartTranslation();
+        },
+      ),
+    );
   }
 
   Widget _promptFormatPicker(AppLocalizations l10n, InstalledModel model) {
@@ -364,6 +401,8 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
               onDelete: () => _delete(model),
             ),
           if (_active != null) _promptFormatPicker(l10n, _active!),
+          if (_active?.runtime == TranslationRuntime.liteRtLm)
+            _devicePicker(l10n),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             key: const ValueKey('importModel'),
@@ -528,6 +567,17 @@ class _ModelCard extends StatelessWidget {
 class _LibraryTranslationSection extends StatelessWidget {
   const _LibraryTranslationSection();
 
+  static String _waitLabel(AppLocalizations l10n, BookTranslationWait wait) =>
+      switch (wait) {
+        BookTranslationWait.none => '',
+        BookTranslationWait.reading => l10n.translationWaitReading,
+        BookTranslationWait.appClosed => l10n.translationWaitAppClosed,
+        BookTranslationWait.warm => l10n.translationWaitWarm,
+        BookTranslationWait.batteryLow => l10n.translationWaitBattery,
+        BookTranslationWait.powerSave => l10n.translationWaitPowerSave,
+        BookTranslationWait.needsCharger => l10n.translationWaitCharger,
+      };
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -548,8 +598,46 @@ class _LibraryTranslationSection extends StatelessWidget {
               subtitle: Text(l10n.translationAutoLibraryHint,
                   style: const TextStyle(fontSize: 12)),
               value: service.enabled,
-              onChanged: service.setEnabled,
+              onChanged: (on) async {
+                // The progress notification needs the permission
+                // (Android 13+); without it the work still runs.
+                if (on && Platform.isAndroid) {
+                  await Permission.notification
+                      .request()
+                      .catchError((_) => PermissionStatus.denied);
+                }
+                await service.setEnabled(on);
+              },
             ),
+            if (service.enabled)
+              SwitchListTile(
+                key: const ValueKey('translateLibraryChargingOnly'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.translationChargingOnly),
+                subtitle: Text(l10n.translationChargingOnlyHint,
+                    style: const TextStyle(fontSize: 12)),
+                value: service.chargingOnly,
+                onChanged: service.setChargingOnly,
+              ),
+            if (service.enabled &&
+                service.running &&
+                service.wait != BookTranslationWait.none)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(Icons.pause_circle_outline,
+                        size: 16, color: scheme.onSurfaceVariant),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(_waitLabel(l10n, service.wait),
+                          key: const ValueKey('libraryTranslationWait'),
+                          style: TextStyle(
+                              fontSize: 12, color: scheme.onSurfaceVariant)),
+                    ),
+                  ],
+                ),
+              ),
             if (service.error != null)
               Text(l10n.translationFailed,
                   style: TextStyle(fontSize: 12, color: scheme.error)),

@@ -21,6 +21,7 @@ class FakeTranslator implements Translator {
   final List<String> asked = [];
   final Map<String, (String?, String?)> around = {};
   final Set<String> emptyFor = {};
+  final Map<String, TranslationPriority> priorities = {};
   bool failLoad = false;
   int loads = 0;
   Completer<void>? gate;
@@ -40,8 +41,9 @@ class FakeTranslator implements Translator {
       String? sourceLanguage,
       String? context,
       String? following,
-      bool urgent = false}) async {
+      TranslationPriority priority = TranslationPriority.background}) async {
     asked.add(text);
+    priorities[text] = priority;
     around[text] = (context, following);
     if (gate != null) await gate!.future;
     if (emptyFor.contains(text)) return '';

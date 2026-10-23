@@ -174,6 +174,48 @@ class ReaderFonts extends ChangeNotifier {
     }
   }
 
+  /// The font files behind [choice] for the book renderer (a web page,
+  /// which cannot see fonts registered with Flutter): the imported file,
+  /// or the Google Font files cached on the device (regular first). Empty
+  /// for the system font or a Google Font not downloaded yet.
+  Future<List<File>> filesOf(FontChoice choice) async {
+    try {
+      if (choice.isFile) {
+        final dir = await _fontDir();
+        for (final ext in ['.ttf', '.otf']) {
+          final file = File(p.join(dir.path, '${choice.family}$ext'));
+          if (await file.exists()) return [file];
+        }
+        return const [];
+      }
+      if (choice.isGoogle) {
+        // google_fonts caches "<Family>_<variant>_<hash>.ttf" in the
+        // support directory, the family without spaces.
+        final support = await getApplicationSupportDirectory();
+        final prefix = '${choice.family.replaceAll(' ', '')}_';
+        final files = <File>[];
+        await for (final entity in support.list()) {
+          if (entity is! File) continue;
+          final name = p.basename(entity.path);
+          if (name.replaceAll(' ', '').startsWith(prefix) &&
+              name.endsWith('.ttf')) {
+            files.add(entity);
+          }
+        }
+        int rank(File f) {
+          final n = p.basename(f.path).toLowerCase();
+          if (n.contains('_regular_') || n.contains('_400_')) return 0;
+          if (n.contains('_700_') || n.contains('bold')) return 1;
+          return 2;
+        }
+
+        files.sort((a, b) => rank(a).compareTo(rank(b)));
+        return files;
+      }
+    } catch (_) {}
+    return const [];
+  }
+
   /// [base] in the font chosen for [script], with the others as fallbacks.
   TextStyle styleForScript(FontScript script, TextStyle base) {
     final primary = familyOf(_choices[script]!);

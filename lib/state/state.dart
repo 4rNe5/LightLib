@@ -1,4 +1,5 @@
 // Dart imports:
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -12,6 +13,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Project imports:
 // NOTE: These imports are crucial and must exist in your project structure.
 import 'package:openlib/services/annas_archieve.dart';
+import 'package:openlib/services/book_covers.dart';
 import 'package:openlib/services/book_detail_routing.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/libgen_service.dart';
@@ -509,6 +511,8 @@ final libraryBooksProvider = FutureProvider<List<LibraryBook>>((ref) async {
   final positions = await dataBase.getPositionsForAll();
   final completed = await dataBase.getCompletedForAll();
   final genres = await dataBase.getGenresForAll();
+  // Full-quality covers from the EPUB files, made in the background.
+  unawaited(BookCovers.instance.ensure(books));
   return [
     for (final book in books)
       LibraryBook(

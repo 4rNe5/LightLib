@@ -33,6 +33,8 @@
             </intent-filter>
         </activity><!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
+        <!-- Keeps library-book translation running while the app is in the background, with a progress notification. -->
+        <service android:name=".BackgroundTranslationService" android:exported="false" android:stopWithTask="true" android:foregroundServiceType="dataSync"/>
         <meta-data android:name="flutterEmbedding" android:value="2"/><!-- FileProvider for sharing files and APK installation -->
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true" tools:replace="android:authorities">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths"/>

@@ -738,7 +738,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get translationOpenSettings => '設定';
 
   @override
-  String get translationLoadingModel => '翻訳モデルを読み込み中…';
+  String get translationLoadingModel => '翻訳モデルを準備中…(初回は数分かかることがあります)';
 
   @override
   String translationTranslating(int count, String device) {
@@ -838,7 +838,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get translationAutoLibraryHint =>
-      'アプリを開いている間、1段落ずつゆっくり翻訳します。翻訳は各本の隣に保存されます。';
+      'オンにしたときだけ動作します。1段落ごとに休みながらゆっくり翻訳し、読書中や端末が熱いとき、バッテリーが少ないときは待機します。アプリを離れても通知とともに続きます。翻訳は各本の隣に保存されます。';
 
   @override
   String get translationBookDone => '完了';
@@ -1182,4 +1182,104 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get translationFaster => '高速';
+
+  @override
+  String get translationChargingOnly => '充電中のみ';
+
+  @override
+  String get translationChargingOnlyHint => '充電器がつながるまで待ち、バッテリーを使いません。';
+
+  @override
+  String get translationDevice => '演算装置';
+
+  @override
+  String get translationDeviceAuto => 'GPU優先(速い)';
+
+  @override
+  String get translationDeviceCpu => 'CPU(GPUは画面用に空ける)';
+
+  @override
+  String get translationDeviceHint =>
+      '翻訳中に画面がカクつくならCPUを試してください。遅くなりますが、GPUを画面描画に残します。';
+
+  @override
+  String get translationNoticeChannel => 'バックグラウンド翻訳';
+
+  @override
+  String get translationNoticeTitle => 'ライブラリの本を翻訳中';
+
+  @override
+  String translationNoticeProgress(String title, int percent) {
+    return '$title · $percent%';
+  }
+
+  @override
+  String translationNoticeCount(int done, int total, int book, int books) {
+    return '$done/$total 段落 · $books冊中$book冊目';
+  }
+
+  @override
+  String get translationNoticeStop => '停止';
+
+  @override
+  String get translationNoticeDone => 'ライブラリの翻訳が完了';
+
+  @override
+  String translationNoticeDoneCount(int count) {
+    return '翻訳済みの本 $count冊';
+  }
+
+  @override
+  String get translationWaitReading => '読書中のため待機中';
+
+  @override
+  String get translationWaitAppClosed => 'アプリを開くと再開';
+
+  @override
+  String get translationWaitWarm => '端末が熱いため休憩中';
+
+  @override
+  String get translationWaitBattery => 'バッテリー残量不足、充電で再開';
+
+  @override
+  String get translationWaitPowerSave => '省電力モードのため一時停止';
+
+  @override
+  String get translationWaitCharger => '充電器の接続待ち';
+
+  @override
+  String get readerWriting => '組み方向';
+
+  @override
+  String get readerWritingAuto => '本の設定';
+
+  @override
+  String get readerWritingHorizontal => '横書き';
+
+  @override
+  String get readerWritingVertical => '縦書き';
+
+  @override
+  String get readerLoadFailed => 'この本を表示できませんでした。';
+
+  @override
+  String get readerOpenSimple => 'シンプルリーダーで開く';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get downloadPreparing => '準備中…';
+
+  @override
+  String get downloadStartedTitle => 'ダウンロードを開始しました';
+
+  @override
+  String get downloadStartedBody => '完了するとライブラリに追加されます。進行状況は通知で確認できます。';
+
+  @override
+  String get downloadFastBadge => '高速ダウンロード';
+
+  @override
+  String get downloadNotStartedTitle => 'ダウンロードを開始できませんでした';
 }

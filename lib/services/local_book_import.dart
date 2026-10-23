@@ -15,6 +15,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 // Project imports:
+import 'package:openlib/services/book_covers.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/files.dart' show generateBookFileName;
 import 'package:openlib/services/logger.dart';
@@ -46,7 +47,9 @@ class EpubFileMetadata {
   final String? publisher;
   final String? description;
   final String? language;
-  final Uint8List? coverPng;
+
+  /// The cover at full quality (see [epubCover]).
+  final CoverImage? cover;
 
   const EpubFileMetadata({
     this.title,
@@ -54,13 +57,13 @@ class EpubFileMetadata {
     this.publisher,
     this.description,
     this.language,
-    this.coverPng,
+    this.cover,
   });
 }
 
-/// Reads title, author, publisher, description, language and a cover
-/// thumbnail from EPUB [bytes]. Never throws: a field that cannot be read
-/// is left null.
+/// Reads title, author, publisher, description, language and the cover
+/// from EPUB [bytes]. Never throws: a field that cannot be read is left
+/// null.
 Future<EpubFileMetadata> readEpubMetadata(List<int> bytes) async {
   try {
     final book = await EpubReader.openBook(bytes);
@@ -70,16 +73,18 @@ Future<EpubFileMetadata> readEpubMetadata(List<int> bytes) async {
       return (t == null || t.isEmpty) ? null : t;
     }
 
-    Uint8List? cover;
-    try {
-      final image = await book.readCover();
-      if (image != null) {
-        // A list thumbnail: 300 px tall is plenty and keeps the file small.
-        final resized =
-            image.height > 300 ? img.copyResize(image, height: 300) : image;
-        cover = Uint8List.fromList(img.encodePng(resized));
-      }
-    } catch (_) {}
+    // The original image file; epubx's reader only knows the EPUB 2
+    // cover meta, and decodes the picture.
+    var cover = epubCover(Uint8List.fromList(bytes));
+    if (cover == null) {
+      try {
+        final image = await book.readCover();
+        if (image != null) {
+          cover = CoverImage(
+              Uint8List.fromList(img.encodeJpg(image, quality: 92)), 'jpg');
+        }
+      } catch (_) {}
+    }
 
     final description =
         clean(meta?.Description?.replaceAll(RegExp(r'<[^>]+>'), ' '));
@@ -89,7 +94,7 @@ Future<EpubFileMetadata> readEpubMetadata(List<int> bytes) async {
       publisher: clean((meta?.Publishers ?? const []).join(', ')),
       description: description,
       language: clean((meta?.Languages ?? const []).firstOrNull),
-      coverPng: cover,
+      cover: cover,
     );
   } catch (_) {
     return const EpubFileMetadata();
@@ -173,10 +178,12 @@ class LocalBookImporter {
       await source.copy(p.join(storage, fileName));
 
       String thumbnail = '';
-      if (meta.coverPng != null) {
+      final cover = meta.cover;
+      if (cover != null) {
         final covers = await _coversDirectory();
-        final coverFile = File(p.join(covers.path, '$id.png'));
-        await coverFile.writeAsBytes(meta.coverPng!);
+        final coverFile = File(
+            p.join(covers.path, BookCovers.fileNameFor(id, cover.extension)));
+        await coverFile.writeAsBytes(cover.bytes);
         thumbnail = coverFile.path;
       }
 
