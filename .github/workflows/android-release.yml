@@ -1,11 +1,15 @@
 name: Android Release
 
-# Every push to main: test, build a signed arm64 APK, publish it as a
-# GitHub release (v<version>-build.<n>). Add [skip ci] to a commit
-# message to skip a build.
+# Run tests and signed arm64 builds concurrently; publish only if both succeed.
+# Skip documentation-only pushes. Pull requests run test checks only.
+# Every release retains the original signing certificate and version scheme.
 
 on:
   push:
+    branches: [main]
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
     branches: [main]
   workflow_dispatch:
 
@@ -21,11 +25,11 @@ env:
   EXPECTED_CERT_SHA256: "663ff5abb728a1bffe57b27170a5a00bdbc0c44c397e3e8f358b4b517efdccfc"
 
 concurrency:
-  group: android-release
+  group: android-release-${{ github.ref }}
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   test:
@@ -48,14 +52,17 @@ jobs:
       - name: Test
         run: flutter test
 
-  release:
-    name: Build and release
-    needs: test
+  build:
+    name: Build signed APK
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
+    outputs:
+      name: ${{ steps.version.outputs.name }}
+      build: ${{ steps.version.outputs.build }}
+      tag: ${{ steps.version.outputs.tag }}
+      file: ${{ steps.apk.outputs.file }}
     steps:
       - uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
 
       - name: Check signing secrets
         env:
@@ -95,13 +102,10 @@ jobs:
           channel: stable
           cache: true
 
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.gradle/caches
-            ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-${{ hashFiles('android/**/*.gradle*', 'android/**/gradle-wrapper.properties') }}
-          restore-keys: gradle-${{ runner.os }}-
+      # Let Gradle cache dependencies and reusable task outputs across runs.
+      # The old immutable ~2 GB cache was never updated after its first hit.
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v6
 
       - name: Decode keystore
         env:
@@ -159,6 +163,42 @@ jobs:
           sha256sum "$OUT" > "$OUT.sha256"
           echo "file=$OUT" >> "$GITHUB_OUTPUT"
 
+      # Transfer the verified APK to the publish job only after tests pass.
+      - name: Upload verified APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: signed-android-arm64
+          path: |
+            LightLib-*-arm64.apk
+            LightLib-*-arm64.apk.sha256
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f "$RUNNER_TEMP/release.jks" android/key.properties
+  publish:
+    name: Publish tested release
+    needs: [test, build]
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Download verified APK
+        uses: actions/download-artifact@v4
+        with:
+          name: signed-android-arm64
+          path: .
+
+      - name: Verify transferred checksum
+        shell: bash
+        run: sha256sum -c "${{ needs.build.outputs.file }}.sha256"
+
       - name: Release notes
         run: |
           PREV=$(git describe --tags --match 'v*-build.*' --abbrev=0 HEAD^ 2>/dev/null || true)
@@ -172,7 +212,7 @@ jobs:
               git log --no-merges --format='- %s (%h)' -1
             fi
             echo
-            echo "SHA-256: \`$(cut -d' ' -f1 "${{ steps.apk.outputs.file }}.sha256")\`"
+            echo "SHA-256: \`$(cut -d' ' -f1 "${{ needs.build.outputs.file }}.sha256")\`"
           } > notes.md
           cat notes.md
 
@@ -180,14 +220,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            "${{ steps.apk.outputs.file }}" \
-            "${{ steps.apk.outputs.file }}.sha256" \
+          gh release create "${{ needs.build.outputs.tag }}" \
+            "${{ needs.build.outputs.file }}" \
+            "${{ needs.build.outputs.file }}.sha256" \
             --target "$GITHUB_SHA" \
-            --title "LightLib ${{ steps.version.outputs.name }} (build ${{ steps.version.outputs.build }})" \
+            --title "LightLib ${{ needs.build.outputs.name }} (build ${{ needs.build.outputs.build }})" \
             --notes-file notes.md \
             --latest
 
-      - name: Remove keystore
-        if: always()
-        run: rm -f "$RUNNER_TEMP/release.jks" android/key.properties
