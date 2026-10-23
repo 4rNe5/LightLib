@@ -65,8 +65,7 @@ void main() {
     tmpDir.deleteSync(recursive: true);
   });
 
-  testWidgets('text size lives in the Themes & Settings sheet',
-      (tester) async {
+  testWidgets('text size lives in the Themes & Settings sheet', (tester) async {
     final file = File('${tmpDir.path}/sample.epub');
     _writeMinimalEpub(file);
 
@@ -96,8 +95,8 @@ void main() {
     expect(find.byKey(const ValueKey('readerLayoutSegments')), findsOneWidget);
 
     String size() => (tester
-            .widget<Text>(find.byKey(const ValueKey('readerFontSizeValue')))
-            .data)!;
+        .widget<Text>(find.byKey(const ValueKey('readerFontSizeValue')))
+        .data)!;
     final before = int.parse(size());
     await tester.tap(find.byTooltip('Increase font size'));
     await tester.pump();
@@ -137,9 +136,16 @@ void main() {
 
     await tester.tap(find.byKey(const ValueKey('readerSettingsButton')));
     await tester.pump();
-    await tester.pump(const Duration(milliseconds: 500));
+    // Let the sheet finish opening (and its contents settle) before
+    // scrolling to and tapping the segment; on a slow machine a tap
+    // during the slide-in missed it.
+    for (var i = 0; i < 8; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     await tester.ensureVisible(find.text('Pages'));
-    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     await tester.tap(find.text('Pages'));
     for (var i = 0; i < 10; i++) {
       await tester.runAsync(
@@ -152,7 +158,9 @@ void main() {
 
     // Back to scrolling for the other tests.
     await tester.ensureVisible(find.text('Scroll'));
-    await tester.pump();
+    for (var i = 0; i < 4; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
     await tester.tap(find.text('Scroll'));
     for (var i = 0; i < 4; i++) {
       await tester.runAsync(
@@ -188,13 +196,13 @@ void main() {
 /// so no timers outlive the test.
 Future<void> _drain(WidgetTester tester) async {
   for (var i = 0; i < 6; i++) {
-    await tester.runAsync(
-        () => Future<void>.delayed(const Duration(milliseconds: 50)));
+    await tester
+        .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 50)));
     await tester.pump();
   }
   await tester.pumpWidget(const SizedBox());
-  await tester.runAsync(
-      () => Future<void>.delayed(const Duration(milliseconds: 100)));
+  await tester
+      .runAsync(() => Future<void>.delayed(const Duration(milliseconds: 100)));
   await tester.pump(const Duration(seconds: 11));
 }
 

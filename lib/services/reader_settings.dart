@@ -228,16 +228,27 @@ class ReaderSettings extends ChangeNotifier {
   bool _loaded = false;
   Future<void>? _loading;
 
+  /// Set by [update]: a change made while the saved settings were still
+  /// loading must not be overwritten when they arrive.
+  bool _changedBeforeLoad = false;
+
   ReaderSettingsData get value => _value;
   bool get loaded => _loaded;
 
   Future<void> load() => _loading ??= _load();
 
   Future<void> _load() async {
+    final loaded = await _read();
+    if (!_changedBeforeLoad && loaded != null) _value = loaded;
+    _loaded = true;
+    notifyListeners();
+  }
+
+  Future<ReaderSettingsData?> _read() async {
     try {
       final saved = await _db.getPreference(pref).catchError((_) => null);
       if (saved is String && saved.isNotEmpty) {
-        _value = ReaderSettingsData.fromJson(
+        return ReaderSettingsData.fromJson(
             jsonDecode(saved) as Map<String, dynamic>);
       } else {
         // Settings saved before the sheet existed.
@@ -246,23 +257,25 @@ class ReaderSettings extends ChangeNotifier {
             .catchError((_) => null);
         final layout =
             await _db.getPreference(_legacyLayoutPref).catchError((_) => null);
-        _value = const ReaderSettingsData().copyWith(
+        return const ReaderSettingsData().copyWith(
           fontSize: double.tryParse('$size'),
           layout: ReaderLayout.fromName(layout as String?),
         );
       }
     } catch (_) {
       // Unreadable: defaults.
+      return null;
     }
-    _loaded = true;
-    notifyListeners();
   }
 
   Future<void> update(ReaderSettingsData next) async {
     if (next == _value) return;
+    if (!_loaded) _changedBeforeLoad = true;
     _value = next;
     notifyListeners();
-    await _db.savePreference(pref, jsonEncode(next.toJson())).catchError((_) {});
+    await _db
+        .savePreference(pref, jsonEncode(next.toJson()))
+        .catchError((_) {});
   }
 
   /// Test hook.
@@ -271,5 +284,6 @@ class ReaderSettings extends ChangeNotifier {
     _value = const ReaderSettingsData();
     _loaded = false;
     _loading = null;
+    _changedBeforeLoad = false;
   }
 }
