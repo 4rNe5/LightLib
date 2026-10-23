@@ -182,7 +182,42 @@ class LocalLlmTranslator implements Translator {
 
   int _setupIndex = 0;
 
-  static const _setupPrefPrefix = 'translationEngineSetup:';
+  // 2: the GPU could not load the phone's OpenCL driver before the manifest
+  // declared it, so what earlier versions found says nothing about it.
+  static const _setupPrefPrefix = 'translationEngineSetup2:';
+  static const _failuresPrefPrefix = 'translationEngineFailures:';
+
+  /// Why setups failed on this device (newest last, a few kept): logged
+  /// whenever the engine starts past them, so a report shows the cause
+  /// even when the failures happened long before.
+  Future<List<Object?>> _failures() async {
+    try {
+      final raw = await MyLibraryDb.instance
+          .getPreference('$_failuresPrefPrefix$_fileName');
+      return raw is String && raw.isNotEmpty
+          ? (jsonDecode(raw) as List).cast<Object?>()
+          : <Object?>[];
+    } catch (_) {
+      return <Object?>[];
+    }
+  }
+
+  Future<void> _recordFailure(_Setup setup, Object error, int afterMs) async {
+    final text = '$error';
+    final list = [
+      ...await _failures(),
+      {
+        'setup': setup.key,
+        'error': text.length > 240 ? text.substring(0, 240) : text,
+        'afterMs': afterMs,
+        'at': DateTime.now().toIso8601String(),
+      },
+    ];
+    await MyLibraryDb.instance
+        .savePreference('$_failuresPrefPrefix$_fileName',
+            jsonEncode(list.length > 6 ? list.sublist(list.length - 6) : list))
+        .catchError((_) {});
+  }
 
   /// Where to start: the setup that worked last time with this model (the
   /// ones before it failed on this device).
@@ -196,9 +231,14 @@ class LocalLlmTranslator implements Translator {
 
   /// Forgets what worked with [fileName] (the processor was chosen again
   /// in settings): the next start tries the fastest setup first.
-  static Future<void> clearGpuStall(String fileName) => MyLibraryDb.instance
-      .savePreference('$_setupPrefPrefix$fileName', '')
-      .catchError((_) {});
+  static Future<void> clearGpuStall(String fileName) async {
+    await MyLibraryDb.instance
+        .savePreference('$_setupPrefPrefix$fileName', '')
+        .catchError((_) {});
+    await MyLibraryDb.instance
+        .savePreference('$_failuresPrefPrefix$fileName', '')
+        .catchError((_) {});
+  }
 
   /// Starts the engine with the first setup from [from] that translates:
   /// a real request must come back in time and in the target script.
@@ -206,9 +246,18 @@ class LocalLlmTranslator implements Translator {
     final model = LlamaModel(ModelSource.path(modelPath));
     final cacheDir = await _liteRtCacheDir();
     final setups = _setups;
+    if (from > 0) {
+      _logger.info('Engine starts past setups that failed before',
+          tag: 'Translator',
+          metadata: {'from': setups[from].key, 'failures': await _failures()});
+    }
     Object? lastError;
+    var gpuStuck = false;
     for (var i = from; i < setups.length; i++) {
       final setup = setups[i];
+      // A GPU that did not answer in minutes will not with other options;
+      // trying each would keep the reader waiting several times as long.
+      if (setup.gpu && gpuStuck) continue;
       // auto means the GPU on Android, iOS and macOS only.
       final label = setup.gpu &&
               (Platform.isAndroid || Platform.isIOS || Platform.isMacOS)
@@ -249,10 +298,12 @@ class LocalLlmTranslator implements Translator {
         return;
       } catch (e) {
         lastError = e;
+        if (setup.gpu && e is TimeoutException) gpuStuck = true;
         _logger.warning('Engine setup ${setup.key} failed',
             tag: 'Translator',
             error: e,
             metadata: {'afterMs': watch.elapsedMilliseconds});
+        await _recordFailure(setup, e, watch.elapsedMilliseconds);
         // A stuck GPU may never finish tearing down; do not wait on it.
         await engine
             .dispose()
@@ -272,6 +323,7 @@ class LocalLlmTranslator implements Translator {
     _deviceLabel = null;
     _logger.warning('Engine setup ${_setups[_setupIndex].key} dropped',
         tag: 'Translator', metadata: {'why': why});
+    await _recordFailure(_setups[_setupIndex], 'dropped: $why', 0);
     await old
         ?.dispose()
         .timeout(const Duration(seconds: 15), onTimeout: () {})

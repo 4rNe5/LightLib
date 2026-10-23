@@ -35,6 +35,9 @@
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <!-- Keeps library-book translation running while the app is in the background, with a progress notification. -->
         <service android:name=".BackgroundTranslationService" android:exported="false" android:stopWithTask="true" android:foregroundServiceType="dataSync"/>
+        <!-- The phone's OpenCL driver, which LiteRT-LM's GPU backend runs on. Without these an app targeting Android 12+ cannot load it, and the GPU falls back to a slow WebGPU path (https://ai.google.dev/edge/litert-lm/android). -->
+        <uses-native-library android:name="libvndksupport.so" android:required="false"/>
+        <uses-native-library android:name="libOpenCL.so" android:required="false"/>
         <meta-data android:name="flutterEmbedding" android:value="2"/><!-- FileProvider for sharing files and APK installation -->
         <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.fileprovider" android:exported="false" android:grantUriPermissions="true" tools:replace="android:authorities">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths"/>
