@@ -43,6 +43,10 @@ class ReaderTranslationController extends ChangeNotifier {
 
   final SplayTreeMap<int, String> _queue = SplayTreeMap();
   final Set<String> _failed = {};
+
+  /// Paragraphs that failed once; they get one more try, at the back of
+  /// the queue, before counting as failed.
+  final Set<String> _retried = {};
   String? _inFlight;
   bool _running = false;
   bool _paused = false;
@@ -53,6 +57,12 @@ class ReaderTranslationController extends ChangeNotifier {
 
   String? Function(int index)? _textAt;
   int _itemCount = 0;
+  int _lastIndex = 0;
+  int? _lastVisibleEnd;
+
+  /// Paragraphs near the reading position that could not be translated
+  /// (after the retry); they stay in the original until [retry].
+  int get failedCount => _failed.length;
 
   String? get error => _error;
   String? get deviceLabel => _translator.deviceLabel;
@@ -76,26 +86,35 @@ class ReaderTranslationController extends ChangeNotifier {
   /// Queues paragraph [index] and the [lookahead] paragraphs after it.
   /// [textAt] gives a paragraph's translatable text, or null for one that
   /// needs no translation (an image, a scene break).
+  ///
+  /// [visibleEnd] is the last paragraph on screen when more than one is
+  /// (a page): everything up to it is queued, and [lookahead] after it.
+  /// Without it a page longer than the lookahead kept its last paragraphs
+  /// in the original language.
   void ensureAhead(
     int index, {
     required String? Function(int index) textAt,
     required int itemCount,
+    int? visibleEnd,
   }) {
     if (_disposed) return;
     _textAt = textAt;
     _itemCount = itemCount;
+    _lastIndex = index;
+    _lastVisibleEnd = visibleEnd;
+    final last = visibleEnd != null && visibleEnd > index ? visibleEnd : index;
     var changed = false;
 
     // Forget what the reader has moved far away from.
     final low = index - keepBehind - lookahead;
-    final high = index + lookahead * 3;
+    final high = last + lookahead * 3;
     final stale = _queue.keys.where((k) => k < low || k > high).toList();
     for (final k in stale) {
       _queue.remove(k);
       changed = true;
     }
 
-    final end = (index + lookahead).clamp(0, itemCount - 1);
+    final end = (last + lookahead).clamp(0, itemCount - 1);
     for (var i = index; i <= end; i++) {
       if (_queue.containsKey(i)) continue;
       final text = textAt(i);
@@ -140,10 +159,14 @@ class ReaderTranslationController extends ChangeNotifier {
   void retry() {
     _error = null;
     _failed.clear();
+    _retried.clear();
     notifyListeners();
     final textAt = _textAt;
-    if (textAt != null && _queue.isNotEmpty) {
-      ensureAhead(_queue.firstKey()!, textAt: textAt, itemCount: _itemCount);
+    if (textAt != null) {
+      // Back to where the reader is: the failed paragraphs there are
+      // queued again (an empty queue used to leave them untouched).
+      ensureAhead(_queue.isNotEmpty ? _queue.firstKey()! : _lastIndex,
+          textAt: textAt, itemCount: _itemCount, visibleEnd: _lastVisibleEnd);
     } else {
       _pump();
     }
@@ -160,7 +183,13 @@ class ReaderTranslationController extends ChangeNotifier {
 
   Future<void> _run() async {
     try {
-      while (!_disposed && !_paused && _queue.isNotEmpty) {
+      while (!_disposed &&
+          !_paused &&
+          (_queue.isNotEmpty || _retryLater.isNotEmpty)) {
+        if (_queue.isEmpty) {
+          _queue.addAll(_retryLater);
+          _retryLater.clear();
+        }
         final entry = _queue.entries.first;
         _queue.remove(entry.key);
         final text = entry.value;
@@ -173,13 +202,16 @@ class ReaderTranslationController extends ChangeNotifier {
             _modelLoaded = true;
             notifyListeners();
           }
+          final textAt = _textAt;
           final out = await _translator.translate(text,
               targetLanguage: targetLanguage,
               sourceLanguage: sourceLanguage,
+              context: precedingContext(entry.key, textAt),
+              following: textAt == null ? null : textAt(entry.key + 1),
               urgent: true);
           if (_disposed) return;
           if (out.isEmpty) {
-            _failed.add(text);
+            _failOnce(entry.key, text);
           } else {
             _cache.store(text, out);
             _done++;
@@ -194,7 +226,7 @@ class ReaderTranslationController extends ChangeNotifier {
             _queue[entry.key] = text;
             return;
           }
-          _failed.add(text);
+          _failOnce(entry.key, text);
         } finally {
           _inFlight = null;
           if (!_disposed) notifyListeners();
@@ -205,6 +237,19 @@ class ReaderTranslationController extends ChangeNotifier {
       if (!_disposed) notifyListeners();
     }
   }
+
+  /// First failure: one more try after the rest of the queue (it runs
+  /// in index order, so a key past the window would never run - the text
+  /// goes back under its own index once the queue drains). Second: failed.
+  void _failOnce(int index, String text) {
+    if (_retried.add(text)) {
+      _retryLater[index] = text;
+    } else {
+      _failed.add(text);
+    }
+  }
+
+  final Map<int, String> _retryLater = {};
 
   @override
   void dispose() {

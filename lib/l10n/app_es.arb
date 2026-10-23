@@ -355,5 +355,16 @@
   "recapReadingDays": "{days, plural, =1{1 día de lectura} other{{days} días de lectura}}",
   "recapMonthTitle": "Resumen de {monthName}",
   "recapFinishedThisMonth": "terminados este mes",
-  "recapGenreMix": "Mezcla de géneros"
+  "recapGenreMix": "Mezcla de géneros",
+  "translationPromptFormat": "Formato de instrucciones",
+  "translationPromptFormatHint": "Cómo se redactan las peticiones para este modelo. Los modelos de traducción funcionan mejor con el formato con el que se entrenaron; Automático lo elige según el modelo.",
+  "promptFormatAuto": "Automático ({format})",
+  "promptFormatGeneral": "General (Gemma y otros)",
+  "promptFormatHyMt": "Modelo de traducción Hy-MT",
+  "promptFormatJaKo": "Modelo de diálogo japonés→coreano",
+  "promptFormatKoreanOnly": "Este formato solo traduce al coreano. Para otros idiomas se usa el formato general.",
+  "translationSomeFailed": "{count, plural, =1{No se pudo traducir 1 párrafo} other{No se pudieron traducir {count} párrafos}}",
+  "translationReadyPlain": "Traducido en el dispositivo",
+  "translationNeedsRam": "RAM de {gb} GB o más",
+  "translationFaster": "más rápido"
 }

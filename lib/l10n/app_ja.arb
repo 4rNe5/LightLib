@@ -349,5 +349,16 @@
   "recapReadingDays": "読書日 {days}日",
   "recapMonthTitle": "{monthName}のまとめ",
   "recapFinishedThisMonth": "今月の読了",
-  "recapGenreMix": "ジャンル構成"
+  "recapGenreMix": "ジャンル構成",
+  "translationPromptFormat": "プロンプト形式",
+  "translationPromptFormatHint": "このモデルへの依頼の書き方です。翻訳専用モデルは学習時と同じ形式で最も良く動きます。自動はモデルに合わせて選びます。",
+  "promptFormatAuto": "自動（{format}）",
+  "promptFormatGeneral": "汎用（Gemma など）",
+  "promptFormatHyMt": "Hy-MT 翻訳モデル",
+  "promptFormatJaKo": "日→韓 台詞翻訳モデル",
+  "promptFormatKoreanOnly": "この形式は韓国語にのみ翻訳します。他の言語には汎用形式を使います。",
+  "translationSomeFailed": "翻訳できなかった段落 {count}件",
+  "translationReadyPlain": "端末で翻訳済み",
+  "translationNeedsRam": "RAM {gb}GB以上",
+  "translationFaster": "高速"
 }

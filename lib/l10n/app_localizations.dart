@@ -2205,6 +2205,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Genre mix'**
   String get recapGenreMix;
+
+  /// translationPromptFormat
+  ///
+  /// In en, this message translates to:
+  /// **'Prompt format'**
+  String get translationPromptFormat;
+
+  /// translationPromptFormatHint
+  ///
+  /// In en, this message translates to:
+  /// **'How requests are worded for this model. Dedicated translation models work best with the format they were trained on; Auto picks it from the model.'**
+  String get translationPromptFormatHint;
+
+  /// promptFormatAuto
+  ///
+  /// In en, this message translates to:
+  /// **'Auto ({format})'**
+  String promptFormatAuto(String format);
+
+  /// promptFormatGeneral
+  ///
+  /// In en, this message translates to:
+  /// **'General (Gemma and others)'**
+  String get promptFormatGeneral;
+
+  /// promptFormatHyMt
+  ///
+  /// In en, this message translates to:
+  /// **'Hy-MT translation model'**
+  String get promptFormatHyMt;
+
+  /// promptFormatJaKo
+  ///
+  /// In en, this message translates to:
+  /// **'Japanese→Korean dialogue model'**
+  String get promptFormatJaKo;
+
+  /// promptFormatKoreanOnly
+  ///
+  /// In en, this message translates to:
+  /// **'This format translates into Korean only. For other languages the general format is used.'**
+  String get promptFormatKoreanOnly;
+
+  /// translationSomeFailed
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 paragraph could not be translated} other{{count} paragraphs could not be translated}}'**
+  String translationSomeFailed(int count);
+
+  /// translationReadyPlain
+  ///
+  /// In en, this message translates to:
+  /// **'Translated on this device'**
+  String get translationReadyPlain;
+
+  /// translationNeedsRam
+  ///
+  /// In en, this message translates to:
+  /// **'RAM {gb} GB or more'**
+  String translationNeedsRam(int gb);
+
+  /// translationFaster
+  ///
+  /// In en, this message translates to:
+  /// **'faster'**
+  String get translationFaster;
 }
 
 class _AppLocalizationsDelegate

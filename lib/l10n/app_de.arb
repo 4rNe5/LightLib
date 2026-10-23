@@ -355,5 +355,16 @@
   "recapReadingDays": "{days, plural, =1{1 Lesetag} other{{days} Lesetage}}",
   "recapMonthTitle": "{monthName} im Rückblick",
   "recapFinishedThisMonth": "diesen Monat beendet",
-  "recapGenreMix": "Genre-Mix"
+  "recapGenreMix": "Genre-Mix",
+  "translationPromptFormat": "Prompt-Format",
+  "translationPromptFormatHint": "Wie Anfragen an dieses Modell formuliert werden. Übersetzungsmodelle arbeiten am besten mit ihrem Trainingsformat; Automatisch wählt es anhand des Modells.",
+  "promptFormatAuto": "Automatisch ({format})",
+  "promptFormatGeneral": "Allgemein (Gemma u. a.)",
+  "promptFormatHyMt": "Hy-MT-Übersetzungsmodell",
+  "promptFormatJaKo": "Japanisch→Koreanisch-Dialogmodell",
+  "promptFormatKoreanOnly": "Dieses Format übersetzt nur ins Koreanische. Für andere Sprachen wird das allgemeine Format verwendet.",
+  "translationSomeFailed": "{count, plural, =1{1 Absatz konnte nicht übersetzt werden} other{{count} Absätze konnten nicht übersetzt werden}}",
+  "translationReadyPlain": "Auf dem Gerät übersetzt",
+  "translationNeedsRam": "ab {gb} GB RAM",
+  "translationFaster": "schneller"
 }

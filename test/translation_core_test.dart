@@ -19,6 +19,8 @@ import 'package:openlib/services/translation/translator.dart';
 /// Records what it was asked and answers `[KO]` + the text.
 class FakeTranslator implements Translator {
   final List<String> asked = [];
+  final Map<String, (String?, String?)> around = {};
+  final Set<String> emptyFor = {};
   bool failLoad = false;
   int loads = 0;
   Completer<void>? gate;
@@ -37,9 +39,12 @@ class FakeTranslator implements Translator {
       {required String targetLanguage,
       String? sourceLanguage,
       String? context,
+      String? following,
       bool urgent = false}) async {
     asked.add(text);
+    around[text] = (context, following);
     if (gate != null) await gate!.future;
+    if (emptyFor.contains(text)) return '';
     return '[KO]$text';
   }
 
@@ -216,6 +221,53 @@ void main() {
       expect(controller.translationOf('p12'), '[KO]p12');
       expect(controller.status, ReaderTranslationStatus.idle);
       expect(translator.loads, 1);
+    });
+
+    test('each paragraph is sent with the text around it', () async {
+      show(10);
+      await settle();
+      final (before, after) = translator.around['p11']!;
+      // Preceding paragraphs, nearest last; the next paragraph after.
+      expect(before, endsWith('p10'));
+      expect(before, contains('p8'));
+      expect(after, 'p12');
+      // p13 is followed by a non-text item (index 14).
+      expect(translator.around['p13']!.$2, isNull);
+    });
+
+    test('a page queues every paragraph on it, then the lookahead', () async {
+      // A page from p0 to p20: lookahead (6) alone would stop at p6.
+      controller.ensureAhead(0,
+          textAt: (j) => j < texts.length ? texts[j] : null,
+          itemCount: texts.length,
+          visibleEnd: 20);
+      await settle();
+      for (final p in ['p0', 'p13', 'p20', 'p26']) {
+        expect(translator.asked, contains(p));
+      }
+      expect(translator.asked, isNot(contains('p27')));
+      // On-screen paragraphs first, in reading order.
+      expect(translator.asked.indexOf('p20'),
+          lessThan(translator.asked.indexOf('p21')));
+    });
+
+    test('a failed paragraph is tried once more, then reported', () async {
+      translator.emptyFor.add('p2');
+      show(0);
+      await settle();
+      expect(translator.asked.where((t) => t == 'p2').length, 2);
+      // The retry runs after the rest of the window.
+      expect(translator.asked.last, 'p2');
+      expect(controller.failedCount, 1);
+      expect(controller.status, ReaderTranslationStatus.idle);
+      expect(controller.translationOf('p2'), isNull);
+
+      // Retry with an empty queue still asks for it again.
+      translator.emptyFor.clear();
+      controller.retry();
+      await settle();
+      expect(controller.failedCount, 0);
+      expect(controller.translationOf('p2'), '[KO]p2');
     });
 
     test('cached paragraphs are not asked again', () async {

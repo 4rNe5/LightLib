@@ -1196,4 +1196,51 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get recapGenreMix => 'Répartition par genre';
+
+  @override
+  String get translationPromptFormat => 'Format d\'instruction';
+
+  @override
+  String get translationPromptFormatHint =>
+      'Formulation des requêtes pour ce modèle. Les modèles de traduction fonctionnent mieux avec leur format d\'entraînement ; Auto le choisit selon le modèle.';
+
+  @override
+  String promptFormatAuto(String format) {
+    return 'Auto ($format)';
+  }
+
+  @override
+  String get promptFormatGeneral => 'Général (Gemma, etc.)';
+
+  @override
+  String get promptFormatHyMt => 'Modèle de traduction Hy-MT';
+
+  @override
+  String get promptFormatJaKo => 'Modèle de dialogue japonais→coréen';
+
+  @override
+  String get promptFormatKoreanOnly =>
+      'Ce format ne traduit qu\'en coréen. Pour les autres langues, le format général est utilisé.';
+
+  @override
+  String translationSomeFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count paragraphes n\'ont pas pu être traduits',
+      one: '1 paragraphe n\'a pas pu être traduit',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get translationReadyPlain => 'Traduit sur l\'appareil';
+
+  @override
+  String translationNeedsRam(int gb) {
+    return '$gb Go de RAM ou plus';
+  }
+
+  @override
+  String get translationFaster => 'plus rapide';
 }

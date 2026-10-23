@@ -106,6 +106,83 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
     await _restartTranslation();
   }
 
+  /// Null clears the override: the format is detected again.
+  Future<void> _setPromptFormat(
+      String fileName, TranslationPromptFormat? format) async {
+    final next = Map.of(TranslationPromptFormats.overrides);
+    if (format == null) {
+      next.remove(fileName);
+    } else {
+      next[fileName] = format;
+    }
+    setState(() => TranslationPromptFormats.overrides = next);
+    await _db
+        .savePreference(TranslationPromptFormats.pref,
+            TranslationPromptFormats.encode(next))
+        .catchError((_) {});
+    // Cached translations are kept per format; the reader and the
+    // background translator pick the new one up.
+    await _restartTranslation();
+  }
+
+  String _formatLabel(AppLocalizations l10n, TranslationPromptFormat f) {
+    switch (f) {
+      case TranslationPromptFormat.general:
+        return l10n.promptFormatGeneral;
+      case TranslationPromptFormat.hyMt:
+        return l10n.promptFormatHyMt;
+      case TranslationPromptFormat.jaKoDialogue:
+        return l10n.promptFormatJaKo;
+    }
+  }
+
+  Widget _promptFormatPicker(AppLocalizations l10n, InstalledModel model) {
+    final detected = detectPromptFormat(model.fileName);
+    final override = TranslationPromptFormats.overrides[model.fileName];
+    final target = languageForCode(_target).englishName;
+    final effective = override ?? detected;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButtonFormField<TranslationPromptFormat?>(
+            key: const ValueKey('promptFormat'),
+            initialValue: override,
+            isExpanded: true,
+            decoration: InputDecoration(
+              labelText: l10n.translationPromptFormat,
+              helperText: l10n.translationPromptFormatHint,
+              helperMaxLines: 3,
+            ),
+            items: [
+              DropdownMenuItem(
+                value: null,
+                child: Text(l10n.promptFormatAuto(_formatLabel(l10n, detected)),
+                    overflow: TextOverflow.ellipsis),
+              ),
+              for (final f in TranslationPromptFormat.values)
+                DropdownMenuItem(
+                    value: f,
+                    child: Text(_formatLabel(l10n, f),
+                        overflow: TextOverflow.ellipsis)),
+            ],
+            onChanged: (f) => _setPromptFormat(model.fileName, f),
+          ),
+          if (!effective.supportsTarget(target))
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(l10n.promptFormatKoreanOnly,
+                  key: const ValueKey('promptFormatKoreanOnly'),
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: Theme.of(context).colorScheme.error)),
+            ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _confirmDownload(TranslationModelPreset preset) async {
     final l10n = AppLocalizations.of(context);
     final ok = await showDialog<bool>(
@@ -264,7 +341,8 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
               title: preset.name,
               subtitle:
                   '${formatGigabytes(preset.sizeBytes)} · ${preset.license}'
-                  '${preset == gemma4E2bLiteRt ? ' · ${l10n.translationRecommended}' : ''}',
+                  '${preset == gemma4E4bLiteRt ? ' · ${l10n.translationRecommended} · ${l10n.translationNeedsRam(8)}' : ''}'
+                  '${preset == gemma4E2bLiteRt ? ' · ${l10n.translationFaster}' : ''}',
               installed: installedNames.contains(preset.fileName),
               active: _active?.fileName == preset.fileName,
               download: _store.downloads[preset.id],
@@ -285,6 +363,7 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
               onUse: () => _use(model.fileName),
               onDelete: () => _delete(model),
             ),
+          if (_active != null) _promptFormatPicker(l10n, _active!),
           const SizedBox(height: 8),
           OutlinedButton.icon(
             key: const ValueKey('importModel'),

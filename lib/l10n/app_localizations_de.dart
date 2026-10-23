@@ -1190,4 +1190,51 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get recapGenreMix => 'Genre-Mix';
+
+  @override
+  String get translationPromptFormat => 'Prompt-Format';
+
+  @override
+  String get translationPromptFormatHint =>
+      'Wie Anfragen an dieses Modell formuliert werden. Übersetzungsmodelle arbeiten am besten mit ihrem Trainingsformat; Automatisch wählt es anhand des Modells.';
+
+  @override
+  String promptFormatAuto(String format) {
+    return 'Automatisch ($format)';
+  }
+
+  @override
+  String get promptFormatGeneral => 'Allgemein (Gemma u. a.)';
+
+  @override
+  String get promptFormatHyMt => 'Hy-MT-Übersetzungsmodell';
+
+  @override
+  String get promptFormatJaKo => 'Japanisch→Koreanisch-Dialogmodell';
+
+  @override
+  String get promptFormatKoreanOnly =>
+      'Dieses Format übersetzt nur ins Koreanische. Für andere Sprachen wird das allgemeine Format verwendet.';
+
+  @override
+  String translationSomeFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Absätze konnten nicht übersetzt werden',
+      one: '1 Absatz konnte nicht übersetzt werden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get translationReadyPlain => 'Auf dem Gerät übersetzt';
+
+  @override
+  String translationNeedsRam(int gb) {
+    return 'ab $gb GB RAM';
+  }
+
+  @override
+  String get translationFaster => 'schneller';
 }
