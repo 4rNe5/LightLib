@@ -1176,4 +1176,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get translationReadyPlain => '기기에서 번역됨';
+
+  @override
+  String translationNeedsRam(int gb) {
+    return 'RAM ${gb}GB 이상';
+  }
+
+  @override
+  String get translationFaster => '더 빠름';
 }

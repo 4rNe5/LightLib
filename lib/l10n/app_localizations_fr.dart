@@ -1235,4 +1235,12 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get translationReadyPlain => 'Traduit sur l\'appareil';
+
+  @override
+  String translationNeedsRam(int gb) {
+    return '$gb Go de RAM ou plus';
+  }
+
+  @override
+  String get translationFaster => 'plus rapide';
 }

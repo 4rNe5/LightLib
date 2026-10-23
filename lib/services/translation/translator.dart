@@ -182,15 +182,15 @@ class LocalLlmTranslator implements Translator {
     }
   }
 
-  Future<String> _generate(String prompt, int maxTokens,
-      TranslationPromptFormat format) async {
+  Future<String> _generate(
+      String prompt, int maxTokens, TranslationPromptFormat format) async {
     // Dedicated translation models: their recommended repetition penalty
     // (1.05); the general format keeps llamadart's default it was tuned on.
     final base = format == TranslationPromptFormat.general
         ? GenerationParams(maxTokens: maxTokens, temp: 0)
-        : GenerationParams(maxTokens: maxTokens, temp: 0, topK: 1, penalty: 1.05);
-    final speculative =
-        runtime == TranslationRuntime.liteRtLm && _speculative;
+        : GenerationParams(
+            maxTokens: maxTokens, temp: 0, topK: 1, penalty: 1.05);
+    final speculative = runtime == TranslationRuntime.liteRtLm && _speculative;
     Future<String> run(bool spec) async {
       final completion = await _engine!.create(
         [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)],
@@ -227,8 +227,7 @@ class LocalLlmTranslator implements Translator {
           if (job.context != null) job.context!,
           ...kept.take(i),
         ].join('\n');
-        final after =
-            i + 1 < kept.length ? kept[i + 1] : job.following;
+        final after = i + 1 < kept.length ? kept[i + 1] : job.following;
         out.add(shouldTranslate(line)
             ? await _translateLine(_Job(line, job.targetLanguage,
                 job.sourceLanguage, before.isEmpty ? null : before, after))

@@ -117,8 +117,8 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
     }
     setState(() => TranslationPromptFormats.overrides = next);
     await _db
-        .savePreference(
-            TranslationPromptFormats.pref, TranslationPromptFormats.encode(next))
+        .savePreference(TranslationPromptFormats.pref,
+            TranslationPromptFormats.encode(next))
         .catchError((_) {});
     // Cached translations are kept per format; the reader and the
     // background translator pick the new one up.
@@ -149,6 +149,7 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
           DropdownButtonFormField<TranslationPromptFormat?>(
             key: const ValueKey('promptFormat'),
             initialValue: override,
+            isExpanded: true,
             decoration: InputDecoration(
               labelText: l10n.translationPromptFormat,
               helperText: l10n.translationPromptFormatHint,
@@ -157,11 +158,14 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
             items: [
               DropdownMenuItem(
                 value: null,
-                child: Text(
-                    l10n.promptFormatAuto(_formatLabel(l10n, detected))),
+                child: Text(l10n.promptFormatAuto(_formatLabel(l10n, detected)),
+                    overflow: TextOverflow.ellipsis),
               ),
               for (final f in TranslationPromptFormat.values)
-                DropdownMenuItem(value: f, child: Text(_formatLabel(l10n, f))),
+                DropdownMenuItem(
+                    value: f,
+                    child: Text(_formatLabel(l10n, f),
+                        overflow: TextOverflow.ellipsis)),
             ],
             onChanged: (f) => _setPromptFormat(model.fileName, f),
           ),
@@ -337,7 +341,8 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
               title: preset.name,
               subtitle:
                   '${formatGigabytes(preset.sizeBytes)} · ${preset.license}'
-                  '${preset == gemma4E2bLiteRt ? ' · ${l10n.translationRecommended}' : ''}',
+                  '${preset == gemma4E4bLiteRt ? ' · ${l10n.translationRecommended} · ${l10n.translationNeedsRam(8)}' : ''}'
+                  '${preset == gemma4E2bLiteRt ? ' · ${l10n.translationFaster}' : ''}',
               installed: installedNames.contains(preset.fileName),
               active: _active?.fileName == preset.fileName,
               download: _store.downloads[preset.id],

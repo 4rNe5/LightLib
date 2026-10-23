@@ -1623,5 +1623,18 @@
   "translationReadyPlain": "Translated on this device",
   "@translationReadyPlain": {
     "description": "translationReadyPlain"
+  },
+  "translationNeedsRam": "RAM {gb} GB or more",
+  "@translationNeedsRam": {
+    "description": "translationNeedsRam",
+    "placeholders": {
+      "gb": {
+        "type": "int"
+      }
+    }
+  },
+  "translationFaster": "faster",
+  "@translationFaster": {
+    "description": "translationFaster"
   }
 }

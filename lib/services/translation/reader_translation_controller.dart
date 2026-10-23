@@ -166,9 +166,7 @@ class ReaderTranslationController extends ChangeNotifier {
       // Back to where the reader is: the failed paragraphs there are
       // queued again (an empty queue used to leave them untouched).
       ensureAhead(_queue.isNotEmpty ? _queue.firstKey()! : _lastIndex,
-          textAt: textAt,
-          itemCount: _itemCount,
-          visibleEnd: _lastVisibleEnd);
+          textAt: textAt, itemCount: _itemCount, visibleEnd: _lastVisibleEnd);
     } else {
       _pump();
     }
@@ -185,7 +183,8 @@ class ReaderTranslationController extends ChangeNotifier {
 
   Future<void> _run() async {
     try {
-      while (!_disposed && !_paused &&
+      while (!_disposed &&
+          !_paused &&
           (_queue.isNotEmpty || _retryLater.isNotEmpty)) {
         if (_queue.isEmpty) {
           _queue.addAll(_retryLater);

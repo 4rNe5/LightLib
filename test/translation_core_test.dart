@@ -235,8 +235,7 @@ void main() {
       expect(translator.around['p13']!.$2, isNull);
     });
 
-    test('a page queues every paragraph on it, then the lookahead',
-        () async {
+    test('a page queues every paragraph on it, then the lookahead', () async {
       // A page from p0 to p20: lookahead (6) alone would stop at p6.
       controller.ensureAhead(0,
           textAt: (j) => j < texts.length ? texts[j] : null,

@@ -364,5 +364,7 @@
   "promptFormatJaKo": "Japanisch→Koreanisch-Dialogmodell",
   "promptFormatKoreanOnly": "Dieses Format übersetzt nur ins Koreanische. Für andere Sprachen wird das allgemeine Format verwendet.",
   "translationSomeFailed": "{count, plural, =1{1 Absatz konnte nicht übersetzt werden} other{{count} Absätze konnten nicht übersetzt werden}}",
-  "translationReadyPlain": "Auf dem Gerät übersetzt"
+  "translationReadyPlain": "Auf dem Gerät übersetzt",
+  "translationNeedsRam": "ab {gb} GB RAM",
+  "translationFaster": "schneller"
 }

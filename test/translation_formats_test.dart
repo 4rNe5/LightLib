@@ -19,8 +19,8 @@ void main() {
     test('presets carry their format', () {
       expect(detectPromptFormat(gemma4E2bLiteRt.fileName),
           TranslationPromptFormat.general);
-      expect(detectPromptFormat(hyMt2Q4km.fileName),
-          TranslationPromptFormat.hyMt);
+      expect(
+          detectPromptFormat(hyMt2Q4km.fileName), TranslationPromptFormat.hyMt);
       expect(
           detectPromptFormat(hyMt2Q8.fileName), TranslationPromptFormat.hyMt);
     });
@@ -185,8 +185,7 @@ void main() {
     test('already quoted, partial or narration lines are left alone', () {
       expect(polishTranslation('“하?”', '「は？」', 'Korean'), '“하?”');
       // Brackets that do not wrap the whole line.
-      expect(
-          polishTranslation('그는 하? 라고 말했다', '彼は「は？」と言った', 'Korean'),
+      expect(polishTranslation('그는 하? 라고 말했다', '彼は「は？」と言った', 'Korean'),
           '그는 하? 라고 말했다');
       // Two quoted parts in one source line.
       expect(polishTranslation('응. 그래.', '「うん」「そう」', 'Korean'), '응. 그래.');

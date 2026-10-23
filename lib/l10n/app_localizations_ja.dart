@@ -1174,4 +1174,12 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get translationReadyPlain => '端末で翻訳済み';
+
+  @override
+  String translationNeedsRam(int gb) {
+    return 'RAM ${gb}GB以上';
+  }
+
+  @override
+  String get translationFaster => '高速';
 }

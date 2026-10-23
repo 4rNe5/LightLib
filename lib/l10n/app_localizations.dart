@@ -2259,6 +2259,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Translated on this device'**
   String get translationReadyPlain;
+
+  /// translationNeedsRam
+  ///
+  /// In en, this message translates to:
+  /// **'RAM {gb} GB or more'**
+  String translationNeedsRam(int gb);
+
+  /// translationFaster
+  ///
+  /// In en, this message translates to:
+  /// **'faster'**
+  String get translationFaster;
 }
 
 class _AppLocalizationsDelegate

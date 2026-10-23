@@ -115,6 +115,23 @@ const gemma4E2bLiteRt = TranslationModelPreset(
   license: 'Apache-2.0',
 );
 
+/// Gemma 4 E4B: the most accurate model measured (chrF++ 61.5 on the
+/// light-novel set, against 52.7-57.1 for E2B). Its per-layer embeddings
+/// stay in the file, memory-mapped: on CPU it used ~600 MB of working
+/// memory, the rest file pages the system can drop. About 2.5x slower
+/// than E2B; on a phone GPU with MTP, Google measured 37-49 tokens/s.
+const gemma4E4bLiteRt = TranslationModelPreset(
+  id: 'gemma-4-e4b-litertlm',
+  name: 'Gemma 4 E4B (LiteRT, GPU, best quality)',
+  fileName: 'gemma-4-E4B-it.litertlm',
+  url: 'https://huggingface.co/litert-community/gemma-4-E4B-it-litert-lm/'
+      'resolve/main/gemma-4-E4B-it.litertlm',
+  sizeBytes: 3659530240,
+  sha256: '0b2a8980ce155fd97673d8e820b4d29d9c7d99b8fa6806f425d969b145bd52e0',
+  runtime: TranslationRuntime.liteRtLm,
+  license: 'Apache-2.0',
+);
+
 /// The same model as GGUF for llama.cpp, for devices where LiteRT-LM
 /// cannot load at all.
 const gemma4E2bGguf = TranslationModelPreset(
@@ -161,6 +178,7 @@ const hyMt2Q4km = TranslationModelPreset(
 );
 
 const translationModelPresets = [
+  gemma4E4bLiteRt,
   gemma4E2bLiteRt,
   gemma4E2bGguf,
   hyMt2Q8,
@@ -441,7 +459,8 @@ String jaKoDialoguePrompt({
         '앞뒤 대사는 참고용이며, 현재 대사의 번역만 출력하세요.');
     if (prev.isNotEmpty) {
       lines.add('이전 대사:');
-      lines.addAll(prev.skip(prev.length > 2 ? prev.length - 2 : 0)
+      lines.addAll(prev
+          .skip(prev.length > 2 ? prev.length - 2 : 0)
           .map((l) => '- ${l.trim()}'));
     }
     if (next.isNotEmpty) {
@@ -468,7 +487,9 @@ List<String> contextLines(String? text,
   return [
     for (final l in picked)
       l.length > maxChars
-          ? (fromEnd ? l.substring(l.length - maxChars) : l.substring(0, maxChars))
+          ? (fromEnd
+              ? l.substring(l.length - maxChars)
+              : l.substring(0, maxChars))
           : l,
   ];
 }
