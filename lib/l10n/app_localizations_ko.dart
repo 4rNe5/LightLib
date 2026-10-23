@@ -1168,4 +1168,12 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get promptFormatKoreanOnly => '이 형식은 한국어로만 번역합니다. 다른 언어로는 일반 형식을 씁니다.';
+
+  @override
+  String translationSomeFailed(int count) {
+    return '번역하지 못한 문단 $count개';
+  }
+
+  @override
+  String get translationReadyPlain => '기기에서 번역됨';
 }

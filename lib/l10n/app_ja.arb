@@ -356,5 +356,7 @@
   "promptFormatGeneral": "汎用（Gemma など）",
   "promptFormatHyMt": "Hy-MT 翻訳モデル",
   "promptFormatJaKo": "日→韓 台詞翻訳モデル",
-  "promptFormatKoreanOnly": "この形式は韓国語にのみ翻訳します。他の言語には汎用形式を使います。"
+  "promptFormatKoreanOnly": "この形式は韓国語にのみ翻訳します。他の言語には汎用形式を使います。",
+  "translationSomeFailed": "翻訳できなかった段落 {count}件",
+  "translationReadyPlain": "端末で翻訳済み"
 }

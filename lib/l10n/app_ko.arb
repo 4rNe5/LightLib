@@ -356,5 +356,7 @@
   "promptFormatGeneral": "일반 (Gemma 등)",
   "promptFormatHyMt": "Hy-MT 번역 모델",
   "promptFormatJaKo": "일→한 대사 번역 모델",
-  "promptFormatKoreanOnly": "이 형식은 한국어로만 번역합니다. 다른 언어로는 일반 형식을 씁니다."
+  "promptFormatKoreanOnly": "이 형식은 한국어로만 번역합니다. 다른 언어로는 일반 형식을 씁니다.",
+  "translationSomeFailed": "번역하지 못한 문단 {count}개",
+  "translationReadyPlain": "기기에서 번역됨"
 }

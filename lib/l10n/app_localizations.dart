@@ -2247,6 +2247,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This format translates into Korean only. For other languages the general format is used.'**
   String get promptFormatKoreanOnly;
+
+  /// translationSomeFailed
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 paragraph could not be translated} other{{count} paragraphs could not be translated}}'**
+  String translationSomeFailed(int count);
+
+  /// translationReadyPlain
+  ///
+  /// In en, this message translates to:
+  /// **'Translated on this device'**
+  String get translationReadyPlain;
 }
 
 class _AppLocalizationsDelegate

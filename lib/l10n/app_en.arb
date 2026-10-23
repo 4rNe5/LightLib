@@ -1610,5 +1610,18 @@
   "promptFormatKoreanOnly": "This format translates into Korean only. For other languages the general format is used.",
   "@promptFormatKoreanOnly": {
     "description": "promptFormatKoreanOnly"
+  },
+  "translationSomeFailed": "{count, plural, =1{1 paragraph could not be translated} other{{count} paragraphs could not be translated}}",
+  "@translationSomeFailed": {
+    "description": "translationSomeFailed",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "translationReadyPlain": "Translated on this device",
+  "@translationReadyPlain": {
+    "description": "translationReadyPlain"
   }
 }

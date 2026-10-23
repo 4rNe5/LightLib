@@ -1215,4 +1215,18 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get promptFormatKoreanOnly =>
       'Dieses Format übersetzt nur ins Koreanische. Für andere Sprachen wird das allgemeine Format verwendet.';
+
+  @override
+  String translationSomeFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Absätze konnten nicht übersetzt werden',
+      one: '1 Absatz konnte nicht übersetzt werden',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get translationReadyPlain => 'Auf dem Gerät übersetzt';
 }

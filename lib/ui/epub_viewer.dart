@@ -372,7 +372,8 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       onPageShown: (first, last) {
         translation?.ensureAhead(first,
             textAt: (i) => _paragraphTexts.textAt(paragraphs, i),
-            itemCount: paragraphs.length);
+            itemCount: paragraphs.length,
+            visibleEnd: last);
       },
     );
   }
@@ -518,8 +519,14 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       case ReaderTranslationStatus.error:
         label = l10n.translationFailed;
       case ReaderTranslationStatus.idle:
-        label = l10n.translationReady(controller.deviceLabel ?? '');
+        label = controller.failedCount > 0
+            ? l10n.translationSomeFailed(controller.failedCount)
+            : controller.deviceLabel == null
+                ? l10n.translationReadyPlain
+                : l10n.translationReady(controller.deviceLabel!);
     }
+    final canRetry = status == ReaderTranslationStatus.error ||
+        (status == ReaderTranslationStatus.idle && controller.failedCount > 0);
     return Material(
       color: palette.text.withAlpha(14),
       child: Column(
@@ -541,8 +548,9 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (status == ReaderTranslationStatus.error)
+                if (canRetry)
                   TextButton(
+                    key: const ValueKey('translationRetry'),
                     onPressed: controller.retry,
                     style: TextButton.styleFrom(
                       visualDensity: VisualDensity.compact,

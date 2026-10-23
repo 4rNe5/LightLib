@@ -362,5 +362,7 @@
   "promptFormatGeneral": "Général (Gemma, etc.)",
   "promptFormatHyMt": "Modèle de traduction Hy-MT",
   "promptFormatJaKo": "Modèle de dialogue japonais→coréen",
-  "promptFormatKoreanOnly": "Ce format ne traduit qu'en coréen. Pour les autres langues, le format général est utilisé."
+  "promptFormatKoreanOnly": "Ce format ne traduit qu'en coréen. Pour les autres langues, le format général est utilisé.",
+  "translationSomeFailed": "{count, plural, =1{1 paragraphe n'a pas pu être traduit} other{{count} paragraphes n'ont pas pu être traduits}}",
+  "translationReadyPlain": "Traduit sur l'appareil"
 }
