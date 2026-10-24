@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Home-screen widgets: the library page's tones (modernSurfaceTheme, seed #FB0101). -->
+<!-- Home-screen widgets: the library page's tones (modernSurfaceTheme, seed #FF6B9D). -->
 <resources>
-    <color name="widget_bg">#FFFAF2F0</color>
-    <color name="widget_card">#FFEFE6E5</color>
+    <color name="widget_bg">#FFFAF2F2</color>
+    <color name="widget_card">#FFEEE6E6</color>
     <color name="widget_on">#FF16181A</color>
-    <color name="widget_variant">#FF4A4645</color>
-    <color name="widget_primary">#FF904B40</color>
-    <color name="widget_primary_container">#FFFFDAD4</color>
-    <color name="widget_on_primary_container">#FF73342B</color>
+    <color name="widget_variant">#FF4A4646</color>
+    <color name="widget_primary">#FF8C4A5E</color>
+    <color name="widget_primary_container">#FFFFD9E1</color>
+    <color name="widget_on_primary_container">#FF703346</color>
     <color name="widget_track">#2616181A</color>
     <color name="widget_fire">#FFFF7A1A</color>
 </resources>

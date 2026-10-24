@@ -282,28 +282,12 @@ class MyApp extends ConsumerWidget {
       locale: ref.watch(localeOverrideProvider),
       builder: (context, child) {
         final scale = ref.watch(fontSizeScaleProvider);
-        // Korean and Japanese UI text uses the font chosen for that script.
-        return ListenableBuilder(
-          listenable: ReaderFonts.instance,
-          builder: (context, _) {
-            final family = ReaderFonts.instance
-                .uiFamilyFor(Localizations.localeOf(context).languageCode);
-            final theme = Theme.of(context);
-            return Theme(
-              data: family == null
-                  ? theme
-                  : theme.copyWith(
-                      textTheme: theme.textTheme.apply(fontFamily: family),
-                      primaryTextTheme:
-                          theme.primaryTextTheme.apply(fontFamily: family),
-                    ),
-              child: MediaQuery(
-                data: MediaQuery.of(context)
-                    .copyWith(textScaler: TextScaler.linear(scale)),
-                child: child!,
-              ),
-            );
-          },
+        // The fonts chosen in the reader settings are for books only; the
+        // app's own screens keep the theme font.
+        return MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(textScaler: TextScaler.linear(scale)),
+          child: child!,
         );
       },
       debugShowCheckedModeBanner: false,

@@ -62,4 +62,25 @@ void main() {
     await tester.pump();
     expect(find.text('Search'), findsOneWidget);
   });
+
+  testWidgets('the capsule never leaves the bar on its way to an end',
+      (tester) async {
+    for (final (from, to) in [(0, 2), (2, 0)]) {
+      await tester.pumpWidget(_bar(from, (_) {}));
+      await tester.pumpAndSettle();
+      final bar = tester.getRect(find.byType(AppNavBar));
+      await tester.pumpWidget(_bar(to, (_) {}));
+      var widest = 0.0;
+      for (var i = 0; i < 40; i++) {
+        await tester.pump(const Duration(milliseconds: 16));
+        final r = tester.getRect(find.byKey(const ValueKey('navIndicator')));
+        expect(r.left, greaterThanOrEqualTo(bar.left + 16));
+        expect(r.right, lessThanOrEqualTo(bar.right - 16));
+        if (r.width > widest) widest = r.width;
+      }
+      final end = tester.getRect(find.byKey(const ValueKey('navIndicator')));
+      // It stretched on the way and settled at its own width.
+      expect(widest, greaterThan(end.width));
+    }
+  });
 }

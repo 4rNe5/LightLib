@@ -244,15 +244,4 @@ class ReaderFonts extends ChangeNotifier {
     if (c.startsWith('ja') || c == 'jpn') return FontScript.japanese;
     return FontScript.latin;
   }
-
-  /// The family the app UI uses for [languageCode] (ko/ja follow their
-  /// script's choice), or null to keep the theme font.
-  String? uiFamilyFor(String languageCode) {
-    final script = languageCode == 'ko'
-        ? FontScript.korean
-        : languageCode == 'ja'
-            ? FontScript.japanese
-            : FontScript.latin;
-    return familyOf(_choices[script]!);
-  }
 }

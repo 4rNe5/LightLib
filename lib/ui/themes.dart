@@ -7,7 +7,7 @@ import 'package:google_fonts/google_fonts.dart';
 // Project imports:
 import 'package:openlib/ui/extensions.dart';
 
-final secondaryColor = '#FB0101'.toColor();
+final secondaryColor = '#FF6B9D'.toColor();
 
 ThemeData lightTheme = ThemeData(
   primaryColor: Colors.white,

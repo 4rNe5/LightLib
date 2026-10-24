@@ -46,8 +46,9 @@ class AppNavBar extends StatelessWidget {
     final accent = theme.colorScheme.secondary;
     final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
     final slide =
-        reduce ? Duration.zero : const Duration(milliseconds: 420);
-    const curve = Curves.easeOutBack;
+        reduce ? Duration.zero : const Duration(milliseconds: 460);
+    // No overshoot: everything stays inside the bar.
+    const curve = Curves.easeOutCubic;
     final barColor = dark
         ? const Color(0xFF1B1B1D).withValues(alpha: 0.86)
         : Colors.white.withValues(alpha: 0.88);
@@ -92,12 +93,9 @@ class AppNavBar extends StatelessWidget {
                 return Stack(
                   children: [
                     // The capsule under the selected tab.
-                    AnimatedPositioned(
+                    _LiquidIndicator(
                       duration: slide,
-                      curve: curve,
                       left: left(selectedIndex),
-                      top: 0,
-                      bottom: 0,
                       width: wide,
                       child: DecoratedBox(
                         key: const ValueKey('navIndicator'),
@@ -106,9 +104,11 @@ class AppNavBar extends StatelessWidget {
                           gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
+                            // Deepening toward the end keeps the white
+                            // label readable on a light accent.
                             colors: [
-                              Color.lerp(accent, Colors.white, 0.12)!,
-                              Color.lerp(accent, Colors.black, 0.12)!,
+                              Color.lerp(accent, Colors.white, 0.06)!,
+                              Color.lerp(accent, Colors.black, 0.18)!,
                             ],
                           ),
                           boxShadow: [
@@ -149,6 +149,86 @@ class AppNavBar extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// The capsule's move: its leading edge sets off first and its trailing
+/// edge follows, so it stretches toward the new tab and settles there.
+/// Both edges only travel between the old and the new place, never past.
+class _LiquidIndicator extends StatefulWidget {
+  const _LiquidIndicator({
+    required this.left,
+    required this.width,
+    required this.duration,
+    required this.child,
+  });
+
+  final double left;
+  final double width;
+  final Duration duration;
+  final Widget child;
+
+  @override
+  State<_LiquidIndicator> createState() => _LiquidIndicatorState();
+}
+
+class _LiquidIndicatorState extends State<_LiquidIndicator>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller =
+      AnimationController(vsync: this, duration: widget.duration, value: 1);
+  late double _fromLeft = widget.left;
+  late double _fromRight = widget.left + widget.width;
+
+  static const _lead = Interval(0, 0.72, curve: Curves.easeOutCubic);
+  static const _trail = Interval(0.22, 1, curve: Curves.easeInOutCubic);
+
+  (double, double) _edges() => _edgesFor(widget);
+
+  @override
+  void didUpdateWidget(_LiquidIndicator old) {
+    super.didUpdateWidget(old);
+    _controller.duration = widget.duration;
+    if (old.left != widget.left || old.width != widget.width) {
+      // From wherever it is now, mid-move included.
+      final now = _edgesFor(old);
+      _fromLeft = now.$1;
+      _fromRight = now.$2;
+      if (widget.duration == Duration.zero) {
+        _controller.value = 1;
+      } else {
+        _controller.forward(from: 0);
+      }
+    }
+  }
+
+  (double, double) _edgesFor(_LiquidIndicator target) {
+    final t = _controller.value;
+    final rightward = target.left >= _fromLeft;
+    final l = rightward ? _trail.transform(t) : _lead.transform(t);
+    final r = rightward ? _lead.transform(t) : _trail.transform(t);
+    return (
+      _fromLeft + (target.left - _fromLeft) * l,
+      _fromRight + (target.left + target.width - _fromRight) * r,
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        final (l, r) = _edges();
+        return Positioned(
+            left: l, top: 0, bottom: 0, width: r - l, child: child!);
+      },
+      child: widget.child,
     );
   }
 }

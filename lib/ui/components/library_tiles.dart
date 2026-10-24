@@ -55,11 +55,11 @@ String genreLabel(AppLocalizations l10n, BookGenre genre) {
 ThemeData modernSurfaceTheme(ThemeData base) {
   final dark = base.brightness == Brightness.dark;
   final tonal = ColorScheme.fromSeed(
-    seedColor: const Color(0xFFFB0101),
+    seedColor: const Color(0xFFFF6B9D),
     brightness: base.brightness,
   );
   final neutral = ColorScheme.fromSeed(
-    seedColor: const Color(0xFFFB0101),
+    seedColor: const Color(0xFFFF6B9D),
     brightness: base.brightness,
     dynamicSchemeVariant: DynamicSchemeVariant.neutral,
   );
