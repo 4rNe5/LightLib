@@ -3,6 +3,9 @@
 // Dart imports:
 import 'dart:typed_data';
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 // Package imports:
 import 'package:html/dom.dart' as dom;
 import 'package:html/parser.dart' as html_parser;
@@ -173,15 +176,39 @@ String polishTranslation(
         return q;
       });
     }
-    text = _restoreWrapping(text, source.trim());
+    text = _restoreWrapping(text, source.trim(), targetLanguage);
+    if (targetLanguage == 'Korean' && closeKoreanDialogue) {
+      text = _closeKoreanDialogue(text);
+    }
   }
   return text;
+}
+
+final _openDialogue = RegExp(r'“([^“”]*?)”');
+
+/// Whether Korean dialogue gets its closing period (off only to measure
+/// what it adds).
+@visibleForTesting
+bool closeKoreanDialogue = true;
+
+/// Korean editions end every line of dialogue with punctuation inside the
+/// quotes (“이제 됐어.”), where Japanese leaves 「いいぞ」 bare: a period
+/// goes in where the line has none.
+String _closeKoreanDialogue(String text) {
+  return text.replaceAllMapped(_openDialogue, (m) {
+      final inner = m.group(1)!;
+      if (inner.trim().isEmpty ||
+          RegExp(r'[.?!…~―─\-)\]’。、,]$').hasMatch(inner.trimRight())) {
+        return m.group(0)!;
+      }
+      return '“${inner.trimRight()}.”';
+    });
 }
 
 /// A whole line of dialogue (「…」) or inner voice (（…）) that came back
 /// bare - dialogue-trained models drop the brackets, as manga balloons
 /// have none - gets them back, so speech still reads as speech.
-String _restoreWrapping(String text, String source) {
+String _restoreWrapping(String text, String source, String targetLanguage) {
   if (text.isEmpty) return text;
   const pairs = {'「': '」', '『': '』', '（': '）', '(': ')'};
   final open = source.isEmpty ? null : source[0];
@@ -193,11 +220,28 @@ String _restoreWrapping(String text, String source) {
   final wrapped = switch (open) {
     '「' => ('“', '”'),
     '『' => ('‘', '’'),
+    _ when targetLanguage == 'Korean' => ('‘', '’'),
     _ => ('(', ')'),
   };
+  // Korean editions set inner thoughts in single quotes, closed like
+  // dialogue: ‘뭐, 그렇겠지.’
+  String thought(String inner) {
+    inner = inner.trim();
+    return RegExp(r'[.?!…~―─\-]$').hasMatch(inner) ? '‘$inner’' : '‘$inner.’';
+  }
+
+  final isThought = wrapped.$1 == '‘' && open == '（';
+  if (isThought &&
+      text.length > 2 &&
+      text.startsWith('(') &&
+      text.endsWith(')') &&
+      !text.substring(1, text.length - 1).contains(RegExp(r'[()]'))) {
+    return thought(text.substring(1, text.length - 1));
+  }
   final starts = RegExp(r'^["“‘(（「『]').hasMatch(text);
   final ends = RegExp(r'["”’)）」』]$').hasMatch(text);
   if (starts || ends) return text;
+  if (isThought) return thought(text);
   return '${wrapped.$1}$text${wrapped.$2}';
 }
 
@@ -206,10 +250,27 @@ String _restoreWrapping(String text, String source) {
 const readerParagraphBlocks =
     'p,h1,h2,h3,h4,h5,h6,li,blockquote,dt,dd,figcaption,td,th,div,caption';
 
+const _voidTags = {
+  'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input', 'link',
+  'meta', 'param', 'source', 'track', 'wbr',
+};
+final _selfClosing = RegExp(r'<([A-Za-z][\w:-]*)(\s[^<>]*?)?/>');
+
+/// [xhtml] with `<tag/>` written `<tag></tag>` for elements HTML does not
+/// know as empty. An HTML parser takes `<script .../>` (a Kobo EPUB
+/// puts one in every head) as an opening tag, and the whole book after
+/// it as the script; the reader, parsing XHTML, does not.
+String expandSelfClosingTags(String xhtml) =>
+    xhtml.replaceAllMapped(_selfClosing, (m) {
+      final tag = m.group(1)!;
+      if (_voidTags.contains(tag.toLowerCase())) return m.group(0)!;
+      return '<$tag${m.group(2) ?? ''}></$tag>';
+    });
+
 /// The paragraphs of one XHTML document as the book reader splits them:
 /// leaf blocks with letters, pictures skipped, text as [paragraphText].
 List<String> readerParagraphs(String xhtml) {
-  final doc = html_parser.parse(xhtml);
+  final doc = html_parser.parse(expandSelfClosingTags(xhtml));
   final body = doc.body;
   if (body == null) return const [];
   final out = <String>[];

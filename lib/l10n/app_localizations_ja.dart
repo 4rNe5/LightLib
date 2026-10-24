@@ -1347,4 +1347,40 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get widgetNextUp => '次の本';
+
+  @override
+  String get glossaryTitle => '用語集';
+
+  @override
+  String get glossaryHint => '翻訳はいつもこの表記を使います。タップして修正できます。';
+
+  @override
+  String get glossaryMaking => '本を読んで用語集を作成中…';
+
+  @override
+  String get glossaryEmpty => 'まだ用語集がありません。この本を翻訳すると作成されます。';
+
+  @override
+  String get glossaryRemake => '作り直す';
+
+  @override
+  String get glossaryKindPerson => '人物';
+
+  @override
+  String get glossaryKindPlace => '場所';
+
+  @override
+  String get glossaryKindTerm => '用語';
+
+  @override
+  String get glossaryGenderMale => '男';
+
+  @override
+  String get glossaryGenderFemale => '女';
+
+  @override
+  String get glossaryGenderUnknown => '不明';
+
+  @override
+  String get glossaryKorean => '翻訳での表記';
 }

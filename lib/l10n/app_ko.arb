@@ -412,5 +412,17 @@
   "releaseLatest": "최신",
   "releaseInstalled": "사용 중",
   "widgetEmptyLibrary": "서재에 책을 추가하면 여기에 표시돼요",
-  "widgetNextUp": "다음 책"
+  "widgetNextUp": "다음 책",
+  "glossaryTitle": "용어집",
+  "glossaryHint": "번역은 항상 이 표기를 씁니다. 눌러서 고칠 수 있어요.",
+  "glossaryMaking": "책을 읽고 용어집을 만드는 중…",
+  "glossaryEmpty": "아직 용어집이 없어요. 이 책을 번역하면 만들어져요.",
+  "glossaryRemake": "다시 만들기",
+  "glossaryKindPerson": "인물",
+  "glossaryKindPlace": "장소",
+  "glossaryKindTerm": "용어",
+  "glossaryGenderMale": "남",
+  "glossaryGenderFemale": "여",
+  "glossaryGenderUnknown": "모름",
+  "glossaryKorean": "번역 표기"
 }

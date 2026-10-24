@@ -17,9 +17,11 @@ import 'package:openlib/services/database.dart';
 import 'package:openlib/services/epub_package.dart' show readingsIn;
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/process_exits.dart';
+import 'package:openlib/services/translation/book_glossary.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/services/translation/translation_qa.dart';
 import 'package:openlib/services/translation/translation_scheduler.dart';
 
 export 'package:openlib/services/translation/translation_scheduler.dart'
@@ -67,9 +69,17 @@ abstract class Translator {
     List<String> before = const [],
     List<String?> beforeTranslations = const [],
     Map<String, String> readings = const {},
+    BookGlossary glossary = BookGlossary.empty,
     TranslationPriority priority = TranslationPriority.background,
     void Function(int index, String translation)? onEach,
   });
+
+  /// The model's raw answer to [prompt] (for requests that are not a
+  /// translation, such as making a book's glossary); null when the model
+  /// cannot take free-form instructions.
+  Future<String?> complete(String prompt,
+      {required int maxTokens,
+      TranslationPriority priority = TranslationPriority.background});
 
   Future<void> dispose();
 }
@@ -662,6 +672,7 @@ class LocalLlmTranslator implements Translator {
     List<String> before = const [],
     List<String?> beforeTranslations = const [],
     Map<String, String> readings = const {},
+    BookGlossary glossary = BookGlossary.empty,
     TranslationPriority priority = TranslationPriority.background,
     void Function(int index, String translation)? onEach,
   }) {
@@ -669,10 +680,68 @@ class LocalLlmTranslator implements Translator {
     return _scheduler
         .submit(
             (token) => _translateBatchNow(texts, targetLanguage, sourceLanguage,
-                before, beforeTranslations, readings, onEach, token),
+                before, beforeTranslations, readings, glossary, onEach, token),
             priority)
         .then((v) => (v as List).cast<String>());
   }
+
+  @override
+  Future<String?> complete(String prompt,
+      {required int maxTokens,
+      TranslationPriority priority = TranslationPriority.background}) {
+    if (_disposed) return Future.error(StateError('Translator disposed'));
+    if (promptFormat != TranslationPromptFormat.general) {
+      return Future.value(null);
+    }
+    return _scheduler.submit((token) async {
+      await load();
+      token.check();
+      return _generateRaw(prompt, maxTokens, null, token);
+    }, priority).then((v) => v as String?);
+  }
+
+  /// Paragraphs that came back with a problem ([checkTranslation]) are
+  /// sent once more with the draft and the problem named
+  /// ([refinementPrompt]); the better of the two is kept.
+  Future<String> _refine(String source, String draft, List<QaIssue> issues,
+      String style, BookGlossary glossary, String targetLanguage,
+      YieldToken token) async {
+    token.check();
+    final prompt = refinementPrompt(
+      style: style,
+      source: source,
+      draft: draft,
+      issues: issues,
+      glossary: glossary.inTexts([source]),
+      targetLanguage: targetLanguage,
+    );
+    final maxTokens = (source.length * 3 + 32).clamp(64, 1024);
+    final again = polishTranslation(
+        await _generate(prompt, maxTokens, TranslationPromptFormat.general,
+            token),
+        source,
+        targetLanguage);
+    final after = checkTranslation(source, again,
+        targetLanguage: targetLanguage, glossary: glossary);
+    final better = again.isNotEmpty && refinedIsBetter(issues, after);
+    refinements++;
+    if (better) refinementsKept++;
+    _logger.info('Translation refined', tag: 'Translator', metadata: {
+      'issues': [for (final i in issues) i.name],
+      'after': [for (final i in after) i.name],
+      'kept': better,
+    });
+    return better ? again : draft;
+  }
+
+  /// Paragraphs sent again to be fixed, and how many of those came back
+  /// better (for the logs and the evaluation).
+  int refinements = 0;
+  int refinementsKept = 0;
+
+  /// Check each translation and fix the ones that fail
+  /// ([checkTranslation]); off only to measure what the checks add.
+  bool qualityChecks = true;
 
   Future<List<String>> _translateBatchNow(
     List<String> texts,
@@ -681,20 +750,34 @@ class LocalLlmTranslator implements Translator {
     List<String> before,
     List<String?> beforeTranslations,
     Map<String, String> readings,
+    BookGlossary glossary,
     void Function(int index, String translation)? onEach,
     YieldToken token,
   ) async {
     await load();
     token.check();
+    final general =
+        promptFormat == TranslationPromptFormat.general && qualityChecks;
     final results = List<String?>.filled(texts.length, null);
+    // Came back with a problem other than untranslated text: fixed after
+    // the batch.
+    final flagged = <int, (String, List<QaIssue>)>{};
     void deliver(int i, String answer) {
-      if (results[i] != null) return;
-      final polished =
-          polishTranslation(cleanTranslation(answer), texts[i], targetLanguage);
-      // Source script left in it: translated again alone (with the retry
-      // that names the problem) once the batch is done.
-      if (polished.isEmpty ||
-          leftoverSourceScript(polished, targetLanguage).isNotEmpty) {
+      if (results[i] != null || flagged.containsKey(i)) return;
+      final cleaned = cleanTranslation(answer);
+      // Source script left in it (checked before polishing, which drops
+      // stray kana - and with it half a name written 아まね): translated
+      // again alone, with the retry that names the problem, once the
+      // batch is done.
+      if (leftoverSourceScript(cleaned, targetLanguage).isNotEmpty) return;
+      final polished = polishTranslation(cleaned, texts[i], targetLanguage);
+      if (polished.isEmpty) return;
+      final issues = general
+          ? checkTranslation(texts[i], polished,
+              targetLanguage: targetLanguage, glossary: glossary)
+          : const <QaIssue>[];
+      if (issues.isNotEmpty) {
+        flagged[i] = (polished, issues);
         return;
       }
       results[i] = polished;
@@ -709,7 +792,9 @@ class LocalLlmTranslator implements Translator {
         before: before,
         beforeTranslations: beforeTranslations,
         readings: readingsIn(readings, [...texts, ...before]),
+        glossary: glossary.inTexts([...texts, ...before]),
         lightNovelStyle: TranslationStyle.lightNovel,
+        narration: targetLanguage == 'Korean' ? glossary.narrationNote : null,
       );
       final maxTokens =
           (texts.fold<int>(0, (n, t) => n + t.length * 3 + 16) + 32)
@@ -735,16 +820,35 @@ class LocalLlmTranslator implements Translator {
         if (got[i] != null) deliver(i, got[i]!);
       }
     }
+    final style = batchStyle(
+        texts: texts,
+        targetLanguage: targetLanguage,
+        sourceLanguage: sourceLanguage,
+        lightNovelStyle: TranslationStyle.lightNovel);
+    for (final MapEntry(key: i, value: (draft, issues)) in flagged.entries) {
+      final out = await _refine(
+          texts[i], draft, issues, style, glossary, targetLanguage, token);
+      results[i] = out;
+      onEach?.call(i, out);
+    }
     // Whatever the batch did not bring back, one at a time.
     for (var i = 0; i < texts.length; i++) {
       if (results[i] != null) continue;
       token.check();
       final context =
           i > 0 ? texts[i - 1] : (before.isNotEmpty ? before.last : null);
-      final out = await _translateNow(
+      var out = await _translateNow(
           _Job(texts[i], targetLanguage, sourceLanguage, context,
               i + 1 < texts.length ? texts[i + 1] : null),
           token);
+      if (general && out.isNotEmpty) {
+        final issues = checkTranslation(texts[i], out,
+            targetLanguage: targetLanguage, glossary: glossary);
+        if (issues.isNotEmpty) {
+          out = await _refine(
+              texts[i], out, issues, style, glossary, targetLanguage, token);
+        }
+      }
       results[i] = out;
       if (out.isNotEmpty) onEach?.call(i, out);
     }
@@ -968,6 +1072,7 @@ class UrgentTranslator implements Translator {
     List<String> before = const [],
     List<String?> beforeTranslations = const [],
     Map<String, String> readings = const {},
+    BookGlossary glossary = BookGlossary.empty,
     TranslationPriority priority = TranslationPriority.visible,
     void Function(int index, String translation)? onEach,
   }) =>
@@ -977,10 +1082,17 @@ class UrgentTranslator implements Translator {
           before: before,
           beforeTranslations: beforeTranslations,
           readings: readings,
+          glossary: glossary,
           priority: priority == TranslationPriority.background
               ? TranslationPriority.ahead
               : priority,
           onEach: onEach);
+
+  @override
+  Future<String?> complete(String prompt,
+          {required int maxTokens,
+          TranslationPriority priority = TranslationPriority.ahead}) =>
+      _inner.complete(prompt, maxTokens: maxTokens, priority: priority);
 
   @override
   Future<void> dispose() async {

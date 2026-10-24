@@ -1876,5 +1876,53 @@
   "widgetNextUp": "Next",
   "@widgetNextUp": {
     "description": "Home-screen widget: the second book"
+  },
+  "glossaryTitle": "Glossary",
+  "@glossaryTitle": {
+    "description": "Reader: the book glossary"
+  },
+  "glossaryHint": "Every translation writes these names and terms this way. Tap one to change it.",
+  "@glossaryHint": {
+    "description": "Glossary sheet subtitle"
+  },
+  "glossaryMaking": "Reading the book to make its glossary…",
+  "@glossaryMaking": {
+    "description": "While the glossary is being made"
+  },
+  "glossaryEmpty": "No glossary yet. It is made when you translate this book.",
+  "@glossaryEmpty": {
+    "description": "Empty glossary"
+  },
+  "glossaryRemake": "Make again",
+  "@glossaryRemake": {
+    "description": "Remake the glossary (edits kept)"
+  },
+  "glossaryKindPerson": "Person",
+  "@glossaryKindPerson": {
+    "description": "Glossary kind"
+  },
+  "glossaryKindPlace": "Place",
+  "@glossaryKindPlace": {
+    "description": "Glossary kind"
+  },
+  "glossaryKindTerm": "Term",
+  "@glossaryKindTerm": {
+    "description": "Glossary kind"
+  },
+  "glossaryGenderMale": "Male",
+  "@glossaryGenderMale": {
+    "description": "Glossary gender"
+  },
+  "glossaryGenderFemale": "Female",
+  "@glossaryGenderFemale": {
+    "description": "Glossary gender"
+  },
+  "glossaryGenderUnknown": "Unknown",
+  "@glossaryGenderUnknown": {
+    "description": "Glossary gender"
+  },
+  "glossaryKorean": "Written as",
+  "@glossaryKorean": {
+    "description": "Glossary edit: the target form"
   }
 }

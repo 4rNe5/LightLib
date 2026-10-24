@@ -8,6 +8,20 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 
 void main() {
+  test('a self-closing script in the head does not swallow the book', () {
+    // Kobo EPUBs put <script .../> in every head; an HTML parser reads it
+    // as an opening tag, the browser (parsing XHTML) does not.
+    const xhtml = '<html><head><title>t</title>'
+        '<script type="text/javascript" src="../../js/kobo.js"/>'
+        '<style id="s"/></head><body>'
+        '<p>「周～、どうだった？」</p><p><br/></p>'
+        '<p>　期末考査の日程がようやく終了した。</p></body></html>';
+    expect(readerParagraphs(xhtml),
+        ['「周～、どうだった？」', '期末考査の日程がようやく終了した。']);
+    expect(expandSelfClosingTags('<br/><img src="a"/><span/>'),
+        '<br/><img src="a"/><span></span>');
+  });
+
   test('leaf blocks with letters, ruby readings dropped, pictures skipped',
       () {
     const xhtml = '''<?xml version="1.0" encoding="UTF-8"?>

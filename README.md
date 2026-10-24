@@ -25,7 +25,7 @@
   The book's own layout, images and covers, vertical (縦書き) or horizontal writing, ruby (furigana), paged or scrolled. Fonts, sizes, spacing and themes per script (Korean, Japanese, Latin), applied to books only. Reader styling follows [Readest](https://github.com/readest/readest).
 
 - **On-device translation**
-  Translate books as you read with a local model: Gemma 4 through [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) (GPU or CPU) or GGUF models through llama.cpp, via [llamadart](https://pub.dev/packages/llamadart). Several paragraphs per request, a light-novel style option tuned for Korean, character names read from the book's furigana. Nothing leaves the phone.
+  Translate books as you read with a local model: Gemma 4 through [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) (GPU or CPU) or GGUF models through llama.cpp, via [llamadart](https://pub.dev/packages/llamadart). Several paragraphs per request, a light-novel style option tuned for Korean, and a per-book glossary (characters, genders, places, terms - made once, editable) so names read the same everywhere; translations that come back wrong are checked and fixed. Nothing leaves the phone.
 
 - **Background translation**
   Optional: library books are translated slowly in the background, pausing while you read, when the phone is warm or the battery is low, with progress in the notification shade.
@@ -80,6 +80,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 - [Openlib](https://github.com/dstark5/Openlib) by dstark5 and [OpenlibExtended](https://github.com/warreth/OpenlibExtended) by warreth, the apps this one is built on.
 - [foliate-js](https://github.com/johnfactotum/foliate-js) (MIT) and [Readest](https://github.com/readest/readest) (AGPL-3.0) for the reader.
 - [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), [llamadart](https://pub.dev/packages/llamadart) and the [Gemma](https://ai.google.dev/gemma) models for translation.
+- [Glossarion](https://github.com/Shirochi-stack/Glossarion) (AGPL-3.0) for the approach of the translation glossary and quality checks.
 
 ## License 📜
 

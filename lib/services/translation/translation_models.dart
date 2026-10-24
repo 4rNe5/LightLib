@@ -6,6 +6,9 @@ import 'dart:convert';
 // Flutter imports:
 import 'package:flutter/foundation.dart';
 
+// Project imports:
+import 'package:openlib/services/translation/book_glossary.dart';
+
 /// How a model file is executed.
 enum TranslationRuntime {
   /// `.litertlm` through LiteRT-LM: GPU first, CPU when the GPU fails.
@@ -544,14 +547,23 @@ You translate Japanese light novels into Korean for a published Korean edition.
 Write Korean that reads like an officially published light novel: smooth, natural and idiomatic, never word for word.
 
 Style:
-- Narration is in the literary -다 form. Keep the tense of the original: present-tense narration (〜する, 〜いる) stays present (한다, 있다), past stays past.
-- The narrator speaks in the first person: 自分 and 俺 in narration are 나, あいつら is 그 녀석들. Rebuild each sentence in natural Korean word order and drop the subjects and pronouns Korean leaves out (avoid 그녀, 그 when the sentence works without them).
+- Narration is in the literary -다 form. What happens is told in the past tense, even where the Japanese says it in the present (ノックされる → 노크하는 소리가 들렸다); the narrator's thoughts, judgments and descriptions of how things are stay in the present (〜だろう → 겠지, 〜ない → 않다).
+- Keep the narration's person. When the narrator tells the story as 俺, 僕 or 私, the narrator is 나 and あいつら is 그 녀석들; narration that calls the hero by name (周は) stays in the third person, and こちら is the hero (아마네 쪽). 自分 is 자신 or 스스로 (나 only where a first-person narrator means himself).
+- Rebuild each sentence in natural Korean word order and drop the subjects and pronouns Korean leaves out (avoid 그녀, 그 when the sentence works without them). Use a comma only where Korean needs a pause, not for every 、.
 - Translate idioms by their meaning (おいしい思いをする → 재미를 보다, 腹が立つ → 화가 나다), never literally.
+- Words that look alike in Korean often mean something else: 苦手 of a person → 껄끄럽다, 거북하다 (not 서툴다); 正解 → 잘한 일; 微妙 → 애매하다, 좀 그렇다; 一応 → 일단, 그래도; 結構 → 꽤; 気味悪い → 징그럽다; 素直 → 솔직하다, 순순히; 適当 → 대충; 迷惑 → 폐; 失礼 → 실례; 遠慮 → 사양.
+- Speech drops the hedges Korean does not say: 〜と思う, 〜気がする and 〜んだけど at the end of a casual line become its ending (「そこまで怒ることないと思うんだけど」 → “그렇게까지 화낼 건 없잖아.”).
 - Dialogue keeps each speaker's voice: casual stays casual (반말), polite stays polite (존댓말); a teenage girl sounds like one (~거든, ~잖아, 진짜), a parent warm, a joker playful.
-- 「」 become “ ”, 『』 become ‘ ’. Keep ……, ── and !? as they are.
-- Japanese names are written by their Japanese reading in Hangul (翔太 → 쇼타, 美咲 → 미사키), the same way every time. Forms of address: お兄ちゃん is 오빠 from a girl and 형 from a boy; 父さん and 母さん are 아빠 and 엄마 for a young speaker; 先輩 → 선배; 〜さん → 씨; 〜君 after a first name is dropped (翔太君 → 쇼타).
+- 「」 become “ ”, 『』 and inner thoughts in （） become ‘ ’, and every line of dialogue ends with punctuation inside the quotes (“이제 됐어.”). Keep ……, ── and !? as they are.
+- Japanese names are written by their Japanese reading in Hangul (翔太 → 쇼타, 美咲 → 미사키), the same way every time. Forms of address: 〜君 and 〜くん → 군 (翔太くん → 쇼타 군); 〜ちゃん is dropped (美咲ちゃん → 미사키, called to: 미사키야); 〜さん → 씨 (美咲さん → 미사키 씨), except between classmates: 군 when a girl politely names a boy, nothing when boys talk of a girl; a young girl called 〜さん by someone older → 양; a role with さん or 様 in polite speech → 님 (探偵さん → 탐정님, お客様 → 손님); 先輩 → 선배; お兄ちゃん is 오빠 from a girl and 형 from a boy; 父さん and 母さん are 아빠 and 엄마 for a young speaker.
+- Numbers with a unit are written in digits (三十八度三分 → 38.3도, 一年生 → 1학년); 一人 and the like stay words (혼자).
 - Sound words and cries become natural Korean ones (ドキッ → 두근, グチャリ → 철퍽, ジンジン → 욱신욱신, いってぇ → 아파).
 - Translate every sentence, add nothing, explain nothing.""";
+
+/// Replaces the Korean light-novel instructions (to measure a change
+/// against the instructions before it).
+@visibleForTesting
+String? koreanStyleOverride;
 
 String _genericBatchStyle(String targetLanguage, bool lightNovelStyle) =>
     lightNovelStyle
@@ -576,14 +588,36 @@ String batchTranslationPrompt({
   List<String> before = const [],
   List<String?> beforeTranslations = const [],
   List<MapEntry<String, String>> readings = const [],
+  List<GlossaryEntry> glossary = const [],
   bool lightNovelStyle = true,
+  String? narration,
 }) {
-  final japanese =
-      sourceLanguage == 'Japanese' || texts.any((t) => containsKana(t));
-  final buffer = StringBuffer(
-      targetLanguage == 'Korean' && japanese && lightNovelStyle
-          ? _koreanLightNovelStyle.trim()
-          : _genericBatchStyle(targetLanguage, lightNovelStyle));
+  final buffer = StringBuffer(batchStyle(
+      texts: texts,
+      targetLanguage: targetLanguage,
+      sourceLanguage: sourceLanguage,
+      lightNovelStyle: lightNovelStyle));
+  if (narration != null) {
+    buffer
+      ..writeln()
+      ..write('- $narration');
+  }
+  if (glossary.isNotEmpty) {
+    buffer
+      ..writeln()
+      ..writeln()
+      ..writeln('Names and terms in this book - write them exactly like this '
+          '(a gender tells how that person speaks and is spoken of):');
+    for (final e in glossary) {
+      buffer.writeln(e.promptLine);
+    }
+  }
+  // Readings the glossary does not cover yet: hints only.
+  final covered = {for (final e in glossary) e.source};
+  readings = [
+    for (final r in readings)
+      if (!covered.any((c) => c.contains(r.key))) r,
+  ];
   if (readings.isNotEmpty) {
     buffer
       ..writeln()
@@ -612,12 +646,34 @@ String batchTranslationPrompt({
     ..writeln()
     ..writeln('Translate these paragraphs into $targetLanguage. Answer with '
         'exactly one line per paragraph: its number in brackets, then the '
-        'translation.')
-    ..writeln();
+        'translation.');
+  // Said again last: what a small model forgets first over a long request.
+  if (targetLanguage == 'Korean' &&
+      lightNovelStyle &&
+      (sourceLanguage == 'Japanese' || texts.any(containsKana))) {
+    buffer.writeln('Remember: narration in the past tense (-었다, -였다), '
+        'dialogue in each speaker\'s own 존댓말 or 반말, names as given.');
+  }
+  buffer.writeln();
   for (var i = 0; i < texts.length; i++) {
     buffer.writeln('[${i + 1}] ${texts[i]}');
   }
   return buffer.toString().trimRight();
+}
+
+/// The instructions a batch request opens with (also those a
+/// refinement request repeats).
+String batchStyle({
+  required List<String> texts,
+  required String targetLanguage,
+  String? sourceLanguage,
+  bool lightNovelStyle = true,
+}) {
+  final japanese =
+      sourceLanguage == 'Japanese' || texts.any((t) => containsKana(t));
+  return targetLanguage == 'Korean' && japanese && lightNovelStyle
+      ? (koreanStyleOverride ?? _koreanLightNovelStyle).trim()
+      : _genericBatchStyle(targetLanguage, lightNovelStyle);
 }
 
 final _numbered = RegExp(r'^\s*\[(\d+)\]\s*(.*)$');

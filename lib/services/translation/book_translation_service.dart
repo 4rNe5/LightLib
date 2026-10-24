@@ -16,6 +16,8 @@ import 'package:epubx/epubx.dart' show EpubReader;
 import 'package:path/path.dart' as p;
 
 // Project imports:
+import 'package:openlib/services/translation/book_glossary.dart';
+import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/epub_package.dart';
@@ -464,6 +466,14 @@ class BookTranslationService extends ChangeNotifier
       final book = EpubPackage.open(await File(path).readAsBytes());
       return book == null ? <String, String>{} : epubRubyReadings(book);
     }).catchError((_) => <String, String>{});
+    // The names and terms every paragraph uses alike, made once per book.
+    final glossary = await GlossaryService.instance
+        .ensure(
+            bookFile: fileName,
+            bookPath: path,
+            translator: translator,
+            priority: TranslationPriority.background)
+        .catchError((_) => BookGlossary.empty);
     final seen = <String>{};
     bool pending(String? t) =>
         t != null && !seen.contains(t) && cache.lookup(t) == null;
@@ -514,6 +524,7 @@ class BookTranslationService extends ChangeNotifier
             before: before,
             beforeTranslations: [for (final t in before) cache.lookup(t)],
             readings: readings,
+            glossary: glossary,
             onEach: (n, out) {
               cache.store(texts[batch[n]]!, out);
               _translatedThisRun++;

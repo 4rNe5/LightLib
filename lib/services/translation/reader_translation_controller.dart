@@ -8,6 +8,7 @@ import 'dart:collection';
 import 'package:flutter/foundation.dart';
 
 // Project imports:
+import 'package:openlib/services/translation/book_glossary.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translator.dart';
@@ -41,6 +42,9 @@ class ReaderTranslationController extends ChangeNotifier {
 
   /// The book's ruby readings ([epubRubyReadings]), once known.
   Map<String, String> readings = const {};
+
+  /// The book's glossary ([GlossaryService]), once known.
+  BookGlossary glossary = BookGlossary.empty;
   final int keepBehind;
   final AppLogger _logger = AppLogger();
 
@@ -249,6 +253,7 @@ class ReaderTranslationController extends ChangeNotifier {
               before: before,
               beforeTranslations: [for (final t in before) _cache.lookup(t)],
               readings: readings,
+              glossary: glossary,
               priority: priority,
               onEach: (i, out) {
                 if (_disposed || out.isEmpty) return;

@@ -175,10 +175,12 @@ void main() {
       expect(polishTranslation('선배, 아직 안 자요?', '「先輩、まだ起きてるんすか？」', 'Korean'),
           '“선배, 아직 안 자요?”');
       expect(polishTranslation('왜 이 녀석은……!', '（なんでこいつ……！）', 'Korean'),
-          '(왜 이 녀석은……!)');
+          '‘왜 이 녀석은……!’');
       expect(polishTranslation('그 책', '『その本』', 'Korean'), '‘그 책’');
-      // Full-width brackets the model mixed in become half-width.
+      // Full-width brackets the model mixed in: a thought all the same.
       expect(polishTranslation('(어째 이 녀석은……!）', '（なんでこいつ……！）', 'Korean'),
+          '‘어째 이 녀석은……!’');
+      expect(polishTranslation('(어째 이 녀석은……!）', '（なんでこいつ……！）', 'English'),
           '(어째 이 녀석은……!)');
     });
 

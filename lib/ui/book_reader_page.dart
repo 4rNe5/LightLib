@@ -27,6 +27,7 @@ import 'package:openlib/services/epub_package.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/reader_fonts.dart';
 import 'package:openlib/services/reader_settings.dart';
+import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/reader_translation_controller.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
@@ -35,6 +36,7 @@ import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
 import 'package:openlib/state/state.dart' show saveEpubState;
 import 'package:openlib/ui/components/paged_book_view.dart' show ReaderLayout;
+import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/ui/components/reader_settings_sheet.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/translation_settings_page.dart';
@@ -253,6 +255,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     _lifecycle?.dispose();
     _saveTimer?.cancel();
     _settingsTimer?.cancel();
+    GlossaryService.instance.removeListener(_onGlossaryChanged);
     _translation?.removeListener(_onTranslationChanged);
     _translation?.dispose();
     _tts?.dispose();
@@ -551,8 +554,10 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       }
       _targetCode = target.code;
       _cache = cache;
+      final urgent = UrgentTranslator(shared);
+      _glossaryTranslator = urgent;
       final controller = ReaderTranslationController(
-        translator: UrgentTranslator(shared),
+        translator: urgent,
         cache: cache,
         targetLanguage: target.englishName,
         sourceLanguage: sourceLanguageName(_language),
@@ -564,6 +569,19 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         final book = EpubPackage.open(await File(path).readAsBytes());
         return book == null ? <String, String>{} : epubRubyReadings(book);
       }).then((r) => controller.readings = r, onError: (_) {}));
+      // The book's names and terms: loaded, or made once by the model
+      // while the first pages are translated ([_onGlossaryChanged]).
+      GlossaryService.instance.removeListener(_onGlossaryChanged);
+      GlossaryService.instance.addListener(_onGlossaryChanged);
+      unawaited(GlossaryService.instance
+          .load(widget.fileName)
+          .then((_) => _onGlossaryChanged()));
+      unawaited(GlossaryService.instance
+          .ensure(
+              bookFile: widget.fileName, bookPath: path, translator: urgent)
+          .then((_) {}, onError: (e) {
+        _logger.warning('Glossary not made', tag: 'Glossary', error: e);
+      }));
       setState(() {
         _translation = controller;
         _translateOn = true;
@@ -616,6 +634,26 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
           '${jsonEncode(entries)}, ${jsonEncode(_targetCode)})');
     });
   }
+
+  /// The translator the glossary is made with (the reader's).
+  Translator? _glossaryTranslator;
+
+  void _onGlossaryChanged() {
+    final glossary = GlossaryService.instance.cached(widget.fileName);
+    if (glossary != null) _translation?.glossary = glossary;
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _openGlossary() => showGlossarySheet(
+        context,
+        bookFile: widget.fileName,
+        onRemake: _glossaryTranslator == null
+            ? null
+            : () => GlossaryService.instance.make(
+                bookFile: widget.fileName,
+                bookPath: widget.filePath,
+                translator: _glossaryTranslator!),
+      );
 
   Future<void> _openTranslationSettings() async {
     await Navigator.push(
@@ -941,6 +979,19 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                 onPressed:
                     _fixedLayout ? null : () => _setTranslation(!_translateOn),
               ),
+              if (_translateOn)
+                IconButton(
+                  key: const ValueKey('glossaryButton'),
+                  tooltip: l10n.glossaryTitle,
+                  icon: GlossaryService.instance.isMaking(widget.fileName)
+                      ? SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: iconColor))
+                      : Icon(Icons.badge_outlined, color: iconColor),
+                  onPressed: _openGlossary,
+                ),
               if (_tts != null)
                 IconButton(
                   tooltip: _ttsState == TtsState.playing

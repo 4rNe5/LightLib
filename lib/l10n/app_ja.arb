@@ -412,5 +412,17 @@
   "releaseLatest": "最新",
   "releaseInstalled": "使用中",
   "widgetEmptyLibrary": "ライブラリに追加した本がここに表示されます",
-  "widgetNextUp": "次の本"
+  "widgetNextUp": "次の本",
+  "glossaryTitle": "用語集",
+  "glossaryHint": "翻訳はいつもこの表記を使います。タップして修正できます。",
+  "glossaryMaking": "本を読んで用語集を作成中…",
+  "glossaryEmpty": "まだ用語集がありません。この本を翻訳すると作成されます。",
+  "glossaryRemake": "作り直す",
+  "glossaryKindPerson": "人物",
+  "glossaryKindPlace": "場所",
+  "glossaryKindTerm": "用語",
+  "glossaryGenderMale": "男",
+  "glossaryGenderFemale": "女",
+  "glossaryGenderUnknown": "不明",
+  "glossaryKorean": "翻訳での表記"
 }

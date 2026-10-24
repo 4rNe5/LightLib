@@ -2583,6 +2583,78 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Next'**
   String get widgetNextUp;
+
+  /// Reader: the book glossary
+  ///
+  /// In en, this message translates to:
+  /// **'Glossary'**
+  String get glossaryTitle;
+
+  /// Glossary sheet subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Every translation writes these names and terms this way. Tap one to change it.'**
+  String get glossaryHint;
+
+  /// While the glossary is being made
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the book to make its glossary…'**
+  String get glossaryMaking;
+
+  /// Empty glossary
+  ///
+  /// In en, this message translates to:
+  /// **'No glossary yet. It is made when you translate this book.'**
+  String get glossaryEmpty;
+
+  /// Remake the glossary (edits kept)
+  ///
+  /// In en, this message translates to:
+  /// **'Make again'**
+  String get glossaryRemake;
+
+  /// Glossary kind
+  ///
+  /// In en, this message translates to:
+  /// **'Person'**
+  String get glossaryKindPerson;
+
+  /// Glossary kind
+  ///
+  /// In en, this message translates to:
+  /// **'Place'**
+  String get glossaryKindPlace;
+
+  /// Glossary kind
+  ///
+  /// In en, this message translates to:
+  /// **'Term'**
+  String get glossaryKindTerm;
+
+  /// Glossary gender
+  ///
+  /// In en, this message translates to:
+  /// **'Male'**
+  String get glossaryGenderMale;
+
+  /// Glossary gender
+  ///
+  /// In en, this message translates to:
+  /// **'Female'**
+  String get glossaryGenderFemale;
+
+  /// Glossary gender
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown'**
+  String get glossaryGenderUnknown;
+
+  /// Glossary edit: the target form
+  ///
+  /// In en, this message translates to:
+  /// **'Written as'**
+  String get glossaryKorean;
 }
 
 class _AppLocalizationsDelegate

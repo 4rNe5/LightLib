@@ -418,5 +418,17 @@
   "releaseLatest": "Más reciente",
   "releaseInstalled": "Instalada",
   "widgetEmptyLibrary": "Los libros que añadas a tu biblioteca aparecerán aquí",
-  "widgetNextUp": "Siguiente"
+  "widgetNextUp": "Siguiente",
+  "glossaryTitle": "Glosario",
+  "glossaryHint": "Todas las traducciones escriben así estos nombres y términos. Toca uno para cambiarlo.",
+  "glossaryMaking": "Leyendo el libro para crear su glosario…",
+  "glossaryEmpty": "Aún no hay glosario. Se crea al traducir este libro.",
+  "glossaryRemake": "Volver a crear",
+  "glossaryKindPerson": "Persona",
+  "glossaryKindPlace": "Lugar",
+  "glossaryKindTerm": "Término",
+  "glossaryGenderMale": "Hombre",
+  "glossaryGenderFemale": "Mujer",
+  "glossaryGenderUnknown": "Desconocido",
+  "glossaryKorean": "Se escribe"
 }

@@ -418,5 +418,17 @@
   "releaseLatest": "Neueste",
   "releaseInstalled": "Installiert",
   "widgetEmptyLibrary": "Bücher aus deiner Bibliothek erscheinen hier",
-  "widgetNextUp": "Als Nächstes"
+  "widgetNextUp": "Als Nächstes",
+  "glossaryTitle": "Glossar",
+  "glossaryHint": "Jede Übersetzung schreibt diese Namen und Begriffe so. Tippe zum Ändern.",
+  "glossaryMaking": "Das Buch wird gelesen, um das Glossar zu erstellen…",
+  "glossaryEmpty": "Noch kein Glossar. Es entsteht, wenn du dieses Buch übersetzt.",
+  "glossaryRemake": "Neu erstellen",
+  "glossaryKindPerson": "Person",
+  "glossaryKindPlace": "Ort",
+  "glossaryKindTerm": "Begriff",
+  "glossaryGenderMale": "Männlich",
+  "glossaryGenderFemale": "Weiblich",
+  "glossaryGenderUnknown": "Unbekannt",
+  "glossaryKorean": "Geschrieben als"
 }

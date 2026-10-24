@@ -1409,4 +1409,43 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get widgetNextUp => 'Als Nächstes';
+
+  @override
+  String get glossaryTitle => 'Glossar';
+
+  @override
+  String get glossaryHint =>
+      'Jede Übersetzung schreibt diese Namen und Begriffe so. Tippe zum Ändern.';
+
+  @override
+  String get glossaryMaking =>
+      'Das Buch wird gelesen, um das Glossar zu erstellen…';
+
+  @override
+  String get glossaryEmpty =>
+      'Noch kein Glossar. Es entsteht, wenn du dieses Buch übersetzt.';
+
+  @override
+  String get glossaryRemake => 'Neu erstellen';
+
+  @override
+  String get glossaryKindPerson => 'Person';
+
+  @override
+  String get glossaryKindPlace => 'Ort';
+
+  @override
+  String get glossaryKindTerm => 'Begriff';
+
+  @override
+  String get glossaryGenderMale => 'Männlich';
+
+  @override
+  String get glossaryGenderFemale => 'Weiblich';
+
+  @override
+  String get glossaryGenderUnknown => 'Unbekannt';
+
+  @override
+  String get glossaryKorean => 'Geschrieben als';
 }

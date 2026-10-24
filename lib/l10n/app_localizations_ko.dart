@@ -1349,4 +1349,40 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get widgetNextUp => '다음 책';
+
+  @override
+  String get glossaryTitle => '용어집';
+
+  @override
+  String get glossaryHint => '번역은 항상 이 표기를 씁니다. 눌러서 고칠 수 있어요.';
+
+  @override
+  String get glossaryMaking => '책을 읽고 용어집을 만드는 중…';
+
+  @override
+  String get glossaryEmpty => '아직 용어집이 없어요. 이 책을 번역하면 만들어져요.';
+
+  @override
+  String get glossaryRemake => '다시 만들기';
+
+  @override
+  String get glossaryKindPerson => '인물';
+
+  @override
+  String get glossaryKindPlace => '장소';
+
+  @override
+  String get glossaryKindTerm => '용어';
+
+  @override
+  String get glossaryGenderMale => '남';
+
+  @override
+  String get glossaryGenderFemale => '여';
+
+  @override
+  String get glossaryGenderUnknown => '모름';
+
+  @override
+  String get glossaryKorean => '번역 표기';
 }

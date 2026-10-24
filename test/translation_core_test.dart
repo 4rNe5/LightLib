@@ -10,6 +10,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:html/parser.dart' as html_parser;
 
 // Project imports:
+import 'package:openlib/services/translation/book_glossary.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/reader_translation_controller.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
@@ -63,9 +64,11 @@ class FakeTranslator implements Translator {
       List<String> before = const [],
       List<String?> beforeTranslations = const [],
       Map<String, String> readings = const {},
+      BookGlossary glossary = BookGlossary.empty,
       TranslationPriority priority = TranslationPriority.background,
       void Function(int index, String translation)? onEach}) async {
     batches.add(texts);
+    glossaries.add(glossary);
     final out = <String>[];
     for (var i = 0; i < texts.length; i++) {
       final t = await translate(texts[i],
@@ -75,6 +78,19 @@ class FakeTranslator implements Translator {
     }
     return out;
   }
+
+  /// The glossary each batch was given.
+  final glossaries = <BookGlossary>[];
+
+  /// Answers [complete] with this (null: a model without free-form
+  /// requests).
+  String? Function(String prompt)? completer;
+
+  @override
+  Future<String?> complete(String prompt,
+          {required int maxTokens,
+          TranslationPriority priority = TranslationPriority.background}) async =>
+      completer?.call(prompt);
 
   @override
   Future<void> dispose() async {}
@@ -329,6 +345,19 @@ void main() {
       expect(controller.translationOf('p6'), '[KO]p6');
     });
 
+    test('the book glossary goes with every request', () async {
+      translator.size = 4;
+      const glossary = BookGlossary(entries: [
+        GlossaryEntry(source: '和希', target: '카즈키'),
+      ]);
+      controller.glossary = glossary;
+      show(0);
+      await settle();
+      expect(translator.glossaries, isNotEmpty);
+      expect(translator.glossaries.every((g) => identical(g, glossary)),
+          isTrue);
+    });
+
     test('pause holds the queue until resume', () async {
       controller.pause();
       show(0);
@@ -364,7 +393,21 @@ void main() {
 
     test('straight quotes in a dialogue line become curly pairs', () {
       expect(polishTranslation('그녀는 "어머"라고 했다.', '彼女は「あら」と言った。', 'Korean'),
-          '그녀는 “어머”라고 했다.');
+          '그녀는 “어머.”라고 했다.');
+    });
+
+    test('Korean dialogue ends with punctuation inside the quotes', () {
+      expect(polishTranslation('“이제 됐어”라고 말했다.', '「いいぞ」と言った。', 'Korean'),
+          '“이제 됐어.”라고 말했다.');
+      expect(polishTranslation('“뭐?”', '「何？」', 'Korean'), '“뭐?”');
+      expect(polishTranslation('“그래……”', '「そう……」', 'Korean'), '“그래……”');
+      expect(polishTranslation('“좋아!”', '「よし！」', 'Korean'), '“좋아!”');
+      // Inner thoughts in （） are set in single quotes in Korean editions.
+      expect(polishTranslation('(뭐, 그렇겠지)', '（まあ、そうだろうな）', 'Korean'),
+          '‘뭐, 그렇겠지.’');
+      expect(polishTranslation('빗속에서 뭘 하는 거람', '（雨の中何してるんだか）', 'Korean'),
+          '‘빗속에서 뭘 하는 거람.’');
+      expect(polishTranslation('(뭐?)', '（え？）', 'English'), '(뭐?)');
     });
 
     test('quotes wrapped around a narration answer are removed', () {
