@@ -2,51 +2,45 @@
 
 <img src="assets/icons/appIcon.png" width="150">
 
-# OpenlibExtended
+# LightLib
 
-**The ultimate open-source cross-platform client for Anna's Archive. <br/> Download, organize, and read your favorite books on any device.**
-> Fork from [openlib](https://github.com/dstark5/Openlib) with more features and desktop support!
+**An e-book library and reader for Android, built for Japanese light novels: <br/> faithful EPUB rendering, on-device translation, and a library that keeps track of your reading.**
 
-[![made-with-flutter](https://img.shields.io/badge/Made%20with-Flutter-4361ee.svg?style=for-the-badge)](https://flutter.dev/)
-[![AGPLv3 License](https://img.shields.io/badge/License-AGPL%20v3-e63946.svg?style=for-the-badge)](https://opensource.org/licenses/)
-[![Latest release](https://img.shields.io/github/release/warreth/OpenlibExtended.svg?style=for-the-badge)](https://github.com/warreth/OpenlibExtended/releases)
-[![Downloads](https://img.shields.io/github/downloads/warreth/OpenlibExtended/total.svg?style=for-the-badge)](https://github.com/warreth/OpenlibExtended/releases)
+> A fork of [OpenlibExtended](https://github.com/warreth/OpenlibExtended), itself a fork of [Openlib](https://github.com/dstark5/Openlib).
+
+[![made-with-flutter](https://img.shields.io/badge/Made%20with-Flutter-FF6B9D.svg?style=for-the-badge)](https://flutter.dev/)
+[![AGPLv3 License](https://img.shields.io/badge/License-AGPL%20v3-e63946.svg?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0.html)
+[![Latest release](https://img.shields.io/github/release/4rNe5/LightLib.svg?style=for-the-badge)](https://github.com/4rNe5/LightLib/releases/latest)
 
 [<img src="github_releases.png"
      alt="Get it on GitHub"
-     height="110">](https://github.com/warreth/OpenlibExtended/releases)
+     height="110">](https://github.com/4rNe5/LightLib/releases/latest)
 
 **[📖 Frequently Asked Questions (FAQ)](./FAQ.md)**
 </div>
 
 ## Features ✨
 
-- **Cross-Platform Support**
-  Native performance on Android, iOS, Windows, Linux, and macOS.
+- **EPUB reader built on [foliate-js](https://github.com/johnfactotum/foliate-js)**
+  The book's own layout, images and covers, vertical (縦書き) or horizontal writing, ruby (furigana), paged or scrolled. Fonts, sizes, spacing and themes per script (Korean, Japanese, Latin), applied to books only. Reader styling follows [Readest](https://github.com/readest/readest).
 
-- **Resilient Downloads**
-  Multi-instance engine automatically balances and fails over between mirrors to guarantee downloads.
+- **On-device translation**
+  Translate books as you read with a local model: Gemma 4 through [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM) (GPU or CPU) or GGUF models through llama.cpp, via [llamadart](https://pub.dev/packages/llamadart). Several paragraphs per request, a light-novel style option tuned for Korean, character names read from the book's furigana. Nothing leaves the phone.
 
-- **Advanced Search**
-  Filter by language, extension, and year. Includes instant search suggestions as you type.
+- **Background translation**
+  Optional: library books are translated slowly in the background, pausing while you read, when the phone is warm or the battery is low, with progress in the notification shade.
 
-- **Built-in Reader**
-  Integrated EPUB and PDF reader with customizable tap zones and gesture support.
+- **Library**
+  Full-quality covers read from the books themselves, reading status, tags and genres, search and filters. A bento overview of what you are reading, and a reading record: checkpoints, streaks, four weeks of activity, the month and your genre mix.
 
-- **Library Management**
-  Track your collection, discover trending books, and export files to other apps.
+- **Home-screen widgets**
+  *Continue reading* (the current book and the next, one tap away) and *Reading record* (checkpoints, streak, activity), in light and dark.
 
-## Star History ⭐️
+- **Updates from this repository**
+  Every build on `main` is released here. The app checks the latest release, downloads a new build over Wi-Fi in the background (verified against its SHA-256), shows what changed since your build, and installs with one tap. The full history is in *Settings → Update history*.
 
-[![Star History Chart](https://api.star-history.com/svg?repos=warreth/OpenlibExtended&type=Date)](https://star-history.com/#warreth/OpenlibExtended&Date)
-
-## Roadmap 🎯
-
-- [ ] **Web Version**: Run OpenlibExtended directly in your browser.
-- [ ] **Cloud Sync**: Sync your library and reading progress with Booklore.
-- [ ] **Enhanced Formats**: Native support for CBR, CBZ, and AZW3.
-- [ ] **Metadata Editor**: Fix and organize book details manually.
-- [ ] **MacOs release**
+- **Six languages**
+  English, 한국어, 日本語, Deutsch, Español, Français.
 
 ## Screenshots 🖼️
 
@@ -58,48 +52,40 @@
 
 ## Installation 📦
 
-Grab the latest release from [GitHub Releases](https://github.com/warreth/OpenlibExtended/releases).
+Download `LightLib-<version>-build.<n>-arm64.apk` from the [latest release](https://github.com/4rNe5/LightLib/releases/latest) and install it. Each release lists its changes and the APK's SHA-256.
 
-### Windows (Scoop)
-
-Install via the [Scoop](https://scoop.sh) package manager using this repository as a bucket:
-
-```powershell
-scoop bucket add openlibextended https://github.com/warreth/OpenlibExtended
-scoop install openlibextended
-```
-
-The manifest (`bucket/openlibextended.json`) is updated automatically whenever a new release is published, so `scoop update` picks up new versions normally.
-
-### Other platforms
-
-Download the APK, IPA, AppImage, tar.gz or Windows installer directly from the [releases page](https://github.com/warreth/OpenlibExtended/releases).
-
-**Android:** releases ship per-ABI APKs — pick the one matching your device's architecture: `arm64-v8a` (most modern phones), `armeabi-v7a` (older 32-bit devices) or `x86_64` (emulators). Each APK contains only the native libraries for its architecture, keeping downloads roughly a third of a universal APK.
+- **Android only, arm64** (64-bit phones from the last several years).
+- Every release is signed with the same key, so a new build installs over the old one and keeps your library. After the first install, updates come through the app.
+- Translation needs a model, downloaded in *Settings → Translation*. Gemma 4 E2B and E4B (`.litertlm`) run on recent phones.
 
 **Note:** Publishing this app to the Play Store violates their terms.
 
 ## Development 🛠️
 
+Flutter 3.47 (Dart 3.13).
+
 ```bash
-git clone https://github.com/warreth/OpenlibExtended.git
+git clone https://github.com/4rNe5/LightLib.git
+cd LightLib
 flutter pub get
 flutter run
 ```
 
+- The EPUB reader's web part lives in `reader_web/` and is bundled into `assets/reader/` (see `reader_web/README.md`).
+- Every push to `main` that changes more than Markdown runs `.github/workflows/android-release.yml`: tests, a signed arm64 build, and a release tagged `v<version>-build.<n>`.
+
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-## Donate 🎁
+## Credits 🙏
 
-If you like the app, consider supporting the original source or the development of this client.
-
-- [**Donate To Anna’s Archive**](https://annas-archive.org/donate?tier=1) (Support the library itself)
-- [**Sponsor me on GitHub 💖**](https://github.com/sponsors/warreth) (Support the app development)
+- [Openlib](https://github.com/dstark5/Openlib) by dstark5 and [OpenlibExtended](https://github.com/warreth/OpenlibExtended) by warreth, the apps this one is built on.
+- [foliate-js](https://github.com/johnfactotum/foliate-js) (MIT) and [Readest](https://github.com/readest/readest) (AGPL-3.0) for the reader.
+- [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), [llamadart](https://pub.dev/packages/llamadart) and the [Gemma](https://ai.google.dev/gemma) models for translation.
 
 ## License 📜
 
-Licensed under [AGPL v3.0](https://www.gnu.org/licenses/agpl-3.0.html).
+Licensed under [AGPL v3.0](https://www.gnu.org/licenses/agpl-3.0.html), like the projects it comes from.
 
 ## Disclaimer ⚠️
 
-OpenlibExtended does not own or have any affiliation with the books available through the app. All books are the property of their respective owners and are protected by copyright law. OpenlibExtended is not responsible for any infringement of copyright or other intellectual property rights that may result from the use of the books available through the app. By using the app, you agree to use the books only for personal, non-commercial purposes and in compliance with all applicable laws and regulations.
+LightLib does not own or have any affiliation with the books available through the app. All books are the property of their respective owners and are protected by copyright law. LightLib is not responsible for any infringement of copyright or other intellectual property rights that may result from the use of the books available through the app. By using the app, you agree to use the books only for personal, non-commercial purposes and in compliance with all applicable laws and regulations.
