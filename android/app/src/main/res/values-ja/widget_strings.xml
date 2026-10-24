@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_continue_name">続きを読む</string>
+    <string name="widget_continue_description">読んでいる本をワンタップで</string>
+    <string name="widget_recap_name">読書記録</string>
+    <string name="widget_recap_description">チェックポイント、連続記録、4週間の読書</string>
+    <string name="widget_preview_title">読んでいる本</string>
+    <string name="widget_preview_author">著者</string>
+</resources>

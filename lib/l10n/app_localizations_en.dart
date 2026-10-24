@@ -1327,4 +1327,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get downloadNotStartedTitle => 'Couldn\'t start the download';
+
+  @override
+  String get updateAvailableTitle => 'A new version is out';
+
+  @override
+  String get updateReadyTitle => 'Update ready to install';
+
+  @override
+  String get updateChangesTitle => 'What\'s changed';
+
+  @override
+  String get updateNoNotes => 'No change notes for this build.';
+
+  @override
+  String get updateDownloading => 'Downloading…';
+
+  @override
+  String get updateDownloadFailed => 'The update could not be downloaded.';
+
+  @override
+  String get updateDownloadInstall => 'Download and install';
+
+  @override
+  String updateDownloadInstallSize(String size) {
+    return 'Download and install · $size';
+  }
+
+  @override
+  String get updateInstallNow => 'Install now';
+
+  @override
+  String get updateLater => 'Later';
+
+  @override
+  String get updateViewOnGithub => 'GitHub';
+
+  @override
+  String get updateAction => 'Update';
+
+  @override
+  String get autoDownloadUpdates => 'Download updates automatically';
+
+  @override
+  String get autoDownloadUpdatesHint =>
+      'New builds are fetched over Wi-Fi, ready to install';
+
+  @override
+  String get releaseHistoryTitle => 'Update history';
+
+  @override
+  String get releaseHistoryHint => 'Every build released on GitHub';
+
+  @override
+  String get releaseHistoryFailed => 'The update history could not be loaded.';
+
+  @override
+  String get releaseLatest => 'Latest';
+
+  @override
+  String get releaseInstalled => 'Installed';
+
+  @override
+  String get widgetEmptyLibrary => 'Books you add to your library show up here';
+
+  @override
+  String get widgetNextUp => 'Next';
 }

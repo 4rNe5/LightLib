@@ -35,6 +35,7 @@ import 'package:openlib/ui/instances_page.dart';
 import 'package:openlib/ui/onboarding/onboarding_page.dart';
 import 'package:openlib/ui/translation_settings_page.dart';
 import 'package:openlib/ui/reader_font_settings_page.dart';
+import 'package:openlib/ui/release_history_page.dart';
 
 import 'package:openlib/state/state.dart'
     show
@@ -818,6 +819,7 @@ class _UpdateSettingsWidget extends StatefulWidget {
 class _UpdateSettingsWidgetState extends State<_UpdateSettingsWidget> {
   final UpdateCheckerService _updateChecker = UpdateCheckerService();
   bool _includePrereleases = false;
+  bool _autoDownload = true;
   bool _isChecking = false;
 
   @override
@@ -828,9 +830,11 @@ class _UpdateSettingsWidgetState extends State<_UpdateSettingsWidget> {
 
   Future<void> _loadPreferences() async {
     final value = await _updateChecker.getIncludePrereleases();
+    final auto = await _updateChecker.getAutoDownload();
     if (mounted) {
       setState(() {
         _includePrereleases = value;
+        _autoDownload = auto;
       });
     }
   }
@@ -894,12 +898,32 @@ class _UpdateSettingsWidgetState extends State<_UpdateSettingsWidget> {
             await _updateChecker.setIncludePrereleases(value);
           },
         ),
+        if (Platform.isAndroid)
+          _SettingsSwitchTile(
+            title: l10n.autoDownloadUpdates,
+            subtitle: l10n.autoDownloadUpdatesHint,
+            icon: Icons.download_for_offline_outlined,
+            color: _Hue.updates,
+            value: _autoDownload,
+            onChanged: (bool value) async {
+              setState(() => _autoDownload = value);
+              await _updateChecker.setAutoDownload(value);
+            },
+          ),
         _SettingsTile(
           title: l10n.checkForUpdates,
           icon: Icons.system_update_outlined,
           color: _Hue.updates,
           busy: _isChecking,
           onTap: _isChecking ? null : _checkForUpdates,
+        ),
+        _SettingsTile(
+          title: l10n.releaseHistoryTitle,
+          subtitle: l10n.releaseHistoryHint,
+          icon: Icons.history_rounded,
+          color: _Hue.updates,
+          onTap: () => Navigator.of(context).push(MaterialPageRoute(
+              builder: (_) => const ReleaseHistoryPage())),
         ),
       ],
     );

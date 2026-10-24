@@ -8,6 +8,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/main.dart' show MainScreen;
+import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/search_manager.dart';
 import 'package:openlib/services/update_checker.dart';
@@ -51,10 +52,16 @@ class _WhatsNewPageState extends ConsumerState<WhatsNewPage>
     _loadReleaseNotes();
   }
 
+  /// Everything released since the build the user had (from the app's
+  /// GitHub releases), else the running release's description.
   Future<void> _loadReleaseNotes() async {
-    final notes = await UpdateCheckerService().fetchReleaseNotes();
+    final checker = UpdateCheckerService();
+    final to = AppBuild.tryParse(widget.toVersion);
+    var notes = await checker.fetchChangeLog(
+        after: AppBuild.tryParse(widget.fromVersion), upTo: to, limit: 12);
+    if (notes.isEmpty) notes = await checker.fetchReleaseNotes() ?? '';
     if (mounted) {
-      setState(() => _releaseNotes = notes ?? '');
+      setState(() => _releaseNotes = notes);
     }
   }
 
@@ -104,7 +111,9 @@ class _WhatsNewPageState extends ConsumerState<WhatsNewPage>
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          l10n.whatsNewTitle(widget.toVersion),
+                          l10n.whatsNewTitle(
+                              AppBuild.tryParse(widget.toVersion)?.label ??
+                                  widget.toVersion),
                           style: theme.textTheme.titleLarge
                               ?.copyWith(fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,

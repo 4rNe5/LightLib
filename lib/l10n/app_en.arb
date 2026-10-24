@@ -1787,5 +1787,94 @@
   "downloadNotStartedTitle": "Couldn't start the download",
   "@downloadNotStartedTitle": {
     "description": "downloadNotStartedTitle"
+  },
+  "updateAvailableTitle": "A new version is out",
+  "@updateAvailableTitle": {
+    "description": "Update sheet title"
+  },
+  "updateReadyTitle": "Update ready to install",
+  "@updateReadyTitle": {
+    "description": "Update sheet title when the APK is downloaded"
+  },
+  "updateChangesTitle": "What's changed",
+  "@updateChangesTitle": {
+    "description": "Heading above the change list"
+  },
+  "updateNoNotes": "No change notes for this build.",
+  "@updateNoNotes": {
+    "description": "Shown when a release has no change lines"
+  },
+  "updateDownloading": "Downloading…",
+  "@updateDownloading": {
+    "description": "Progress before the size is known"
+  },
+  "updateDownloadFailed": "The update could not be downloaded.",
+  "@updateDownloadFailed": {
+    "description": "Error under the retry button"
+  },
+  "updateDownloadInstall": "Download and install",
+  "@updateDownloadInstall": {
+    "description": "Primary button"
+  },
+  "updateDownloadInstallSize": "Download and install · {size}",
+  "@updateDownloadInstallSize": {
+    "description": "Primary button with the APK size",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "updateInstallNow": "Install now",
+  "@updateInstallNow": {
+    "description": "Primary button when downloaded"
+  },
+  "updateLater": "Later",
+  "@updateLater": {
+    "description": "Dismiss the update for a day"
+  },
+  "updateViewOnGithub": "GitHub",
+  "@updateViewOnGithub": {
+    "description": "Opens the releases page"
+  },
+  "updateAction": "Update",
+  "@updateAction": {
+    "description": "Button on the update banner"
+  },
+  "autoDownloadUpdates": "Download updates automatically",
+  "@autoDownloadUpdates": {
+    "description": "Settings switch"
+  },
+  "autoDownloadUpdatesHint": "New builds are fetched over Wi-Fi, ready to install",
+  "@autoDownloadUpdatesHint": {
+    "description": "Settings switch subtitle"
+  },
+  "releaseHistoryTitle": "Update history",
+  "@releaseHistoryTitle": {
+    "description": "Settings tile and page title"
+  },
+  "releaseHistoryHint": "Every build released on GitHub",
+  "@releaseHistoryHint": {
+    "description": "Settings tile subtitle"
+  },
+  "releaseHistoryFailed": "The update history could not be loaded.",
+  "@releaseHistoryFailed": {
+    "description": "Error state"
+  },
+  "releaseLatest": "Latest",
+  "@releaseLatest": {
+    "description": "Badge on the newest release"
+  },
+  "releaseInstalled": "Installed",
+  "@releaseInstalled": {
+    "description": "Badge on the running build"
+  },
+  "widgetEmptyLibrary": "Books you add to your library show up here",
+  "@widgetEmptyLibrary": {
+    "description": "Home-screen widget with an empty library"
+  },
+  "widgetNextUp": "Next",
+  "@widgetNextUp": {
+    "description": "Home-screen widget: the second book"
   }
 }

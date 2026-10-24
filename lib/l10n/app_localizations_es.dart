@@ -1340,4 +1340,73 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get downloadNotStartedTitle => 'No se pudo iniciar la descarga';
+
+  @override
+  String get updateAvailableTitle => 'Hay una nueva versión';
+
+  @override
+  String get updateReadyTitle => 'Actualización lista para instalar';
+
+  @override
+  String get updateChangesTitle => 'Cambios';
+
+  @override
+  String get updateNoNotes => 'Esta compilación no tiene notas de cambios.';
+
+  @override
+  String get updateDownloading => 'Descargando…';
+
+  @override
+  String get updateDownloadFailed => 'No se pudo descargar la actualización.';
+
+  @override
+  String get updateDownloadInstall => 'Descargar e instalar';
+
+  @override
+  String updateDownloadInstallSize(String size) {
+    return 'Descargar e instalar · $size';
+  }
+
+  @override
+  String get updateInstallNow => 'Instalar ahora';
+
+  @override
+  String get updateLater => 'Más tarde';
+
+  @override
+  String get updateViewOnGithub => 'GitHub';
+
+  @override
+  String get updateAction => 'Actualizar';
+
+  @override
+  String get autoDownloadUpdates => 'Descargar actualizaciones automáticamente';
+
+  @override
+  String get autoDownloadUpdatesHint =>
+      'Las nuevas compilaciones se descargan por Wi-Fi, listas para instalar';
+
+  @override
+  String get releaseHistoryTitle => 'Historial de actualizaciones';
+
+  @override
+  String get releaseHistoryHint =>
+      'Todas las compilaciones publicadas en GitHub';
+
+  @override
+  String get releaseHistoryFailed =>
+      'No se pudo cargar el historial de actualizaciones.';
+
+  @override
+  String get releaseLatest => 'Más reciente';
+
+  @override
+  String get releaseInstalled => 'Instalada';
+
+  @override
+  String get widgetEmptyLibrary =>
+      'Los libros que añadas a tu biblioteca aparecerán aquí';
+
+  @override
+  String get widgetNextUp => 'Siguiente';
 }

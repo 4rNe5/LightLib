@@ -2457,6 +2457,132 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Couldn\'t start the download'**
   String get downloadNotStartedTitle;
+
+  /// Update sheet title
+  ///
+  /// In en, this message translates to:
+  /// **'A new version is out'**
+  String get updateAvailableTitle;
+
+  /// Update sheet title when the APK is downloaded
+  ///
+  /// In en, this message translates to:
+  /// **'Update ready to install'**
+  String get updateReadyTitle;
+
+  /// Heading above the change list
+  ///
+  /// In en, this message translates to:
+  /// **'What\'s changed'**
+  String get updateChangesTitle;
+
+  /// Shown when a release has no change lines
+  ///
+  /// In en, this message translates to:
+  /// **'No change notes for this build.'**
+  String get updateNoNotes;
+
+  /// Progress before the size is known
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get updateDownloading;
+
+  /// Error under the retry button
+  ///
+  /// In en, this message translates to:
+  /// **'The update could not be downloaded.'**
+  String get updateDownloadFailed;
+
+  /// Primary button
+  ///
+  /// In en, this message translates to:
+  /// **'Download and install'**
+  String get updateDownloadInstall;
+
+  /// Primary button with the APK size
+  ///
+  /// In en, this message translates to:
+  /// **'Download and install · {size}'**
+  String updateDownloadInstallSize(String size);
+
+  /// Primary button when downloaded
+  ///
+  /// In en, this message translates to:
+  /// **'Install now'**
+  String get updateInstallNow;
+
+  /// Dismiss the update for a day
+  ///
+  /// In en, this message translates to:
+  /// **'Later'**
+  String get updateLater;
+
+  /// Opens the releases page
+  ///
+  /// In en, this message translates to:
+  /// **'GitHub'**
+  String get updateViewOnGithub;
+
+  /// Button on the update banner
+  ///
+  /// In en, this message translates to:
+  /// **'Update'**
+  String get updateAction;
+
+  /// Settings switch
+  ///
+  /// In en, this message translates to:
+  /// **'Download updates automatically'**
+  String get autoDownloadUpdates;
+
+  /// Settings switch subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'New builds are fetched over Wi-Fi, ready to install'**
+  String get autoDownloadUpdatesHint;
+
+  /// Settings tile and page title
+  ///
+  /// In en, this message translates to:
+  /// **'Update history'**
+  String get releaseHistoryTitle;
+
+  /// Settings tile subtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Every build released on GitHub'**
+  String get releaseHistoryHint;
+
+  /// Error state
+  ///
+  /// In en, this message translates to:
+  /// **'The update history could not be loaded.'**
+  String get releaseHistoryFailed;
+
+  /// Badge on the newest release
+  ///
+  /// In en, this message translates to:
+  /// **'Latest'**
+  String get releaseLatest;
+
+  /// Badge on the running build
+  ///
+  /// In en, this message translates to:
+  /// **'Installed'**
+  String get releaseInstalled;
+
+  /// Home-screen widget with an empty library
+  ///
+  /// In en, this message translates to:
+  /// **'Books you add to your library show up here'**
+  String get widgetEmptyLibrary;
+
+  /// Home-screen widget: the second book
+  ///
+  /// In en, this message translates to:
+  /// **'Next'**
+  String get widgetNextUp;
 }
 
 class _AppLocalizationsDelegate

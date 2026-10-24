@@ -5,6 +5,7 @@ import android.app.ApplicationExitInfo
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.net.ConnectivityManager
 import android.os.BatteryManager
 import android.os.Build
 import android.os.Bundle
@@ -17,12 +18,38 @@ import io.flutter.plugin.common.MethodChannel
 
 class MainActivity : FlutterActivity() {
     private var channel: MethodChannel? = null
+    private var widgetChannel: MethodChannel? = null
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val action = HomeWidgets.actionOf(intent) ?: return
+        setIntent(intent)
+        widgetChannel?.invokeMethod("widgetAction", action)
+        intent.action = null
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
         val channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger,
             "lightlib/background_translation")
         this.channel = channel
+        val widgets = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "lightlib/widgets")
+        widgetChannel = widgets
+        widgets.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "update" -> {
+                    val snapshot = call.argument<String>("snapshot")
+                    if (snapshot != null) HomeWidgets.save(applicationContext, snapshot)
+                    result.success(null)
+                }
+                "takeLaunchAction" -> {
+                    result.success(HomeWidgets.actionOf(intent))
+                    // Acted on once; a configuration change must not reopen it.
+                    intent?.action = null
+                }
+                else -> result.notImplemented()
+            }
+        }
         val main = Handler(Looper.getMainLooper())
         BackgroundTranslationService.listener = { event ->
             main.post { this.channel?.invokeMethod(event, null) }
@@ -55,6 +82,9 @@ class MainActivity : FlutterActivity() {
                     result.success(null)
                 }
                 "deviceState" -> result.success(deviceState())
+                "isMetered" -> result.success(
+                    (getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager)
+                        .isActiveNetworkMetered)
                 "lastExits" -> Thread {
                     val exits = try { lastExits() } catch (e: Exception) { emptyList() }
                     main.post { result.success(exits) }
@@ -174,6 +204,8 @@ class MainActivity : FlutterActivity() {
         BackgroundTranslationService.listener = null
         channel?.setMethodCallHandler(null)
         channel = null
+        widgetChannel?.setMethodCallHandler(null)
+        widgetChannel = null
         super.onDestroy()
     }
 }

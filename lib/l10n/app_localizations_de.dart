@@ -1340,4 +1340,73 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get downloadNotStartedTitle => 'Download konnte nicht starten';
+
+  @override
+  String get updateAvailableTitle => 'Eine neue Version ist da';
+
+  @override
+  String get updateReadyTitle => 'Update bereit zur Installation';
+
+  @override
+  String get updateChangesTitle => 'Änderungen';
+
+  @override
+  String get updateNoNotes => 'Keine Änderungsnotizen für diesen Build.';
+
+  @override
+  String get updateDownloading => 'Wird heruntergeladen…';
+
+  @override
+  String get updateDownloadFailed =>
+      'Das Update konnte nicht heruntergeladen werden.';
+
+  @override
+  String get updateDownloadInstall => 'Herunterladen und installieren';
+
+  @override
+  String updateDownloadInstallSize(String size) {
+    return 'Herunterladen und installieren · $size';
+  }
+
+  @override
+  String get updateInstallNow => 'Jetzt installieren';
+
+  @override
+  String get updateLater => 'Später';
+
+  @override
+  String get updateViewOnGithub => 'GitHub';
+
+  @override
+  String get updateAction => 'Aktualisieren';
+
+  @override
+  String get autoDownloadUpdates => 'Updates automatisch herunterladen';
+
+  @override
+  String get autoDownloadUpdatesHint =>
+      'Neue Builds werden über WLAN geladen und sind sofort installierbar';
+
+  @override
+  String get releaseHistoryTitle => 'Update-Verlauf';
+
+  @override
+  String get releaseHistoryHint => 'Jeder auf GitHub veröffentlichte Build';
+
+  @override
+  String get releaseHistoryFailed =>
+      'Der Update-Verlauf konnte nicht geladen werden.';
+
+  @override
+  String get releaseLatest => 'Neueste';
+
+  @override
+  String get releaseInstalled => 'Installiert';
+
+  @override
+  String get widgetEmptyLibrary =>
+      'Bücher aus deiner Bibliothek erscheinen hier';
+
+  @override
+  String get widgetNextUp => 'Als Nächstes';
 }

@@ -1282,4 +1282,69 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get downloadNotStartedTitle => 'ダウンロードを開始できませんでした';
+
+  @override
+  String get updateAvailableTitle => '新しいバージョンがあります';
+
+  @override
+  String get updateReadyTitle => 'アップデートの準備ができました';
+
+  @override
+  String get updateChangesTitle => '変更点';
+
+  @override
+  String get updateNoNotes => 'このビルドの変更点はありません。';
+
+  @override
+  String get updateDownloading => 'ダウンロード中…';
+
+  @override
+  String get updateDownloadFailed => 'アップデートをダウンロードできませんでした。';
+
+  @override
+  String get updateDownloadInstall => 'ダウンロードしてインストール';
+
+  @override
+  String updateDownloadInstallSize(String size) {
+    return 'ダウンロードしてインストール · $size';
+  }
+
+  @override
+  String get updateInstallNow => '今すぐインストール';
+
+  @override
+  String get updateLater => 'あとで';
+
+  @override
+  String get updateViewOnGithub => 'GitHub';
+
+  @override
+  String get updateAction => 'アップデート';
+
+  @override
+  String get autoDownloadUpdates => 'アップデートを自動でダウンロード';
+
+  @override
+  String get autoDownloadUpdatesHint => 'Wi-Fi で新しいビルドを先に取得し、すぐインストールできます';
+
+  @override
+  String get releaseHistoryTitle => 'アップデート履歴';
+
+  @override
+  String get releaseHistoryHint => 'GitHub で公開されたすべてのビルド';
+
+  @override
+  String get releaseHistoryFailed => 'アップデート履歴を読み込めませんでした。';
+
+  @override
+  String get releaseLatest => '最新';
+
+  @override
+  String get releaseInstalled => '使用中';
+
+  @override
+  String get widgetEmptyLibrary => 'ライブラリに追加した本がここに表示されます';
+
+  @override
+  String get widgetNextUp => '次の本';
 }

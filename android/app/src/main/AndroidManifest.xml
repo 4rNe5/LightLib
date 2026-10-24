@@ -1,5 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
@@ -34,6 +35,19 @@
         </activity><!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <!-- Keeps library-book translation running while the app is in the background, with a progress notification. -->
+        <!-- Home-screen widgets: the library's bento cards. -->
+        <receiver android:name=".ContinueReadingWidget" android:exported="false" android:label="@string/widget_continue_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_continue_reading_info"/>
+        </receiver>
+        <receiver android:name=".ReadingRecapWidget" android:exported="false" android:label="@string/widget_recap_name">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE"/>
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_reading_recap_info"/>
+        </receiver>
         <service android:name=".BackgroundTranslationService" android:exported="false" android:stopWithTask="true" android:foregroundServiceType="dataSync"/>
         <!-- The phone's OpenCL driver, which LiteRT-LM's GPU backend runs on. Without these an app targeting Android 12+ cannot load it, and the GPU falls back to a slow WebGPU path (https://ai.google.dev/edge/litert-lm/android). -->
         <uses-native-library android:name="libvndksupport.so" android:required="false"/>

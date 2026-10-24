@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 // Package imports:
 import 'package:android_package_installer/android_package_installer.dart';
 import 'package:apk_sideload/install_apk.dart';
+import 'package:crypto/crypto.dart';
 import 'package:dio/dio.dart';
 import 'package:http/http.dart' as http;
 import 'package:open_file/open_file.dart';
@@ -19,8 +20,11 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Project imports:
+import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/download_notification.dart';
 import 'package:openlib/services/logger.dart';
+import 'package:openlib/ui/components/update_sheet.dart';
 
 // Release information from GitHub
 class ReleaseInfo {
@@ -33,6 +37,18 @@ class ReleaseInfo {
   final DateTime publishedAt;
   final Map<String, String> downloadUrls;
 
+  /// Asset sizes in bytes by download URL.
+  final Map<String, int> assetSizes;
+
+  /// The build the tag names (`v1.7.2-build.35`), null for other tags.
+  AppBuild? get build => AppBuild.tryParse(tagName);
+
+  /// `1.7.2 (build 35)`, or the version for a tag without a build.
+  String get label => build?.label ?? version;
+
+  /// The APK checksum from the description, when the workflow wrote one.
+  String? get sha256 => releaseSha256(body);
+
   ReleaseInfo({
     required this.version,
     required this.tagName,
@@ -42,6 +58,7 @@ class ReleaseInfo {
     required this.isPrerelease,
     required this.publishedAt,
     required this.downloadUrls,
+    this.assetSizes = const {},
   });
 
   factory ReleaseInfo.fromJson(Map<String, dynamic> json) {
@@ -51,10 +68,14 @@ class ReleaseInfo {
     // Parse download URLs from assets
     final assets = json["assets"] as List<dynamic>? ?? [];
     final downloadUrls = <String, String>{};
+    final assetSizes = <String, int>{};
 
     for (final asset in assets) {
       final name = asset["name"] as String;
       final url = asset["browser_download_url"] as String;
+      if (asset["size"] is int) assetSizes[url] = asset["size"] as int;
+      // Checksum files ride along with each APK.
+      if (name.endsWith(".sha256")) continue;
 
       // Categorize by platform
       if (name.contains("android") || name.endsWith(".apk")) {
@@ -109,6 +130,7 @@ class ReleaseInfo {
       isPrerelease: json["prerelease"] as bool? ?? false,
       publishedAt: DateTime.parse(json["published_at"] as String),
       downloadUrls: downloadUrls,
+      assetSizes: assetSizes,
     );
   }
 }
@@ -136,71 +158,57 @@ class UpdateCheckerService {
   final AppLogger _logger = AppLogger();
   final MyLibraryDb _database = MyLibraryDb.instance;
 
-  // GitHub repository information - update these for your repo
-  static const String _owner = "warreth";
-  static const String _repo = "OpenlibExtended";
+  // The fork this app is built from: every push to main is released as
+  // v<version>-build.<n> with a signed arm64 APK.
+  static const String owner = "4rNe5";
+  static const String repo = "LightLib";
   static const String _apiUrl = "https://api.github.com/repos";
+  static const String releasesPage = "https://github.com/$owner/$repo/releases";
+  static const String _userAgent = "LightLib-App";
+
+  /// The running build (version name + build number).
+  static Future<AppBuild> currentBuild() async {
+    final info = await PackageInfo.fromPlatform();
+    return AppBuild.of(info.version, info.buildNumber);
+  }
 
   // Check for updates
   Future<UpdateCheckResult> checkForUpdates(
       {bool includePrereleases = false}) async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final currentVersion = packageInfo.version;
+      final current = await currentBuild();
 
       _logger.info("Checking for updates", tag: "UpdateChecker", metadata: {
-        "currentVersion": currentVersion,
+        "current": current.label,
         "includePrereleases": includePrereleases,
       });
 
-      // Fetch releases from GitHub API
-      final releases = await _fetchReleases();
-
-      if (releases.isEmpty) {
-        _logger.info("No releases found", tag: "UpdateChecker");
-        return UpdateCheckResult(
-          updateAvailable: false,
-          currentVersion: currentVersion,
-        );
-      }
-
-      // Filter releases based on prerelease preference
-      final filteredReleases = includePrereleases
-          ? releases
-          : releases.where((r) => !r.isPrerelease).toList();
-
-      if (filteredReleases.isEmpty) {
-        return UpdateCheckResult(
-          updateAvailable: false,
-          currentVersion: currentVersion,
-        );
-      }
-
-      // Find the latest release that is newer than the current version
-      ReleaseInfo? latestNewerRelease;
-      for (final release in filteredReleases) {
-        if (_isNewerVersion(currentVersion, release.version)) {
-          latestNewerRelease = release;
-          break;
+      final releases = await fetchReleases();
+      ReleaseInfo? newest;
+      AppBuild? newestBuild;
+      for (final release in releases) {
+        if (release.isPrerelease && !includePrereleases) continue;
+        if (getDownloadUrlForPlatform(release) == null &&
+            (Platform.isAndroid || Platform.isIOS)) {
+          continue;
+        }
+        final build = release.build ?? AppBuild.tryParse(release.version);
+        if (build == null || !(build > current)) continue;
+        if (newestBuild == null || build > newestBuild) {
+          newest = release;
+          newestBuild = build;
         }
       }
 
-      if (latestNewerRelease == null) {
-        return UpdateCheckResult(
-          updateAvailable: false,
-          currentVersion: currentVersion,
-        );
-      }
-
       _logger.info("Update check completed", tag: "UpdateChecker", metadata: {
-        "latestVersion": latestNewerRelease.version,
-        "updateAvailable": true,
+        "latest": newest?.label,
+        "updateAvailable": newest != null,
       });
 
       return UpdateCheckResult(
-        updateAvailable: true,
-        latestRelease: latestNewerRelease,
-        currentVersion: currentVersion,
+        updateAvailable: newest != null,
+        latestRelease: newest,
+        currentVersion: current.label,
       );
     } catch (e, stackTrace) {
       _logger.error("Failed to check for updates",
@@ -209,21 +217,56 @@ class UpdateCheckerService {
     }
   }
 
-  // Fetch releases from GitHub API
-  Future<List<ReleaseInfo>> _fetchReleases() async {
-    final url = Uri.parse("$_apiUrl/$_owner/$_repo/releases");
+  List<ReleaseInfo>? _cached;
+  DateTime? _cachedAt;
+
+  /// The repository's releases, newest first. Kept for five minutes:
+  /// GitHub allows 60 unauthenticated requests an hour.
+  Future<List<ReleaseInfo>> fetchReleases({bool refresh = false}) async {
+    final cached = _cached;
+    if (!refresh &&
+        cached != null &&
+        DateTime.now().difference(_cachedAt!) < const Duration(minutes: 5)) {
+      return cached;
+    }
+    final url = Uri.parse("$_apiUrl/$owner/$repo/releases?per_page=40");
 
     final response = await http.get(url, headers: {
-      "Accept": "application/vnd.github.v3+json",
-      "User-Agent": "OpenlibExtended-App",
-    });
+      "Accept": "application/vnd.github+json",
+      "User-Agent": _userAgent,
+    }).timeout(const Duration(seconds: 20));
 
     if (response.statusCode != 200) {
       throw Exception("Failed to fetch releases: ${response.statusCode}");
     }
 
     final List<dynamic> data = json.decode(response.body);
-    return data.map((json) => ReleaseInfo.fromJson(json)).toList();
+    final releases = [
+      for (final r in data)
+        if (r is Map<String, dynamic> && r["draft"] != true)
+          ReleaseInfo.fromJson(r),
+    ];
+    _cached = releases;
+    _cachedAt = DateTime.now();
+    return releases;
+  }
+
+  /// The changes released after [after] up to [upTo] as markdown (one
+  /// heading per build, newest first), '' when none or offline.
+  Future<String> fetchChangeLog(
+      {AppBuild? after, AppBuild? upTo, int? limit}) async {
+    try {
+      final releases = await fetchReleases();
+      return changeLog([
+        for (final r in releases)
+          if (r.build != null)
+            (build: r.build!, body: r.body, publishedAt: r.publishedAt),
+      ], after: after, upTo: upTo, limit: limit);
+    } catch (e) {
+      _logger.warning("Could not load the change log",
+          tag: "UpdateChecker", error: e);
+      return '';
+    }
   }
 
   /// Fetches the release notes (GitHub release description) for the
@@ -233,13 +276,12 @@ class UpdateCheckerService {
   /// (e.g. beta) build never shows another release's notes.
   Future<String?> fetchReleaseNotes() async {
     try {
-      final packageInfo = await PackageInfo.fromPlatform();
-      final running = packageInfo.version;
+      final running = await currentBuild();
 
-      final releases = await _fetchReleases();
+      final releases = await fetchReleases();
       ReleaseInfo? matching;
       for (final r in releases) {
-        if (r.version == running || r.tagName == 'v$running') {
+        if (r.build == running) {
           matching = r;
           break;
         }
@@ -252,57 +294,6 @@ class UpdateCheckerService {
       _logger.warning("Could not load release notes",
           tag: "UpdateChecker", error: e);
       return null;
-    }
-  }
-
-  // Compare two semantic versions
-  // Compare two semantic versions, including pre-release tags
-  bool _isNewerVersion(String current, String latest) {
-    try {
-      // Split out pre-release tags
-      final currentMain = current.split('-')[0];
-      final latestMain = latest.split('-')[0];
-      final currentParts = currentMain.split('.').map(int.parse).toList();
-      final latestParts = latestMain.split('.').map(int.parse).toList();
-
-      // Pad with zeros if needed
-      while (currentParts.length < 3) {
-        currentParts.add(0);
-      }
-      while (latestParts.length < 3) {
-        latestParts.add(0);
-      }
-
-      for (int i = 0; i < 3; i++) {
-        if (latestParts[i] > currentParts[i]) return true;
-        if (latestParts[i] < currentParts[i]) return false;
-      }
-
-      // If main versions are equal, handle pre-release tags
-      final currentIsPre = current.contains('-');
-      final latestIsPre = latest.contains('-');
-      if (!currentIsPre && latestIsPre) {
-        // Current is stable, latest is pre-release: not newer
-        return false;
-      } else if (currentIsPre && !latestIsPre) {
-        // Current is pre-release, latest is stable: newer
-        return true;
-      } else if (currentIsPre && latestIsPre) {
-        // Both are pre-releases: compare tags lexically
-        final currentTag =
-            current.split('-').length > 1 ? current.split('-')[1] : '';
-        final latestTag =
-            latest.split('-').length > 1 ? latest.split('-')[1] : '';
-        return latestTag.compareTo(currentTag) > 0;
-      }
-      return false;
-    } catch (e) {
-      _logger
-          .warning("Failed to parse version", tag: "UpdateChecker", metadata: {
-        "current": current,
-        "latest": latest,
-      });
-      return false;
     }
   }
 
@@ -432,6 +423,10 @@ class UpdateCheckerService {
       return null;
     }
 
+    if (Platform.isAndroid) {
+      return _downloadApk(release, downloadUrl, onProgress, cancelToken);
+    }
+
     try {
       final dio = Dio();
       final downloadsDir = await _getDownloadsDirectory();
@@ -551,6 +546,221 @@ class UpdateCheckerService {
       _logger.error("Failed to download/move update",
           tag: "UpdateChecker", error: e, stackTrace: stackTrace);
       rethrow;
+    }
+  }
+
+  /// Where [release]'s APK is kept once downloaded: one file per build,
+  /// so a download finished in the background is installed later
+  /// without fetching it again.
+  Future<File> _apkFile(ReleaseInfo release) async {
+    final dir = Directory("${(await _getDownloadsDirectory()).path}/updates");
+    if (!await dir.exists()) await dir.create(recursive: true);
+    final name = release.build?.build ?? release.version;
+    return File("${dir.path}/LightLib-$name.apk");
+  }
+
+  /// [file] is complete: its checksum matches the one the release
+  /// published (or, for a release without one, it has the asset's size).
+  Future<bool> _verified(File file, ReleaseInfo release) async {
+    if (!await file.exists()) return false;
+    final expected = release.sha256;
+    if (expected != null) {
+      final digest = await sha256.bind(file.openRead()).first;
+      return digest.toString().toLowerCase() == expected.toLowerCase();
+    }
+    final url = getDownloadUrlForPlatform(release);
+    final size = url == null ? null : release.assetSizes[url];
+    return size != null && await file.length() == size;
+  }
+
+  /// The APK of [release] when it is already downloaded and verified.
+  Future<String?> preparedUpdate(ReleaseInfo release) async {
+    if (!Platform.isAndroid) return null;
+    final file = await _apkFile(release);
+    return await _verified(file, release) ? file.path : null;
+  }
+
+  /// Removes downloaded APKs of builds not newer than the running one.
+  Future<void> cleanUpDownloads() async {
+    if (!Platform.isAndroid) return;
+    try {
+      final current = await currentBuild();
+      final dir = Directory("${(await _getDownloadsDirectory()).path}/updates");
+      if (!await dir.exists()) return;
+      await for (final f in dir.list()) {
+        final m = RegExp(r'LightLib-(\d+)\.apk(\.part)?$').firstMatch(f.path);
+        final build = int.tryParse(m?.group(1) ?? '');
+        if (build != null && build <= current.build) {
+          await f.delete().catchError((_) => f);
+        }
+      }
+      // The single file earlier versions downloaded to.
+      final old =
+          File("${(await _getDownloadsDirectory()).path}/openlib_update_temp.apk");
+      if (await old.exists()) await old.delete();
+    } catch (_) {}
+  }
+
+  Future<String?> _downloadApk(
+    ReleaseInfo release,
+    String url,
+    Function(double progress, int downloaded, int total) onProgress,
+    CancelToken? cancelToken,
+  ) async {
+    final file = await _apkFile(release);
+    if (await _verified(file, release)) {
+      final size = await file.length();
+      onProgress(1, size, size);
+      return file.path;
+    }
+    final part = File("${file.path}.part");
+    final dio = Dio();
+    try {
+      _logger.info("Starting update download",
+          tag: "UpdateChecker",
+          metadata: {"release": release.label, "url": url});
+      // Continues a download cut off earlier.
+      var have = await part.exists() ? await part.length() : 0;
+      final response = await dio.get<ResponseBody>(
+        url,
+        cancelToken: cancelToken,
+        options: Options(
+          responseType: ResponseType.stream,
+          followRedirects: true,
+          headers: {
+            "User-Agent": _userAgent,
+            if (have > 0) "Range": "bytes=$have-",
+          },
+          validateStatus: (code) => code == 200 || code == 206,
+        ),
+      );
+      if (response.statusCode == 200) have = 0;
+      final total = have +
+          (int.tryParse(response.headers.value(Headers.contentLengthHeader) ??
+                  '') ??
+              0);
+      final sink = part.openWrite(
+          mode: have > 0 ? FileMode.writeOnlyAppend : FileMode.writeOnly);
+      var received = have;
+      try {
+        await for (final chunk in response.data!.stream) {
+          sink.add(chunk);
+          received += chunk.length;
+          if (total > 0) onProgress(received / total, received, total);
+        }
+      } finally {
+        await sink.close();
+      }
+      if (await file.exists()) await file.delete();
+      await part.rename(file.path);
+      if (!await _verified(file, release)) {
+        await file.delete();
+        throw Exception("The downloaded update did not match its checksum");
+      }
+      _logger.info("Update downloaded",
+          tag: "UpdateChecker",
+          metadata: {"release": release.label, "bytes": received});
+      return file.path;
+    } on DioException catch (e) {
+      if (e.type == DioExceptionType.cancel) {
+        _logger.info("Update download cancelled", tag: "UpdateChecker");
+        return null;
+      }
+      _logger.error("Failed to download update",
+          tag: "UpdateChecker", error: e);
+      rethrow;
+    } finally {
+      dio.close();
+    }
+  }
+
+  static const _autoDownloadPref = "autoDownloadUpdates";
+  static const _snoozePref = "updateSnoozedBuild";
+  static const _channel = MethodChannel('lightlib/background_translation');
+
+  /// New builds download on their own over Wi-Fi (on unless turned off).
+  Future<bool> getAutoDownload() async {
+    try {
+      return await _database.getPreference(_autoDownloadPref) != 0;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<void> setAutoDownload(bool value) =>
+      _database.savePreference(_autoDownloadPref, value ? 1 : 0);
+
+  /// The network counts its data (mobile data, a metered hotspot).
+  Future<bool> _metered() async {
+    if (!Platform.isAndroid) return false;
+    try {
+      return await _channel.invokeMethod<bool>('isMetered') ?? true;
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<String?>? _preparing;
+  int? _preparingBuild;
+
+  /// Downloads [release] in the background, its progress in a
+  /// notification. One download at a time; null on failure.
+  Future<String?> prepareInBackground(ReleaseInfo release) {
+    final build = release.build?.build;
+    if (_preparing != null && _preparingBuild == build) return _preparing!;
+    _preparingBuild = build;
+    return _preparing = _prepare(release).whenComplete(() => _preparing = null);
+  }
+
+  Future<String?> _prepare(ReleaseInfo release) async {
+    const id = 7310;
+    final notifications = DownloadNotificationService();
+    await notifications.initialize().catchError((_) {});
+    var shown = -1;
+    try {
+      final path = await downloadUpdate(
+        release: release,
+        onProgress: (progress, _, __) {
+          final percent = (progress * 100).floor();
+          if (percent == shown || percent >= 100) return;
+          shown = percent;
+          notifications
+              .showDownloadNotification(
+                  id: id,
+                  title: "LightLib ${release.label}",
+                  body: "$percent%",
+                  progress: percent)
+              .catchError((_) {});
+        },
+      );
+      await notifications.cancelNotification(id).catchError((_) {});
+      return path;
+    } catch (e) {
+      await notifications.cancelNotification(id).catchError((_) {});
+      _logger.warning("Background update download failed",
+          tag: "UpdateChecker", error: e);
+      return null;
+    }
+  }
+
+  /// "Later" on [release]: not offered again on its own for a day.
+  Future<void> snooze(ReleaseInfo release) => _database.savePreference(
+      _snoozePref,
+      "${release.build?.build ?? release.version}@"
+      "${DateTime.now().millisecondsSinceEpoch}");
+
+  Future<bool> _snoozed(ReleaseInfo release) async {
+    try {
+      final raw = "${await _database.getPreference(_snoozePref)}";
+      final at = raw.lastIndexOf('@');
+      if (at < 0) return false;
+      final build = raw.substring(0, at);
+      final since = int.tryParse(raw.substring(at + 1)) ?? 0;
+      return build == "${release.build?.build ?? release.version}" &&
+          DateTime.now().millisecondsSinceEpoch - since <
+              const Duration(hours: 24).inMilliseconds;
+    } catch (_) {
+      return false;
     }
   }
 
@@ -1085,181 +1295,63 @@ class UpdateCheckerService {
     await _database.savePreference("includePrereleaseUpdates", value);
   }
 
-  // Show update dialog
+  /// The update sheet for [release]: what changed, then download and
+  /// install in place (or install right away when it is downloaded).
   Future<void> showUpdateDialog(
       BuildContext context, ReleaseInfo release) async {
-    final downloadUrl = getDownloadUrlForPlatform(release);
-
-    return showDialog(
-      context: context,
-      builder: (BuildContext dialogContext) {
-        return AlertDialog(
-          title: Row(
-            children: [
-              Icon(Icons.system_update,
-                  color: Theme.of(dialogContext).colorScheme.secondary),
-              const SizedBox(width: 10),
-              Text(
-                "Update Available",
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(dialogContext).colorScheme.secondary,
-                ),
-              ),
-            ],
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  "Version ${release.version} is available!",
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(dialogContext).colorScheme.tertiary,
-                  ),
-                ),
-                if (release.isPrerelease)
-                  Container(
-                    margin: const EdgeInsets.only(top: 8),
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      "Pre-release",
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.orange,
-                      ),
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                if (release.body.isNotEmpty) ...[
-                  Text(
-                    "What's new:",
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Theme.of(dialogContext).colorScheme.tertiary,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Container(
-                    constraints: const BoxConstraints(maxHeight: 200),
-                    child: SingleChildScrollView(
-                      child: Text(
-                        release.body,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Theme.of(dialogContext)
-                              .colorScheme
-                              .tertiary
-                              .withValues(alpha: 0.8),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: Text(
-                "Later",
-                style: TextStyle(
-                  color: Theme.of(dialogContext)
-                      .colorScheme
-                      .tertiary
-                      .withValues(alpha: 0.7),
-                ),
-              ),
-            ),
-            // Show download button for mobile when URL exists
-            if (downloadUrl != null && (Platform.isAndroid || Platform.isIOS))
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(dialogContext).pop();
-                  if (context.mounted) {
-                    await _showUpdateDownloadDialog(context, release);
-                  }
-                },
-                child: Text(
-                  "Download & Install",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(dialogContext).colorScheme.secondary,
-                  ),
-                ),
-              ),
-            // Show download button for desktop (direct download or open GitHub)
-            if (Platform.isWindows || Platform.isLinux || Platform.isMacOS)
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(dialogContext).pop();
-                  if (downloadUrl != null && context.mounted) {
-                    await _showUpdateDownloadDialog(context, release);
-                  } else {
-                    final uri = Uri.parse(release.htmlUrl);
-                    if (await canLaunchUrl(uri)) {
-                      await launchUrl(uri,
-                          mode: LaunchMode.externalApplication);
-                    }
-                  }
-                },
-                child: Text(
-                  downloadUrl != null
-                      ? "Download & Install"
-                      : "Download from GitHub",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(dialogContext).colorScheme.secondary,
-                  ),
-                ),
-              ),
-            // Fallback for mobile when no download URL
-            if (downloadUrl == null && (Platform.isAndroid || Platform.isIOS))
-              TextButton(
-                onPressed: () async {
-                  Navigator.of(context).pop();
-                  final uri = Uri.parse(release.htmlUrl);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: Text(
-                  "View on GitHub",
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Theme.of(context).colorScheme.secondary,
-                  ),
-                ),
-              ),
-          ],
-        );
-      },
+    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+      return _showDesktopUpdateDialog(context, release);
+    }
+    final current = await currentBuild();
+    final notes = await fetchChangeLog(after: current, upTo: release.build);
+    final prepared = await preparedUpdate(release);
+    if (!context.mounted) return;
+    final url = getDownloadUrlForPlatform(release);
+    await showUpdateSheet(
+      context,
+      label: release.label,
+      currentLabel: current.label,
+      changes: notes.isNotEmpty ? notes : release.body,
+      pageUrl: release.htmlUrl,
+      sizeBytes: url == null ? null : release.assetSizes[url],
+      preparedPath: prepared,
+      download: (onProgress, cancel) => downloadUpdate(
+          release: release, onProgress: onProgress, cancelToken: cancel),
+      install: (path) => openUpdateFile(path, context, release: release),
+      onLater: () => snooze(release),
     );
   }
 
-  // Check for updates and show dialog if available
+  Future<void> _showDesktopUpdateDialog(
+      BuildContext context, ReleaseInfo release) async {
+    final downloadUrl = getDownloadUrlForPlatform(release);
+    if (downloadUrl != null) {
+      return _showUpdateDownloadDialog(context, release);
+    }
+    final uri = Uri.parse(release.htmlUrl);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
+  /// At startup: a newer build is downloaded on its own over Wi-Fi, then
+  /// offered for install; on mobile data (or with auto-download off) the
+  /// sheet offers the download. Not again for a day after "Later".
   Future<void> checkAndShowUpdateDialog(BuildContext context) async {
     try {
+      await cleanUpDownloads();
       final includePrereleases = await getIncludePrereleases();
       final result =
           await checkForUpdates(includePrereleases: includePrereleases);
-
-      if (result.updateAvailable &&
-          result.latestRelease != null &&
-          context.mounted) {
-        await showUpdateDialog(context, result.latestRelease!);
+      final release = result.latestRelease;
+      if (!result.updateAvailable || release == null) return;
+      if (await _snoozed(release)) return;
+      if (Platform.isAndroid &&
+          await getAutoDownload() &&
+          !await _metered()) {
+        await prepareInBackground(release);
       }
+      if (context.mounted) await showUpdateDialog(context, release);
     } catch (e) {
       _logger.error("Failed to check for updates",
           tag: "UpdateChecker", error: e);

@@ -8,7 +8,7 @@ import 'package:flutter/material.dart';
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
-import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:openlib/ui/components/app_nav_bar.dart';
 import 'package:openlib/ui/home_page.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:desktop_webview_window/desktop_webview_window.dart';
@@ -31,6 +31,9 @@ import 'package:openlib/ui/themes.dart';
 import 'package:openlib/ui/onboarding/onboarding_page.dart';
 import 'package:openlib/ui/challenge_solver_page.dart';
 import 'package:openlib/ui/whats_new_page.dart';
+import 'package:openlib/ui/mybook_page.dart' show BookPage;
+import 'package:openlib/services/home_widgets.dart';
+import 'package:openlib/services/reading_recap.dart';
 
 import 'package:openlib/services/files.dart'
     show moveFilesToAndroidInternalStorage;
@@ -40,6 +43,7 @@ import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/state/state.dart'
     show
         ThemeModeNotifier,
+        libraryBooksProvider,
         selectedIndexProvider,
         themeModeProvider,
         fontSizeScaleProvider,
@@ -339,6 +343,10 @@ class _MainScreenState extends ConsumerState<MainScreen>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    // A tap on a home-screen widget opens its book or the library.
+    HomeWidgets.instance.pending.addListener(_onWidgetAction);
+    unawaited(HomeWidgets.instance.init());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onWidgetAction());
     // Request notification permission after first frame (only on mobile)
     if (PlatformUtils.isMobile) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -369,8 +377,47 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   @override
   void dispose() {
+    HomeWidgets.instance.pending.removeListener(_onWidgetAction);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onWidgetAction() {
+    final action = HomeWidgets.instance.pending.value;
+    if (action == null || !mounted) return;
+    HomeWidgets.instance.pending.value = null;
+    // The library tab under the book, so "back" lands there.
+    ref.read(selectedIndexProvider.notifier).state = 2;
+    final id = action.bookId;
+    if (id != null) {
+      Navigator.of(context)
+          .push(MaterialPageRoute(builder: (_) => BookPage(id: id)))
+          .then((_) {
+        if (mounted) ref.invalidate(libraryBooksProvider);
+      });
+    }
+  }
+
+  /// The home-screen widgets show the library as it is now.
+  void _updateHomeWidgets() {
+    final books = ref.read(libraryBooksProvider).valueOrNull;
+    if (books == null) return;
+    final recap = ref.read(readingRecapProvider).valueOrNull;
+    HomeWidgets.instance.update(
+      books: books,
+      recap: recap == null || recap.total == 0 ? null : recap,
+      l10n: AppLocalizations.of(context),
+      localeTag: Localizations.localeOf(context).toLanguageTag(),
+    );
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // The language may have changed.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _updateHomeWidgets();
+    });
   }
 
   Future<void> _refreshMirrorsOnStartup() async {
@@ -483,9 +530,12 @@ class _MainScreenState extends ConsumerState<MainScreen>
 
   @override
   Widget build(BuildContext context) {
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final selectedIndex = ref.watch(selectedIndexProvider);
     final l10n = AppLocalizations.of(context);
+    if (HomeWidgets.instance.supported) {
+      ref.listen(libraryBooksProvider, (_, __) => _updateHomeWidgets());
+      ref.listen(readingRecapProvider, (_, __) => _updateHomeWidgets());
+    }
 
     // No shared app bar: each tab draws its own large title (Home,
     // Search, My Library, Settings) and pushed pages carry the title of
@@ -493,43 +543,34 @@ class _MainScreenState extends ConsumerState<MainScreen>
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: _widgetOptions.elementAt(selectedIndex),
+        child: AppTabSwitcher(
+          index: selectedIndex,
+          child: _widgetOptions.elementAt(selectedIndex),
+        ),
       ),
       bottomNavigationBar: SafeArea(
-        child: Container(
-          // Allow bottom bar to be light in light mode
-          color: isDarkMode ? const Color(0xFF141414) : Colors.white,
-          child: GNav(
-            backgroundColor:
-                isDarkMode ? const Color(0xFF141414) : Colors.white,
-            haptic: true,
-            tabBorderRadius: 50,
-            tabActiveBorder: Border.all(
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            tabMargin: const EdgeInsets.fromLTRB(13, 12, 13, 12),
-            curve: Curves.fastLinearToSlowEaseIn,
-            duration: const Duration(milliseconds: 250),
-            gap: 8,
-            // Icons adapted for light/dark mode
-            color: isDarkMode ? Colors.white : Colors.black,
-            activeColor: Colors.white,
-            iconSize: 20,
-            tabBackgroundColor: Theme.of(context).colorScheme.secondary,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            tabs: [
-              GButton(icon: Icons.trending_up, text: l10n.navHome),
-              GButton(icon: Icons.search, text: l10n.navSearch),
-              GButton(
-                  icon: Icons.collections_bookmark,
-                  text: l10n.navMyLibrary), // Shortened text
-              GButton(icon: Icons.settings, text: l10n.navSettings),
-            ],
-            selectedIndex: selectedIndex,
-            onTabChange: (index) {
-              ref.read(selectedIndexProvider.notifier).state = index;
-            },
-          ),
+        child: AppNavBar(
+          selectedIndex: selectedIndex,
+          onSelected: (index) =>
+              ref.read(selectedIndexProvider.notifier).state = index,
+          items: [
+            AppNavItem(
+                icon: Icons.explore_outlined,
+                selectedIcon: Icons.explore_rounded,
+                label: l10n.navHome),
+            AppNavItem(
+                icon: Icons.search_rounded,
+                selectedIcon: Icons.manage_search_rounded,
+                label: l10n.navSearch),
+            AppNavItem(
+                icon: Icons.collections_bookmark_outlined,
+                selectedIcon: Icons.collections_bookmark_rounded,
+                label: l10n.navMyLibrary),
+            AppNavItem(
+                icon: Icons.settings_outlined,
+                selectedIcon: Icons.settings_rounded,
+                label: l10n.navSettings),
+          ],
         ),
       ),
     );

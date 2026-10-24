@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_continue_name">Reprendre la lecture</string>
+    <string name="widget_continue_description">Le livre en cours, à portée de doigt</string>
+    <string name="widget_recap_name">Journal de lecture</string>
+    <string name="widget_recap_description">Étapes, série de lecture et quatre semaines de lecture</string>
+    <string name="widget_preview_title">Le livre en cours</string>
+    <string name="widget_preview_author">Auteur</string>
+</resources>

@@ -1350,4 +1350,74 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get downloadNotStartedTitle =>
       'Impossible de lancer le téléchargement';
+
+  @override
+  String get updateAvailableTitle => 'Une nouvelle version est disponible';
+
+  @override
+  String get updateReadyTitle => 'Mise à jour prête à installer';
+
+  @override
+  String get updateChangesTitle => 'Nouveautés';
+
+  @override
+  String get updateNoNotes => 'Aucune note de version pour cette build.';
+
+  @override
+  String get updateDownloading => 'Téléchargement…';
+
+  @override
+  String get updateDownloadFailed =>
+      'La mise à jour n\'a pas pu être téléchargée.';
+
+  @override
+  String get updateDownloadInstall => 'Télécharger et installer';
+
+  @override
+  String updateDownloadInstallSize(String size) {
+    return 'Télécharger et installer · $size';
+  }
+
+  @override
+  String get updateInstallNow => 'Installer maintenant';
+
+  @override
+  String get updateLater => 'Plus tard';
+
+  @override
+  String get updateViewOnGithub => 'GitHub';
+
+  @override
+  String get updateAction => 'Mettre à jour';
+
+  @override
+  String get autoDownloadUpdates =>
+      'Télécharger les mises à jour automatiquement';
+
+  @override
+  String get autoDownloadUpdatesHint =>
+      'Les nouvelles builds sont récupérées en Wi-Fi, prêtes à installer';
+
+  @override
+  String get releaseHistoryTitle => 'Historique des mises à jour';
+
+  @override
+  String get releaseHistoryHint => 'Toutes les builds publiées sur GitHub';
+
+  @override
+  String get releaseHistoryFailed =>
+      'L\'historique des mises à jour n\'a pas pu être chargé.';
+
+  @override
+  String get releaseLatest => 'Dernière';
+
+  @override
+  String get releaseInstalled => 'Installée';
+
+  @override
+  String get widgetEmptyLibrary =>
+      'Les livres ajoutés à votre bibliothèque apparaissent ici';
+
+  @override
+  String get widgetNextUp => 'Ensuite';
 }

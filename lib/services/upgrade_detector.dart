@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 // Project imports:
+import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/database.dart';
 
 /// Result of an upgrade check.
@@ -43,15 +44,22 @@ class UpgradeDetector {
   /// platform plugin.
   final Future<String> Function() _versionOf;
 
-  static Future<String> _platformVersion() async =>
-      (await PackageInfo.fromPlatform()).version;
+  /// Version and build (`1.7.2+35`): every build is released, and each
+  /// one's notes are shown once.
+  static Future<String> _platformVersion() async {
+    final info = await PackageInfo.fromPlatform();
+    return AppBuild.of(info.version, info.buildNumber).stored;
+  }
 
-  /// Compares two dot-separated versions ("1.2.10" vs "1.2.9").
+  /// Compares two versions ("1.2.10" vs "1.2.9", "1.7.2+36" vs "1.7.2").
   /// Returns a negative number when [a] is older, 0 when equal,
   /// positive when [a] is newer. Each side may have 1-3 segments;
   /// missing segments count as 0.
   @visibleForTesting
   static int compareVersions(String a, String b) {
+    final ba = AppBuild.tryParse(a);
+    final bb = AppBuild.tryParse(b);
+    if (ba != null && bb != null) return ba.compareTo(bb);
     final pa = a.split('.').map(int.tryParse).toList();
     final pb = b.split('.').map(int.tryParse).toList();
     for (var i = 0; i < 3; i++) {

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_continue_name">Weiterlesen</string>
+    <string name="widget_continue_description">Dein aktuelles Buch, einen Tipp entfernt</string>
+    <string name="widget_recap_name">Leseprotokoll</string>
+    <string name="widget_recap_description">Meilensteine, Lesesträhne und vier Wochen Lesen</string>
+    <string name="widget_preview_title">Dein aktuelles Buch</string>
+    <string name="widget_preview_author">Autor</string>
+</resources>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_continue_name">Seguir leyendo</string>
+    <string name="widget_continue_description">El libro que estás leyendo, a un toque</string>
+    <string name="widget_recap_name">Registro de lectura</string>
+    <string name="widget_recap_description">Hitos, tu racha y cuatro semanas de lectura</string>
+    <string name="widget_preview_title">El libro que estás leyendo</string>
+    <string name="widget_preview_author">Autor</string>
+</resources>

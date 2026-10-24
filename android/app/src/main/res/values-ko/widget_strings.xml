@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_continue_name">이어 읽기</string>
+    <string name="widget_continue_description">읽고 있는 책을 바로 열어요</string>
+    <string name="widget_recap_name">독서 기록</string>
+    <string name="widget_recap_description">체크포인트, 연속 독서, 4주간의 독서</string>
+    <string name="widget_preview_title">읽고 있는 책</string>
+    <string name="widget_preview_author">저자</string>
+</resources>

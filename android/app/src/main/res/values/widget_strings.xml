@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="widget_continue_name">Continue reading</string>
+    <string name="widget_continue_description">The book you are reading, one tap away</string>
+    <string name="widget_recap_name">Reading record</string>
+    <string name="widget_recap_description">Checkpoints, your streak and four weeks of reading</string>
+    <string name="widget_preview_title">The book you are reading</string>
+    <string name="widget_preview_author">Author</string>
+</resources>

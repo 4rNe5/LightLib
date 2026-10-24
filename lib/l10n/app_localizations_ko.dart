@@ -1284,4 +1284,69 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get downloadNotStartedTitle => '다운로드를 시작하지 못했어요';
+
+  @override
+  String get updateAvailableTitle => '새 버전이 나왔어요';
+
+  @override
+  String get updateReadyTitle => '업데이트 준비 완료';
+
+  @override
+  String get updateChangesTitle => '변경 사항';
+
+  @override
+  String get updateNoNotes => '이 빌드의 변경 사항이 없어요.';
+
+  @override
+  String get updateDownloading => '다운로드 중…';
+
+  @override
+  String get updateDownloadFailed => '업데이트를 다운로드하지 못했어요.';
+
+  @override
+  String get updateDownloadInstall => '다운로드 및 설치';
+
+  @override
+  String updateDownloadInstallSize(String size) {
+    return '다운로드 및 설치 · $size';
+  }
+
+  @override
+  String get updateInstallNow => '지금 설치';
+
+  @override
+  String get updateLater => '나중에';
+
+  @override
+  String get updateViewOnGithub => 'GitHub';
+
+  @override
+  String get updateAction => '업데이트';
+
+  @override
+  String get autoDownloadUpdates => '업데이트 자동 다운로드';
+
+  @override
+  String get autoDownloadUpdatesHint => 'Wi-Fi에서 새 빌드를 미리 받아 바로 설치할 수 있게 해요';
+
+  @override
+  String get releaseHistoryTitle => '업데이트 기록';
+
+  @override
+  String get releaseHistoryHint => 'GitHub에 릴리스된 모든 빌드';
+
+  @override
+  String get releaseHistoryFailed => '업데이트 기록을 불러오지 못했어요.';
+
+  @override
+  String get releaseLatest => '최신';
+
+  @override
+  String get releaseInstalled => '사용 중';
+
+  @override
+  String get widgetEmptyLibrary => '서재에 책을 추가하면 여기에 표시돼요';
+
+  @override
+  String get widgetNextUp => '다음 책';
 }
