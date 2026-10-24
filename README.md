@@ -44,11 +44,10 @@
 
 ## Screenshots 🖼️
 
-[<img src="screenshots/Screenshot_1.png" width=160>](screenshots/Screenshot_1.png)
-[<img src="screenshots/Screenshot_2.png" width=160>](screenshots/Screenshot_2.png)
-[<img src="screenshots/Screenshot_3.png" width=160>](screenshots/Screenshot_3.png)
-[<img src="screenshots/Screenshot_4.png" width=160>](screenshots/Screenshot_4.png)
-[<img src="screenshots/Screenshot_5.png" width=160>](screenshots/Screenshot_5.png)
+[<img src="screenshots/library.jpg" width=180 alt="My library">](screenshots/library.jpg)
+[<img src="screenshots/reader.jpg" width=180 alt="Vertical-writing reader">](screenshots/reader.jpg)
+[<img src="screenshots/search.jpg" width=180 alt="Search">](screenshots/search.jpg)
+[<img src="screenshots/settings.jpg" width=180 alt="Settings">](screenshots/settings.jpg)
 
 ## Installation 📦
 
