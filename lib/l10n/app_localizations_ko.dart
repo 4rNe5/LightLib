@@ -1404,4 +1404,33 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get storageNotWritable =>
       '그 폴더에는 책을 저장할 수 없어요. 앱 폴더나 Download·Documents 안의 폴더를 골라 주세요.';
+
+  @override
+  String get priorityTranslate => '이 책 끝까지 번역';
+
+  @override
+  String get priorityTranslateHint =>
+      '다른 책보다 먼저, 끝날 때까지 쉬지 않고 번역합니다. 화면을 꺼도 계속되고, 기기가 많이 뜨거워질 때만 잠시 멈춥니다.';
+
+  @override
+  String get priorityTranslating => '이 책 우선 번역 중';
+
+  @override
+  String get priorityTranslateDone => '번역 완료';
+
+  @override
+  String get priorityTranslatePreparing => '준비 중…';
+
+  @override
+  String get priorityTranslateNoModel => '번역 모델을 먼저 설치하세요 (설정 > 기기 내 번역)';
+
+  @override
+  String priorityTranslateProgress(int done, int total, int percent) {
+    return '$done/$total 문단 · $percent%';
+  }
+
+  @override
+  String translationNoticeBookDone(String title) {
+    return '‘$title’ 번역 완료';
+  }
 }

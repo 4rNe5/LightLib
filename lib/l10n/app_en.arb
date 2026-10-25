@@ -1948,5 +1948,53 @@
   "storageNotWritable": "Books can't be saved in that folder. Choose the app's folder, or one inside Download or Documents.",
   "@storageNotWritable": {
     "description": "Settings/onboarding: the picked storage folder is not writable"
+  },
+  "priorityTranslate": "Translate this whole book",
+  "@priorityTranslate": {
+    "description": "Book page: translate this book first, to the end"
+  },
+  "priorityTranslateHint": "Before any other book and without resting until it's done, also with the screen off. It pauses only if the phone gets very hot.",
+  "@priorityTranslateHint": {
+    "description": "Book page: what the whole-book translation does"
+  },
+  "priorityTranslating": "Translating this book first",
+  "@priorityTranslating": {
+    "description": "Book page / notification: this book is being translated first"
+  },
+  "priorityTranslateDone": "Translated",
+  "@priorityTranslateDone": {
+    "description": "Book page: the whole book is translated"
+  },
+  "priorityTranslatePreparing": "Getting ready…",
+  "@priorityTranslatePreparing": {
+    "description": "Book page: reading the book before translating"
+  },
+  "priorityTranslateNoModel": "Install a translation model first (Settings > On-device translation)",
+  "@priorityTranslateNoModel": {
+    "description": "Book page: no translation model installed"
+  },
+  "priorityTranslateProgress": "{done}/{total} paragraphs · {percent}%",
+  "@priorityTranslateProgress": {
+    "description": "Book page: paragraphs translated so far",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "translationNoticeBookDone": "“{title}” is translated",
+  "@translationNoticeBookDone": {
+    "description": "Notification: the book translated first is done",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
   }
 }

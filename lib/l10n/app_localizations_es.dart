@@ -1466,4 +1466,34 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get storageNotWritable =>
       'No se pueden guardar libros en esa carpeta. Elige la carpeta de la app o una dentro de Download o Documents.';
+
+  @override
+  String get priorityTranslate => 'Traducir el libro entero';
+
+  @override
+  String get priorityTranslateHint =>
+      'Antes que cualquier otro libro y sin descansos hasta terminar, también con la pantalla apagada. Solo se detiene si el teléfono se calienta mucho.';
+
+  @override
+  String get priorityTranslating => 'Traduciendo este libro primero';
+
+  @override
+  String get priorityTranslateDone => 'Traducido';
+
+  @override
+  String get priorityTranslatePreparing => 'Preparando…';
+
+  @override
+  String get priorityTranslateNoModel =>
+      'Instala primero un modelo de traducción (Ajustes > Traducción en el dispositivo)';
+
+  @override
+  String priorityTranslateProgress(int done, int total, int percent) {
+    return '$done/$total párrafos · $percent %';
+  }
+
+  @override
+  String translationNoticeBookDone(String title) {
+    return '«$title» está traducido';
+  }
 }

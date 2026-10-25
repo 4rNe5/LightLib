@@ -11,6 +11,7 @@ import 'package:openlib/services/share_book.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/components/book_info_widget.dart';
 import 'package:openlib/ui/components/file_buttons_widget.dart';
+import 'package:openlib/ui/components/priority_translation_card.dart';
 
 class BookPage extends StatelessWidget {
   const BookPage({super.key, required this.id});
@@ -66,15 +67,24 @@ class BookPage extends StatelessWidget {
               future: bookInfo,
               builder: (BuildContext context, AsyncSnapshot<MyBook?> snapshot) {
                 if (snapshot.hasData) {
+                  final book = snapshot.data!;
                   return BookInfoWidget(
-                      data: snapshot.data,
-                      child: FileOpenAndDeleteButtons(
-                        id: snapshot.data!.id,
-                        format: snapshot.data!.format!,
-                        fileName: snapshot.data!.fileName,
-                        onDelete: () {
-                          Navigator.of(context).pop();
-                        },
+                      data: book,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          FileOpenAndDeleteButtons(
+                            id: book.id,
+                            format: book.format!,
+                            fileName: book.fileName,
+                            onDelete: () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                          if ((book.format ?? '').toLowerCase() == 'epub')
+                            PriorityTranslationCard(
+                                fileName: book.getFileName()),
+                        ],
                       ));
                 } else if (snapshot.hasError) {
                   return Center(

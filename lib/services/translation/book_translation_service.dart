@@ -38,6 +38,14 @@ const autoTranslateLibraryPref = 'autoTranslateLibrary';
 /// Preference: library books only while the phone charges.
 const translateLibraryChargingOnlyPref = 'translateLibraryChargingOnly';
 
+/// Preference: the book to translate first, to the end (its file name).
+const priorityTranslationBookPref = 'priorityTranslationBook';
+
+/// Heat ([DeviceLoad.heat]) at which translation stops for a while -
+/// severe throttling ahead - and the heat it then waits to fall below.
+const hotHeat = 1.0;
+const cooledHeat = 0.9;
+
 /// Why library translation is waiting.
 enum BookTranslationWait {
   none,
@@ -48,7 +56,7 @@ enum BookTranslationWait {
   /// The app is in the background without its notification service.
   appClosed,
 
-  /// The phone is warm (thermal status moderate or worse).
+  /// The phone is hot (severe throttling ahead).
   warm,
   batteryLow,
   powerSave,
@@ -58,15 +66,39 @@ enum BookTranslationWait {
 }
 
 /// Whether library translation may run now, and if not why.
+///
+/// Warmth only slows it down ([backgroundRest]); it stops when the phone
+/// is about to throttle hard, and once stopped ([cooling]) waits until it
+/// has cooled a little, so it does not stop and start every few seconds.
+/// A [priority] book goes on while a book is open (the reader's requests
+/// still come first), on battery saver, without a charger and down to 10%;
+/// with the app open ([fullSpeed]) it runs like the reader does, whatever
+/// the heat and battery, and stops only when the phone is about to shut
+/// itself down for heat (status critical).
 BookTranslationWait backgroundWaitReason({
   required DeviceLoad load,
   required bool reading,
   required bool canRunNow,
   required bool chargingOnly,
+  bool priority = false,
+  bool fullSpeed = false,
+  bool cooling = false,
 }) {
-  if (reading) return BookTranslationWait.reading;
+  if (reading && !priority) return BookTranslationWait.reading;
   if (!canRunNow) return BookTranslationWait.appClosed;
-  if (load.thermal >= 2) return BookTranslationWait.warm;
+  if (priority && fullSpeed) {
+    return load.thermal >= 4
+        ? BookTranslationWait.warm
+        : BookTranslationWait.none;
+  }
+  if (load.heat >= (cooling ? cooledHeat : hotHeat)) {
+    return BookTranslationWait.warm;
+  }
+  if (priority) {
+    return !load.charging && load.battery < 10
+        ? BookTranslationWait.batteryLow
+        : BookTranslationWait.none;
+  }
   if (chargingOnly && !load.charging) return BookTranslationWait.needsCharger;
   if (!load.charging && load.powerSave) return BookTranslationWait.powerSave;
   if (!load.charging && load.battery < 20) {
@@ -75,14 +107,32 @@ BookTranslationWait backgroundWaitReason({
   return BookTranslationWait.none;
 }
 
-/// How long to rest after a paragraph that took [took]: busy at most 40% of
-/// the time (50% on a charger), 25% once the phone warms up.
-Duration backgroundRest(Duration took, DeviceLoad load) {
-  final factor = load.thermal >= 1
-      ? 3.0
-      : load.charging
-          ? 1.0
-          : 1.5;
+/// How long to rest after a request that took [took], by heat: a cool
+/// phone is busy 2/3 of the time (4/5 on a charger), a warm one 1/2, 1/3,
+/// then 1/4 near the limit. A [priority] book does not rest until the
+/// phone is warm (status moderate), then 2/3 and 2/5 of the time; with
+/// the app open ([fullSpeed]) not at all, like the page being read.
+Duration backgroundRest(Duration took, DeviceLoad load,
+    {bool priority = false, bool fullSpeed = false}) {
+  if (priority && fullSpeed) return Duration.zero;
+  final heat = load.heat;
+  final double factor;
+  if (priority) {
+    factor = heat < 0.8
+        ? 0
+        : heat < 0.9
+            ? 0.5
+            : 1.5;
+  } else {
+    factor = heat < 0.6
+        ? (load.charging ? 0.25 : 0.5)
+        : heat < 0.8
+            ? 1.0
+            : heat < 0.9
+                ? 2.0
+                : 3.0;
+  }
+  if (factor == 0) return Duration.zero;
   final rest = took * factor;
   const min = Duration(milliseconds: 300);
   const max = Duration(seconds: 30);
@@ -139,8 +189,12 @@ Future<List<String?>> epubParagraphTexts(String path) => Isolate.run(() async {
 /// Works through the library's EPUBs one paragraph at a time with the
 /// shared engine at background priority, only when turned on, and gently:
 /// - it waits while a book is open, so reading never competes with it;
-/// - it rests after every paragraph (busy at most 40% of the time) and
-///   waits while the phone is warm, on battery saver or low on battery;
+/// - it rests after every request, longer as the phone warms up, and
+///   waits while the phone is hot, on battery saver or low on battery;
+/// - a book chosen to go first ([prioritize]) is translated before the
+///   others and to the end, even with background translation off,
+///   without resting until the phone is warm, and with the app open as
+///   fast as the reader translates the page on screen;
 /// - on Android it keeps going after the app is left, with an ongoing
 ///   notification and progress bar (a foreground service); elsewhere it
 ///   waits until the app is back.
@@ -152,7 +206,7 @@ class BookTranslationService extends ChangeNotifier
   static final BookTranslationService instance = BookTranslationService._();
 
   /// How often the battery and temperature are read again.
-  static const loadCheck = Duration(seconds: 20);
+  static const loadCheck = Duration(seconds: 10);
 
   final AppLogger _logger = AppLogger();
   final Map<String, BookTranslationProgress> _progress = {};
@@ -175,12 +229,21 @@ class BookTranslationService extends ChangeNotifier
   int _bookNumber = 0;
   int _bookCount = 0;
   String? _currentFile;
+  String? _priorityFile;
+  String? _priorityDoneTitle;
+  bool _cooling = false;
 
   Map<String, BookTranslationProgress> get progress =>
       Map.unmodifiable(_progress);
   bool get enabled => _enabled;
   bool get chargingOnly => _chargingOnly;
   bool get running => _running;
+
+  /// The book being translated first, to the end (its file name).
+  String? get priorityFile => _priorityFile;
+
+  /// The book being worked on now.
+  String? get currentFile => _currentFile;
   String? get error => _error;
 
   /// Why it is waiting now ([BookTranslationWait.none] while translating).
@@ -195,6 +258,8 @@ class BookTranslationService extends ChangeNotifier
         db.getPreference(key).catchError((_) => null);
     _enabled = await pref(autoTranslateLibraryPref) == 1;
     _chargingOnly = await pref(translateLibraryChargingOnlyPref) == 1;
+    final priority = await pref(priorityTranslationBookPref);
+    _priorityFile = priority is String && priority.isNotEmpty ? priority : null;
     TranslationStyle.lightNovel =
         await pref(translationLightNovelStylePref) != 0;
     SharedTranslationEngine.cpuOnly =
@@ -202,7 +267,10 @@ class BookTranslationService extends ChangeNotifier
     final formats = await pref(TranslationPromptFormats.pref);
     TranslationPromptFormats.overrides =
         TranslationPromptFormats.decode(formats is String ? formats : null);
-    _notice.onStopRequested = () => unawaited(setEnabled(false));
+    _notice.onStopRequested = () {
+      unawaited(cancelPriority());
+      unawaited(setEnabled(false));
+    };
     _notice.onTimedOut = () => _serviceTimedOut = true;
     SharedTranslationEngine.instance.readers.addListener(_onReaders);
     scanSoon();
@@ -216,9 +284,41 @@ class BookTranslationService extends ChangeNotifier
     notifyListeners();
     if (on) {
       scanSoon();
-    } else {
+    } else if (_priorityFile == null) {
       await _notice.hide();
     }
+  }
+
+  /// Translates [fileName] before every other book and to the end.
+  Future<void> prioritize(String fileName) async {
+    _priorityFile = fileName;
+    _priorityDoneTitle = null;
+    await MyLibraryDb.instance
+        .savePreference(priorityTranslationBookPref, fileName)
+        .catchError((_) {});
+    notifyListeners();
+    scanSoon();
+  }
+
+  /// Back to the usual order and pace.
+  Future<void> cancelPriority() async {
+    if (_priorityFile == null) return;
+    _priorityFile = null;
+    await MyLibraryDb.instance
+        .savePreference(priorityTranslationBookPref, '')
+        .catchError((_) {});
+    notifyListeners();
+    scanSoon();
+  }
+
+  bool get _active => _enabled || _priorityFile != null;
+
+  /// For tests: a book chosen to go first, and a book's progress.
+  @visibleForTesting
+  void debugShow({String? priorityFile, BookTranslationProgress? progress}) {
+    _priorityFile = priorityFile;
+    if (progress != null) _progress[progress.fileName] = progress;
+    notifyListeners();
   }
 
   Future<void> setChargingOnly(bool on) async {
@@ -254,7 +354,13 @@ class BookTranslationService extends ChangeNotifier
     if (!_running) unawaited(_run());
   }
 
-  bool get _stopRequested => !_enabled || _rescan;
+  bool get _stopRequested => !_active || _rescan;
+
+  /// The book in progress is the one to finish first.
+  bool get _urgent => _currentFile != null && _currentFile == _priorityFile;
+
+  /// The book to finish first, with the app open: as fast as reading.
+  bool get _fullSpeed => _urgent && _foreground;
 
   Future<void> _run() async {
     if (_running) return;
@@ -266,16 +372,36 @@ class BookTranslationService extends ChangeNotifier
     try {
       while (_rescan) {
         _rescan = false;
-        if (!_enabled) break;
+        if (!_active) break;
         final model = await TranslationModelStore.instance.activeModel();
         if (model == null) break;
         _l10n = await _localizations();
         final target = languageForCode(await MyLibraryDb.instance
             .getPreference(translationTargetLanguagePref)
             .catchError((_) => null) as String?);
-        final books = (await MyLibraryDb.instance.getAll())
+        final first = _priorityFile;
+        var books = (await MyLibraryDb.instance.getAll())
             .where((b) => (b.format ?? '').toLowerCase() == 'epub')
             .toList();
+        if (first != null) {
+          final chosen = [
+            for (final b in books)
+              if (b.getFileName() == first) b
+          ];
+          if (chosen.isEmpty) {
+            // Deleted since: back to the usual order.
+            _priorityFile = null;
+            unawaited(MyLibraryDb.instance
+                .savePreference(priorityTranslationBookPref, '')
+                .catchError((_) {}));
+          }
+          books = [
+            ...chosen,
+            if (_enabled)
+              for (final b in books)
+                if (b.getFileName() != first) b
+          ];
+        }
         final storage =
             (await MyLibraryDb.instance.getPreference('bookStorageDirectory'))
                 .toString();
@@ -287,7 +413,16 @@ class BookTranslationService extends ChangeNotifier
           _bookNumber = n + 1;
           final fileName = book.getFileName();
           final path = p.join(storage, fileName);
-          if (!await File(path).exists()) continue;
+          if (!await File(path).exists()) {
+            if (fileName == _priorityFile) {
+              _priorityFile = null;
+              await MyLibraryDb.instance
+                  .savePreference(priorityTranslationBookPref, '')
+                  .catchError((_) {});
+              notifyListeners();
+            }
+            continue;
+          }
           translator ??= await SharedTranslationEngine.instance.acquire();
           if (translator == null) break;
           await _translateBook(
@@ -298,8 +433,18 @@ class BookTranslationService extends ChangeNotifier
             modelId: TranslationStyle.cacheModelId(model.fileName),
             targetLanguage: target,
           );
+          if (fileName == _priorityFile &&
+              _progress[fileName]?.state == BookTranslationState.done) {
+            // Finished: the rest of the library at its usual pace.
+            _priorityDoneTitle = book.title;
+            _priorityFile = null;
+            await MyLibraryDb.instance
+                .savePreference(priorityTranslationBookPref, '')
+                .catchError((_) {});
+            notifyListeners();
+          }
         }
-        finished = _enabled && !_rescan;
+        finished = _active && !_rescan;
       }
     } catch (e) {
       _error = e.toString();
@@ -314,10 +459,14 @@ class BookTranslationService extends ChangeNotifier
       final allDone = finished &&
           _error == null &&
           _progress.values.every((b) => b.state == BookTranslationState.done);
+      final bookDone = _priorityDoneTitle;
+      _priorityDoneTitle = null;
       await _notice.hide(
           doneTitle: allDone && _translatedThisRun > 0
               ? l10n?.translationNoticeDone
-              : null,
+              : bookDone != null
+                  ? l10n?.translationNoticeBookDone(bookDone)
+                  : null,
           doneText: allDone && _translatedThisRun > 0
               ? l10n?.translationNoticeDoneCount(_progress.length)
               : null);
@@ -358,7 +507,11 @@ class BookTranslationService extends ChangeNotifier
         reading: SharedTranslationEngine.instance.readers.value > 0,
         canRunNow: _foreground || (_notice.showing && !_serviceTimedOut),
         chargingOnly: _chargingOnly,
+        priority: _urgent,
+        fullSpeed: _fullSpeed,
+        cooling: _cooling,
       );
+      _cooling = reason == BookTranslationWait.warm;
       if (reason != _wait) {
         _wait = reason;
         notifyListeners();
@@ -372,7 +525,8 @@ class BookTranslationService extends ChangeNotifier
     }
   }
 
-  String? _waitText(AppLocalizations l10n) => switch (_wait) {
+  /// Why it is waiting, for the reader ([wait]), or null.
+  String? waitText(AppLocalizations l10n) => switch (_wait) {
         BookTranslationWait.none => null,
         BookTranslationWait.reading => l10n.translationWaitReading,
         BookTranslationWait.appClosed => l10n.translationWaitAppClosed,
@@ -386,7 +540,7 @@ class BookTranslationService extends ChangeNotifier
   Future<void> _updateNotice({bool force = false}) async {
     final l10n = _l10n;
     final file = _currentFile;
-    if (l10n == null || file == null || !_enabled) return;
+    if (l10n == null || file == null || !_active) return;
     final now = DateTime.now();
     if (!force && now.difference(_noticeAt) < const Duration(seconds: 1)) {
       return;
@@ -400,7 +554,8 @@ class BookTranslationService extends ChangeNotifier
     if (!_notice.showing && !_foreground) return;
     await _notice.show(
       channelName: l10n.translationNoticeChannel,
-      title: _waitText(l10n) ?? l10n.translationNoticeTitle,
+      title: waitText(l10n) ??
+          (_urgent ? l10n.priorityTranslating : l10n.translationNoticeTitle),
       text: l10n.translationNoticeProgress(book.title, percent),
       subText: l10n.translationNoticeCount(
           book.done, book.total, _bookNumber, _bookCount),
@@ -543,8 +698,9 @@ class BookTranslationService extends ChangeNotifier
       await _updateNotice();
       // The time includes waiting behind the reader's requests; resting
       // in proportion to it only makes the pace gentler.
-      await Future<void>.delayed(
-          backgroundRest(DateTime.now().difference(started), _load));
+      final rest = backgroundRest(DateTime.now().difference(started), _load,
+          priority: _urgent, fullSpeed: _fullSpeed);
+      if (rest > Duration.zero) await Future<void>.delayed(rest);
     }
     await cache.flush();
     report(done() == unique.length

@@ -120,9 +120,15 @@ class MainActivity : FlutterActivity() {
         val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
         val status = battery?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val plugged = (battery?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) ?: 0) != 0
+        // How close the phone is to severe throttling in 10 s (1.0 = there),
+        // finer than the status steps; NaN where the device cannot tell.
+        val headroom = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R)
+            try { power.getThermalHeadroom(10) } catch (e: Exception) { Float.NaN }
+        else Float.NaN
         return mapOf(
             "thermal" to (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
                 power.currentThermalStatus else 0),
+            "headroom" to (if (headroom.isNaN()) -1.0 else headroom.toDouble()),
             "powerSave" to power.isPowerSaveMode,
             "battery" to (if (level >= 0 && scale > 0) level * 100 / scale else 100),
             "charging" to (plugged || status == BatteryManager.BATTERY_STATUS_CHARGING ||

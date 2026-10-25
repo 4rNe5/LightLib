@@ -436,5 +436,13 @@
   "japanLightNovels": "Light novels",
   "japanNewLiterature": "Romans web publiés",
   "japanManga": "Mangas",
-  "storageNotWritable": "Impossible d'enregistrer des livres dans ce dossier. Choisissez le dossier de l'app ou un dossier dans Download ou Documents."
+  "storageNotWritable": "Impossible d'enregistrer des livres dans ce dossier. Choisissez le dossier de l'app ou un dossier dans Download ou Documents.",
+  "priorityTranslate": "Traduire tout le livre",
+  "priorityTranslateHint": "Avant tout autre livre et sans pause jusqu'à la fin, même écran éteint. Il ne s'arrête que si le téléphone chauffe beaucoup.",
+  "priorityTranslating": "Traduction prioritaire de ce livre",
+  "priorityTranslateDone": "Traduit",
+  "priorityTranslatePreparing": "Préparation…",
+  "priorityTranslateNoModel": "Installez d'abord un modèle de traduction (Réglages > Traduction sur l'appareil)",
+  "priorityTranslateProgress": "{done}/{total} paragraphes · {percent} %",
+  "translationNoticeBookDone": "« {title} » est traduit"
 }

@@ -627,7 +627,7 @@ class _LibraryTranslationSection extends StatelessWidget {
                 value: service.chargingOnly,
                 onChanged: service.setChargingOnly,
               ),
-            if (service.enabled &&
+            if ((service.enabled || service.priorityFile != null) &&
                 service.running &&
                 service.wait != BookTranslationWait.none)
               Padding(

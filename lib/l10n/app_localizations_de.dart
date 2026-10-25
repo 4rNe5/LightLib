@@ -1467,4 +1467,34 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get storageNotWritable =>
       'In diesem Ordner können keine Bücher gespeichert werden. Wähle den App-Ordner oder einen Ordner in Download oder Documents.';
+
+  @override
+  String get priorityTranslate => 'Ganzes Buch übersetzen';
+
+  @override
+  String get priorityTranslateHint =>
+      'Vor allen anderen Büchern und ohne Pausen, bis es fertig ist – auch bei ausgeschaltetem Bildschirm. Nur wenn das Telefon sehr heiß wird, hält es kurz an.';
+
+  @override
+  String get priorityTranslating => 'Dieses Buch wird zuerst übersetzt';
+
+  @override
+  String get priorityTranslateDone => 'Übersetzt';
+
+  @override
+  String get priorityTranslatePreparing => 'Wird vorbereitet…';
+
+  @override
+  String get priorityTranslateNoModel =>
+      'Zuerst ein Übersetzungsmodell installieren (Einstellungen > Übersetzung auf dem Gerät)';
+
+  @override
+  String priorityTranslateProgress(int done, int total, int percent) {
+    return '$done/$total Absätze · $percent %';
+  }
+
+  @override
+  String translationNoticeBookDone(String title) {
+    return '„$title“ ist übersetzt';
+  }
 }

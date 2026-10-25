@@ -1402,4 +1402,33 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get storageNotWritable =>
       'そのフォルダには保存できません。アプリのフォルダか、Download・Documents内のフォルダを選んでください。';
+
+  @override
+  String get priorityTranslate => 'この本を最後まで翻訳';
+
+  @override
+  String get priorityTranslateHint =>
+      'ほかの本より先に、終わるまで休まず翻訳します。画面を消しても続き、本体がかなり熱くなったときだけ一時停止します。';
+
+  @override
+  String get priorityTranslating => 'この本を優先して翻訳中';
+
+  @override
+  String get priorityTranslateDone => '翻訳済み';
+
+  @override
+  String get priorityTranslatePreparing => '準備中…';
+
+  @override
+  String get priorityTranslateNoModel => '先に翻訳モデルをインストールしてください（設定 > 端末内翻訳）';
+
+  @override
+  String priorityTranslateProgress(int done, int total, int percent) {
+    return '$done/$total 段落 · $percent%';
+  }
+
+  @override
+  String translationNoticeBookDone(String title) {
+    return '「$title」の翻訳が完了';
+  }
 }

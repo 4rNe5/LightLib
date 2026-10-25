@@ -17,6 +17,7 @@ class DeviceLoad {
     this.powerSave = false,
     this.battery = 100,
     this.charging = false,
+    this.headroom,
   });
 
   /// Android's thermal status: 0 none, 1 light, 2 moderate, 3 severe...
@@ -27,6 +28,23 @@ class DeviceLoad {
   final int battery;
   final bool charging;
 
+  /// Android's thermal headroom 10 s ahead (1.0: severe throttling), or
+  /// null where the phone does not report it.
+  final double? headroom;
+
+  /// How hot, from 0 (cool) to 1 (severe throttling) and above: the
+  /// headroom where there is one, never less than the status step says.
+  double get heat {
+    final fromStatus = switch (thermal) {
+      <= 0 => 0.0,
+      1 => 0.6,
+      2 => 0.85,
+      _ => 1.0 + (thermal - 3) * 0.1,
+    };
+    final h = headroom;
+    return h != null && h > fromStatus ? h : fromStatus;
+  }
+
   static const nominal = DeviceLoad();
 
   factory DeviceLoad.fromMap(Map<Object?, Object?> map) => DeviceLoad(
@@ -34,6 +52,10 @@ class DeviceLoad {
         powerSave: map['powerSave'] == true,
         battery: (map['battery'] as num?)?.toInt() ?? 100,
         charging: map['charging'] == true,
+        headroom: switch (map['headroom']) {
+          final num h when h >= 0 && h.isFinite => h.toDouble(),
+          _ => null,
+        },
       );
 }
 

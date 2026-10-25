@@ -436,5 +436,13 @@
   "japanLightNovels": "Light Novels",
   "japanNewLiterature": "Webromane in Buchform",
   "japanManga": "Manga",
-  "storageNotWritable": "In diesem Ordner können keine Bücher gespeichert werden. Wähle den App-Ordner oder einen Ordner in Download oder Documents."
+  "storageNotWritable": "In diesem Ordner können keine Bücher gespeichert werden. Wähle den App-Ordner oder einen Ordner in Download oder Documents.",
+  "priorityTranslate": "Ganzes Buch übersetzen",
+  "priorityTranslateHint": "Vor allen anderen Büchern und ohne Pausen, bis es fertig ist – auch bei ausgeschaltetem Bildschirm. Nur wenn das Telefon sehr heiß wird, hält es kurz an.",
+  "priorityTranslating": "Dieses Buch wird zuerst übersetzt",
+  "priorityTranslateDone": "Übersetzt",
+  "priorityTranslatePreparing": "Wird vorbereitet…",
+  "priorityTranslateNoModel": "Zuerst ein Übersetzungsmodell installieren (Einstellungen > Übersetzung auf dem Gerät)",
+  "priorityTranslateProgress": "{done}/{total} Absätze · {percent} %",
+  "translationNoticeBookDone": "„{title}“ ist übersetzt"
 }

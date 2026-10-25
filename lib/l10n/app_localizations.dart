@@ -2691,6 +2691,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Books can\'t be saved in that folder. Choose the app\'s folder, or one inside Download or Documents.'**
   String get storageNotWritable;
+
+  /// Book page: translate this book first, to the end
+  ///
+  /// In en, this message translates to:
+  /// **'Translate this whole book'**
+  String get priorityTranslate;
+
+  /// Book page: what the whole-book translation does
+  ///
+  /// In en, this message translates to:
+  /// **'Before any other book and without resting until it\'s done, also with the screen off. It pauses only if the phone gets very hot.'**
+  String get priorityTranslateHint;
+
+  /// Book page / notification: this book is being translated first
+  ///
+  /// In en, this message translates to:
+  /// **'Translating this book first'**
+  String get priorityTranslating;
+
+  /// Book page: the whole book is translated
+  ///
+  /// In en, this message translates to:
+  /// **'Translated'**
+  String get priorityTranslateDone;
+
+  /// Book page: reading the book before translating
+  ///
+  /// In en, this message translates to:
+  /// **'Getting ready…'**
+  String get priorityTranslatePreparing;
+
+  /// Book page: no translation model installed
+  ///
+  /// In en, this message translates to:
+  /// **'Install a translation model first (Settings > On-device translation)'**
+  String get priorityTranslateNoModel;
+
+  /// Book page: paragraphs translated so far
+  ///
+  /// In en, this message translates to:
+  /// **'{done}/{total} paragraphs · {percent}%'**
+  String priorityTranslateProgress(int done, int total, int percent);
+
+  /// Notification: the book translated first is done
+  ///
+  /// In en, this message translates to:
+  /// **'“{title}” is translated'**
+  String translationNoticeBookDone(String title);
 }
 
 class _AppLocalizationsDelegate
