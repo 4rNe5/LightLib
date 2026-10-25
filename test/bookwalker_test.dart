@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Package imports:
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
@@ -99,6 +100,26 @@ void main() {
     expect(books.single.cover, 'https://rimg.bookwalker.jp/1140/e.jpg');
   });
 
+  test('a bot check (202, empty) is cleared in the browser, then always',
+      () async {
+    final dio = Dio()..httpClientAdapter = _Answer(202, '');
+    final asked = <String>[];
+    final bw = BookWalker(
+        dio: dio,
+        browser: (url) async {
+          asked.add(url);
+          return _searchPage;
+        });
+    final books = await bw.popular(BookWalkerCategory.lightNovel);
+    expect(books.first.searchQuery, '青春ブタ野郎');
+    expect(asked, ['https://bookwalker.jp/search/?order=rank&qcat=3']);
+    // The next page goes to the browser straight away.
+    (dio.httpClientAdapter as _Answer).calls = 0;
+    await bw.genre(BookWalkerCategory.manga, bookWalkerGenres.first);
+    expect((dio.httpClientAdapter as _Answer).calls, 0);
+    expect(asked.length, 2);
+  });
+
   test('a ranking page: its products', () {
     final books = parseBookWalkerRanking(_rankingPage);
     expect(books.length, 2);
@@ -149,4 +170,21 @@ void main() {
     expect(find.text('이세계'), findsOneWidget);
     expect(find.text('異世界系作品'), findsOneWidget);
   });
+}
+
+class _Answer implements HttpClientAdapter {
+  _Answer(this.status, this.body);
+  final int status;
+  final String body;
+  int calls = 0;
+
+  @override
+  Future<ResponseBody> fetch(RequestOptions options,
+      Stream<List<int>>? requestStream, Future<void>? cancelFuture) async {
+    calls++;
+    return ResponseBody.fromString(body, status);
+  }
+
+  @override
+  void close({bool force = false}) {}
 }

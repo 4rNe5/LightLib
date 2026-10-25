@@ -12,6 +12,7 @@ import 'package:dio/dio.dart';
 import 'package:html/parser.dart' show parse;
 
 // Project imports:
+import 'package:openlib/services/browser_page_reader.dart';
 import 'package:openlib/services/logger.dart';
 
 /// A BOOK☆WALKER category: its search id and ranking path.
@@ -193,7 +194,23 @@ List<BookWalkerBook> onePerSeries(List<BookWalkerBook> books) {
 
 /// Fetches BOOK☆WALKER pages, each kept for a day.
 class BookWalker {
-  BookWalker({Dio? dio}) : _dio = dio ?? Dio();
+  BookWalker({Dio? dio, Future<String?> Function(String url)? browser})
+      : _dio = dio ?? Dio(),
+        _browser = browser ??
+            ((url) => readPageInBrowser(url, readyJs: _contentReady));
+
+  /// The page has its books: tiles in either layout, or a ranking's
+  /// structured data.
+  static const _contentReady =
+      "document.querySelector('h2.o-tile-ttl, p.m-book-item__title') || "
+      "/\"@type\":\\s*\"Product\"/.test("
+      "document.documentElement.innerHTML)";
+
+  final Future<String?> Function(String url) _browser;
+
+  /// The store answered a plain request with its bot check (202, nothing
+  /// in it): from then on pages are read in the browser.
+  bool _blocked = false;
 
   static final BookWalker instance = BookWalker();
 
@@ -241,6 +258,16 @@ class BookWalker {
         DateTime.now().difference(kept.$1) < _cacheFor) {
       return kept.$2;
     }
+    if (_blocked) {
+      final books = parser(await _browser(url) ?? '');
+      if (books.isNotEmpty) {
+        _cache[url] = (DateTime.now(), books);
+        return books;
+      }
+      if (kept != null) return kept.$2;
+      _blocked = false; // the plain request again, next time
+      return books;
+    }
     try {
       final response = await _dio.get<String>(url,
           options: Options(
@@ -254,8 +281,15 @@ class BookWalker {
               'Accept-Language': 'ja,ko;q=0.8,en;q=0.6',
             },
           ));
-      final body = response.data ?? '';
-      final books = parser(body);
+      var body = response.data ?? '';
+      var books = parser(body);
+      // AWS WAF's check from some networks (phones in Korea, at least): a
+      // 202 with no page, cleared by a browser running its script.
+      if (books.isEmpty && (response.statusCode == 202 || body.isEmpty)) {
+        _blocked = true;
+        body = await _browser(url) ?? '';
+        books = parser(body);
+      }
       if (books.isEmpty) {
         // The page came but held nothing: another layout, or another page.
         _logger.warning('BOOK☆WALKER page without books',
