@@ -17,6 +17,7 @@
 
         <!-- Checkpoints -->
         <LinearLayout
+            android:id="@+id/checkpoint_tile"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="2"
@@ -86,6 +87,7 @@
 
         <!-- Streak -->
         <LinearLayout
+            android:id="@+id/streak_tile"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginStart="8dp"

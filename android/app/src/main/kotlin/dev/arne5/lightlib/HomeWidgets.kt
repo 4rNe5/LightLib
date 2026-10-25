@@ -14,8 +14,11 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.RectF
 import android.graphics.Shader
+import android.os.Build
 import android.os.Bundle
+import android.util.SizeF
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONObject
@@ -204,8 +207,33 @@ object HomeWidgets {
     private fun withAlpha(color: Int, alpha: Int) = (color and 0x00FFFFFF) or (alpha shl 24)
 }
 
+/**
+ * The widget's views for every size the launcher may give it. On Android
+ * 12+ the launcher picks the variant that fits (also after the phone is
+ * folded or unfolded); before, the widget's current size decides.
+ */
+internal fun responsive(
+    context: Context, manager: AppWidgetManager, id: Int,
+    sizes: List<SizeF>, build: (Float, Float) -> RemoteViews
+): RemoteViews {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        return RemoteViews(sizes.associateWith { build(it.width, it.height) })
+    }
+    val (w, h) = HomeWidgets.sizeOf(manager, id)
+    return build(w.toFloat(), h.toFloat())
+}
+
 /** "Continue reading": the book being read (or the newest), and the next. */
 class ContinueReadingWidget : AppWidgetProvider() {
+    companion object {
+        /** 1x1 to wide and tall: cover; cover and title; the full card. */
+        val sizes = listOf(
+            SizeF(50f, 50f), SizeF(100f, 50f), SizeF(160f, 50f),
+            SizeF(100f, 100f), SizeF(100f, 160f), SizeF(160f, 100f), SizeF(250f, 100f),
+            SizeF(160f, 150f), SizeF(250f, 150f), SizeF(250f, 250f),
+        )
+    }
+
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         for (id in ids) manager.updateAppWidget(id, render(context, manager, id))
     }
@@ -217,8 +245,30 @@ class ContinueReadingWidget : AppWidgetProvider() {
     }
 
     private fun render(context: Context, manager: AppWidgetManager, id: Int): RemoteViews {
-        val views = RemoteViews(context.packageName, R.layout.widget_continue_reading)
         val data = HomeWidgets.load(context)
+        // One picture of each cover for every size (the launcher's bitmap
+        // memory is limited; the same bitmap is sent once).
+        val hero = data?.optJSONObject("hero")
+        val cover = HomeWidgets.cover(context, hero?.optString("cover"),
+            HomeWidgets.dp(context, 280f).roundToInt(), HomeWidgets.dp(context, 18f))
+        val nextCover = HomeWidgets.cover(context,
+            data?.optJSONObject("next")?.optString("cover"),
+            HomeWidgets.dp(context, 33f).roundToInt(), HomeWidgets.dp(context, 4f))
+        return responsive(context, manager, id, sizes) { w, h ->
+            build(context, data, id, w, h, cover, nextCover)
+        }
+    }
+
+    /** The card for a widget [width] x [height] dp. */
+    private fun build(
+        context: Context, data: JSONObject?, id: Int, width: Float, height: Float,
+        cover: Bitmap?, nextCover: Bitmap?
+    ): RemoteViews {
+        // Narrow and tall: the cover on top. Small: the cover alone.
+        val tall = width < 160 && height >= 100
+        val coverOnly = !tall && (width < 100 || height < 50)
+        val views = RemoteViews(context.packageName,
+            if (tall) R.layout.widget_continue_reading_tall else R.layout.widget_continue_reading)
         val hero = data?.optJSONObject("hero")
         val labels = data?.optJSONObject("labels")
         views.setOnClickPendingIntent(R.id.widget_root,
@@ -232,29 +282,35 @@ class ContinueReadingWidget : AppWidgetProvider() {
         }
         views.setViewVisibility(R.id.book, View.VISIBLE)
         views.setViewVisibility(R.id.empty, View.GONE)
-        val (width, height) = HomeWidgets.sizeOf(manager, id)
-        views.setTextViewText(R.id.label, labels?.optString("hero") ?: "")
         views.setTextViewText(R.id.title, hero.optString("title"))
         val author = hero.optString("author")
         views.setTextViewText(R.id.author, author)
-        views.setViewVisibility(R.id.author, if (author.isEmpty()) View.GONE else View.VISIBLE)
 
-        val coverHeight = HomeWidgets.dp(context, (height - 24).coerceIn(56, 260).toFloat()).roundToInt()
-        val cover = HomeWidgets.cover(context, hero.optString("cover"), coverHeight,
-            HomeWidgets.dp(context, 10f))
         if (cover != null) views.setImageViewBitmap(R.id.cover, cover)
         else views.setImageViewResource(R.id.cover, R.drawable.widget_cover_placeholder)
-        // A narrow widget is the cover and the title only.
-        views.setViewVisibility(R.id.cover, if (width < 150 && cover == null) View.GONE else View.VISIBLE)
+        if (tall) {
+            views.setInt(R.id.title, "setMaxLines", if (height >= 160) 2 else 1)
+            views.setViewVisibility(R.id.author,
+                if (author.isEmpty() || height < 200) View.GONE else View.VISIBLE)
+            return views
+        }
+
+        views.setViewVisibility(R.id.text_column, if (coverOnly) View.GONE else View.VISIBLE)
+        views.setInt(R.id.book, "setGravity", if (coverOnly) Gravity.CENTER else Gravity.START)
+        if (coverOnly) return views
+        // Short: no label, a one-line title; the author once there is room.
+        views.setViewVisibility(R.id.label_pill, if (height >= 100) View.VISIBLE else View.GONE)
+        views.setInt(R.id.title, "setMaxLines", if (height >= 100) 2 else 1)
+        views.setViewVisibility(R.id.author,
+            if (author.isEmpty() || height < 80) View.GONE else View.VISIBLE)
+        views.setTextViewText(R.id.label, labels?.optString("hero") ?: "")
 
         val next = data.optJSONObject("next")
-        if (next != null && height >= 120) {
+        if (next != null && height >= 150) {
             views.setViewVisibility(R.id.next_row, View.VISIBLE)
             views.setTextViewText(R.id.next_label, labels?.optString("nextUp") ?: "")
             views.setTextViewText(R.id.next_title, next.optString("title"))
-            val small = HomeWidgets.cover(context, next.optString("cover"),
-                HomeWidgets.dp(context, 33f).roundToInt(), HomeWidgets.dp(context, 4f))
-            if (small != null) views.setImageViewBitmap(R.id.next_cover, small)
+            if (nextCover != null) views.setImageViewBitmap(R.id.next_cover, nextCover)
             else views.setImageViewResource(R.id.next_cover, R.drawable.widget_cover_placeholder)
             views.setOnClickPendingIntent(R.id.next_row,
                 HomeWidgets.openIntent(context, id * 10 + 1, next.optString("id")))
@@ -267,6 +323,15 @@ class ContinueReadingWidget : AppWidgetProvider() {
 
 /** "Reading record": checkpoints, the streak and four weeks of reading. */
 class ReadingRecapWidget : AppWidgetProvider() {
+    companion object {
+        /** 2x1 to tall: checkpoints; with the streak; with the four weeks. */
+        val sizes = listOf(
+            SizeF(110f, 50f), SizeF(180f, 50f), SizeF(110f, 110f),
+            SizeF(180f, 110f), SizeF(250f, 110f), SizeF(180f, 180f),
+            SizeF(250f, 180f), SizeF(320f, 180f),
+        )
+    }
+
     override fun onUpdate(context: Context, manager: AppWidgetManager, ids: IntArray) {
         for (id in ids) manager.updateAppWidget(id, render(context, manager, id))
     }
@@ -278,9 +343,27 @@ class ReadingRecapWidget : AppWidgetProvider() {
     }
 
     private fun render(context: Context, manager: AppWidgetManager, id: Int): RemoteViews {
+        val data = HomeWidgets.load(context)
+        val progress = data?.optJSONObject("recap")?.optDouble("progress", 0.0) ?: 0.0
+        val rings = mutableMapOf<Int, Bitmap>()
+        return responsive(context, manager, id, sizes) { w, h ->
+            build(context, data, id, w, h) { px ->
+                rings.getOrPut(px) { HomeWidgets.ring(context, progress, px) }
+            }
+        }
+    }
+
+    private fun build(
+        context: Context, data: JSONObject?, id: Int, width: Float, height: Float,
+        ring: (Int) -> Bitmap
+    ): RemoteViews {
         val views = RemoteViews(context.packageName, R.layout.widget_reading_recap)
         views.setOnClickPendingIntent(R.id.widget_root, HomeWidgets.openIntent(context, id * 10 + 5, null))
-        val data = HomeWidgets.load(context)
+        // Narrow: the checkpoints alone; short: no line under the count.
+        views.setViewVisibility(R.id.streak_tile, if (width >= 180) View.VISIBLE else View.GONE)
+        views.setViewVisibility(R.id.ring, if (width >= 140 || height >= 110) View.VISIBLE else View.GONE)
+        views.setViewVisibility(R.id.to_next, if (height >= 80) View.VISIBLE else View.GONE)
+        val ringPx = HomeWidgets.dp(context, if (height >= 80) 50f else 36f).roundToInt()
         val recap = data?.optJSONObject("recap")
         if (recap == null) {
             views.setViewVisibility(R.id.activity, View.GONE)
@@ -289,17 +372,14 @@ class ReadingRecapWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.to_next, data?.optJSONObject("labels")?.optString("empty") ?: "")
             views.setTextViewText(R.id.streak, "0")
             views.setTextViewText(R.id.streak_label, "")
-            views.setImageViewBitmap(R.id.ring, HomeWidgets.ring(context, 0.0,
-                HomeWidgets.dp(context, 50f).roundToInt()))
+            views.setImageViewBitmap(R.id.ring, ring(ringPx))
             views.setImageViewResource(R.id.fire, R.drawable.ic_widget_fire_off)
             return views
         }
-        val (width, height) = HomeWidgets.sizeOf(manager, id)
         views.setTextViewText(R.id.checkpoints, recap.optString("checkpoints"))
         views.setTextViewText(R.id.completed, recap.optString("completed"))
         views.setTextViewText(R.id.to_next, recap.optString("toNext"))
-        views.setImageViewBitmap(R.id.ring, HomeWidgets.ring(context, recap.optDouble("progress", 0.0),
-            HomeWidgets.dp(context, 50f).roundToInt()))
+        views.setImageViewBitmap(R.id.ring, ring(ringPx))
         views.setTextViewText(R.id.streak, recap.optString("streak"))
         views.setTextViewText(R.id.streak_label, recap.optString("streakLabel"))
         views.setImageViewResource(R.id.fire,
@@ -312,7 +392,7 @@ class ReadingRecapWidget : AppWidgetProvider() {
             views.setTextViewText(R.id.reading_days, recap.optString("readingDays"))
             val days = recap.optJSONArray("days")
             val list = (0 until (days?.length() ?: 0)).map { days!!.optInt(it) }
-            val strip = HomeWidgets.dp(context, (width - 40).coerceAtLeast(120).toFloat()).roundToInt()
+            val strip = HomeWidgets.dp(context, (width - 40).coerceAtLeast(120f)).roundToInt()
             views.setImageViewBitmap(R.id.heatmap, HomeWidgets.heatmap(context, list, strip))
         } else {
             views.setViewVisibility(R.id.activity, View.GONE)

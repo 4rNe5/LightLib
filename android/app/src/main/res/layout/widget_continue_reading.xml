@@ -19,13 +19,13 @@
             android:layout_width="wrap_content"
             android:layout_height="match_parent"
             android:adjustViewBounds="true"
-            android:maxWidth="120dp"
-            android:minWidth="56dp"
+            android:maxWidth="160dp"
             android:scaleType="fitCenter"
             android:src="@drawable/widget_cover_placeholder"
             android:importantForAccessibility="no" />
 
         <LinearLayout
+            android:id="@+id/text_column"
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_marginStart="12dp"
@@ -33,6 +33,7 @@
             android:orientation="vertical">
 
             <LinearLayout
+                android:id="@+id/label_pill"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:background="@drawable/widget_pill"
