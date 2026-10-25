@@ -36,24 +36,75 @@ class JapanCategoryChips extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final selected = ref.watch(japanCategoryProvider);
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          for (final c in BookWalkerCategory.values)
-            Padding(
-              padding: const EdgeInsets.only(right: 8),
-              child: ChoiceChip(
-                key: ValueKey('japanCategory-${c.name}'),
-                label: Text(categoryLabel(l10n, c)),
-                selected: c == selected,
-                showCheckmark: false,
-                onSelected: (_) =>
-                    ref.read(japanCategoryProvider.notifier).state = c,
+    // Full width, so a Column does not center the row.
+    return SizedBox(
+      width: double.infinity,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            for (final c in BookWalkerCategory.values)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: _SoftChip(
+                  key: ValueKey('japanCategory-${c.name}'),
+                  label: categoryLabel(l10n, c),
+                  selected: c == selected,
+                  onTap: () =>
+                      ref.read(japanCategoryProvider.notifier).state = c,
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A filled pill, no outline: the chosen one in the accent colour.
+class _SoftChip extends StatelessWidget {
+  const _SoftChip({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected
+            ? scheme.secondary
+            : scheme.onSurface.withValues(alpha: 0.08),
+        shape: const StadiumBorder(),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+            child: Text(
+              label,
+              style: (theme.textTheme.labelLarge ?? const TextStyle())
+                  .copyWith(
+                fontSize: 14,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                color: selected
+                    ? Colors.white
+                    : scheme.onSurface.withValues(alpha: 0.75),
               ),
             ),
-        ],
+          ),
+        ),
       ),
     );
   }
@@ -168,8 +219,9 @@ class JapanTrendingView extends ConsumerWidget {
 
     return Column(
       children: [
-        const SizedBox(height: 6),
+        const SizedBox(height: 10),
         const JapanCategoryChips(),
+        const SizedBox(height: 4),
         Expanded(
           child: books.when(
             skipLoadingOnRefresh: false,

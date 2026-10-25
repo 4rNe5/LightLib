@@ -29,7 +29,7 @@ class _HomePageState extends ConsumerState<HomePage> {
           const SizedBox(height: 8),
           const ActiveDownloadsWidget(),
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 4),
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 2),
             child: LargeTitle(
               selectedIndex == 0
                   ? AppLocalizations.of(context).trending
@@ -181,27 +181,81 @@ class _RegionSwitch extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final region = ref.watch(homeRegionProvider);
+    // Text tabs with a bar under the chosen one: lighter than a second
+    // row of buttons above the category chips.
     return Padding(
-      padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: SegmentedButton<HomeRegion>(
-          key: const ValueKey('homeRegion'),
-          showSelectedIcon: false,
-          style: const ButtonStyle(
-            visualDensity: VisualDensity(horizontal: -2, vertical: -3),
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+      child: Row(
+        key: const ValueKey('homeRegion'),
+        children: [
+          for (final r in HomeRegion.values)
+            _RegionTab(
+              key: ValueKey('homeRegion-${r.name}'),
+              label: r == HomeRegion.japan
+                  ? l10n.homeRegionJapan
+                  : l10n.homeRegionWestern,
+              selected: r == region,
+              onTap: () => ref.read(homeRegionProvider.notifier).set(r),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RegionTab extends StatelessWidget {
+  const _RegionTab({
+    super.key,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(2, 6, 14, 4),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AnimatedDefaultTextStyle(
+                duration: const Duration(milliseconds: 200),
+                style: (theme.textTheme.titleMedium ?? const TextStyle())
+                    .copyWith(
+                  fontSize: 17,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                  color: selected
+                      ? scheme.onSurface
+                      : scheme.onSurface.withValues(alpha: 0.45),
+                ),
+                child: Text(label),
+              ),
+              const SizedBox(height: 4),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeOut,
+                height: 3,
+                width: selected ? 20 : 0,
+                decoration: BoxDecoration(
+                  color: scheme.secondary,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ],
           ),
-          segments: [
-            ButtonSegment(
-                value: HomeRegion.japan, label: Text(l10n.homeRegionJapan)),
-            ButtonSegment(
-                value: HomeRegion.western,
-                label: Text(l10n.homeRegionWestern)),
-          ],
-          selected: {region},
-          onSelectionChanged: (v) =>
-              ref.read(homeRegionProvider.notifier).set(v.first),
         ),
       ),
     );
