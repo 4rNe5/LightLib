@@ -509,9 +509,8 @@ List<GlossaryCandidate> epubGlossaryCandidates(Uint8List bytes) =>
 /// How many candidates one request takes.
 const glossaryRequestSize = 12;
 
-/// One request: sort [candidates] into people, places and terms, give
-/// each its Korean form and each person a gender.
-String glossaryPrompt(List<GlossaryCandidate> candidates) {
+/// The instructions every glossary request opens with.
+String glossaryPromptHead() {
   final b = StringBuffer()
     ..writeln('You are preparing a glossary for translating a Japanese light '
         'novel into Korean.')
@@ -534,6 +533,16 @@ String glossaryPrompt(List<GlossaryCandidate> candidates) {
         'how they talk in a few words: polite or casual, and their tone '
         '(polite, gentle; casual, teasing); otherwise -. A line after '
         '"named:" may be someone else talking to them.')
+    ..writeln();
+  return b.toString().trimRight();
+}
+
+/// One request: sort [candidates] into people, places and terms, give
+/// each its Korean form and each person a gender. Opens with
+/// [glossaryPromptHead], the same for every request.
+String glossaryPrompt(List<GlossaryCandidate> candidates) {
+  final b = StringBuffer(glossaryPromptHead())
+    ..writeln()
     ..writeln()
     ..writeln('Entries:');
   for (var i = 0; i < candidates.length; i++) {

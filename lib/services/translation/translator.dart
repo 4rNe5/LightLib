@@ -77,9 +77,12 @@ abstract class Translator {
   /// The model's raw answer to [prompt] (for requests that are not a
   /// translation, such as making a book's glossary); null when the model
   /// cannot take free-form instructions.
+  /// [head], when [prompt] opens with it, is the part requests share
+  /// (sent as a system message, kept read where the runtime can).
   Future<String?> complete(String prompt,
       {required int maxTokens,
-      TranslationPriority priority = TranslationPriority.background});
+      TranslationPriority priority = TranslationPriority.background,
+      String? head});
 
   Future<void> dispose();
 }
@@ -320,9 +323,38 @@ class LocalLlmTranslator implements Translator {
         .catchError((_) {});
   }
 
+  /// Set while the first request that reuses the fixed opening (a cloned
+  /// conversation) runs; still set at the next launch, it crashed the app,
+  /// and this model sends the opening with every request from then on.
+  static const _cloneTryingPrefPrefix = 'translationCloneTrying:';
+  static const _noClonePrefPrefix = 'translationNoClone:';
+  bool _cloneConfirmed = false;
+
+  Future<void> _checkClone() async {
+    final db = MyLibraryDb.instance;
+    final trying = await db
+        .getPreference('$_cloneTryingPrefPrefix$_fileName')
+        .catchError((_) => null);
+    if (trying is String && trying.isNotEmpty && trying != '$pid') {
+      await db
+          .savePreference('$_noClonePrefPrefix$_fileName', 'crash')
+          .catchError((_) {});
+      await db
+          .savePreference('$_cloneTryingPrefPrefix$_fileName', '')
+          .catchError((_) {});
+      _logger.warning('Reused opening crashed the app before; off',
+          tag: 'Translator');
+    }
+    final off = await db
+        .getPreference('$_noClonePrefPrefix$_fileName')
+        .catchError((_) => null);
+    if (off is String && off.isNotEmpty) systemHead = false;
+  }
+
   /// Starts the engine with the first setup from [from] that translates:
   /// a real request must come back in time and in the target script.
   Future<void> _loadLiteRt({required int from}) async {
+    await _checkClone();
     final model = LlamaModel(ModelSource.path(modelPath));
     final cacheDir = await _liteRtCacheDir();
     final setups = _setups;
@@ -564,13 +596,46 @@ class LocalLlmTranslator implements Translator {
   int _generationCount = 0;
   bool _firstGeneration = true;
 
+  /// Whether a batch request's fixed opening is sent as a system message
+  /// (off only to measure what it saves).
+  bool systemHead = true;
+  int _cloneUses = 0;
+
+  /// Totals over this translator's generations, where the runtime reports
+  /// them: tokens read and written and the time each took.
+  int promptTokens = 0, outputTokens = 0;
+  double promptMs = 0, outputMs = 0;
+
   /// One generation, retried on the next engine setup when it stalls or
   /// produces garbage. [onText] hears the text so far as it streams.
   /// Returns the raw answer.
   Future<String> _generateRaw(
       String prompt, int maxTokens, double? penalty, YieldToken token,
       {void Function(String textSoFar)? onText,
-      bool Function(String raw)? isGarbage}) async {
+      bool Function(String raw)? isGarbage,
+      String? head}) async {
+    // The fixed opening goes as a system message: LiteRT-LM keeps it read
+    // between requests (a cloned conversation), llama.cpp reuses the
+    // shared prefix either way.
+    final split = head != null &&
+        systemHead &&
+        runtime == TranslationRuntime.liteRtLm &&
+        prompt.startsWith(head) &&
+        prompt.length > head.length;
+    final messages = split
+        ? [
+            LlamaChatMessage.fromText(role: LlamaChatRole.system, text: head),
+            LlamaChatMessage.fromText(
+                role: LlamaChatRole.user,
+                text: prompt.substring(head.length).trimLeft()),
+          ]
+        : [LlamaChatMessage.fromText(role: LlamaChatRole.user, text: prompt)];
+    final guardClone = split && !_cloneConfirmed;
+    if (guardClone) {
+      await MyLibraryDb.instance
+          .savePreference('$_cloneTryingPrefPrefix$_fileName', '$pid')
+          .catchError((_) {});
+    }
     final liteRt = runtime == TranslationRuntime.liteRtLm;
     final GenerationParams base = liteRt
         ? _liteRtParams(maxTokens, penalty: penalty)
@@ -587,10 +652,7 @@ class LocalLlmTranslator implements Translator {
         final buffer = StringBuffer();
         final work = engine
             .create(
-              [
-                LlamaChatMessage.fromText(
-                    role: LlamaChatRole.user, text: prompt)
-              ],
+              messages,
               params: base.copyWith(speculativeDecoding: spec),
               enableThinking: false,
             )
@@ -602,12 +664,32 @@ class LocalLlmTranslator implements Translator {
             .then((_) => buffer.toString());
         final raw = await _withTimeout(engine, work, _limitFor(maxTokens));
         if (_firstGeneration && liteRt) await _setTrying('');
+        if (guardClone) {
+          // The second use is the first that really clones what was read.
+          if (_cloneUses++ >= 1) {
+            _cloneConfirmed = true;
+            await MyLibraryDb.instance
+                .savePreference('$_cloneTryingPrefPrefix$_fileName', '')
+                .catchError((_) {});
+          }
+        }
         _firstGeneration = false;
         // Stopped to make room: the partial text is not a translation.
         token.check();
         final garbage = raw.isNotEmpty &&
             (isGarbage?.call(raw) ?? cleanTranslation(raw).isEmpty);
         _generationCount++;
+        // Where the time went: reading the prompt, or writing the answer.
+        BackendPerfContextData? perf;
+        try {
+          perf = await engine.getPerformanceContext();
+        } catch (_) {}
+        if (perf != null) {
+          promptTokens += perf.promptEvalTokens;
+          promptMs += perf.promptEvalMs;
+          outputTokens += perf.evalTokens;
+          outputMs += perf.evalMs;
+        }
         if (_generationCount <= 3 ||
             watch.elapsed > const Duration(seconds: 20) ||
             garbage ||
@@ -620,6 +702,12 @@ class LocalLlmTranslator implements Translator {
             'promptChars': prompt.length,
             'maxTokens': maxTokens,
             'rawChars': raw.length,
+            if (perf != null) ...{
+              'promptTokens': perf.promptEvalTokens,
+              'promptMs': perf.promptEvalMs.round(),
+              'outputTokens': perf.evalTokens,
+              'outputMs': perf.evalMs.round(),
+            },
             if (garbage || raw.isEmpty)
               'raw': jsonEncode(raw.length > 40 ? raw.substring(0, 40) : raw),
           });
@@ -653,16 +741,16 @@ class LocalLlmTranslator implements Translator {
   }
 
   Future<String> _generate(String prompt, int maxTokens,
-      TranslationPromptFormat format, YieldToken token) async {
+      TranslationPromptFormat format, YieldToken token, {String? head}) async {
     // Dedicated translation models: their recommended repetition penalty
     // (1.05); the general format keeps the runtime's default.
     final penalty = format == TranslationPromptFormat.general ? null : 1.05;
     return cleanTranslation(
-        await _generateRaw(prompt, maxTokens, penalty, token));
+        await _generateRaw(prompt, maxTokens, penalty, token, head: head));
   }
 
   @override
-  int get batchSize => promptFormat == TranslationPromptFormat.general ? 8 : 1;
+  int get batchSize => promptFormat == TranslationPromptFormat.general ? 12 : 1;
 
   @override
   Future<List<String>> translateBatch(
@@ -688,7 +776,8 @@ class LocalLlmTranslator implements Translator {
   @override
   Future<String?> complete(String prompt,
       {required int maxTokens,
-      TranslationPriority priority = TranslationPriority.background}) {
+      TranslationPriority priority = TranslationPriority.background,
+      String? head}) {
     if (_disposed) return Future.error(StateError('Translator disposed'));
     if (promptFormat != TranslationPromptFormat.general) {
       return Future.value(null);
@@ -696,7 +785,7 @@ class LocalLlmTranslator implements Translator {
     return _scheduler.submit((token) async {
       await load();
       token.check();
-      return _generateRaw(prompt, maxTokens, null, token);
+      return _generateRaw(prompt, maxTokens, null, token, head: head);
     }, priority).then((v) => v as String?);
   }
 
@@ -718,7 +807,8 @@ class LocalLlmTranslator implements Translator {
     final maxTokens = (source.length * 3 + 32).clamp(64, 1024);
     final again = polishTranslation(
         await _generate(prompt, maxTokens, TranslationPromptFormat.general,
-            token),
+            token,
+            head: style),
         source,
         targetLanguage);
     final after = checkTranslation(source, again,
@@ -784,6 +874,12 @@ class LocalLlmTranslator implements Translator {
       onEach?.call(i, polished);
     }
 
+    final head = batchPromptHead(
+        texts: texts,
+        targetLanguage: targetLanguage,
+        sourceLanguage: sourceLanguage,
+        lightNovelStyle: TranslationStyle.lightNovel,
+        narration: targetLanguage == 'Korean' ? glossary.narrationNote : null);
     if (texts.length > 1 && promptFormat == TranslationPromptFormat.general) {
       final prompt = batchTranslationPrompt(
         texts: texts,
@@ -814,17 +910,14 @@ class LocalLlmTranslator implements Translator {
 
       final raw = await _generateRaw(prompt, maxTokens, null, token,
           onText: onText,
-          isGarbage: (raw) => !RegExp(r'\p{L}', unicode: true).hasMatch(raw));
+          isGarbage: (raw) => !RegExp(r'\p{L}', unicode: true).hasMatch(raw),
+          head: head);
       final got = parseNumberedTranslations(raw, texts.length);
       for (var i = 0; i < got.length; i++) {
         if (got[i] != null) deliver(i, got[i]!);
       }
     }
-    final style = batchStyle(
-        texts: texts,
-        targetLanguage: targetLanguage,
-        sourceLanguage: sourceLanguage,
-        lightNovelStyle: TranslationStyle.lightNovel);
+    final style = head;
     for (final MapEntry(key: i, value: (draft, issues)) in flagged.entries) {
       final out = await _refine(
           texts[i], draft, issues, style, glossary, targetLanguage, token);
@@ -1091,8 +1184,10 @@ class UrgentTranslator implements Translator {
   @override
   Future<String?> complete(String prompt,
           {required int maxTokens,
-          TranslationPriority priority = TranslationPriority.ahead}) =>
-      _inner.complete(prompt, maxTokens: maxTokens, priority: priority);
+          TranslationPriority priority = TranslationPriority.ahead,
+          String? head}) =>
+      _inner.complete(prompt,
+          maxTokens: maxTokens, priority: priority, head: head);
 
   @override
   Future<void> dispose() async {

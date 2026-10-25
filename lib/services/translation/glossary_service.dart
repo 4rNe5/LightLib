@@ -125,7 +125,10 @@ class GlossaryService extends ChangeNotifier {
       final chunk = candidates.sublist(
           i, (i + glossaryRequestSize).clamp(0, candidates.length));
       final answer = await translator.complete(glossaryPrompt(chunk),
-          maxTokens: 36 * chunk.length + 48, priority: priority);
+          maxTokens: 36 * chunk.length + 48,
+          // Not with the instructions as a system message: measured, the
+          // model then names and sorts the entries worse.
+          priority: priority);
       if (answer == null) break;
       answered = true;
       entries.addAll(parseGlossaryAnswer(answer, chunk));

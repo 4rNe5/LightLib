@@ -119,6 +119,11 @@ dependency_overrides:
   # Uint8List); epub_view still pulls hosted epubx, the override wins.
   epubx:
     path: third_party/epubx
+  # llamadart with one change: a request whose system message matches the
+  # one before starts from a clone of a conversation that read it already
+  # (see third_party/llamadart/PATCHES.md).
+  llamadart:
+    path: third_party/llamadart
 
 dev_dependencies:
   archive: ^4.5.2

@@ -592,16 +592,12 @@ String batchTranslationPrompt({
   bool lightNovelStyle = true,
   String? narration,
 }) {
-  final buffer = StringBuffer(batchStyle(
+  final buffer = StringBuffer(batchPromptHead(
       texts: texts,
       targetLanguage: targetLanguage,
       sourceLanguage: sourceLanguage,
-      lightNovelStyle: lightNovelStyle));
-  if (narration != null) {
-    buffer
-      ..writeln()
-      ..write('- $narration');
-  }
+      lightNovelStyle: lightNovelStyle,
+      narration: narration));
   if (glossary.isNotEmpty) {
     buffer
       ..writeln()
@@ -659,6 +655,24 @@ String batchTranslationPrompt({
     buffer.writeln('[${i + 1}] ${texts[i]}');
   }
   return buffer.toString().trimRight();
+}
+
+/// What every batch request for a book opens with, the same each time:
+/// the style and how the book is narrated. Sent as a system message, a
+/// runtime that keeps it read can skip reading it again.
+String batchPromptHead({
+  required List<String> texts,
+  required String targetLanguage,
+  String? sourceLanguage,
+  bool lightNovelStyle = true,
+  String? narration,
+}) {
+  final style = batchStyle(
+      texts: texts,
+      targetLanguage: targetLanguage,
+      sourceLanguage: sourceLanguage,
+      lightNovelStyle: lightNovelStyle);
+  return narration == null ? style : '$style\n- $narration';
 }
 
 /// The instructions a batch request opens with (also those a

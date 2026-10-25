@@ -219,6 +219,19 @@ void main() {
         texts: ['こちらを見る'], targetLanguage: 'Korean',
         sourceLanguage: 'Japanese', narration: g.narrationNote);
     expect(prompt, contains('following 周 (아마네)'));
+    // The opening is the same for every batch of the book (kept read by
+    // the runtime): the prompt starts with it.
+    final head = batchPromptHead(
+        texts: ['こちらを見る'], targetLanguage: 'Korean',
+        sourceLanguage: 'Japanese', narration: g.narrationNote);
+    expect(prompt.startsWith(head), isTrue);
+    expect(head, isNot(contains('こちらを見る')));
+    expect(
+        batchTranslationPrompt(
+                texts: ['別の段落'], targetLanguage: 'Korean',
+                sourceLanguage: 'Japanese', narration: g.narrationNote)
+            .startsWith(head),
+        isTrue);
   });
 
   group('checks', () {

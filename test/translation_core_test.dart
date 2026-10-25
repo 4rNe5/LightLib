@@ -89,7 +89,8 @@ class FakeTranslator implements Translator {
   @override
   Future<String?> complete(String prompt,
           {required int maxTokens,
-          TranslationPriority priority = TranslationPriority.background}) async =>
+          TranslationPriority priority = TranslationPriority.background,
+          String? head}) async =>
       completer?.call(prompt);
 
   @override

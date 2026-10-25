@@ -655,10 +655,9 @@ packages:
   llamadart:
     dependency: "direct main"
     description:
-      name: llamadart
-      sha256: "0a9fc3fa30a39cc826644d89b62ce851a0e57c92a67500f5eb010b4455d0cb66"
-      url: "https://pub.dev"
-    source: hosted
+      path: "third_party/llamadart"
+      relative: true
+    source: path
     version: "0.15.6"
   logging:
     dependency: transitive
