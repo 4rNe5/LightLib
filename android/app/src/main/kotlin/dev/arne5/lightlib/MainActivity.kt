@@ -1,4 +1,4 @@
-package dev.wath.openlibextended
+package dev.arne5.lightlib
 
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo

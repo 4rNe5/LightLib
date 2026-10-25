@@ -22,7 +22,7 @@ env:
   # SHA-256 of the release signing certificate (public, not a secret).
   # A build signed with any other key is refused, so a missing or wrong
   # secret never publishes an APK that cannot install over the old one.
-  EXPECTED_CERT_SHA256: "663ff5abb728a1bffe57b27170a5a00bdbc0c44c397e3e8f358b4b517efdccfc"
+  EXPECTED_CERT_SHA256: "aa493047b750ce9d667245e1e37b125779c7750b0e05107a17ab00bbb46bd929"
 
 concurrency:
   group: android-release-${{ github.ref }}

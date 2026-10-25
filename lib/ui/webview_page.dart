@@ -73,7 +73,7 @@ class _WebviewState extends ConsumerState<Webview> {
         configuration: desktop_webview.CreateConfiguration(
           windowHeight: 720,
           windowWidth: 1280,
-          title: "Verify Access - OpenLibExtended",
+          title: "Verify Access - LightLib",
           userDataFolderWindows: webviewDataDir.path,
         ),
       );

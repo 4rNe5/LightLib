@@ -1,4 +1,4 @@
-package dev.wath.openlibextended
+package dev.arne5.lightlib
 
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -33,7 +33,7 @@ import kotlin.math.roundToInt
 object HomeWidgets {
     private const val PREFS = "lightlib_widgets"
     private const val KEY = "snapshot"
-    const val ACTION_OPEN = "dev.wath.openlibextended.WIDGET_OPEN"
+    const val ACTION_OPEN = "dev.arne5.lightlib.WIDGET_OPEN"
     const val EXTRA_BOOK = "bookId"
     const val EXTRA_LIBRARY = "library"
 

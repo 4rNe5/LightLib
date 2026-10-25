@@ -1,4 +1,4 @@
-package dev.wath.openlibextended
+package dev.arne5.lightlib
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -27,8 +27,8 @@ class BackgroundTranslationService : Service() {
         const val CHANNEL_ID = "background_translation"
         const val NOTIFICATION_ID = 7301
         const val DONE_NOTIFICATION_ID = 7302
-        const val ACTION_UPDATE = "dev.wath.openlibextended.translation.UPDATE"
-        const val ACTION_PAUSE = "dev.wath.openlibextended.translation.PAUSE"
+        const val ACTION_UPDATE = "dev.arne5.lightlib.translation.UPDATE"
+        const val ACTION_PAUSE = "dev.arne5.lightlib.translation.PAUSE"
 
         // Re-acquired on every update; lapses if the Dart side goes quiet.
         private const val WAKE_LOCK_MS = 10 * 60 * 1000L
