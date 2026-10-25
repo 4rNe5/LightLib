@@ -109,6 +109,21 @@ String generateBookFileName({
   return "$baseName.$format";
 }
 
+/// Whether the app can write in [path]: without all-files access (which
+/// the app does not ask for - security scanners flag it), a folder outside
+/// the app's own is writable only in the shared Download and Documents
+/// collections.
+Future<bool> canWriteDirectory(String path) async {
+  try {
+    final probe = File('$path/.lightlib_write_test');
+    await probe.writeAsString('ok', flush: true);
+    await probe.delete();
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 /// Lets the user pick the folder books are stored in.
 ///
 /// On iOS the native folder picker can end up unusable (the Open button

@@ -9,7 +9,7 @@ class AppLocalizationsFr extends AppLocalizations {
   AppLocalizationsFr([String locale = 'fr']) : super(locale);
 
   @override
-  String get appTitle => 'OpenlibExtended';
+  String get appTitle => 'LightLib';
 
   @override
   String get navHome => 'Accueil';
@@ -82,7 +82,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get notificationsExplanation =>
-      'OpenlibExtended a besoin de l\'autorisation de notification pour afficher la progression des téléchargements en arrière-plan. Vous pouvez ainsi suivre vos téléchargements de livres même lorsque l\'application est réduite.';
+      'LightLib a besoin de l\'autorisation de notification pour afficher la progression des téléchargements en arrière-plan. Vous pouvez ainsi suivre vos téléchargements de livres même lorsque l\'application est réduite.';
 
   @override
   String get maybeLater => 'Peut-être plus tard';
@@ -244,7 +244,7 @@ class AppLocalizationsFr extends AppLocalizations {
       'Saisissez la clé pour des téléchargements plus rapides';
 
   @override
-  String get aboutOpenlib => 'À propos d\'OpenlibExtended';
+  String get aboutOpenlib => 'À propos d\'LightLib';
 
   @override
   String get redoOnboarding => 'Refaire l\'introduction';
@@ -357,8 +357,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get pickBackupFile => 'Choisir un fichier de sauvegarde';
 
   @override
-  String get notABackup =>
-      'Ce fichier n\'est pas une sauvegarde OpenlibExtended';
+  String get notABackup => 'Ce fichier n\'est pas une sauvegarde LightLib';
 
   @override
   String get donationKeyHelper =>
@@ -536,7 +535,7 @@ class AppLocalizationsFr extends AppLocalizations {
   String get next => 'Suivant';
 
   @override
-  String get welcomeTitle => 'Bienvenue sur OpenlibExtended';
+  String get welcomeTitle => 'Bienvenue sur LightLib';
 
   @override
   String get welcomeSubtitle =>
@@ -699,7 +698,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get whatsNewIntro =>
-      'OpenlibExtended a été mis à jour. Voici ce qui a changé.';
+      'LightLib a été mis à jour. Voici ce qui a changé.';
 
   @override
   String get whatsNewTabFeatures => 'Nouvelles fonctionnalités';
@@ -1473,4 +1472,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get japanManga => 'Mangas';
+
+  @override
+  String get storageNotWritable =>
+      'Impossible d\'enregistrer des livres dans ce dossier. Choisissez le dossier de l\'app ou un dossier dans Download ou Documents.';
 }

@@ -143,7 +143,7 @@ void main() {
 
     await tester.pump();
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
-    expect(find.text('OpenlibExtended'), findsOneWidget);
+    expect(find.text('LightLib'), findsOneWidget);
 
     // Unmount so no pending provider work bleeds into the next test -
     // leftover viewers contend on the shared sqlite singleton and leave

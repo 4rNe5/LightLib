@@ -95,7 +95,7 @@ void main() {
       "Anna's Archive Donation Key",
       'Include Beta Updates',
       'Check for Updates',
-      'About OpenlibExtended',
+      'About LightLib',
       'Redo Onboarding',
       'Export Logs',
     ]) {

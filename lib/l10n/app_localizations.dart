@@ -109,7 +109,7 @@ abstract class AppLocalizations {
   /// Application name shown in the app bar and about page
   ///
   /// In en, this message translates to:
-  /// **'OpenlibExtended'**
+  /// **'LightLib'**
   String get appTitle;
 
   /// Bottom navigation label
@@ -247,7 +247,7 @@ abstract class AppLocalizations {
   /// Dialog body explaining why notifications are needed
   ///
   /// In en, this message translates to:
-  /// **'OpenlibExtended needs notification permission to show download progress in the background. This helps you track your book downloads even when the app is minimized.'**
+  /// **'LightLib needs notification permission to show download progress in the background. This helps you track your book downloads even when the app is minimized.'**
   String get notificationsExplanation;
 
   /// Deferred consent button in the notification dialog
@@ -547,7 +547,7 @@ abstract class AppLocalizations {
   /// Settings tile title
   ///
   /// In en, this message translates to:
-  /// **'About OpenlibExtended'**
+  /// **'About LightLib'**
   String get aboutOpenlib;
 
   /// Settings tile title
@@ -733,7 +733,7 @@ abstract class AppLocalizations {
   /// Snackbar when an imported file is invalid
   ///
   /// In en, this message translates to:
-  /// **'That file is not an OpenlibExtended backup'**
+  /// **'That file is not an LightLib backup'**
   String get notABackup;
 
   /// Helper text under the donation key field
@@ -1063,7 +1063,7 @@ abstract class AppLocalizations {
   /// Onboarding welcome heading
   ///
   /// In en, this message translates to:
-  /// **'Welcome to OpenlibExtended'**
+  /// **'Welcome to LightLib'**
   String get welcomeTitle;
 
   /// Onboarding welcome body
@@ -1351,7 +1351,7 @@ abstract class AppLocalizations {
   /// One-line intro on the upgrade screen
   ///
   /// In en, this message translates to:
-  /// **'OpenlibExtended was updated. Here is what changed.'**
+  /// **'LightLib was updated. Here is what changed.'**
   String get whatsNewIntro;
 
   /// Tab label listing this release's features
@@ -2685,6 +2685,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Manga'**
   String get japanManga;
+
+  /// Settings/onboarding: the picked storage folder is not writable
+  ///
+  /// In en, this message translates to:
+  /// **'Books can\'t be saved in that folder. Choose the app\'s folder, or one inside Download or Documents.'**
+  String get storageNotWritable;
 }
 
 class _AppLocalizationsDelegate

@@ -294,7 +294,7 @@ class MyApp extends ConsumerWidget {
         );
       },
       debugShowCheckedModeBanner: false,
-      title: 'OpenlibExtended',
+      title: 'LightLib',
       theme: lightTheme,
       darkTheme: darkTheme,
       themeMode: ref.watch(themeModeProvider),

@@ -7,7 +7,8 @@ import 'package:openlib/main.dart' show MainScreen;
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/files.dart';
 import 'package:openlib/state/state.dart';
-import 'package:openlib/ui/settings_page.dart' show scanAndImportBooks;
+import 'package:openlib/ui/settings_page.dart'
+    show requestStoragePermission, scanAndImportBooks;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -120,12 +121,13 @@ class _OnboardingPageState extends ConsumerState<OnboardingPage> {
     if (pickedDirectory != null) {
       // If we are selecting a new path, we should probably check permissions if android
       if (Platform.isAndroid) {
-        var status = await Permission.storage.status;
-        if (!status.isGranted) {
-          await Permission.storage.request();
-        }
-        if (await Permission.manageExternalStorage.status.isDenied) {
-          await Permission.manageExternalStorage.request();
+        await requestStoragePermission();
+        if (!await canWriteDirectory(pickedDirectory)) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text(AppLocalizations.of(context).storageNotWritable)));
+          }
+          return;
         }
       }
 

@@ -234,7 +234,7 @@ class AppLogger {
     buffer.writeln(
         '╔═══════════════════════════════════════════════════════════════╗');
     buffer.writeln(
-        '║              OpenlibExtended App Diagnostic Logs             ║');
+        '║                 LightLib App Diagnostic Logs                  ║');
     buffer.writeln(
         '╚═══════════════════════════════════════════════════════════════╝');
     buffer.writeln('');
@@ -308,9 +308,9 @@ class AppLogger {
         await SharePlus.instance.share(
           ShareParams(
             files: [XFile(file.path)],
-            subject: 'OpenlibExtended App Logs - $timestamp',
+            subject: 'LightLib App Logs - $timestamp',
             text:
-                'OpenlibExtended app logs for the past ${_logRetentionDuration.inMinutes} minutes',
+                'LightLib app logs for the past ${_logRetentionDuration.inMinutes} minutes',
           ),
         );
       }

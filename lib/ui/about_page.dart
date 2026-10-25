@@ -120,7 +120,7 @@ class _AboutPageState extends State<AboutPage> {
                   url: 'https://github.com/warreth/OpenlibExtended'),
               _UrlText(
                   text: l10n.reportAnIssue,
-                  url: 'https://github.com/warreth/OpenlibExtended/issues'),
+                  url: 'https://github.com/4rNe5/LightLib/issues'),
               _UrlText(
                   text: l10n.originalProject,
                   url: 'https://github.com/dstark5/Openlib'),

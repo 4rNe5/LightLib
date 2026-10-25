@@ -1,6 +1,6 @@
 {
   "@@locale": "ja",
-  "appTitle": "OpenlibExtended",
+  "appTitle": "LightLib",
   "navHome": "ホーム",
   "navSearch": "検索",
   "navMyLibrary": "マイライブラリ",
@@ -73,7 +73,7 @@
   "showManualDownloadHint": "ダウンロードを手動で始めるボタンを表示",
   "donationKeyTitle": "Anna's Archive 寄付キー",
   "enterKeyForFasterDownloads": "高速ダウンロード用のキーを入力",
-  "aboutOpenlib": "OpenlibExtended について",
+  "aboutOpenlib": "LightLib について",
   "redoOnboarding": "初期設定をやり直す",
   "resetAppSetup": "アプリの設定をリセットして最初から",
   "exportLogs": "ログを書き出す",
@@ -104,7 +104,7 @@
   "themeTitle": "テーマ",
   "saveBackupTitle": "バックアップを保存",
   "pickBackupFile": "バックアップファイルを選択",
-  "notABackup": "OpenlibExtended のバックアップファイルではありません",
+  "notABackup": "LightLib のバックアップファイルではありません",
   "donationKeyHelper": "Anna's Archive で高速ダウンロードに使われます",
   "mirrorsTestedRanked": "ミラーをテストして速度順に並べました",
   "testingFailed": "テストに失敗しました:{error}",
@@ -159,7 +159,7 @@
   "selectStorageToContinue": "続けるには保存フォルダを選んでください",
   "getStarted": "はじめる",
   "next": "次へ",
-  "welcomeTitle": "OpenlibExtended へようこそ",
+  "welcomeTitle": "LightLib へようこそ",
   "welcomeSubtitle": "知識の世界へのあなただけの入り口です。まずは設定をしましょう。",
   "whereToStoreBooks": "本をどこに保存しますか?",
   "noPathSelected": "パスが選ばれていません",
@@ -207,7 +207,7 @@
   "tryingNextSource": "見つからないため次のソースを検索中…",
   "slowMirrorsSkipped": "速いミラーを使用中",
   "whatsNewTitle": "{version} の新機能",
-  "whatsNewIntro": "OpenlibExtended がアップデートされました。変更点をお知らせします。",
+  "whatsNewIntro": "LightLib がアップデートされました。変更点をお知らせします。",
   "whatsNewTabFeatures": "新機能",
   "whatsNewTabSources": "ソースとミラー",
   "whatsNewProvidersHint": "このバージョンで検索ソースとミラーが追加されました。リストを更新すると使えないミラーが外れて新しいミラーが入り、3つの検索ソースがすべて有効になります。",
@@ -429,5 +429,6 @@
   "homeRegionWestern": "英語圏",
   "japanLightNovels": "ライトノベル",
   "japanNewLiterature": "新文芸",
-  "japanManga": "マンガ"
+  "japanManga": "マンガ",
+  "storageNotWritable": "そのフォルダには保存できません。アプリのフォルダか、Download・Documents内のフォルダを選んでください。"
 }

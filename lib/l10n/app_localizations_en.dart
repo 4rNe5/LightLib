@@ -9,7 +9,7 @@ class AppLocalizationsEn extends AppLocalizations {
   AppLocalizationsEn([String locale = 'en']) : super(locale);
 
   @override
-  String get appTitle => 'OpenlibExtended';
+  String get appTitle => 'LightLib';
 
   @override
   String get navHome => 'Home';
@@ -82,7 +82,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notificationsExplanation =>
-      'OpenlibExtended needs notification permission to show download progress in the background. This helps you track your book downloads even when the app is minimized.';
+      'LightLib needs notification permission to show download progress in the background. This helps you track your book downloads even when the app is minimized.';
 
   @override
   String get maybeLater => 'Maybe Later';
@@ -243,7 +243,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterKeyForFasterDownloads => 'Enter key for faster downloads';
 
   @override
-  String get aboutOpenlib => 'About OpenlibExtended';
+  String get aboutOpenlib => 'About LightLib';
 
   @override
   String get redoOnboarding => 'Redo Onboarding';
@@ -351,7 +351,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pickBackupFile => 'Pick a backup file';
 
   @override
-  String get notABackup => 'That file is not an OpenlibExtended backup';
+  String get notABackup => 'That file is not an LightLib backup';
 
   @override
   String get donationKeyHelper =>
@@ -526,7 +526,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get next => 'Next';
 
   @override
-  String get welcomeTitle => 'Welcome to OpenlibExtended';
+  String get welcomeTitle => 'Welcome to LightLib';
 
   @override
   String get welcomeSubtitle =>
@@ -685,8 +685,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get whatsNewIntro =>
-      'OpenlibExtended was updated. Here is what changed.';
+  String get whatsNewIntro => 'LightLib was updated. Here is what changed.';
 
   @override
   String get whatsNewTabFeatures => 'New features';
@@ -1446,4 +1445,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get japanManga => 'Manga';
+
+  @override
+  String get storageNotWritable =>
+      'Books can\'t be saved in that folder. Choose the app\'s folder, or one inside Download or Documents.';
 }

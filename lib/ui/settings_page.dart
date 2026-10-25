@@ -110,27 +110,15 @@ Future<void> requestStoragePermission() async {
   // Desktop platforms don't require runtime storage permissions
   if (PlatformUtils.isDesktop) return;
 
-  // Check whether the device is running Android 11 or higher
+  // Storage permission exists up to Android 10; from 11 on a folder is
+  // usable or not by where it is (see canWriteDirectory). All-files
+  // access is not asked for: security scanners flag sideloaded apps that
+  // hold it together with the right to install updates.
   DeviceInfoPlugin plugin = DeviceInfoPlugin();
   AndroidDeviceInfo android = await plugin.androidInfo;
-  // Android < 11
-  if (android.version.sdkInt < 33) {
-    if (await Permission.storage.request().isGranted) {
-      // Permission granted
-    } else if (await Permission.storage.request().isPermanentlyDenied) {
+  if (android.version.sdkInt < 30) {
+    if (await Permission.storage.request().isPermanentlyDenied) {
       await openAppSettings();
-    }
-  }
-  // Android > 11
-  else {
-    if (await Permission.manageExternalStorage.request().isGranted) {
-      // Permission granted
-    } else if (await Permission.manageExternalStorage
-        .request()
-        .isPermanentlyDenied) {
-      await openAppSettings();
-    } else if (await Permission.manageExternalStorage.request().isDenied) {
-      // Permission denied
     }
   }
 }
@@ -587,6 +575,15 @@ class SettingsPage extends ConsumerWidget {
                               await pickBookStorageDirectory();
                           if (pickedDirectory == null) return;
                           await requestStoragePermission();
+                          if (!await canWriteDirectory(pickedDirectory)) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text(l10n.storageNotWritable)));
+                            }
+                            return;
+                          }
 
                           // Move the books from wherever they live now - the
                           // old code only moved them when leaving the
@@ -1037,7 +1034,7 @@ class _BackupSettingsWidget extends ConsumerWidget {
         await file.writeAsString(json);
         await SharePlus.instance.share(ShareParams(
           files: [XFile(file.path)],
-          text: 'OpenlibExtended backup',
+          text: 'LightLib backup',
         ));
       }
     } catch (e) {

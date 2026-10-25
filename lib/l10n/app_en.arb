@@ -1,6 +1,6 @@
 {
   "@@locale": "en",
-  "appTitle": "OpenlibExtended",
+  "appTitle": "LightLib",
   "@appTitle": {
     "description": "Application name shown in the app bar and about page"
   },
@@ -97,7 +97,7 @@
   "@enableNotifications": {
     "description": "Onboarding notifications switch title"
   },
-  "notificationsExplanation": "OpenlibExtended needs notification permission to show download progress in the background. This helps you track your book downloads even when the app is minimized.",
+  "notificationsExplanation": "LightLib needs notification permission to show download progress in the background. This helps you track your book downloads even when the app is minimized.",
   "@notificationsExplanation": {
     "description": "Dialog body explaining why notifications are needed"
   },
@@ -307,7 +307,7 @@
   "@enterKeyForFasterDownloads": {
     "description": "Settings tile subtitle"
   },
-  "aboutOpenlib": "About OpenlibExtended",
+  "aboutOpenlib": "About LightLib",
   "@aboutOpenlib": {
     "description": "Settings tile title"
   },
@@ -469,7 +469,7 @@
   "@pickBackupFile": {
     "description": "Native file picker dialog title"
   },
-  "notABackup": "That file is not an OpenlibExtended backup",
+  "notABackup": "That file is not an LightLib backup",
   "@notABackup": {
     "description": "Snackbar when an imported file is invalid"
   },
@@ -704,7 +704,7 @@
   "@next": {
     "description": "Onboarding advance button"
   },
-  "welcomeTitle": "Welcome to OpenlibExtended",
+  "welcomeTitle": "Welcome to LightLib",
   "@welcomeTitle": {
     "description": "Onboarding welcome heading"
   },
@@ -916,7 +916,7 @@
       }
     }
   },
-  "whatsNewIntro": "OpenlibExtended was updated. Here is what changed.",
+  "whatsNewIntro": "LightLib was updated. Here is what changed.",
   "@whatsNewIntro": {
     "description": "One-line intro on the upgrade screen"
   },
@@ -1944,5 +1944,9 @@
   "japanManga": "Manga",
   "@japanManga": {
     "description": "Home: Japanese manga"
+  },
+  "storageNotWritable": "Books can't be saved in that folder. Choose the app's folder, or one inside Download or Documents.",
+  "@storageNotWritable": {
+    "description": "Settings/onboarding: the picked storage folder is not writable"
   }
 }

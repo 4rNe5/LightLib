@@ -9,7 +9,7 @@ class AppLocalizationsKo extends AppLocalizations {
   AppLocalizationsKo([String locale = 'ko']) : super(locale);
 
   @override
-  String get appTitle => 'OpenlibExtended';
+  String get appTitle => 'LightLib';
 
   @override
   String get navHome => '홈';
@@ -239,7 +239,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get enterKeyForFasterDownloads => '더 빠른 다운로드를 위해 키 입력';
 
   @override
-  String get aboutOpenlib => 'OpenlibExtended 정보';
+  String get aboutOpenlib => 'LightLib 정보';
 
   @override
   String get redoOnboarding => '초기 설정 다시 하기';
@@ -346,7 +346,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get pickBackupFile => '백업 파일 선택';
 
   @override
-  String get notABackup => 'OpenlibExtended 백업 파일이 아닙니다';
+  String get notABackup => 'LightLib 백업 파일이 아닙니다';
 
   @override
   String get donationKeyHelper => 'Anna\'s Archive에서 더 빠르게 내려받는 데 쓰입니다';
@@ -517,7 +517,7 @@ class AppLocalizationsKo extends AppLocalizations {
   String get next => '다음';
 
   @override
-  String get welcomeTitle => 'OpenlibExtended에 오신 것을 환영합니다';
+  String get welcomeTitle => 'LightLib에 오신 것을 환영합니다';
 
   @override
   String get welcomeSubtitle => '지식의 세계로 가는 나만의 입구입니다. 먼저 설정을 해 볼게요.';
@@ -673,7 +673,7 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
-  String get whatsNewIntro => 'OpenlibExtended가 업데이트되었습니다. 바뀐 점을 알려 드릴게요.';
+  String get whatsNewIntro => 'LightLib가 업데이트되었습니다. 바뀐 점을 알려 드릴게요.';
 
   @override
   String get whatsNewTabFeatures => '새 기능';
@@ -1400,4 +1400,8 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get japanManga => '만화';
+
+  @override
+  String get storageNotWritable =>
+      '그 폴더에는 책을 저장할 수 없어요. 앱 폴더나 Download·Documents 안의 폴더를 골라 주세요.';
 }

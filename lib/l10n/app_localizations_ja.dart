@@ -9,7 +9,7 @@ class AppLocalizationsJa extends AppLocalizations {
   AppLocalizationsJa([String locale = 'ja']) : super(locale);
 
   @override
-  String get appTitle => 'OpenlibExtended';
+  String get appTitle => 'LightLib';
 
   @override
   String get navHome => 'ホーム';
@@ -239,7 +239,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get enterKeyForFasterDownloads => '高速ダウンロード用のキーを入力';
 
   @override
-  String get aboutOpenlib => 'OpenlibExtended について';
+  String get aboutOpenlib => 'LightLib について';
 
   @override
   String get redoOnboarding => '初期設定をやり直す';
@@ -346,7 +346,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get pickBackupFile => 'バックアップファイルを選択';
 
   @override
-  String get notABackup => 'OpenlibExtended のバックアップファイルではありません';
+  String get notABackup => 'LightLib のバックアップファイルではありません';
 
   @override
   String get donationKeyHelper => 'Anna\'s Archive で高速ダウンロードに使われます';
@@ -517,7 +517,7 @@ class AppLocalizationsJa extends AppLocalizations {
   String get next => '次へ';
 
   @override
-  String get welcomeTitle => 'OpenlibExtended へようこそ';
+  String get welcomeTitle => 'LightLib へようこそ';
 
   @override
   String get welcomeSubtitle => '知識の世界へのあなただけの入り口です。まずは設定をしましょう。';
@@ -672,7 +672,7 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
-  String get whatsNewIntro => 'OpenlibExtended がアップデートされました。変更点をお知らせします。';
+  String get whatsNewIntro => 'LightLib がアップデートされました。変更点をお知らせします。';
 
   @override
   String get whatsNewTabFeatures => '新機能';
@@ -1398,4 +1398,8 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get japanManga => 'マンガ';
+
+  @override
+  String get storageNotWritable =>
+      'そのフォルダには保存できません。アプリのフォルダか、Download・Documents内のフォルダを選んでください。';
 }

@@ -9,7 +9,7 @@ class AppLocalizationsDe extends AppLocalizations {
   AppLocalizationsDe([String locale = 'de']) : super(locale);
 
   @override
-  String get appTitle => 'OpenlibExtended';
+  String get appTitle => 'LightLib';
 
   @override
   String get navHome => 'Start';
@@ -82,7 +82,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get notificationsExplanation =>
-      'OpenlibExtended benötigt die Berechtigung für Benachrichtigungen, um den Download-Fortschritt im Hintergrund anzuzeigen. So behalten Sie Ihre Buch-Downloads auch im minimierten Zustand im Blick.';
+      'LightLib benötigt die Berechtigung für Benachrichtigungen, um den Download-Fortschritt im Hintergrund anzuzeigen. So behalten Sie Ihre Buch-Downloads auch im minimierten Zustand im Blick.';
 
   @override
   String get maybeLater => 'Vielleicht später';
@@ -244,7 +244,7 @@ class AppLocalizationsDe extends AppLocalizations {
       'Schlüssel für schnellere Downloads eingeben';
 
   @override
-  String get aboutOpenlib => 'Über OpenlibExtended';
+  String get aboutOpenlib => 'Über LightLib';
 
   @override
   String get redoOnboarding => 'Onboarding wiederholen';
@@ -355,7 +355,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get pickBackupFile => 'Sicherungsdatei auswählen';
 
   @override
-  String get notABackup => 'Diese Datei ist keine OpenlibExtended-Sicherung';
+  String get notABackup => 'Diese Datei ist keine LightLib-Sicherung';
 
   @override
   String get donationKeyHelper =>
@@ -535,7 +535,7 @@ class AppLocalizationsDe extends AppLocalizations {
   String get next => 'Weiter';
 
   @override
-  String get welcomeTitle => 'Willkommen bei OpenlibExtended';
+  String get welcomeTitle => 'Willkommen bei LightLib';
 
   @override
   String get welcomeSubtitle =>
@@ -697,7 +697,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get whatsNewIntro =>
-      'OpenlibExtended wurde aktualisiert. Das hat sich geändert.';
+      'LightLib wurde aktualisiert. Das hat sich geändert.';
 
   @override
   String get whatsNewTabFeatures => 'Neue Funktionen';
@@ -1463,4 +1463,8 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get japanManga => 'Manga';
+
+  @override
+  String get storageNotWritable =>
+      'In diesem Ordner können keine Bücher gespeichert werden. Wähle den App-Ordner oder einen Ordner in Download oder Documents.';
 }
