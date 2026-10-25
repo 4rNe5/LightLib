@@ -46,6 +46,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           ),
+          const _RegionSwitch(),
           Expanded(child: _pages[selectedIndex]), // Display the selected page
         ],
       ),
@@ -167,6 +168,41 @@ class PelletContainer extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Japan (the default) or the English-speaking world.
+class _RegionSwitch extends ConsumerWidget {
+  const _RegionSwitch();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
+    final region = ref.watch(homeRegionProvider);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 2, 12, 2),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: SegmentedButton<HomeRegion>(
+          key: const ValueKey('homeRegion'),
+          showSelectedIcon: false,
+          style: const ButtonStyle(
+            visualDensity: VisualDensity(horizontal: -2, vertical: -3),
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          segments: [
+            ButtonSegment(
+                value: HomeRegion.japan, label: Text(l10n.homeRegionJapan)),
+            ButtonSegment(
+                value: HomeRegion.western,
+                label: Text(l10n.homeRegionWestern)),
+          ],
+          selected: {region},
+          onSelectionChanged: (v) =>
+              ref.read(homeRegionProvider.notifier).set(v.first),
+        ),
       ),
     );
   }

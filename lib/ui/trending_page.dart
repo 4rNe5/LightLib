@@ -11,7 +11,8 @@ import 'package:openlib/ui/results_page.dart';
 import 'extensions.dart';
 
 import 'package:openlib/state/state.dart'
-    show getTrendingBooks, enableFiltersState;
+    show getTrendingBooks, enableFiltersState, homeRegionProvider, HomeRegion;
+import 'package:openlib/ui/japan_discover.dart';
 
 class TrendingPage extends ConsumerWidget {
   const TrendingPage({super.key});
@@ -21,6 +22,9 @@ class TrendingPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(homeRegionProvider) == HomeRegion.japan) {
+      return const JapanTrendingView();
+    }
     final trendingBooks = ref.watch(getTrendingBooks);
     return trendingBooks.when(
         skipLoadingOnRefresh: false,

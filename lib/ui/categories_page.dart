@@ -12,7 +12,12 @@ import 'package:openlib/ui/extensions.dart';
 import 'package:openlib/ui/results_page.dart';
 import 'package:openlib/ui/components/error_widget.dart';
 import 'package:openlib/state/state.dart'
-    show getSubCategoryTypeList, enableFiltersState;
+    show
+        getSubCategoryTypeList,
+        enableFiltersState,
+        homeRegionProvider,
+        HomeRegion;
+import 'package:openlib/ui/japan_discover.dart';
 
 class CategoryBook {
   final String title;
@@ -230,6 +235,9 @@ class GenresPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    if (ref.watch(homeRegionProvider) == HomeRegion.japan) {
+      return const JapanGenresView();
+    }
     final categories = categoriesTypeValues;
     return Scaffold(
       body: Padding(

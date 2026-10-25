@@ -430,5 +430,10 @@
   "glossaryGenderMale": "Homme",
   "glossaryGenderFemale": "Femme",
   "glossaryGenderUnknown": "Inconnu",
-  "glossaryKorean": "Écrit"
+  "glossaryKorean": "Écrit",
+  "homeRegionJapan": "Japon",
+  "homeRegionWestern": "Anglais",
+  "japanLightNovels": "Light novels",
+  "japanNewLiterature": "Romans web publiés",
+  "japanManga": "Mangas"
 }

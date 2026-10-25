@@ -424,5 +424,10 @@
   "glossaryGenderMale": "男",
   "glossaryGenderFemale": "女",
   "glossaryGenderUnknown": "不明",
-  "glossaryKorean": "翻訳での表記"
+  "glossaryKorean": "翻訳での表記",
+  "homeRegionJapan": "日本",
+  "homeRegionWestern": "英語圏",
+  "japanLightNovels": "ライトノベル",
+  "japanNewLiterature": "新文芸",
+  "japanManga": "マンガ"
 }

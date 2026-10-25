@@ -2655,6 +2655,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Written as'**
   String get glossaryKorean;
+
+  /// Home: Japanese books (BOOK☆WALKER)
+  ///
+  /// In en, this message translates to:
+  /// **'Japan'**
+  String get homeRegionJapan;
+
+  /// Home: English-language books (Goodreads and others)
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get homeRegionWestern;
+
+  /// Home: Japanese light novels
+  ///
+  /// In en, this message translates to:
+  /// **'Light novels'**
+  String get japanLightNovels;
+
+  /// Home: Japanese new literature (web novels published as books)
+  ///
+  /// In en, this message translates to:
+  /// **'Web novels in print'**
+  String get japanNewLiterature;
+
+  /// Home: Japanese manga
+  ///
+  /// In en, this message translates to:
+  /// **'Manga'**
+  String get japanManga;
 }
 
 class _AppLocalizationsDelegate

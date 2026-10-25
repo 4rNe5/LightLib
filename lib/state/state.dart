@@ -14,6 +14,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // NOTE: These imports are crucial and must exist in your project structure.
 import 'package:openlib/services/annas_archieve.dart';
 import 'package:openlib/services/book_covers.dart';
+import 'package:openlib/services/bookwalker.dart';
 import 'package:openlib/services/book_detail_routing.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/libgen_service.dart';
@@ -219,6 +220,48 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
 
 final selectedIndexProvider = StateProvider<int>((ref) => 0);
 final homePageSelectedIndexProvider = StateProvider<int>((ref) => 0);
+
+/// Whose books the home page shows: Japan's (BOOK☆WALKER, the default)
+/// or the English-speaking world's (Goodreads and others).
+enum HomeRegion { japan, western }
+
+class HomeRegionNotifier extends StateNotifier<HomeRegion> {
+  HomeRegionNotifier() : super(HomeRegion.japan) {
+    MyLibraryDb.instance
+        .getPreference(_pref)
+        .then((v) {
+          if (v == 'western' && mounted) state = HomeRegion.western;
+        })
+        .catchError((_) {});
+  }
+
+  static const _pref = 'homeRegion';
+
+  void set(HomeRegion region) {
+    state = region;
+    MyLibraryDb.instance
+        .savePreference(_pref, region.name)
+        .catchError((_) {});
+  }
+}
+
+final homeRegionProvider =
+    StateNotifierProvider<HomeRegionNotifier, HomeRegion>(
+        (ref) => HomeRegionNotifier());
+
+/// The kind of Japanese books the home page shows.
+final japanCategoryProvider =
+    StateProvider<BookWalkerCategory>((ref) => BookWalkerCategory.lightNovel);
+
+/// What sells in a BOOK☆WALKER category now, a series at a time.
+final japanPopularProvider =
+    FutureProvider.family<List<BookWalkerBook>, BookWalkerCategory>(
+        (ref, category) => BookWalker.instance.popular(category));
+
+/// A genre's most popular series in a BOOK☆WALKER category.
+final japanGenreProvider = FutureProvider.family<List<BookWalkerBook>,
+        (BookWalkerCategory, BookWalkerGenre)>(
+    (ref, key) => BookWalker.instance.genre(key.$1, key.$2));
 final themeModeProvider =
     StateNotifierProvider<ThemeModeNotifier, ThemeMode>((ref) {
   return ThemeModeNotifier(ThemeMode.light);

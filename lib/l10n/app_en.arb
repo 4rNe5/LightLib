@@ -1924,5 +1924,25 @@
   "glossaryKorean": "Written as",
   "@glossaryKorean": {
     "description": "Glossary edit: the target form"
+  },
+  "homeRegionJapan": "Japan",
+  "@homeRegionJapan": {
+    "description": "Home: Japanese books (BOOK☆WALKER)"
+  },
+  "homeRegionWestern": "English",
+  "@homeRegionWestern": {
+    "description": "Home: English-language books (Goodreads and others)"
+  },
+  "japanLightNovels": "Light novels",
+  "@japanLightNovels": {
+    "description": "Home: Japanese light novels"
+  },
+  "japanNewLiterature": "Web novels in print",
+  "@japanNewLiterature": {
+    "description": "Home: Japanese new literature (web novels published as books)"
+  },
+  "japanManga": "Manga",
+  "@japanManga": {
+    "description": "Home: Japanese manga"
   }
 }
