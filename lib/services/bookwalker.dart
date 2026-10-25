@@ -143,10 +143,14 @@ List<BookWalkerBook> parseBookWalkerRanking(String html) {
 }
 
 /// The books (series, mostly) of a search results page.
+///
+/// The store serves two layouts, by device or region: the phone one
+/// (`h2.o-tile-ttl` tiles) and the computer one (`.m-book-item` items).
 List<BookWalkerBook> parseBookWalkerSearch(String html) {
   final document = parse(html);
   final books = <BookWalkerBook>[];
-  for (final heading in document.querySelectorAll('h2.o-tile-ttl')) {
+  for (final heading
+      in document.querySelectorAll('h2.o-tile-ttl, p.m-book-item__title')) {
     final link = heading.querySelector('a');
     final title = link?.text.trim() ?? '';
     if (title.isEmpty) continue;
@@ -167,7 +171,7 @@ List<BookWalkerBook> parseBookWalkerSearch(String html) {
       cover: cover,
       url: link?.attributes['href'],
       author: heading.parent
-          ?.querySelector('.o-tile-book-author')
+          ?.querySelector('.o-tile-book-author, .m-book-item__author')
           ?.text
           .trim(),
     ));
@@ -206,11 +210,17 @@ class BookWalker {
   /// What sells in [category] now, a series at a time (the store's
   /// popularity order; its rankings list each volume separately).
   Future<List<BookWalkerBook>> popular(BookWalkerCategory category,
-          {bool refresh = false}) =>
-      _get('$_base/search/?order=rank&qcat=${category.id}',
-              parseBookWalkerSearch,
-              refresh: refresh)
-          .then(onePerSeries);
+      {bool refresh = false}) async {
+    final books = await _get(
+        '$_base/search/?order=rank&qcat=${category.id}', parseBookWalkerSearch,
+        refresh: refresh);
+    if (books.isNotEmpty) return onePerSeries(books);
+    // The week's ranking carries its books as structured data in every
+    // layout: volumes, one kept per series.
+    return onePerSeries(await _get(
+        '$_base/rank/weekly/ct${category.id}/', parseBookWalkerRanking,
+        refresh: refresh));
+  }
 
   /// The most popular series of [category] in [genre].
   Future<List<BookWalkerBook>> genre(
@@ -244,11 +254,24 @@ class BookWalker {
               'Accept-Language': 'ja,ko;q=0.8,en;q=0.6',
             },
           ));
-      final books = parser(response.data ?? '');
+      final body = response.data ?? '';
+      final books = parser(body);
       if (books.isEmpty) {
-        // The page came but held nothing: its layout changed.
+        // The page came but held nothing: another layout, or another page.
         _logger.warning('BOOK☆WALKER page without books',
-            tag: 'BookWalker', metadata: {'url': url});
+            tag: 'BookWalker', metadata: {
+              'url': url,
+              'final': response.realUri.toString(),
+              'status': response.statusCode,
+              'bytes': body.length,
+              'title': RegExp(r'<title[^>]*>([^<]{0,80})')
+                  .firstMatch(body)
+                  ?.group(1),
+              'tiles': RegExp('o-tile-ttl|m-book-item__title')
+                  .allMatches(body)
+                  .length,
+              'products': '"@type": "Product"'.allMatches(body).length,
+            });
       } else {
         _cache[url] = (DateTime.now(), books);
       }

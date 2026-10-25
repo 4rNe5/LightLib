@@ -83,6 +83,22 @@ void main() {
         ['青春ブタ野郎', '攻撃力ゼロから始める剣聖譚']);
   });
 
+  test('the computer layout of a search page reads the same', () {
+    const page = '''
+<ul class="m-tile-list"><li class="m-tile"><div class="m-book-item ">
+  <div class="m-book-item__thumb-block"><div class="m-thumb">
+    <a href="https://bookwalker.jp/series/177437/list/" class="m-thumb__image">
+      <img class="lazy" src="https://c.bookwalker.jp/louis/pc/img/common/bg-now-loading-pc.png"
+           data-original="https://rimg.bookwalker.jp/1140/e.jpg" alt="『青春ブタ野郎』シリーズ（電撃文庫）"/></a></div></div>
+  <div class="m-book-item__info-block"><div class="m-book-item__secondary">
+    <p class="m-book-item__title"><a href="https://bookwalker.jp/series/177437/list/"
+       class="m-book-item__title"> 『青春ブタ野郎』シリーズ（電撃文庫） </a></p></div></div>
+</div></li></ul>''';
+    final books = parseBookWalkerSearch(page);
+    expect(books.single.searchQuery, '青春ブタ野郎');
+    expect(books.single.cover, 'https://rimg.bookwalker.jp/1140/e.jpg');
+  });
+
   test('a ranking page: its products', () {
     final books = parseBookWalkerRanking(_rankingPage);
     expect(books.length, 2);
