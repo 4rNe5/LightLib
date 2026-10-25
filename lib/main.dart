@@ -15,6 +15,7 @@ import 'package:desktop_webview_window/desktop_webview_window.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/services/reader_fonts.dart';
@@ -205,6 +206,8 @@ void main(List<String> args) async {
   // Library books are translated in the background, a little at a time,
   // when a model is installed and the option is on.
   unawaited(ProcessExits.logNew());
+  // Caches of models that were deleted or replaced (GBs on the GPU path).
+  unawaited(TranslationModelStore.instance.sweepCaches());
   unawaited(BookTranslationService.instance.start());
 
   runApp(

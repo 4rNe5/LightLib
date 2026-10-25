@@ -7,6 +7,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 // Project imports:
+import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/state/state.dart'
@@ -228,6 +229,7 @@ Future<void> deleteFileWithDbData(Ref ref, String md5, String format,
     await deleteFile('$bookStorageDirectory/$actualFileName');
     // The book's saved translations go with it.
     await TranslationCache.deleteForBook(actualFileName).catchError((_) {});
+    await GlossaryService.instance.remove(actualFileName);
     await dataBase.delete(md5);
     await dataBase.deleteBookState(actualFileName);
     // ignore: unused_result
@@ -282,6 +284,9 @@ Future<int> syncLibraryWithDisk() async {
       if (!filesOnDisk.contains(fileName)) {
         await dataBase.delete(book.id);
         await dataBase.deleteBookState(fileName);
+        // What was kept for the book goes with it.
+        await TranslationCache.deleteForBook(fileName).catchError((_) {});
+        await GlossaryService.instance.remove(fileName);
         changes++;
       }
     }

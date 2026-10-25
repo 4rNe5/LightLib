@@ -126,7 +126,6 @@ dependency_overrides:
     path: third_party/llamadart
 
 dev_dependencies:
-  archive: ^4.5.2
   import_sorter: ^4.6.0
   flutter_test:
     sdk: flutter
@@ -176,7 +175,7 @@ flutter:
 
   assets:
     - assets/
-    - assets/icons/
+    # (assets/icons/ is only the launcher icons' source, not bundled.)
     # The book renderer page (built from reader_web/).
     - assets/reader/
     - google_fonts/
@@ -213,7 +212,15 @@ hooks:
   user_defines:
     llamadart:
       # LiteRT-LM runs .litertlm models on the GPU (CPU fallback); llama.cpp
-      # runs GGUF models on the CPU only, so its GPU modules stay out.
+      # runs GGUF models on the CPU only, so its GPU modules stay out (the
+      # setting is read per platform only: a bare list kept Vulkan, 26 MB).
       llamadart_native_runtimes: [llama_cpp, litert_lm]
-      llamadart_native_backends: [cpu]
+      llamadart_native_backends:
+        platforms:
+          android-arm64:
+            backends: [cpu]
+            # The CPU builds that matter for quantized models: the baseline,
+            # dot products with fp16, and int8 matrix multiply. Newer cores
+            # run the last; SVE/SME builds add little at phone vector widths.
+            cpu_variants: [android_armv8.0_1, android_armv8.2_2, android_armv8.6_1]
 

@@ -580,17 +580,23 @@ class UpdateCheckerService {
     return await _verified(file, release) ? file.path : null;
   }
 
-  /// Removes downloaded APKs of builds not newer than the running one.
+  /// Removes downloaded APKs (about 100 MB each) of builds not newer than
+  /// the running one, and of newer builds a still newer download replaced.
   Future<void> cleanUpDownloads() async {
     if (!Platform.isAndroid) return;
     try {
       final current = await currentBuild();
       final dir = Directory("${(await _getDownloadsDirectory()).path}/updates");
       if (!await dir.exists()) return;
+      final files = <(FileSystemEntity, int)>[];
       await for (final f in dir.list()) {
         final m = RegExp(r'LightLib-(\d+)\.apk(\.part)?$').firstMatch(f.path);
         final build = int.tryParse(m?.group(1) ?? '');
-        if (build != null && build <= current.build) {
+        if (build != null) files.add((f, build));
+      }
+      final newest = files.fold<int>(0, (n, f) => f.$2 > n ? f.$2 : n);
+      for (final (f, build) in files) {
+        if (build <= current.build || build < newest) {
           await f.delete().catchError((_) => f);
         }
       }

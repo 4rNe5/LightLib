@@ -110,4 +110,34 @@ void main() {
     await src.delete();
     await bad.delete();
   });
+
+  test('caches of deleted or replaced models are removed, current ones kept',
+      () async {
+    final cache = await Directory.systemTemp.createTemp('tcache');
+    addTearDown(() => cache.delete(recursive: true));
+    store.runtimeCacheDirectory = () async => cache;
+    final model = File('${dir.path}/a.litertlm')..writeAsBytesSync([1, 2, 3]);
+    final stat = model.statSync();
+    final v = '${stat.modified.millisecondsSinceEpoch ~/ 1000}_${stat.size}';
+    final current =
+        File('${dir.path}/a.litertlm_${v}_mldrift_weight_cache.bin')
+          ..writeAsBytesSync(List.filled(10, 0));
+    final stale = File('${dir.path}/a.litertlm_1_99_mldrift_weight_cache.bin')
+      ..writeAsBytesSync(List.filled(20, 0));
+    final orphan =
+        File('${cache.path}/gone.litertlm_${v}_mldrift_program_cache.bin')
+          ..writeAsBytesSync(List.filled(30, 0));
+    final partial = File('${dir.path}/b.litertlm.part')..writeAsBytesSync([1]);
+    final other = File('${cache.path}/.llamadart_litert_lm_lease_1_00')
+      ..writeAsStringSync('a.litertlm');
+    expect(await store.sweepCaches(), 50);
+    expect(current.existsSync(), isTrue);
+    expect(stale.existsSync(), isFalse);
+    expect(orphan.existsSync(), isFalse);
+    expect(partial.existsSync(), isTrue);
+    expect(other.existsSync(), isTrue);
+    // Deleting the model takes its caches with it.
+    await store.delete('a.litertlm');
+    expect(current.existsSync(), isFalse);
+  });
 }

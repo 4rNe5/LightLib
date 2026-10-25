@@ -289,9 +289,71 @@ class TranslationModelStore extends ChangeNotifier {
       final file = File(path);
       if (await file.exists()) await file.delete();
     }
+    await sweepCaches();
     notifyListeners();
   }
+
+  /// Where else LiteRT-LM keeps caches (when the model directory is not
+  /// writable). Overridable in tests.
+  @visibleForTesting
+  Future<Directory?> Function() runtimeCacheDirectory = () async {
+    final dir = Directory(
+        p.join((await getApplicationSupportDirectory()).path, 'litert_cache'));
+    return await dir.exists() ? dir : null;
+  };
+
+  /// Deletes what the runtime cached for models that are gone, or for an
+  /// earlier copy of a model file: LiteRT-LM names its GPU caches after the
+  /// model, its modification time and size
+  /// (`<model>_<seconds>_<bytes>_mldrift_weight_cache.bin`), and the weight
+  /// cache is about as large as the model. Returns the bytes freed.
+  Future<int> sweepCaches() async {
+    var freed = 0;
+    try {
+      final models = <String, FileStat>{};
+      final dirs = [await directoryProvider(), await runtimeCacheDirectory()];
+      final modelsDir = dirs.first!;
+      await for (final e in modelsDir.list()) {
+        if (e is File && runtimeForFile(p.basename(e.path)) != null) {
+          models[p.basename(e.path)] = await e.stat();
+        }
+      }
+      for (final dir in dirs.whereType<Directory>()) {
+        await for (final e in dir.list(followLinks: false)) {
+          if (e is! File) continue;
+          final name = p.basename(e.path);
+          final m = _cacheName.firstMatch(name);
+          if (m == null || name.endsWith('.part')) continue;
+          final stat = models[m.group(1)!];
+          final version = _cacheVersion.firstMatch(m.group(2)!);
+          final stale = stat == null ||
+              (version != null &&
+                  (int.parse(version.group(1)!) !=
+                          stat.modified.millisecondsSinceEpoch ~/ 1000 ||
+                      int.parse(version.group(2)!) != stat.size));
+          if (!stale) continue;
+          final size = await e.length().catchError((_) => 0);
+          try {
+            await e.delete();
+            freed += size;
+          } catch (_) {}
+        }
+      }
+      if (freed > 0) {
+        _logger.info('Model caches removed',
+            tag: 'Translation', metadata: {'bytes': freed});
+      }
+    } catch (e) {
+      _logger.warning('Model caches not swept', tag: 'Translation', error: e);
+    }
+    return freed;
+  }
 }
+
+/// A file named after a model: `<model>.litertlm` or `.gguf`, then `_` or
+/// `.` and the rest (a cache, not the model itself).
+final _cacheName = RegExp(r'^(.+?\.(?:litertlm|gguf))[_.](.+)$');
+final _cacheVersion = RegExp(r'^(\d+)_(\d+)_');
 
 /// SHA-256 of a file, computed off the UI isolate (a 2.6 GB model takes
 /// a while to hash on a phone).

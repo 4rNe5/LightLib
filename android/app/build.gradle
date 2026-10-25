@@ -47,6 +47,10 @@ android {
             // 830 with Gemma 4; without them LiteRT-LM picks the next token
             // on the CPU, which costs a millisecond or two per token.
             excludes += ["**/libLiteRtTopKOpenClSampler.so", "**/libLiteRtTopKWebGpuSampler.so"]
+            // Native libraries compressed in the APK (108 MB -> 43 MB, the
+            // size every update downloads) and unpacked at install, at about
+            // 40 MB more space on the phone.
+            useLegacyPackaging = true
         }
     }
 

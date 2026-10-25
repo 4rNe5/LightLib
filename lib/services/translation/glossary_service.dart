@@ -149,6 +149,15 @@ class GlossaryService extends ChangeNotifier {
     return glossary;
   }
 
+  /// Forgets [bookFile]'s glossary (the book was removed).
+  Future<void> remove(String bookFile) async {
+    _loaded.remove(bookFile);
+    try {
+      final file = await _file(bookFile);
+      if (await file.exists()) await file.delete();
+    } catch (_) {}
+  }
+
   /// [entry] changed by the reader (replacing the one with its source).
   Future<void> updateEntry(String bookFile, GlossaryEntry entry) async {
     final glossary = await load(bookFile);
