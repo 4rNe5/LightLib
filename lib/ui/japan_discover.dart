@@ -94,8 +94,7 @@ class _SoftChip extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
             child: Text(
               label,
-              style: (theme.textTheme.labelLarge ?? const TextStyle())
-                  .copyWith(
+              style: (theme.textTheme.labelLarge ?? const TextStyle()).copyWith(
                 fontSize: 14,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
                 color: selected
@@ -134,8 +133,9 @@ class BookWalkerGrid extends ConsumerWidget {
     final grid = GridView.builder(
       padding: const EdgeInsets.fromLTRB(10, 10, 10, 24),
       physics: const AlwaysScrollableScrollPhysics(),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
+      // Three columns on a phone, more on a tablet or an unfolded phone.
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 135,
         mainAxisSpacing: 10,
         crossAxisSpacing: 13,
         mainAxisExtent: 205,
@@ -250,8 +250,8 @@ class JapanGenresView extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
         mainAxisSpacing: 10,
         crossAxisSpacing: 10,
         mainAxisExtent: 96,
@@ -295,10 +295,8 @@ class _GenreTile extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         key: ValueKey('japanGenre-${genre.tag}'),
-        onTap: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => JapanGenrePage(genre: genre))),
+        onTap: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => JapanGenrePage(genre: genre))),
         child: Row(
           children: [
             Expanded(
@@ -332,7 +330,8 @@ class _GenreTile extends ConsumerWidget {
                   color: scheme.primaryContainer,
                   borderRadius: BorderRadius.circular(14),
                 ),
-                child: Icon(_genreIcons[genre.tag] ?? Icons.auto_stories_rounded,
+                child: Icon(
+                    _genreIcons[genre.tag] ?? Icons.auto_stories_rounded,
                     color: scheme.onPrimaryContainer),
               ),
             ),

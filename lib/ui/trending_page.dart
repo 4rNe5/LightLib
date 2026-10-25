@@ -37,8 +37,10 @@ class TrendingPage extends ConsumerWidget {
                   padding: const EdgeInsets.all(5),
                   sliver: SliverGrid(
                     gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                      // Three columns on a phone, more on a tablet or
+                      // an unfolded phone.
+                      maxCrossAxisExtent: 135,
                       mainAxisSpacing: 10.0,
                       crossAxisSpacing: 13.0,
                       mainAxisExtent: 205,

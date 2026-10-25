@@ -536,28 +536,36 @@ class _MainScreenState extends ConsumerState<MainScreen>
         ),
       ),
       bottomNavigationBar: SafeArea(
-        child: AppNavBar(
-          selectedIndex: selectedIndex,
-          onSelected: (index) =>
-              ref.read(selectedIndexProvider.notifier).state = index,
-          items: [
-            AppNavItem(
-                icon: Icons.explore_outlined,
-                selectedIcon: Icons.explore_rounded,
-                label: l10n.navHome),
-            AppNavItem(
-                icon: Icons.search_rounded,
-                selectedIcon: Icons.manage_search_rounded,
-                label: l10n.navSearch),
-            AppNavItem(
-                icon: Icons.collections_bookmark_outlined,
-                selectedIcon: Icons.collections_bookmark_rounded,
-                label: l10n.navMyLibrary),
-            AppNavItem(
-                icon: Icons.settings_outlined,
-                selectedIcon: Icons.settings_rounded,
-                label: l10n.navSettings),
-          ],
+        // Phone-sized on a tablet or an unfolded phone, centred.
+        child: Align(
+          alignment: Alignment.bottomCenter,
+          heightFactor: 1,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: AppNavBar(
+              selectedIndex: selectedIndex,
+              onSelected: (index) =>
+                  ref.read(selectedIndexProvider.notifier).state = index,
+              items: [
+                AppNavItem(
+                    icon: Icons.explore_outlined,
+                    selectedIcon: Icons.explore_rounded,
+                    label: l10n.navHome),
+                AppNavItem(
+                    icon: Icons.search_rounded,
+                    selectedIcon: Icons.manage_search_rounded,
+                    label: l10n.navSearch),
+                AppNavItem(
+                    icon: Icons.collections_bookmark_outlined,
+                    selectedIcon: Icons.collections_bookmark_rounded,
+                    label: l10n.navMyLibrary),
+                AppNavItem(
+                    icon: Icons.settings_outlined,
+                    selectedIcon: Icons.settings_rounded,
+                    label: l10n.navSettings),
+              ],
+            ),
+          ),
         ),
       ),
     );
