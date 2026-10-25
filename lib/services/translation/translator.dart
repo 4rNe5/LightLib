@@ -330,6 +330,15 @@ class LocalLlmTranslator implements Translator {
   static const _noClonePrefPrefix = 'translationNoClone:';
   bool _cloneConfirmed = false;
 
+  /// Why the opening is not reused with this model: 'crash', or
+  /// 'slow:' and the device (only on that device: the CPU fallback still gains).
+  String? _noClone;
+
+  bool get _reuseOpening =>
+      systemHead &&
+      (_noClone == null ||
+          (_noClone!.startsWith('slow:') && _noClone != 'slow:$_deviceLabel'));
+
   Future<void> _checkClone() async {
     final db = MyLibraryDb.instance;
     final trying = await db
@@ -348,7 +357,41 @@ class LocalLlmTranslator implements Translator {
     final off = await db
         .getPreference('$_noClonePrefPrefix$_fileName')
         .catchError((_) => null);
-    if (off is String && off.isNotEmpty) systemHead = false;
+    if (off is String && off.isNotEmpty) _noClone = off;
+  }
+
+  /// Time to the first text per prompt token of the request that read its
+  /// opening fresh, against which cloned requests are measured.
+  double? _freshMsPerToken;
+  int _slowClones = 0;
+
+  /// Reusing the opening pays on the CPU, where reading a prompt is slow;
+  /// on some GPUs a cloned conversation reads the rest slower than a new
+  /// one reads all of it. Twice slower in a row, and this model sends the
+  /// whole prompt every time on this phone from then on.
+  Future<void> _judgeClone(BackendPerfContextData perf, int? firstTextMs) async {
+    if (!_reuseOpening || firstTextMs == null || perf.promptEvalTokens <= 0) {
+      return;
+    }
+    final perToken = firstTextMs / perf.promptEvalTokens;
+    if (perf.reusedGraphs == 2) {
+      _freshMsPerToken ??= perToken;
+      return;
+    }
+    final fresh = _freshMsPerToken;
+    if (perf.reusedGraphs != 1 || fresh == null) return;
+    _slowClones = perToken > fresh * 1.15 ? _slowClones + 1 : 0;
+    if (_slowClones < 2) return;
+    _noClone = 'slow:$_deviceLabel';
+    _logger.warning('Reused opening slower here; off', tag: 'Translator',
+        metadata: {
+          'device': _deviceLabel,
+          'freshMsPerToken': fresh.toStringAsFixed(2),
+          'clonedMsPerToken': perToken.toStringAsFixed(2),
+        });
+    await MyLibraryDb.instance
+        .savePreference('$_noClonePrefPrefix$_fileName', 'slow:$_deviceLabel')
+        .catchError((_) {});
   }
 
   /// Starts the engine with the first setup from [from] that translates:
@@ -618,7 +661,7 @@ class LocalLlmTranslator implements Translator {
     // between requests (a cloned conversation), llama.cpp reuses the
     // shared prefix either way.
     final split = head != null &&
-        systemHead &&
+        _reuseOpening &&
         runtime == TranslationRuntime.liteRtLm &&
         prompt.startsWith(head) &&
         prompt.length > head.length;
@@ -650,6 +693,11 @@ class LocalLlmTranslator implements Translator {
       final watch = Stopwatch()..start();
       try {
         final buffer = StringBuffer();
+        // Where the wall time goes on this side: to the first piece of
+        // text, in handling the pieces (showing lines as they come), and
+        // after the last one.
+        int? firstTextMs, lastTextMs;
+        var handlingUs = 0;
         final work = engine
             .create(
               messages,
@@ -658,11 +706,16 @@ class LocalLlmTranslator implements Translator {
             )
             .textDeltas()
             .forEach((delta) {
+              firstTextMs ??= watch.elapsedMilliseconds;
               buffer.write(delta);
+              final t = watch.elapsedMicroseconds;
               onText?.call(buffer.toString());
+              handlingUs += watch.elapsedMicroseconds - t;
+              lastTextMs = watch.elapsedMilliseconds;
             })
             .then((_) => buffer.toString());
         final raw = await _withTimeout(engine, work, _limitFor(maxTokens));
+        final doneMs = watch.elapsedMilliseconds;
         if (_firstGeneration && liteRt) await _setTrying('');
         if (guardClone) {
           // The second use is the first that really clones what was read.
@@ -684,6 +737,9 @@ class LocalLlmTranslator implements Translator {
         try {
           perf = await engine.getPerformanceContext();
         } catch (_) {}
+        if (perf != null && liteRt) {
+          await _judgeClone(perf, firstTextMs);
+        }
         if (perf != null) {
           promptTokens += perf.promptEvalTokens;
           promptMs += perf.promptEvalMs;
@@ -707,7 +763,20 @@ class LocalLlmTranslator implements Translator {
               'promptMs': perf.promptEvalMs.round(),
               'outputTokens': perf.evalTokens,
               'outputMs': perf.evalMs.round(),
+              // (Carried by the local llamadart, third_party/llamadart.)
+              'firstTokenMs': perf.loadMs.round(),
+              'setupMs': perf.sampleMs.round(),
+              'opening': switch (perf.reusedGraphs) {
+                1 => 'cloned',
+                2 => 'read once, cloned',
+                _ => 'read',
+              },
             },
+            'firstTextMs': firstTextMs,
+            'handlingMs': handlingUs ~/ 1000,
+            'afterLastTextMs':
+                lastTextMs == null ? null : doneMs - lastTextMs!,
+            'afterDoneMs': watch.elapsedMilliseconds - doneMs,
             if (garbage || raw.isEmpty)
               'raw': jsonEncode(raw.length > 40 ? raw.substring(0, 40) : raw),
           });

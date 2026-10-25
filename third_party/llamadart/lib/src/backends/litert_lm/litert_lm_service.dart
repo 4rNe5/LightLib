@@ -109,6 +109,12 @@ class LiteRtLmService {
   int? _modelHandle;
   int? _contextHandle;
   LiteRtLmRuntimeMetrics? _lastMetrics;
+
+  /// How the last native chat request got its conversation (LightLib):
+  /// 0 made new, 1 cloned from the kept base, 2 base made then cloned; and
+  /// how long that took.
+  int _lastConversationReuse = 0;
+  double _lastConversationSetupMs = 0;
   ({bool vision, bool audio, bool speculativeDecoding})? _bundleCapabilities;
   bool _bundleCapabilitiesRead = false;
   bool _bundleTemplateProbed = false;
@@ -573,6 +579,8 @@ class LiteRtLmService {
         client.supportsConversationClone;
     void createConversation(String? template, {bool seeded = true}) {
       if (!seeded || !reusable) {
+        // A base kept for earlier requests holds memory for nothing now.
+        if (seeded) client.dropBaseConversation();
         makeConversation(template, seeded: seeded);
         return;
       }
@@ -585,11 +593,21 @@ class LiteRtLmService {
         backend,
         loraPath,
       ]);
-      if (client.useBaseConversation(key)) return;
+      if (client.useBaseConversation(key)) {
+        _lastConversationReuse = 1;
+        return;
+      }
       makeConversation(template);
       client.keepConversationAsBase(key);
-      if (!client.useBaseConversation(key)) makeConversation(template);
+      if (client.useBaseConversation(key)) {
+        _lastConversationReuse = 2;
+      } else {
+        makeConversation(template);
+      }
     }
+
+    _lastConversationReuse = 0;
+    final setupWatch = Stopwatch()..start();
 
     if (promptTemplate == null) {
       _createBundleTemplateConversation(
@@ -600,6 +618,7 @@ class LiteRtLmService {
     } else {
       createConversation(promptTemplate);
     }
+    _lastConversationSetupMs = setupWatch.elapsedMicroseconds / 1000.0;
     if (_cancelRequested) {
       client.cancel();
       return;
@@ -984,15 +1003,18 @@ class LiteRtLmService {
       metrics.outputTokens,
       metrics.decodeTokensPerSecond,
     );
+    // LightLib: loadMs carries the time to the first token, sampleMs the
+    // conversation setup (create or clone) and reusedGraphs how it was made
+    // (see _lastConversationReuse).
     return BackendPerfContextData(
-      loadMs: (metrics.initSeconds ?? 0) * 1000.0,
+      loadMs: (metrics.timeToFirstTokenSeconds ?? 0) * 1000.0,
       promptEvalMs: promptEvalMs,
       evalMs: evalMs,
-      sampleMs: 0,
+      sampleMs: _lastConversationSetupMs,
       promptEvalTokens: metrics.inputTokens,
       evalTokens: metrics.outputTokens,
       sampleCount: metrics.outputTokens,
-      reusedGraphs: 0,
+      reusedGraphs: _lastConversationReuse,
     );
   }
 

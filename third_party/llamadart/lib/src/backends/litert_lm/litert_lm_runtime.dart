@@ -1579,6 +1579,9 @@ class LiteRtLmRuntimeClient {
     return true;
   }
 
+  /// Lets the kept base go (requests no longer share its opening).
+  void dropBaseConversation() => _deleteBaseConversation();
+
   void _deleteBaseConversation() {
     final base = _baseConversation;
     final bindings = _bindings;
