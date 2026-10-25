@@ -1431,4 +1431,13 @@ class AppLocalizationsJa extends AppLocalizations {
   String translationNoticeBookDone(String title) {
     return '「$title」の翻訳が完了';
   }
+
+  @override
+  String get coverHide => '表紙を隠す';
+
+  @override
+  String get coverShow => '表紙を表示';
+
+  @override
+  String get coverHideHint => '本棚、本の画面、ホーム画面ウィジェットで表紙の代わりにタイトルを表示します';
 }

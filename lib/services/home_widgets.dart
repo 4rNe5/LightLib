@@ -21,6 +21,7 @@ import 'package:path_provider/path_provider.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/book_covers.dart';
+import 'package:openlib/services/hidden_covers.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/local_book_import.dart'
     show isLocalImagePath, localImageFilePath;
@@ -187,6 +188,9 @@ class HomeWidgets {
   /// A local file of [book]'s cover: the full-quality one read from the
   /// book, an imported book's picture, or the online cover fetched once.
   Future<String?> _coverFile(LibraryBook book) async {
+    // A hidden cover is not drawn on the home screen either.
+    await HiddenCovers.instance.load();
+    if (HiddenCovers.instance.isHidden(book.id)) return null;
     final saved = BookCovers.instance.coverFor(book.id);
     if (saved != null && isLocalImagePath(saved)) {
       return localImageFilePath(saved);

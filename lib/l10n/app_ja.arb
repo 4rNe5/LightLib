@@ -438,5 +438,8 @@
   "priorityTranslatePreparing": "準備中…",
   "priorityTranslateNoModel": "先に翻訳モデルをインストールしてください（設定 > 端末内翻訳）",
   "priorityTranslateProgress": "{done}/{total} 段落 · {percent}%",
-  "translationNoticeBookDone": "「{title}」の翻訳が完了"
+  "translationNoticeBookDone": "「{title}」の翻訳が完了",
+  "coverHide": "表紙を隠す",
+  "coverShow": "表紙を表示",
+  "coverHideHint": "本棚、本の画面、ホーム画面ウィジェットで表紙の代わりにタイトルを表示します"
 }

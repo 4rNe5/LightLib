@@ -1497,4 +1497,14 @@ class AppLocalizationsDe extends AppLocalizations {
   String translationNoticeBookDone(String title) {
     return '„$title“ ist übersetzt';
   }
+
+  @override
+  String get coverHide => 'Cover ausblenden';
+
+  @override
+  String get coverShow => 'Cover anzeigen';
+
+  @override
+  String get coverHideHint =>
+      'Bibliothek, Buchseite und Startbildschirm-Widgets zeigen stattdessen den Titel';
 }

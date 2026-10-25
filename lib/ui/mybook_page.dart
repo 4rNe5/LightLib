@@ -11,6 +11,7 @@ import 'package:openlib/services/share_book.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/components/book_info_widget.dart';
 import 'package:openlib/ui/components/file_buttons_widget.dart';
+import 'package:openlib/ui/components/hide_cover_controls.dart';
 import 'package:openlib/ui/components/priority_translation_card.dart';
 
 class BookPage extends StatelessWidget {
@@ -29,6 +30,7 @@ class BookPage extends StatelessWidget {
         title: Text(AppLocalizations.of(context).appTitle),
         titleTextStyle: Theme.of(context).textTheme.displayLarge,
         actions: [
+          HideCoverButton(bookId: id),
           FutureBuilder(
               future: bookInfo,
               builder: (BuildContext context, AsyncSnapshot<MyBook?> snapshot) {

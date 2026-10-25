@@ -14,6 +14,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/book_covers.dart';
+import 'package:openlib/services/hidden_covers.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/local_book_import.dart'
     show isLocalImagePath, localImageFilePath;
@@ -155,8 +156,11 @@ class BookCover extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-        listenable: BookCovers.instance,
-        builder: (context, _) => _cover(context),
+        listenable:
+            Listenable.merge([BookCovers.instance, HiddenCovers.instance]),
+        builder: (context, _) => HiddenCovers.instance.isHidden(book.book.id)
+            ? HiddenCover(title: book.title)
+            : _cover(context),
       );
 
   Widget _cover(BuildContext context) {
@@ -192,6 +196,52 @@ class BookCover extends StatelessWidget {
       height: double.infinity,
       placeholder: (_, __) => Container(color: _placeholderColor(book.title)),
       errorWidget: (_, __, ___) => _placeholder(),
+    );
+  }
+}
+
+/// In place of a cover the reader chose to hide: a plain card with the
+/// title and a crossed-out eye.
+class HiddenCover extends StatelessWidget {
+  const HiddenCover({super.key, required this.title, this.radius = 0});
+
+  final String title;
+  final double radius;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const ValueKey('hiddenCover'),
+      decoration: BoxDecoration(
+        color: Color.alphaBlend(
+            scheme.onSurface.withValues(alpha: 0.08), scheme.surface),
+        borderRadius: BorderRadius.circular(radius),
+        border: Border.all(color: scheme.onSurface.withValues(alpha: 0.08)),
+      ),
+      padding: const EdgeInsets.all(10),
+      alignment: Alignment.center,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.visibility_off_outlined,
+              size: 20, color: scheme.onSurface.withValues(alpha: 0.45)),
+          const SizedBox(height: 8),
+          Flexible(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              maxLines: 4,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                  height: 1.25,
+                  color: scheme.onSurface.withValues(alpha: 0.75)),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -333,8 +383,8 @@ class LibraryGridTile extends StatelessWidget {
                     book.author.isEmpty ? ' ' : book.author,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                        fontSize: 11, color: scheme.onSurfaceVariant),
+                    style:
+                        TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
                   ),
                 ],
               ),

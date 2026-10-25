@@ -444,5 +444,8 @@
   "priorityTranslatePreparing": "Wird vorbereitet…",
   "priorityTranslateNoModel": "Zuerst ein Übersetzungsmodell installieren (Einstellungen > Übersetzung auf dem Gerät)",
   "priorityTranslateProgress": "{done}/{total} Absätze · {percent} %",
-  "translationNoticeBookDone": "„{title}“ ist übersetzt"
+  "translationNoticeBookDone": "„{title}“ ist übersetzt",
+  "coverHide": "Cover ausblenden",
+  "coverShow": "Cover anzeigen",
+  "coverHideHint": "Bibliothek, Buchseite und Startbildschirm-Widgets zeigen stattdessen den Titel"
 }

@@ -1433,4 +1433,13 @@ class AppLocalizationsKo extends AppLocalizations {
   String translationNoticeBookDone(String title) {
     return '‘$title’ 번역 완료';
   }
+
+  @override
+  String get coverHide => '표지 가리기';
+
+  @override
+  String get coverShow => '표지 보이기';
+
+  @override
+  String get coverHideHint => '서재, 책 화면, 홈 화면 위젯에 표지 대신 제목을 보여줍니다';
 }

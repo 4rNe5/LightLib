@@ -1996,5 +1996,17 @@
         "type": "String"
       }
     }
+  },
+  "coverHide": "Hide cover",
+  "@coverHide": {
+    "description": "Library book: hide its cover everywhere in the app"
+  },
+  "coverShow": "Show cover",
+  "@coverShow": {
+    "description": "Library book: show its cover again"
+  },
+  "coverHideHint": "The library, the book page and the home-screen widgets show the title instead",
+  "@coverHideHint": {
+    "description": "Library book: what hiding the cover does"
   }
 }

@@ -444,5 +444,8 @@
   "priorityTranslatePreparing": "Préparation…",
   "priorityTranslateNoModel": "Installez d'abord un modèle de traduction (Réglages > Traduction sur l'appareil)",
   "priorityTranslateProgress": "{done}/{total} paragraphes · {percent} %",
-  "translationNoticeBookDone": "« {title} » est traduit"
+  "translationNoticeBookDone": "« {title} » est traduit",
+  "coverHide": "Masquer la couverture",
+  "coverShow": "Afficher la couverture",
+  "coverHideHint": "La bibliothèque, la page du livre et les widgets affichent le titre à la place"
 }

@@ -34,6 +34,7 @@ import 'package:openlib/ui/challenge_solver_page.dart';
 import 'package:openlib/ui/whats_new_page.dart';
 import 'package:openlib/ui/mybook_page.dart' show BookPage;
 import 'package:openlib/services/home_widgets.dart';
+import 'package:openlib/services/hidden_covers.dart';
 import 'package:openlib/services/reading_recap.dart';
 
 import 'package:openlib/services/files.dart'
@@ -209,6 +210,7 @@ void main(List<String> args) async {
   // Caches of models that were deleted or replaced (GBs on the GPU path).
   unawaited(TranslationModelStore.instance.sweepCaches());
   unawaited(BookTranslationService.instance.start());
+  unawaited(HiddenCovers.instance.load());
 
   runApp(
     ProviderScope(

@@ -438,5 +438,8 @@
   "priorityTranslatePreparing": "준비 중…",
   "priorityTranslateNoModel": "번역 모델을 먼저 설치하세요 (설정 > 기기 내 번역)",
   "priorityTranslateProgress": "{done}/{total} 문단 · {percent}%",
-  "translationNoticeBookDone": "‘{title}’ 번역 완료"
+  "translationNoticeBookDone": "‘{title}’ 번역 완료",
+  "coverHide": "표지 가리기",
+  "coverShow": "표지 보이기",
+  "coverHideHint": "서재, 책 화면, 홈 화면 위젯에 표지 대신 제목을 보여줍니다"
 }

@@ -16,6 +16,7 @@ import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
 import 'package:openlib/ui/components/error_widget.dart';
+import 'package:openlib/ui/components/hide_cover_controls.dart';
 import 'package:openlib/services/reading_recap.dart';
 import 'package:openlib/ui/components/library_recap.dart';
 import 'package:openlib/ui/components/library_tiles.dart';
@@ -748,7 +749,9 @@ class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
                   style: const TextStyle(
                       fontSize: 18, fontWeight: FontWeight.w700),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 8),
+                HideCoverSwitch(bookId: widget.bookId),
+                const SizedBox(height: 8),
                 Text(l10n.bookGenre, style: labelStyle),
                 const SizedBox(height: 8),
                 Wrap(

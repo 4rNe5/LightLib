@@ -2739,6 +2739,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'“{title}” is translated'**
   String translationNoticeBookDone(String title);
+
+  /// Library book: hide its cover everywhere in the app
+  ///
+  /// In en, this message translates to:
+  /// **'Hide cover'**
+  String get coverHide;
+
+  /// Library book: show its cover again
+  ///
+  /// In en, this message translates to:
+  /// **'Show cover'**
+  String get coverShow;
+
+  /// Library book: what hiding the cover does
+  ///
+  /// In en, this message translates to:
+  /// **'The library, the book page and the home-screen widgets show the title instead'**
+  String get coverHideHint;
 }
 
 class _AppLocalizationsDelegate
