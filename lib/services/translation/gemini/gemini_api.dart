@@ -122,13 +122,22 @@ enum GeminiBlock {
       .firstWhere((b) => b.name == name, orElse: () => GeminiBlock.off);
 }
 
-/// The schema of a translation answer: exactly [count] strings.
+/// The schema of a translation answer: exactly [count] items, each the
+/// number of the paragraph it translates and the translation (numbered,
+/// so an answer that slips by one can be told).
 Map<String, Object?> translationSchema(int count) => {
       'type': 'object',
       'properties': {
         'translations': {
           'type': 'array',
-          'items': {'type': 'string'},
+          'items': {
+            'type': 'object',
+            'properties': {
+              'n': {'type': 'integer'},
+              'text': {'type': 'string'},
+            },
+            'required': ['n', 'text'],
+          },
           'minItems': count,
           'maxItems': count,
         },
@@ -286,8 +295,9 @@ class GeminiResult {
   }
 }
 
-/// The translations in a structured answer; null where the answer is not
-/// [count] strings.
+/// The translations in a structured answer, in paragraph order; null
+/// where the answer does not have each of the [count] numbers (1 to
+/// [count]) exactly once. Plain strings are taken in order.
 List<String>? parseTranslations(String text, int count) {
   var body = text.trim();
   // Some answers come fenced as a code block.
@@ -301,12 +311,20 @@ List<String>? parseTranslations(String text, int count) {
   }
   final list = data is Map ? data['translations'] : data;
   if (list is! List || list.length != count) return null;
-  final out = <String>[];
-  for (final item in list) {
-    if (item is! String) return null;
-    out.add(item.trim());
+  if (list.every((i) => i is String)) {
+    return [for (final i in list) (i as String).trim()];
   }
-  return out;
+  final byNumber = <int, String>{};
+  for (final item in list) {
+    if (item is! Map) return null;
+    final n = item['n'];
+    final t = item['text'];
+    if (n is! num || t is! String) return null;
+    final k = n.toInt();
+    if (k < 1 || k > count || byNumber.containsKey(k)) return null;
+    byNumber[k] = t.trim();
+  }
+  return [for (var k = 1; k <= count; k++) byNumber[k]!];
 }
 
 enum GeminiErrorKind {

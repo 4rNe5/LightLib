@@ -23,6 +23,7 @@ class _Server implements HttpClientAdapter {
   final (int, Object) Function(List<String> paragraphs, Map body) answer;
   final List<Map> bodies = [];
   final List<Map> refinements = [];
+  final List<List?> contexts = [];
 
   @override
   Future<ResponseBody> fetch(RequestOptions options,
@@ -31,12 +32,23 @@ class _Server implements HttpClientAdapter {
     bodies.add(body);
     final user = ((body['contents'] as List).first['parts'] as List)
         .first['text'] as String;
-    final start = user.lastIndexOf('\n[');
-    final raw = start < 0 ? <Object?>[] : jsonDecode(user.substring(start + 1)) as List;
-    refinements.addAll(raw.whereType<Map>());
-    final list = [
-      for (final x in raw) x is Map ? 'FIX:${x['source']}' : x as String
-    ];
+    final start = user.indexOf('\n{');
+    final data0 =
+        start < 0 ? null : jsonDecode(user.substring(start + 1)) as Map;
+    final List<String> list;
+    if (data0 == null) {
+      list = [];
+    } else if (data0['items'] is List) {
+      final items = (data0['items'] as List).cast<Map>();
+      refinements.addAll(items);
+      list = [for (final x in items) 'FIX:${x['source']}'];
+    } else {
+      contexts.add(data0['context'] as List?);
+      list = [
+        for (final x in (data0['paragraphs'] as List).cast<Map>())
+          x['text'] as String
+      ];
+    }
     final (status, data) = answer(list, body);
     return ResponseBody.fromString(jsonEncode(data), status, headers: {
       'content-type': ['application/json']
@@ -56,7 +68,14 @@ Map _ok(List<String> out) => {
         {
           'content': {
             'parts': [
-              {'text': jsonEncode({'translations': out})}
+              {
+                'text': jsonEncode({
+                  'translations': [
+                    for (var i = 0; i < out.length; i++)
+                      {'n': i + 1, 'text': out[i]}
+                  ]
+                })
+              }
             ]
           },
           'finishReason': 'STOP'
@@ -84,7 +103,8 @@ class _Device implements Translator {
           String? sourceLanguage,
           String? context,
           String? following,
-          TranslationPriority priority = TranslationPriority.background}) async =>
+          TranslationPriority priority =
+              TranslationPriority.background}) async =>
       'device:$text';
   @override
   Future<List<String>> translateBatch(List<String> texts,
@@ -148,18 +168,20 @@ void main() {
     expect(out, [ko('あ'), ko('い'), ko('う')]);
     expect(heard.length, 3);
     expect(server.bodies.length, 1);
-    final system = ((server.bodies.single['systemInstruction'] as Map)['parts']
-        as List).first['text'] as String;
+    final system =
+        ((server.bodies.single['systemInstruction'] as Map)['parts'] as List)
+            .first['text'] as String;
     expect(system, contains('{"translations"'));
-    final user = ((server.bodies.single['contents'] as List).first['parts']
-        as List).first['text'] as String;
-    expect(user, contains('前\n→ 앞'));
+    expect(server.contexts.single, [
+      {'text': '前', 'translation': '앞'}
+    ]);
     expect(settings.usage.requests, 1);
     expect(settings.usage.paragraphs, 3);
     expect(device.asked, isEmpty);
   });
 
-  test('blocked: the paragraph is found; a filter block goes to the phone, '
+  test(
+      'blocked: the paragraph is found; a filter block goes to the phone, '
       'a policy refusal stays as written', () async {
     final server = _Server((p, _) {
       if (p.contains('禁止')) return (200, _blocked('PROHIBITED_CONTENT'));
@@ -185,7 +207,8 @@ void main() {
     expect(settings.usage.onDevice, 1);
   });
 
-  test("the day's quota: the phone takes over, and later requests skip "
+  test(
+      "the day's quota: the phone takes over, and later requests skip "
       'Gemini until the reset', () async {
     var calls = 0;
     final server = _Server((p, _) {
@@ -258,9 +281,8 @@ void main() {
   });
 
   test('a short answer is asked again in halves, then the phone', () async {
-    final server = _Server((p, _) => p.length > 1
-        ? (200, _ok(['only one']))
-        : (200, _ok([ko(p.single)])));
+    final server = _Server((p, _) =>
+        p.length > 1 ? (200, _ok(['only one'])) : (200, _ok([ko(p.single)])));
     final out = await translator(server)
         .translateBatch(['a', 'b', 'c', 'd'], targetLanguage: 'Korean');
     expect(out, [ko('a'), ko('b'), ko('c'), ko('d')]);
@@ -274,7 +296,8 @@ void main() {
           }
         ));
     expect(
-        () => translator(server).translateBatch(['a'], targetLanguage: 'Korean'),
+        () =>
+            translator(server).translateBatch(['a'], targetLanguage: 'Korean'),
         throwsA(isA<GeminiError>()
             .having((e) => e.kind, 'kind', GeminiErrorKind.badKey)));
   });
@@ -289,13 +312,14 @@ void main() {
             ]
           }
         ));
-    final out =
-        await translator(server).translateBatch(['a'], targetLanguage: 'Korean');
+    final out = await translator(server)
+        .translateBatch(['a'], targetLanguage: 'Korean');
     expect(out, ['']);
     expect(device.asked, isEmpty);
   });
 
-  test('a translation failing a check goes back once with its problem, and '
+  test(
+      'a translation failing a check goes back once with its problem, and '
       'the better one is kept', () async {
     final server = _Server((p, _) => (
           200,
@@ -312,5 +336,42 @@ void main() {
     expect((server.refinements.single['problems'] as List).single,
         contains('untranslated'));
     expect(server.bodies.length, 2);
+  });
+
+  test(
+      'an answer that slipped by one paragraph is not used: asked again '
+      'in parts', () async {
+    const names = {
+      '一つ目の段落': '첫째',
+      '二つ目の段落': '둘째',
+      '三つ目の段落': '셋째',
+      '四つ目の段落': '넷째',
+    };
+    var calls = 0;
+    final server = _Server((p, _) {
+      calls++;
+      if (p.length == 4) {
+        // The context's last line translated again, the rest one late.
+        return (
+          200,
+          _ok([
+            '앞 문장을 한 번 더 옮긴 번역입니다',
+            '첫째 문단의 번역입니다',
+            '둘째 문단의 번역입니다',
+            '셋째 문단의 번역입니다'
+          ])
+        );
+      }
+      return (200, _ok([for (final t in p) '${names[t]} 문단을 제대로 옮긴 번역']));
+    });
+    final out = await translator(server).translateBatch(
+        ['一つ目の段落', '二つ目の段落', '三つ目の段落', '四つ目の段落'],
+        targetLanguage: 'Korean',
+        before: const ['前の段落です'],
+        beforeTranslations: const ['앞 문장을 옮긴 번역입니다']);
+    expect(out, [
+      for (final n in names.values) '$n 문단을 제대로 옮긴 번역'
+    ]);
+    expect(calls, 3);
   });
 }

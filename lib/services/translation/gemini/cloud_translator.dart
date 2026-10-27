@@ -69,26 +69,33 @@ import 'package:openlib/services/translation/translator.dart';
   system
     ..writeln()
     ..writeln()
-    ..write('You receive a JSON array of consecutive paragraphs. Answer with '
-        '{"translations": [...]}: exactly one $targetLanguage translation per '
-        'paragraph, in the same order - never merge, split, skip or add '
-        'paragraphs, and add no notes or explanations of your own.');
+    ..write('You receive JSON: "context" is the story just before, already '
+        'translated - read it for the flow, never translate or repeat it. '
+        '"paragraphs" are the numbered paragraphs to translate. Answer with '
+        '{"translations": [{"n": 1, "text": "..."}, ...]}: for each '
+        'paragraph its number and its $targetLanguage translation, in '
+        'order - never merge, split, skip or add paragraphs, and add no '
+        'notes or explanations of your own.');
 
-  final user = StringBuffer();
-  if (before.isNotEmpty) {
-    user.writeln('The story just before (context only, do not translate it '
-        'again):');
-    for (var i = 0; i < before.length; i++) {
-      user.writeln(before[i]);
-      final done = i < beforeTranslations.length ? beforeTranslations[i] : null;
-      if (done != null && done.isNotEmpty) user.writeln('→ $done');
-    }
-    user.writeln();
-  }
-  user
-    ..writeln('Translate these ${texts.length} paragraphs:')
-    ..write(jsonEncode(texts));
-  return (system: system.toString(), user: user.toString());
+  final user = {
+    if (before.isNotEmpty)
+      'context': [
+        for (var i = 0; i < before.length; i++)
+          {
+            'text': before[i],
+            if (i < beforeTranslations.length &&
+                (beforeTranslations[i] ?? '').isNotEmpty)
+              'translation': beforeTranslations[i],
+          }
+      ],
+    'paragraphs': [
+      for (var i = 0; i < texts.length; i++) {'n': i + 1, 'text': texts[i]}
+    ],
+  };
+  return (
+    system: system.toString(),
+    user: 'Translate the ${texts.length} paragraphs.\n${jsonEncode(user)}',
+  );
 }
 
 /// A request to correct [items]: each source, its draft and what is
@@ -98,12 +105,64 @@ String cloudRefinementRequest(
     String targetLanguage) {
   return 'These $targetLanguage translations failed a check. Correct each '
       'one (the problems are listed with it), keeping everything that was '
-      'right, and answer with {"translations": [...]}: one corrected '
-      'translation per item, in the same order.\n'
-      '${jsonEncode([
-        for (final i in items)
-          {'source': i.source, 'draft': i.draft, 'problems': i.problems}
-      ])}';
+      'right, and answer with {"translations": [{"n": 1, "text": "..."}, '
+      '...]}: for each item its number and the corrected translation.\n'
+      '${jsonEncode({
+        'items': [
+          for (var k = 0; k < items.length; k++)
+            {
+              'n': k + 1,
+              'source': items[k].source,
+              'draft': items[k].draft,
+              'problems': items[k].problems,
+            }
+        ]
+      })}';
+}
+
+/// How alike two texts are (0 to 1, letter pairs shared, spaces and
+/// punctuation aside).
+double textSimilarity(String a, String b) {
+  final strip = RegExp(r'[\s\p{P}\p{S}]', unicode: true);
+  Map<String, int> pairs(String s) {
+    final t = s.replaceAll(strip, '');
+    final out = <String, int>{};
+    for (var i = 0; i + 1 < t.length; i++) {
+      final g = t.substring(i, i + 2);
+      out[g] = (out[g] ?? 0) + 1;
+    }
+    return out;
+  }
+
+  final x = pairs(a), y = pairs(b);
+  final total = x.values.fold<int>(0, (n, v) => n + v) +
+      y.values.fold<int>(0, (n, v) => n + v);
+  if (total == 0) return 0;
+  var shared = 0;
+  x.forEach((g, n) {
+    final m = y[g];
+    if (m != null) shared += n < m ? n : m;
+  });
+  return 2 * shared / total;
+}
+
+/// The first answer in [outs] that repeats the one before it (or the last
+/// context translation [previous]) while its source is another sentence:
+/// the answer slipped by one paragraph from there. Null when none does.
+int? slippedAt(List<String> sources, List<String> outs, String? previous,
+    String? previousSource) {
+  for (var k = 0; k < outs.length; k++) {
+    final before = k == 0 ? previous : outs[k - 1];
+    final beforeSource = k == 0 ? previousSource : sources[k - 1];
+    if (before == null || before.isEmpty || beforeSource == null) continue;
+    // Short lines repeat by nature (「はい」, 「……」).
+    if (outs[k].replaceAll(RegExp(r'\s'), '').length < 8) continue;
+    if (textSimilarity(outs[k], before) >= 0.6 &&
+        textSimilarity(sources[k], beforeSource) < 0.5) {
+      return k;
+    }
+  }
+  return null;
 }
 
 class CloudTranslator implements Translator {
@@ -302,7 +361,29 @@ class CloudTranslator implements Translator {
         }
         return onDevice(indexes);
       }
-      final got = parseTranslations(result.text, part.length);
+      var got = parseTranslations(result.text, part.length);
+      // An answer that slipped by a paragraph (one translated twice, the
+      // rest one place late) is not used: asked again in smaller parts.
+      if (got != null) {
+        final first = indexes.first;
+        final previous = first > 0 ? results[first - 1] : '';
+        final slip = slippedAt(
+            part,
+            got,
+            previous.isNotEmpty
+                ? previous
+                : (beforeTranslations.isNotEmpty
+                    ? beforeTranslations.last
+                    : null),
+            first > 0 && previous.isNotEmpty
+                ? texts[first - 1]
+                : (before.isNotEmpty ? before.last : null));
+        if (slip != null) {
+          _logger.warning('Gemini answer slipped by a paragraph',
+              tag: 'Gemini', metadata: {'at': slip, 'of': part.length});
+          got = null;
+        }
+      }
       if (got == null || got.any((t) => t.isEmpty)) {
         // A cut-off or malformed answer: smaller requests, then the phone.
         if (indexes.length > 1 && depth < 3) {

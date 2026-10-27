@@ -493,5 +493,8 @@
   "geminiThinkingSpeed": "Velocidad",
   "geminiThinkingBalanced": "Equilibrado",
   "geminiThinkingQuality": "Calidad",
-  "geminiThinkingHint": "Cuanto más piensa el modelo antes de responder, mejor capta los matices, y más tarda y cuesta cada solicitud (el razonamiento se cobra como salida)."
+  "geminiThinkingHint": "Cuanto más piensa el modelo antes de responder, mejor capta los matices, y más tarda y cuesta cada solicitud (el razonamiento se cobra como salida).",
+  "translationClearBook": "Borrar las traducciones de este libro",
+  "translationClearBookConfirm": "Se borran todas las traducciones guardadas de este libro. Al leerlo o con «Traducir el libro entero» se traduce de nuevo.",
+  "translationClearBookDone": "Traducciones borradas"
 }

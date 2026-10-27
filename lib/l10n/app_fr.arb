@@ -493,5 +493,8 @@
   "geminiThinkingSpeed": "Vitesse",
   "geminiThinkingBalanced": "Équilibré",
   "geminiThinkingQuality": "Qualité",
-  "geminiThinkingHint": "Plus le modèle réfléchit avant de répondre, mieux il rend les nuances, et plus chaque requête est longue et coûteuse (la réflexion est facturée comme sortie)."
+  "geminiThinkingHint": "Plus le modèle réfléchit avant de répondre, mieux il rend les nuances, et plus chaque requête est longue et coûteuse (la réflexion est facturée comme sortie).",
+  "translationClearBook": "Supprimer les traductions de ce livre",
+  "translationClearBookConfirm": "Toutes les traductions enregistrées de ce livre sont supprimées. En le lisant ou avec « Traduire tout le livre », il est retraduit.",
+  "translationClearBookDone": "Traductions supprimées"
 }

@@ -487,5 +487,8 @@
   "geminiThinkingSpeed": "速度優先",
   "geminiThinkingBalanced": "バランス",
   "geminiThinkingQuality": "品質優先",
-  "geminiThinkingHint": "答える前に長く考えるほどニュアンスをよく汲み取りますが、リクエストごとの時間と費用が増えます（思考トークンは出力料金）。"
+  "geminiThinkingHint": "答える前に長く考えるほどニュアンスをよく汲み取りますが、リクエストごとの時間と費用が増えます（思考トークンは出力料金）。",
+  "translationClearBook": "この本の翻訳を削除",
+  "translationClearBookConfirm": "この本に保存された翻訳をすべて削除します。読み直すか「この本を最後まで翻訳」で改めて翻訳します。",
+  "translationClearBookDone": "翻訳を削除しました"
 }

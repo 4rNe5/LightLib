@@ -1658,4 +1658,14 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get geminiThinkingHint =>
       'The more the model thinks before answering, the better it handles nuance, and the longer and costlier each request (thinking is billed as output).';
+
+  @override
+  String get translationClearBook => 'Delete this book\'s translations';
+
+  @override
+  String get translationClearBookConfirm =>
+      'Every saved translation of this book is deleted. Reading it or “Translate this whole book” translates it again.';
+
+  @override
+  String get translationClearBookDone => 'Translations deleted';
 }

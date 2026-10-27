@@ -329,6 +329,14 @@ class BookTranslationService extends ChangeNotifier
 
   bool get _active => _enabled || _priorityFile != null;
 
+  /// [fileName]'s translations were deleted: its progress goes, and the
+  /// library is looked at again.
+  void forgetBook(String fileName) {
+    _progress.remove(fileName);
+    notifyListeners();
+    scanSoon();
+  }
+
   /// For tests: a book chosen to go first, and a book's progress.
   @visibleForTesting
   void debugShow({String? priorityFile, BookTranslationProgress? progress}) {

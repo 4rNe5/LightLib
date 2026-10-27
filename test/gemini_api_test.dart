@@ -41,6 +41,7 @@ void main() {
     expect(format['mimeType'], 'APPLICATION_JSON');
     final items = ((format['schema'] as Map)['properties']
         as Map)['translations'] as Map;
+    expect((items['items'] as Map)['required'], ['n', 'text']);
     expect(items['minItems'], 3);
     expect(items['maxItems'], 3);
 
@@ -111,6 +112,17 @@ void main() {
     expect(parseTranslations('{"translations":["a"]}', 2), isNull);
     expect(parseTranslations('not json', 1), isNull);
     expect(parseTranslations('{"translations":[1]}', 1), isNull);
+    // Numbered: put back in order; a number missing or twice, refused.
+    expect(
+        parseTranslations(
+            '{"translations":[{"n":2,"text":"b"},{"n":1,"text":"a"}]}', 2),
+        ['a', 'b']);
+    expect(
+        parseTranslations(
+            '{"translations":[{"n":1,"text":"a"},{"n":1,"text":"b"}]}', 2),
+        isNull);
+    expect(parseTranslations('{"translations":[{"n":3,"text":"a"}]}', 1),
+        isNull);
   });
 
   test('errors: the day used up on the free tier, a minute, a bad key', () {

@@ -3033,6 +3033,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The more the model thinks before answering, the better it handles nuance, and the longer and costlier each request (thinking is billed as output).'**
   String get geminiThinkingHint;
+
+  /// translationClearBook
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this book\'s translations'**
+  String get translationClearBook;
+
+  /// translationClearBookConfirm
+  ///
+  /// In en, this message translates to:
+  /// **'Every saved translation of this book is deleted. Reading it or “Translate this whole book” translates it again.'**
+  String get translationClearBookConfirm;
+
+  /// translationClearBookDone
+  ///
+  /// In en, this message translates to:
+  /// **'Translations deleted'**
+  String get translationClearBookDone;
 }
 
 class _AppLocalizationsDelegate

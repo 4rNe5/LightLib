@@ -98,6 +98,7 @@ class GeminiClient {
         maxOutputTokens: maxOutputTokens,
       );
       GeminiError error;
+      final started = DateTime.now();
       try {
         final response = await _dio.post<Object?>(
           '$_base/models/${m.id}:generateContent',
@@ -116,6 +117,18 @@ class GeminiClient {
           final result = GeminiResult.fromJson(
               Map<String, Object?>.from(response.data as Map));
           _settings.recordRequest(result, paragraphs: paragraphs);
+          _logger.info('Gemini request', tag: 'Gemini', metadata: {
+            'model': m.id,
+            'paragraphs': paragraphs,
+            'ms': DateTime.now().difference(started).inMilliseconds,
+            'promptTokens': result.promptTokens,
+            'outputTokens': result.outputTokens,
+            'thoughtTokens': result.thoughtTokens,
+            if (result.block != null) 'block': result.block!.name,
+            if (result.finishReason != null &&
+                result.finishReason != 'STOP')
+              'finish': result.finishReason,
+          });
           return result;
         }
         error = GeminiError.fromResponse(status, response.data);

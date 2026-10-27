@@ -1685,4 +1685,14 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get geminiThinkingHint =>
       'Plus le modèle réfléchit avant de répondre, mieux il rend les nuances, et plus chaque requête est longue et coûteuse (la réflexion est facturée comme sortie).';
+
+  @override
+  String get translationClearBook => 'Supprimer les traductions de ce livre';
+
+  @override
+  String get translationClearBookConfirm =>
+      'Toutes les traductions enregistrées de ce livre sont supprimées. En le lisant ou avec « Traduire tout le livre », il est retraduit.';
+
+  @override
+  String get translationClearBookDone => 'Traductions supprimées';
 }

@@ -13,6 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/translation/book_translation_service.dart';
+import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 
@@ -40,6 +41,34 @@ class PriorityTranslationCard extends StatelessWidget {
           .catchError((_) => PermissionStatus.denied);
     }
     await BookTranslationService.instance.prioritize(fileName);
+  }
+
+  Future<void> _clear(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (c) => AlertDialog(
+        title: Text(l10n.translationClearBook),
+        content: Text(l10n.translationClearBookConfirm),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(c, false),
+              child: Text(MaterialLocalizations.of(c).cancelButtonLabel)),
+          FilledButton(
+              key: const ValueKey('translationClearBookConfirm'),
+              onPressed: () => Navigator.pop(c, true),
+              child: Text(MaterialLocalizations.of(c).okButtonLabel)),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    final service = BookTranslationService.instance;
+    if (service.priorityFile == fileName) await service.cancelPriority();
+    await TranslationCache.deleteForBook(fileName).catchError((_) {});
+    service.forgetBook(fileName);
+    if (context.mounted) {
+      showSnackBar(context: context, message: l10n.translationClearBookDone);
+    }
   }
 
   @override
@@ -137,6 +166,21 @@ class PriorityTranslationCard extends StatelessWidget {
             ],
           );
         }
+        final card = Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            body,
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton.icon(
+                key: const ValueKey('translationClearBook'),
+                onPressed: () => _clear(context),
+                icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                label: Text(l10n.translationClearBook),
+              ),
+            ),
+          ],
+        );
         return Container(
           width: double.infinity,
           margin: const EdgeInsets.only(bottom: 16),
@@ -145,7 +189,7 @@ class PriorityTranslationCard extends StatelessWidget {
             color: scheme.onSurface.withValues(alpha: 0.05),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: body,
+          child: card,
         );
       },
     );

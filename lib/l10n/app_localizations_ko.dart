@@ -1608,4 +1608,14 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get geminiThinkingHint =>
       '답하기 전에 더 오래 생각할수록 뉘앙스를 잘 살리지만, 요청마다 시간이 더 걸리고 비용도 늘어납니다 (생각 토큰은 출력 요금).';
+
+  @override
+  String get translationClearBook => '이 책 번역 지우기';
+
+  @override
+  String get translationClearBookConfirm =>
+      '이 책에 저장된 번역을 모두 지웁니다. 다시 읽거나 ‘이 책 끝까지 번역’을 누르면 새로 번역합니다.';
+
+  @override
+  String get translationClearBookDone => '번역을 지웠습니다';
 }

@@ -2265,5 +2265,17 @@
   "geminiThinkingHint": "The more the model thinks before answering, the better it handles nuance, and the longer and costlier each request (thinking is billed as output).",
   "@geminiThinkingHint": {
     "description": "geminiThinkingHint"
+  },
+  "translationClearBook": "Delete this book's translations",
+  "@translationClearBook": {
+    "description": "translationClearBook"
+  },
+  "translationClearBookConfirm": "Every saved translation of this book is deleted. Reading it or “Translate this whole book” translates it again.",
+  "@translationClearBookConfirm": {
+    "description": "translationClearBookConfirm"
+  },
+  "translationClearBookDone": "Translations deleted",
+  "@translationClearBookDone": {
+    "description": "translationClearBookDone"
   }
 }

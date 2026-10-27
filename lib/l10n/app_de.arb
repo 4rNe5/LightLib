@@ -493,5 +493,8 @@
   "geminiThinkingSpeed": "Tempo zuerst",
   "geminiThinkingBalanced": "Ausgewogen",
   "geminiThinkingQuality": "Qualität zuerst",
-  "geminiThinkingHint": "Je länger das Modell vor der Antwort nachdenkt, desto besser trifft es Nuancen – und desto länger und teurer wird jede Anfrage (Denken wird als Ausgabe berechnet)."
+  "geminiThinkingHint": "Je länger das Modell vor der Antwort nachdenkt, desto besser trifft es Nuancen – und desto länger und teurer wird jede Anfrage (Denken wird als Ausgabe berechnet).",
+  "translationClearBook": "Übersetzungen dieses Buchs löschen",
+  "translationClearBookConfirm": "Alle gespeicherten Übersetzungen dieses Buchs werden gelöscht. Beim Lesen oder mit „Ganzes Buch übersetzen“ wird neu übersetzt.",
+  "translationClearBookDone": "Übersetzungen gelöscht"
 }

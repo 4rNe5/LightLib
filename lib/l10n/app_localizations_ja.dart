@@ -1606,4 +1606,14 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get geminiThinkingHint =>
       '答える前に長く考えるほどニュアンスをよく汲み取りますが、リクエストごとの時間と費用が増えます（思考トークンは出力料金）。';
+
+  @override
+  String get translationClearBook => 'この本の翻訳を削除';
+
+  @override
+  String get translationClearBookConfirm =>
+      'この本に保存された翻訳をすべて削除します。読み直すか「この本を最後まで翻訳」で改めて翻訳します。';
+
+  @override
+  String get translationClearBookDone => '翻訳を削除しました';
 }
