@@ -2277,5 +2277,29 @@
   "translationClearBookDone": "Translations deleted",
   "@translationClearBookDone": {
     "description": "translationClearBookDone"
+  },
+  "translationExport": "Export translated EPUB",
+  "@translationExport": {
+    "description": "translationExport"
+  },
+  "translationExportNone": "Nothing of this book is translated yet",
+  "@translationExportNone": {
+    "description": "translationExportNone"
+  },
+  "translationExportDone": "EPUB made with {translated} of {total} paragraphs translated",
+  "@translationExportDone": {
+    "description": "translationExportDone",
+    "placeholders": {
+      "translated": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "translationExportFailed": "This book could not be exported",
+  "@translationExportFailed": {
+    "description": "translationExportFailed"
   }
 }

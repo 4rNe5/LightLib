@@ -52,8 +52,8 @@ class BookPage extends StatelessWidget {
                           outcome == ShareOutcome.pathCopied) {
                         showSnackBar(
                             context: context,
-                            message: AppLocalizations.of(context)
-                                .copiedBookPath);
+                            message:
+                                AppLocalizations.of(context).copiedBookPath);
                       }
                     },
                   );
@@ -85,7 +85,8 @@ class BookPage extends StatelessWidget {
                           ),
                           if ((book.format ?? '').toLowerCase() == 'epub')
                             PriorityTranslationCard(
-                                fileName: book.getFileName()),
+                                fileName: book.getFileName(),
+                                title: book.title),
                         ],
                       ));
                 } else if (snapshot.hasError) {

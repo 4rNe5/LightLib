@@ -8,20 +8,27 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 
 // Package imports:
+import 'package:path/path.dart' as p;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:share_plus/share_plus.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/translation/book_translation_service.dart';
+import 'package:openlib/services/translation/translated_epub.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 
 class PriorityTranslationCard extends StatelessWidget {
-  const PriorityTranslationCard({super.key, required this.fileName});
+  const PriorityTranslationCard(
+      {super.key, required this.fileName, this.title = ''});
 
   /// The book's file in the library folder.
   final String fileName;
+
+  /// The book's title, for the exported copy's name.
+  final String title;
 
   Future<void> _start(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
@@ -88,9 +95,8 @@ class PriorityTranslationCard extends StatelessWidget {
         final Widget body;
         if (first) {
           final known = progress != null && progress.total > 0;
-          final waiting = service.currentFile == fileName
-              ? service.waitText(l10n)
-              : null;
+          final waiting =
+              service.currentFile == fileName ? service.waitText(l10n) : null;
           body = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -170,14 +176,17 @@ class PriorityTranslationCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             body,
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                key: const ValueKey('translationClearBook'),
-                onPressed: () => _clear(context),
-                icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-                label: Text(l10n.translationClearBook),
-              ),
+            Wrap(
+              alignment: WrapAlignment.end,
+              children: [
+                _ExportButton(fileName: fileName, title: title),
+                TextButton.icon(
+                  key: const ValueKey('translationClearBook'),
+                  onPressed: () => _clear(context),
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                  label: Text(l10n.translationClearBook),
+                ),
+              ],
             ),
           ],
         );
@@ -194,4 +203,65 @@ class PriorityTranslationCard extends StatelessWidget {
       },
     );
   }
+}
+
+/// Makes the translated copy and opens the share sheet with it (save to
+/// files, send, open in another reading app).
+class _ExportButton extends StatefulWidget {
+  const _ExportButton({required this.fileName, required this.title});
+  final String fileName;
+  final String title;
+
+  @override
+  State<_ExportButton> createState() => _ExportButtonState();
+}
+
+class _ExportButtonState extends State<_ExportButton> {
+  bool _busy = false;
+
+  Future<void> _export() async {
+    final l10n = AppLocalizations.of(context);
+    setState(() => _busy = true);
+    try {
+      final out = await exportTranslatedEpub(
+          fileName: widget.fileName,
+          title: widget.title.isEmpty
+              ? p.basenameWithoutExtension(widget.fileName)
+              : widget.title);
+      if (!mounted) return;
+      final file = out.file;
+      if (file == null) {
+        showSnackBar(
+            context: context,
+            message: out.total == 0
+                ? l10n.translationExportFailed
+                : l10n.translationExportNone);
+        return;
+      }
+      showSnackBar(
+          context: context,
+          message: l10n.translationExportDone(out.translated, out.total));
+      await SharePlus.instance.share(ShareParams(
+          files: [XFile(file.path, mimeType: 'application/epub+zip')]));
+    } catch (_) {
+      if (mounted) {
+        showSnackBar(context: context, message: l10n.translationExportFailed);
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => TextButton.icon(
+        key: const ValueKey('translationExport'),
+        onPressed: _busy ? null : _export,
+        icon: _busy
+            ? const SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2))
+            : const Icon(Icons.ios_share, size: 18),
+        label: Text(AppLocalizations.of(context).translationExport),
+      );
 }

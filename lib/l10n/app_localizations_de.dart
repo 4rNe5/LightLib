@@ -1686,4 +1686,20 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get translationClearBookDone => 'Übersetzungen gelöscht';
+
+  @override
+  String get translationExport => 'Übersetztes EPUB exportieren';
+
+  @override
+  String get translationExportNone =>
+      'Von diesem Buch ist noch nichts übersetzt';
+
+  @override
+  String translationExportDone(int translated, int total) {
+    return 'EPUB mit $translated von $total übersetzten Absätzen erstellt';
+  }
+
+  @override
+  String get translationExportFailed =>
+      'Dieses Buch lässt sich nicht exportieren';
 }

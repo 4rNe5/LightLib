@@ -1616,4 +1616,18 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get translationClearBookDone => '翻訳を削除しました';
+
+  @override
+  String get translationExport => '翻訳版EPUBを書き出す';
+
+  @override
+  String get translationExportNone => 'この本はまだ翻訳されていません';
+
+  @override
+  String translationExportDone(int translated, int total) {
+    return '$total段落中$translated段落を翻訳したEPUBを作成しました';
+  }
+
+  @override
+  String get translationExportFailed => 'この本は書き出せません';
 }

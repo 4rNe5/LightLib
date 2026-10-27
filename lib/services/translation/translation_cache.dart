@@ -143,6 +143,9 @@ class TranslationCache {
 
   int get length => _entries.length;
 
+  /// Every translation, by [keyFor] of its source text.
+  Map<String, String> get entries => Map.unmodifiable(_entries);
+
   String? lookup(String text) => _entries[keyFor(text)];
 
   void store(String text, String translation) {

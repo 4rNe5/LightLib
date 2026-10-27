@@ -496,5 +496,9 @@
   "geminiThinkingHint": "Je länger das Modell vor der Antwort nachdenkt, desto besser trifft es Nuancen – und desto länger und teurer wird jede Anfrage (Denken wird als Ausgabe berechnet).",
   "translationClearBook": "Übersetzungen dieses Buchs löschen",
   "translationClearBookConfirm": "Alle gespeicherten Übersetzungen dieses Buchs werden gelöscht. Beim Lesen oder mit „Ganzes Buch übersetzen“ wird neu übersetzt.",
-  "translationClearBookDone": "Übersetzungen gelöscht"
+  "translationClearBookDone": "Übersetzungen gelöscht",
+  "translationExport": "Übersetztes EPUB exportieren",
+  "translationExportNone": "Von diesem Buch ist noch nichts übersetzt",
+  "translationExportDone": "EPUB mit {translated} von {total} übersetzten Absätzen erstellt",
+  "translationExportFailed": "Dieses Buch lässt sich nicht exportieren"
 }

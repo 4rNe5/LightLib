@@ -1618,4 +1618,18 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get translationClearBookDone => '번역을 지웠습니다';
+
+  @override
+  String get translationExport => '번역본 EPUB 내보내기';
+
+  @override
+  String get translationExportNone => '아직 번역된 문단이 없습니다';
+
+  @override
+  String translationExportDone(int translated, int total) {
+    return '번역된 문단 $translated/$total개가 들어간 EPUB을 만들었습니다';
+  }
+
+  @override
+  String get translationExportFailed => '이 책은 내보낼 수 없습니다';
 }

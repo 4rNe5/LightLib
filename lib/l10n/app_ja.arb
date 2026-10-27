@@ -490,5 +490,9 @@
   "geminiThinkingHint": "答える前に長く考えるほどニュアンスをよく汲み取りますが、リクエストごとの時間と費用が増えます（思考トークンは出力料金）。",
   "translationClearBook": "この本の翻訳を削除",
   "translationClearBookConfirm": "この本に保存された翻訳をすべて削除します。読み直すか「この本を最後まで翻訳」で改めて翻訳します。",
-  "translationClearBookDone": "翻訳を削除しました"
+  "translationClearBookDone": "翻訳を削除しました",
+  "translationExport": "翻訳版EPUBを書き出す",
+  "translationExportNone": "この本はまだ翻訳されていません",
+  "translationExportDone": "{total}段落中{translated}段落を翻訳したEPUBを作成しました",
+  "translationExportFailed": "この本は書き出せません"
 }

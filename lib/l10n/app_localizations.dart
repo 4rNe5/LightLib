@@ -3051,6 +3051,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Translations deleted'**
   String get translationClearBookDone;
+
+  /// translationExport
+  ///
+  /// In en, this message translates to:
+  /// **'Export translated EPUB'**
+  String get translationExport;
+
+  /// translationExportNone
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing of this book is translated yet'**
+  String get translationExportNone;
+
+  /// translationExportDone
+  ///
+  /// In en, this message translates to:
+  /// **'EPUB made with {translated} of {total} paragraphs translated'**
+  String translationExportDone(int translated, int total);
+
+  /// translationExportFailed
+  ///
+  /// In en, this message translates to:
+  /// **'This book could not be exported'**
+  String get translationExportFailed;
 }
 
 class _AppLocalizationsDelegate

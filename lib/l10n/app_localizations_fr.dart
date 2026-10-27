@@ -1695,4 +1695,18 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get translationClearBookDone => 'Traductions supprimées';
+
+  @override
+  String get translationExport => 'Exporter l’EPUB traduit';
+
+  @override
+  String get translationExportNone => 'Rien de ce livre n’est encore traduit';
+
+  @override
+  String translationExportDone(int translated, int total) {
+    return 'EPUB créé avec $translated paragraphes traduits sur $total';
+  }
+
+  @override
+  String get translationExportFailed => 'Ce livre n’a pas pu être exporté';
 }
