@@ -1669,4 +1669,20 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get geminiPrivacyNote =>
       'Le texte du livre est envoyé à Google. Au niveau gratuit, Google peut l\'utiliser pour améliorer ses produits ; au niveau payant, non.';
+
+  @override
+  String get geminiThinking => 'Réflexion';
+
+  @override
+  String get geminiThinkingSpeed => 'Vitesse';
+
+  @override
+  String get geminiThinkingBalanced => 'Équilibré';
+
+  @override
+  String get geminiThinkingQuality => 'Qualité';
+
+  @override
+  String get geminiThinkingHint =>
+      'Plus le modèle réfléchit avant de répondre, mieux il rend les nuances, et plus chaque requête est longue et coûteuse (la réflexion est facturée comme sortie).';
 }

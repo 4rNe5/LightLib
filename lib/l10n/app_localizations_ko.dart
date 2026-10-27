@@ -1592,4 +1592,20 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get geminiPrivacyNote =>
       '책 본문이 Google로 전송됩니다. 무료 등급에서는 Google 제품 개선에 쓰일 수 있고, 유료 등급에서는 쓰이지 않습니다.';
+
+  @override
+  String get geminiThinking => '생각 비중';
+
+  @override
+  String get geminiThinkingSpeed => '속도 우선';
+
+  @override
+  String get geminiThinkingBalanced => '균형';
+
+  @override
+  String get geminiThinkingQuality => '퀄리티 우선';
+
+  @override
+  String get geminiThinkingHint =>
+      '답하기 전에 더 오래 생각할수록 뉘앙스를 잘 살리지만, 요청마다 시간이 더 걸리고 비용도 늘어납니다 (생각 토큰은 출력 요금).';
 }

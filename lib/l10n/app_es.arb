@@ -488,5 +488,10 @@
   "geminiDeviceFallback": "Seguir en el dispositivo si Gemini no puede",
   "geminiDeviceFallbackHint": "Cuota agotada, un filtro, sin conexión: solo esos párrafos, con el modelo del teléfono.",
   "geminiConcurrency": "Solicitudes a la vez",
-  "geminiPrivacyNote": "El texto del libro se envía a Google. En el nivel gratuito Google puede usarlo para mejorar sus productos; en el de pago no."
+  "geminiPrivacyNote": "El texto del libro se envía a Google. En el nivel gratuito Google puede usarlo para mejorar sus productos; en el de pago no.",
+  "geminiThinking": "Razonamiento",
+  "geminiThinkingSpeed": "Velocidad",
+  "geminiThinkingBalanced": "Equilibrado",
+  "geminiThinkingQuality": "Calidad",
+  "geminiThinkingHint": "Cuanto más piensa el modelo antes de responder, mejor capta los matices, y más tarda y cuesta cada solicitud (el razonamiento se cobra como salida)."
 }

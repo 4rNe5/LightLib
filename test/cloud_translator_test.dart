@@ -22,6 +22,7 @@ class _Server implements HttpClientAdapter {
   _Server(this.answer);
   final (int, Object) Function(List<String> paragraphs, Map body) answer;
   final List<Map> bodies = [];
+  final List<Map> refinements = [];
 
   @override
   Future<ResponseBody> fetch(RequestOptions options,
@@ -31,9 +32,11 @@ class _Server implements HttpClientAdapter {
     final user = ((body['contents'] as List).first['parts'] as List)
         .first['text'] as String;
     final start = user.lastIndexOf('\n[');
-    final list = start < 0
-        ? <String>[]
-        : (jsonDecode(user.substring(start + 1)) as List).cast<String>();
+    final raw = start < 0 ? <Object?>[] : jsonDecode(user.substring(start + 1)) as List;
+    refinements.addAll(raw.whereType<Map>());
+    final list = [
+      for (final x in raw) x is Map ? 'FIX:${x['source']}' : x as String
+    ];
     final (status, data) = answer(list, body);
     return ResponseBody.fromString(jsonEncode(data), status, headers: {
       'content-type': ['application/json']
@@ -43,6 +46,10 @@ class _Server implements HttpClientAdapter {
   @override
   void close({bool force = false}) {}
 }
+
+/// A Korean stand-in for a test paragraph (no kana left, so it passes
+/// the checks).
+String ko(String t) => '번역${t.runes.first}';
 
 Map _ok(List<String> out) => {
       'candidates': [
@@ -130,7 +137,7 @@ void main() {
   });
 
   test('a batch in one request, one translation each, counted', () async {
-    final server = _Server((p, _) => (200, _ok([for (final t in p) 'ko:$t'])));
+    final server = _Server((p, _) => (200, _ok([for (final t in p) ko(t)])));
     final heard = <int, String>{};
     final out = await translator(server).translateBatch(['あ', 'い', 'う'],
         targetLanguage: 'Korean',
@@ -138,7 +145,7 @@ void main() {
         before: const ['前'],
         beforeTranslations: const ['앞'],
         onEach: (i, t) => heard[i] = t);
-    expect(out, ['ko:あ', 'ko:い', 'ko:う']);
+    expect(out, [ko('あ'), ko('い'), ko('う')]);
     expect(heard.length, 3);
     expect(server.bodies.length, 1);
     final system = ((server.bodies.single['systemInstruction'] as Map)['parts']
@@ -166,12 +173,12 @@ void main() {
           }
         );
       }
-      return (200, _ok([for (final t in p) 'ko:$t']));
+      return (200, _ok([for (final t in p) ko(t)]));
     });
     final out = await translator(server).translateBatch(
         ['一', '禁止', '二', '過激', '三', '四'],
         targetLanguage: 'Korean');
-    expect(out, ['ko:一', '禁止', 'ko:二', 'device:過激', 'ko:三', 'ko:四']);
+    expect(out, [ko('一'), '禁止', ko('二'), 'device:過激', ko('三'), ko('四')]);
     expect(device.asked, ['過激']);
     expect(settings.usage.blockedProhibited, 1);
     expect(settings.usage.blockedSafety, 1);
@@ -238,7 +245,7 @@ void main() {
           }
         );
       }
-      return (200, _ok([for (final x in p) 'ko:$x']));
+      return (200, _ok([for (final x in p) ko(x)]));
     });
     final dio = Dio()..httpClientAdapter = server;
     final t = CloudTranslator(
@@ -246,17 +253,17 @@ void main() {
             dio: dio, settings: settings, sleep: (d) async => waits.add(d)),
         settings: settings,
         device: () async => device);
-    expect(await t.translateBatch(['a'], targetLanguage: 'Korean'), ['ko:a']);
+    expect(await t.translateBatch(['a'], targetLanguage: 'Korean'), [ko('a')]);
     expect(waits, contains(const Duration(seconds: 7)));
   });
 
   test('a short answer is asked again in halves, then the phone', () async {
     final server = _Server((p, _) => p.length > 1
         ? (200, _ok(['only one']))
-        : (200, _ok(['ko:${p.single}'])));
+        : (200, _ok([ko(p.single)])));
     final out = await translator(server)
         .translateBatch(['a', 'b', 'c', 'd'], targetLanguage: 'Korean');
-    expect(out, ['ko:a', 'ko:b', 'ko:c', 'ko:d']);
+    expect(out, [ko('a'), ko('b'), ko('c'), ko('d')]);
   });
 
   test('a key that does not work stops the run', () async {
@@ -286,5 +293,24 @@ void main() {
         await translator(server).translateBatch(['a'], targetLanguage: 'Korean');
     expect(out, ['']);
     expect(device.asked, isEmpty);
+  });
+
+  test('a translation failing a check goes back once with its problem, and '
+      'the better one is kept', () async {
+    final server = _Server((p, _) => (
+          200,
+          _ok([
+            for (final t in p)
+              t.startsWith('FIX:') ? '고친 번역' : (t == 'う' ? 'う가 남음' : ko(t))
+          ])
+        ));
+    final out = await translator(server)
+        .translateBatch(['あ', 'う'], targetLanguage: 'Korean');
+    expect(out, [ko('あ'), '고친 번역']);
+    expect(server.refinements.single['source'], 'う');
+    expect(server.refinements.single['draft'], 'う가 남음');
+    expect((server.refinements.single['problems'] as List).single,
+        contains('untranslated'));
+    expect(server.bodies.length, 2);
   });
 }

@@ -3003,6 +3003,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The book\'s text is sent to Google. On the free tier Google may use it to improve its products; on the paid tier it does not.'**
   String get geminiPrivacyNote;
+
+  /// geminiThinking
+  ///
+  /// In en, this message translates to:
+  /// **'Thinking'**
+  String get geminiThinking;
+
+  /// geminiThinkingSpeed
+  ///
+  /// In en, this message translates to:
+  /// **'Speed first'**
+  String get geminiThinkingSpeed;
+
+  /// geminiThinkingBalanced
+  ///
+  /// In en, this message translates to:
+  /// **'Balanced'**
+  String get geminiThinkingBalanced;
+
+  /// geminiThinkingQuality
+  ///
+  /// In en, this message translates to:
+  /// **'Quality first'**
+  String get geminiThinkingQuality;
+
+  /// geminiThinkingHint
+  ///
+  /// In en, this message translates to:
+  /// **'The more the model thinks before answering, the better it handles nuance, and the longer and costlier each request (thinking is billed as output).'**
+  String get geminiThinkingHint;
 }
 
 class _AppLocalizationsDelegate

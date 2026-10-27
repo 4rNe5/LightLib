@@ -50,5 +50,7 @@ void main() {
       expect(find.byKey(ValueKey('geminiSafety-${h.name}')), findsOneWidget);
     }
     expect(find.text('차단 안 함'), findsNWidgets(4));
+    expect(find.text('속도 우선'), findsOneWidget);
+    expect(find.text('퀄리티 우선'), findsOneWidget);
   });
 }

@@ -488,5 +488,10 @@
   "geminiDeviceFallback": "Continuer sur l'appareil si Gemini ne peut pas",
   "geminiDeviceFallbackHint": "Quota épuisé, un filtre, pas de connexion : seulement ces paragraphes, avec le modèle du téléphone.",
   "geminiConcurrency": "Requêtes simultanées",
-  "geminiPrivacyNote": "Le texte du livre est envoyé à Google. Au niveau gratuit, Google peut l'utiliser pour améliorer ses produits ; au niveau payant, non."
+  "geminiPrivacyNote": "Le texte du livre est envoyé à Google. Au niveau gratuit, Google peut l'utiliser pour améliorer ses produits ; au niveau payant, non.",
+  "geminiThinking": "Réflexion",
+  "geminiThinkingSpeed": "Vitesse",
+  "geminiThinkingBalanced": "Équilibré",
+  "geminiThinkingQuality": "Qualité",
+  "geminiThinkingHint": "Plus le modèle réfléchit avant de répondre, mieux il rend les nuances, et plus chaque requête est longue et coûteuse (la réflexion est facturée comme sortie)."
 }

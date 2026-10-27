@@ -16,7 +16,10 @@ import 'package:openlib/services/translation/book_glossary.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart';
 import 'package:openlib/services/translation/gemini/gemini_client.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
+import 'package:openlib/services/translation/paragraph_text.dart'
+    show cleanTranslation, leftoverSourceScript, polishTranslation;
 import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/services/translation/translation_qa.dart';
 import 'package:openlib/services/translation/translator.dart';
 
 /// The instructions (system) and the request (user) for [texts].
@@ -86,6 +89,21 @@ import 'package:openlib/services/translation/translator.dart';
     ..writeln('Translate these ${texts.length} paragraphs:')
     ..write(jsonEncode(texts));
   return (system: system.toString(), user: user.toString());
+}
+
+/// A request to correct [items]: each source, its draft and what is
+/// wrong with it; answered like a translation request.
+String cloudRefinementRequest(
+    List<({String source, String draft, List<String> problems})> items,
+    String targetLanguage) {
+  return 'These $targetLanguage translations failed a check. Correct each '
+      'one (the problems are listed with it), keeping everything that was '
+      'right, and answer with {"translations": [...]}: one corrected '
+      'translation per item, in the same order.\n'
+      '${jsonEncode([
+        for (final i in items)
+          {'source': i.source, 'draft': i.draft, 'problems': i.problems}
+      ])}';
 }
 
 class CloudTranslator implements Translator {
@@ -181,6 +199,54 @@ class CloudTranslator implements Translator {
       _settings.recordOnDevice(indexes.length);
     }
 
+    Future<void> refine(Map<int, (String, String, List<QaIssue>)> flagged,
+        String system) async {
+      final items = flagged.entries.toList();
+      List<String>? fixed;
+      try {
+        final r = await _client.generate(
+          system: system,
+          user: cloudRefinementRequest([
+            for (final e in items)
+              (
+                source: texts[e.key],
+                draft: e.value.$1,
+                problems: [
+                  for (final q in e.value.$3) qaProblem(q, targetLanguage)
+                ],
+              ),
+          ], targetLanguage),
+          schema: translationSchema(items.length),
+          maxOutputTokens:
+              (items.fold<int>(0, (n, e) => n + texts[e.key].length * 3) + 1024)
+                  .clamp(1024, 65536),
+        );
+        if (r.block == null) fixed = parseTranslations(r.text, items.length);
+      } on GeminiError catch (e) {
+        if (e.kind == GeminiErrorKind.badKey) rethrow;
+      }
+      for (var k = 0; k < items.length; k++) {
+        final i = items[k].key;
+        final (_, polishedDraft, before) = items[k].value;
+        var best = polishedDraft;
+        final again = fixed?[k];
+        if (again != null && again.isNotEmpty) {
+          final polished = polishTranslation(
+              cleanTranslation(again), texts[i], targetLanguage);
+          final after = checkTranslation(texts[i], polished,
+              targetLanguage: targetLanguage, glossary: glossary);
+          if (polished.isNotEmpty && refinedIsBetter(before, after)) {
+            best = polished;
+          }
+        }
+        if (best.isNotEmpty) {
+          deliver(i, best);
+        } else {
+          await onDevice([i]);
+        }
+      }
+    }
+
     Future<void> run(List<int> indexes, {int depth = 0}) async {
       if (_settings.usage.exhausted) return onDevice(indexes);
       final part = [for (final i in indexes) texts[i]];
@@ -247,8 +313,31 @@ class CloudTranslator implements Translator {
         }
         return onDevice(indexes);
       }
+      // The same checks as the phone's translations: what fails goes
+      // back once, all together, with its problems named.
+      final flagged = <int, (String, String, List<QaIssue>)>{};
       for (var k = 0; k < got.length; k++) {
-        deliver(indexes[k], got[k]);
+        final i = indexes[k];
+        final cleaned = cleanTranslation(got[k]);
+        final leftover =
+            leftoverSourceScript(cleaned, targetLanguage).isNotEmpty;
+        final polished = polishTranslation(cleaned, texts[i], targetLanguage);
+        final issues = [
+          if (leftover) QaIssue.leftoverSource,
+          ...checkTranslation(texts[i], polished,
+                  targetLanguage: targetLanguage, glossary: glossary)
+              .where((q) => q != QaIssue.leftoverSource),
+        ];
+        if (issues.isEmpty) {
+          deliver(i, polished);
+        } else {
+          // The model sees what it wrote (kana and all); the polished one
+          // stays if the correction is no better.
+          flagged[i] = (leftover ? cleaned : polished, polished, issues);
+        }
+      }
+      if (flagged.isNotEmpty) {
+        await refine(flagged, prompt.system);
       }
     }
 

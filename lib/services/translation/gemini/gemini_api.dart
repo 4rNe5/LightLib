@@ -16,7 +16,7 @@ class GeminiModel {
     required this.outputPrice,
     required this.freeRpm,
     required this.freeRpd,
-    this.thinkingLevel = 'minimal',
+    this.thinkingLevels = const ['minimal', 'low', 'high'],
   });
 
   final String id;
@@ -30,9 +30,19 @@ class GeminiModel {
   final int freeRpm;
   final int freeRpd;
 
-  /// The least thinking the model takes (thinking tokens are billed as
-  /// output and add nothing to a translation).
-  final String thinkingLevel;
+  /// The thinking levels for speed first, balance and quality first
+  /// (thinking tokens are billed as output and take time).
+  final List<String> thinkingLevels;
+
+  String thinkingLevel(GeminiThinking mode) => thinkingLevels[mode.index];
+
+  /// Output room on top of the answer for [mode]'s thinking (it counts
+  /// toward the output limit, and a cut-off answer is lost).
+  static int thinkingRoom(GeminiThinking mode) => switch (mode) {
+        GeminiThinking.speed => 1024,
+        GeminiThinking.balanced => 8192,
+        GeminiThinking.quality => 24576,
+      };
 
   /// What [input] and [output] tokens cost, in US dollars.
   double cost(int input, int output) =>
@@ -69,11 +79,22 @@ const geminiModels = <GeminiModel>[
       freeRpm: 5,
       freeRpd: 20,
       // 3.8 Flash refuses "minimal".
-      thinkingLevel: 'low'),
+      thinkingLevels: ['low', 'medium', 'high']),
 ];
 
 GeminiModel geminiModelFor(String? id) => geminiModels
     .firstWhere((m) => m.id == id, orElse: () => geminiModels.first);
+
+/// How much the model thinks before it answers: least for speed, most
+/// for quality.
+enum GeminiThinking {
+  speed,
+  balanced,
+  quality;
+
+  static GeminiThinking parse(Object? name) => GeminiThinking.values
+      .firstWhere((t) => t.name == name, orElse: () => GeminiThinking.speed);
+}
 
 /// The categories the API lets a caller set a threshold for.
 enum GeminiHarm {
@@ -128,11 +149,16 @@ Map<String, Object?> geminiRequest({
   Map<String, Object?>? schema,
   GeminiSchemaStyle schemaStyle = GeminiSchemaStyle.responseFormat,
   bool thinking = true,
+  GeminiThinking thinkingMode = GeminiThinking.speed,
   int? maxOutputTokens,
 }) {
   final config = <String, Object?>{
-    if (maxOutputTokens != null) 'maxOutputTokens': maxOutputTokens,
-    if (thinking) 'thinkingConfig': {'thinkingLevel': model.thinkingLevel},
+    if (maxOutputTokens != null)
+      'maxOutputTokens': (maxOutputTokens +
+              (thinking ? GeminiModel.thinkingRoom(thinkingMode) - 1024 : 0))
+          .clamp(256, 65536),
+    if (thinking)
+      'thinkingConfig': {'thinkingLevel': model.thinkingLevel(thinkingMode)},
     if (schema != null)
       ...switch (schemaStyle) {
         GeminiSchemaStyle.responseFormat => {

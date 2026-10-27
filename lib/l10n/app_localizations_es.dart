@@ -1659,4 +1659,20 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get geminiPrivacyNote =>
       'El texto del libro se envía a Google. En el nivel gratuito Google puede usarlo para mejorar sus productos; en el de pago no.';
+
+  @override
+  String get geminiThinking => 'Razonamiento';
+
+  @override
+  String get geminiThinkingSpeed => 'Velocidad';
+
+  @override
+  String get geminiThinkingBalanced => 'Equilibrado';
+
+  @override
+  String get geminiThinkingQuality => 'Calidad';
+
+  @override
+  String get geminiThinkingHint =>
+      'Cuanto más piensa el modelo antes de responder, mejor capta los matices, y más tarda y cuesta cada solicitud (el razonamiento se cobra como salida).';
 }

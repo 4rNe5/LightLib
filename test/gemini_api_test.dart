@@ -209,6 +209,34 @@ void main() {
         DateTime.utc(2026, 12, 2, 8));
   });
 
+  test('thinking: least for speed, more for balance, most for quality, '
+      'with room for it in the output', () {
+    final lite = geminiModelFor('gemini-3.5-flash-lite');
+    final flash = geminiModelFor('gemini-3.8-flash');
+    Map config(GeminiModel m, GeminiThinking t) => geminiRequest(
+            system: 's',
+            user: 'u',
+            model: m,
+            safety: const {},
+            thinkingMode: t,
+            maxOutputTokens: 2000)['generationConfig'] as Map;
+    expect(config(lite, GeminiThinking.speed)['thinkingConfig'],
+        {'thinkingLevel': 'minimal'});
+    expect(config(lite, GeminiThinking.balanced)['thinkingConfig'],
+        {'thinkingLevel': 'low'});
+    expect(config(lite, GeminiThinking.quality)['thinkingConfig'],
+        {'thinkingLevel': 'high'});
+    expect(config(flash, GeminiThinking.speed)['thinkingConfig'],
+        {'thinkingLevel': 'low'});
+    expect(config(flash, GeminiThinking.quality)['thinkingConfig'],
+        {'thinkingLevel': 'high'});
+    expect(config(lite, GeminiThinking.speed)['maxOutputTokens'], 2000);
+    expect(config(lite, GeminiThinking.balanced)['maxOutputTokens'], 9168);
+    expect(config(lite, GeminiThinking.quality)['maxOutputTokens'], 25552);
+    expect(GeminiThinking.parse('quality'), GeminiThinking.quality);
+    expect(GeminiThinking.parse(null), GeminiThinking.speed);
+  });
+
   test('cost at paid prices', () {
     final lite = geminiModelFor('gemini-3.5-flash-lite');
     expect(lite.cost(1000000, 1000000), closeTo(2.80, 1e-9));

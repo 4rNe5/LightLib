@@ -137,6 +137,28 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
               const SizedBox(height: 12),
               _modelPicker(l10n, small),
               const SizedBox(height: 12),
+              Text(l10n.geminiThinking, style: theme.textTheme.titleSmall),
+              const SizedBox(height: 6),
+              SegmentedButton<GeminiThinking>(
+                key: const ValueKey('geminiThinking'),
+                showSelectedIcon: false,
+                segments: [
+                  ButtonSegment(
+                      value: GeminiThinking.speed,
+                      label: Text(l10n.geminiThinkingSpeed)),
+                  ButtonSegment(
+                      value: GeminiThinking.balanced,
+                      label: Text(l10n.geminiThinkingBalanced)),
+                  ButtonSegment(
+                      value: GeminiThinking.quality,
+                      label: Text(l10n.geminiThinkingQuality)),
+                ],
+                selected: {_settings.thinking},
+                onSelectionChanged: (v) => _settings.setThinking(v.first),
+              ),
+              const SizedBox(height: 4),
+              Text(l10n.geminiThinkingHint, style: small),
+              const SizedBox(height: 12),
               if (_settings.hasKey) _usageCard(l10n, theme, small),
               const SizedBox(height: 12),
               Text(l10n.geminiSafety, style: theme.textTheme.titleSmall),

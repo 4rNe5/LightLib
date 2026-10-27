@@ -1590,4 +1590,20 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get geminiPrivacyNote =>
       '本文が Google に送信されます。無料枠では Google の製品改善に使われることがあり、有料枠では使われません。';
+
+  @override
+  String get geminiThinking => '思考の量';
+
+  @override
+  String get geminiThinkingSpeed => '速度優先';
+
+  @override
+  String get geminiThinkingBalanced => 'バランス';
+
+  @override
+  String get geminiThinkingQuality => '品質優先';
+
+  @override
+  String get geminiThinkingHint =>
+      '答える前に長く考えるほどニュアンスをよく汲み取りますが、リクエストごとの時間と費用が増えます（思考トークンは出力料金）。';
 }

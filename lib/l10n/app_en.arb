@@ -2245,5 +2245,25 @@
   "geminiPrivacyNote": "The book's text is sent to Google. On the free tier Google may use it to improve its products; on the paid tier it does not.",
   "@geminiPrivacyNote": {
     "description": "geminiPrivacyNote"
+  },
+  "geminiThinking": "Thinking",
+  "@geminiThinking": {
+    "description": "geminiThinking"
+  },
+  "geminiThinkingSpeed": "Speed first",
+  "@geminiThinkingSpeed": {
+    "description": "geminiThinkingSpeed"
+  },
+  "geminiThinkingBalanced": "Balanced",
+  "@geminiThinkingBalanced": {
+    "description": "geminiThinkingBalanced"
+  },
+  "geminiThinkingQuality": "Quality first",
+  "@geminiThinkingQuality": {
+    "description": "geminiThinkingQuality"
+  },
+  "geminiThinkingHint": "The more the model thinks before answering, the better it handles nuance, and the longer and costlier each request (thinking is billed as output).",
+  "@geminiThinkingHint": {
+    "description": "geminiThinkingHint"
   }
 }

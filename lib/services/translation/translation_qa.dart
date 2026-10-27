@@ -130,6 +130,10 @@ String refinementPrompt({
   return b.toString().trimRight();
 }
 
+/// What [issue] means, said to the model.
+String qaProblem(QaIssue issue, String targetLanguage) =>
+    _problem(issue, targetLanguage);
+
 String _problem(QaIssue issue, String targetLanguage) => switch (issue) {
       QaIssue.leftoverSource =>
         'Japanese text is left untranslated; every word must be $targetLanguage.',

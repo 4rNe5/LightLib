@@ -94,6 +94,7 @@ class GeminiClient {
         schema: schema,
         schemaStyle: schemaStyle,
         thinking: !_noThinking.contains(m.id),
+        thinkingMode: _settings.thinking,
         maxOutputTokens: maxOutputTokens,
       );
       GeminiError error;

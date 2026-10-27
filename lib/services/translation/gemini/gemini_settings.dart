@@ -22,6 +22,7 @@ const translationEnginePref = 'translationEngine';
 const geminiModelPref = 'geminiModel';
 const geminiSafetyPref = 'geminiSafety';
 const geminiConcurrencyPref = 'geminiConcurrency';
+const geminiThinkingPref = 'geminiThinking';
 
 /// Preference: when Gemini cannot translate (the day's quota, a filter, no
 /// connection), the model on the phone does (1, the default) or the
@@ -175,6 +176,7 @@ class GeminiSettings extends ChangeNotifier {
     for (final h in GeminiHarm.values) h: GeminiBlock.off
   };
   int _concurrency = 3;
+  GeminiThinking _thinking = GeminiThinking.speed;
   bool _deviceFallback = true;
   GeminiUsage? _usage;
   Future<void>? _loading;
@@ -188,6 +190,7 @@ class GeminiSettings extends ChangeNotifier {
   GeminiModel get model => _model;
   Map<GeminiHarm, GeminiBlock> get safety => Map.unmodifiable(_safety);
   int get concurrency => _concurrency;
+  GeminiThinking get thinking => _thinking;
   bool get deviceFallback => _deviceFallback;
 
   GeminiUsage get usage {
@@ -215,6 +218,7 @@ class GeminiSettings extends ChangeNotifier {
     final c = int.tryParse('${await pref(geminiConcurrencyPref)}');
     if (c != null) _concurrency = c.clamp(1, 8);
     _deviceFallback = await pref(geminiDeviceFallbackPref) != 0;
+    _thinking = GeminiThinking.parse(await pref(geminiThinkingPref));
     _usage =
         GeminiUsage.fromJson(await pref(geminiUsagePref), quotaDay(clock()));
     try {
@@ -281,6 +285,12 @@ class GeminiSettings extends ChangeNotifier {
     await _save(geminiConcurrencyPref, _concurrency);
   }
 
+  Future<void> setThinking(GeminiThinking mode) async {
+    _thinking = mode;
+    notifyListeners();
+    await _save(geminiThinkingPref, mode.name);
+  }
+
   Future<void> setDeviceFallback(bool on) async {
     _deviceFallback = on;
     notifyListeners();
@@ -344,6 +354,7 @@ class GeminiSettings extends ChangeNotifier {
     GeminiUsage? usage,
     bool? deviceFallback,
     int? concurrency,
+    GeminiThinking? thinking,
   }) {
     if (useGemini != null) _useGemini = useGemini;
     if (key != null) _key = key;
@@ -351,6 +362,7 @@ class GeminiSettings extends ChangeNotifier {
     if (usage != null) _usage = usage;
     if (deviceFallback != null) _deviceFallback = deviceFallback;
     if (concurrency != null) _concurrency = concurrency;
+    if (thinking != null) _thinking = thinking;
     _loading = Future.value();
     notifyListeners();
   }
