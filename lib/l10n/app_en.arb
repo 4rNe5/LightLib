@@ -2008,5 +2008,242 @@
   "coverHideHint": "The library, the book page and the home-screen widgets show the title instead",
   "@coverHideHint": {
     "description": "Library book: what hiding the cover does"
+  },
+  "translationEngine": "Translation engine",
+  "@translationEngine": {
+    "description": "translationEngine"
+  },
+  "translationEngineDevice": "On the device",
+  "@translationEngineDevice": {
+    "description": "translationEngineDevice"
+  },
+  "translationEngineGemini": "Gemini",
+  "@translationEngineGemini": {
+    "description": "translationEngineGemini"
+  },
+  "translationEngineGeminiHint": "Google Gemini translates over the internet: a book in minutes, better than the model on the phone.",
+  "@translationEngineGeminiHint": {
+    "description": "translationEngineGeminiHint"
+  },
+  "geminiKey": "API key",
+  "@geminiKey": {
+    "description": "geminiKey"
+  },
+  "geminiKeyHint": "Free from Google AI Studio (aistudio.google.com/apikey). Kept on this device only, never in backups.",
+  "@geminiKeyHint": {
+    "description": "geminiKeyHint"
+  },
+  "geminiKeySaved": "Saved key {hint}",
+  "@geminiKeySaved": {
+    "description": "geminiKeySaved",
+    "placeholders": {
+      "hint": {
+        "type": "String"
+      }
+    }
+  },
+  "geminiGetKey": "Get a key",
+  "@geminiGetKey": {
+    "description": "geminiGetKey"
+  },
+  "geminiTest": "Save and test",
+  "@geminiTest": {
+    "description": "geminiTest"
+  },
+  "geminiTestOk": "Connected",
+  "@geminiTestOk": {
+    "description": "geminiTestOk"
+  },
+  "geminiTestBadKey": "The key doesn't work",
+  "@geminiTestBadKey": {
+    "description": "geminiTestBadKey"
+  },
+  "geminiTestFailed": "Could not connect: {error}",
+  "@geminiTestFailed": {
+    "description": "geminiTestFailed",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "geminiModel": "Model",
+  "@geminiModel": {
+    "description": "geminiModel"
+  },
+  "geminiModelInfo": "Free: about {rpd} requests a day · paid ${input} / ${output} per 1M tokens",
+  "@geminiModelInfo": {
+    "description": "geminiModelInfo",
+    "placeholders": {
+      "rpd": {
+        "type": "int"
+      },
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "geminiUsageTitle": "Today's use",
+  "@geminiUsageTitle": {
+    "description": "geminiUsageTitle"
+  },
+  "geminiUsageResets": "Resets at {time} (midnight US Pacific)",
+  "@geminiUsageResets": {
+    "description": "geminiUsageResets",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "geminiUsageRequests": "Requests {count} / {limit}",
+  "@geminiUsageRequests": {
+    "description": "geminiUsageRequests",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "geminiUsageRequestsEstimate": "Requests {count} (free limit about {limit})",
+  "@geminiUsageRequestsEstimate": {
+    "description": "geminiUsageRequestsEstimate",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "geminiUsageTokens": "Tokens in {input} · out {output}",
+  "@geminiUsageTokens": {
+    "description": "geminiUsageTokens",
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "geminiUsageParagraphs": "Paragraphs translated {count}",
+  "@geminiUsageParagraphs": {
+    "description": "geminiUsageParagraphs",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "geminiUsageBlocked": "Blocked by filters {safety} · refused by policy {prohibited}",
+  "@geminiUsageBlocked": {
+    "description": "geminiUsageBlocked",
+    "placeholders": {
+      "safety": {
+        "type": "int"
+      },
+      "prohibited": {
+        "type": "int"
+      }
+    }
+  },
+  "geminiUsageOnDevice": "Translated on the device instead {count}",
+  "@geminiUsageOnDevice": {
+    "description": "geminiUsageOnDevice",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "geminiTierFree": "Free tier",
+  "@geminiTierFree": {
+    "description": "geminiTierFree"
+  },
+  "geminiTierPaid": "Paid tier",
+  "@geminiTierPaid": {
+    "description": "geminiTierPaid"
+  },
+  "geminiTierUnknown": "Tier not known yet (shown once a limit is reached)",
+  "@geminiTierUnknown": {
+    "description": "geminiTierUnknown"
+  },
+  "geminiCost": "At paid prices: {cost}",
+  "@geminiCost": {
+    "description": "geminiCost",
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "geminiExhausted": "Today's quota is used up: the device translates until it resets.",
+  "@geminiExhausted": {
+    "description": "geminiExhausted"
+  },
+  "geminiSafety": "Safety filters",
+  "@geminiSafety": {
+    "description": "geminiSafety"
+  },
+  "geminiSafetyHint": "For books rated 15+ or adult, leave these off. What Google always blocks (such as anything endangering children) stays blocked whatever is set; such paragraphs stay in the original.",
+  "@geminiSafetyHint": {
+    "description": "geminiSafetyHint"
+  },
+  "geminiHarmHarassment": "Harassment",
+  "@geminiHarmHarassment": {
+    "description": "geminiHarmHarassment"
+  },
+  "geminiHarmHate": "Hate speech",
+  "@geminiHarmHate": {
+    "description": "geminiHarmHate"
+  },
+  "geminiHarmSexual": "Sexual content",
+  "@geminiHarmSexual": {
+    "description": "geminiHarmSexual"
+  },
+  "geminiHarmDangerous": "Dangerous content",
+  "@geminiHarmDangerous": {
+    "description": "geminiHarmDangerous"
+  },
+  "geminiBlockOff": "Off",
+  "@geminiBlockOff": {
+    "description": "geminiBlockOff"
+  },
+  "geminiBlockOnlyHigh": "High only",
+  "@geminiBlockOnlyHigh": {
+    "description": "geminiBlockOnlyHigh"
+  },
+  "geminiBlockMedium": "Medium and above",
+  "@geminiBlockMedium": {
+    "description": "geminiBlockMedium"
+  },
+  "geminiBlockLow": "Low and above",
+  "@geminiBlockLow": {
+    "description": "geminiBlockLow"
+  },
+  "geminiDeviceFallback": "Continue on the device when Gemini can't",
+  "@geminiDeviceFallback": {
+    "description": "geminiDeviceFallback"
+  },
+  "geminiDeviceFallbackHint": "Quota used up, a filter, no connection: those paragraphs only, with the model on the phone.",
+  "@geminiDeviceFallbackHint": {
+    "description": "geminiDeviceFallbackHint"
+  },
+  "geminiConcurrency": "Requests at once",
+  "@geminiConcurrency": {
+    "description": "geminiConcurrency"
+  },
+  "geminiPrivacyNote": "The book's text is sent to Google. On the free tier Google may use it to improve its products; on the paid tier it does not.",
+  "@geminiPrivacyNote": {
+    "description": "geminiPrivacyNote"
   }
 }

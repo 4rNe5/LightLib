@@ -14,7 +14,8 @@ void main() {
           bool chargingOnly = false,
           bool priority = false,
           bool fullSpeed = false,
-          bool cooling = false}) =>
+          bool cooling = false,
+          bool cloud = false}) =>
       backgroundWaitReason(
           load: load,
           reading: reading,
@@ -22,7 +23,8 @@ void main() {
           chargingOnly: chargingOnly,
           priority: priority,
           fullSpeed: fullSpeed,
-          cooling: cooling);
+          cooling: cooling,
+          cloud: cloud);
 
   test('waits for the reader, the app, heat, battery and the charger', () {
     const ok = DeviceLoad(battery: 80);
@@ -82,6 +84,21 @@ void main() {
     // fullSpeed alone (not the chosen book) changes nothing.
     expect(reason(const DeviceLoad(thermal: 3), fullSpeed: true),
         BookTranslationWait.warm);
+  });
+
+  test('with Gemini: no heat, battery or reader waits; the app and the '
+      'charger still count', () {
+    expect(reason(const DeviceLoad(thermal: 4, battery: 3, powerSave: true),
+            reading: true, cloud: true),
+        BookTranslationWait.none);
+    expect(reason(DeviceLoad.nominal, canRunNow: false, cloud: true),
+        BookTranslationWait.appClosed);
+    expect(reason(DeviceLoad.nominal, chargingOnly: true, cloud: true),
+        BookTranslationWait.needsCharger);
+    expect(
+        reason(DeviceLoad.nominal,
+            chargingOnly: true, priority: true, cloud: true),
+        BookTranslationWait.none);
   });
 
   test('rests by heat: little while cool, more as the phone warms', () {

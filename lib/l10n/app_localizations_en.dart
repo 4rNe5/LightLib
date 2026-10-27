@@ -1489,4 +1489,157 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get coverHideHint =>
       'The library, the book page and the home-screen widgets show the title instead';
+
+  @override
+  String get translationEngine => 'Translation engine';
+
+  @override
+  String get translationEngineDevice => 'On the device';
+
+  @override
+  String get translationEngineGemini => 'Gemini';
+
+  @override
+  String get translationEngineGeminiHint =>
+      'Google Gemini translates over the internet: a book in minutes, better than the model on the phone.';
+
+  @override
+  String get geminiKey => 'API key';
+
+  @override
+  String get geminiKeyHint =>
+      'Free from Google AI Studio (aistudio.google.com/apikey). Kept on this device only, never in backups.';
+
+  @override
+  String geminiKeySaved(String hint) {
+    return 'Saved key $hint';
+  }
+
+  @override
+  String get geminiGetKey => 'Get a key';
+
+  @override
+  String get geminiTest => 'Save and test';
+
+  @override
+  String get geminiTestOk => 'Connected';
+
+  @override
+  String get geminiTestBadKey => 'The key doesn\'t work';
+
+  @override
+  String geminiTestFailed(String error) {
+    return 'Could not connect: $error';
+  }
+
+  @override
+  String get geminiModel => 'Model';
+
+  @override
+  String geminiModelInfo(int rpd, String input, String output) {
+    return 'Free: about $rpd requests a day · paid \$$input / \$$output per 1M tokens';
+  }
+
+  @override
+  String get geminiUsageTitle => 'Today\'s use';
+
+  @override
+  String geminiUsageResets(String time) {
+    return 'Resets at $time (midnight US Pacific)';
+  }
+
+  @override
+  String geminiUsageRequests(int count, int limit) {
+    return 'Requests $count / $limit';
+  }
+
+  @override
+  String geminiUsageRequestsEstimate(int count, int limit) {
+    return 'Requests $count (free limit about $limit)';
+  }
+
+  @override
+  String geminiUsageTokens(String input, String output) {
+    return 'Tokens in $input · out $output';
+  }
+
+  @override
+  String geminiUsageParagraphs(int count) {
+    return 'Paragraphs translated $count';
+  }
+
+  @override
+  String geminiUsageBlocked(int safety, int prohibited) {
+    return 'Blocked by filters $safety · refused by policy $prohibited';
+  }
+
+  @override
+  String geminiUsageOnDevice(int count) {
+    return 'Translated on the device instead $count';
+  }
+
+  @override
+  String get geminiTierFree => 'Free tier';
+
+  @override
+  String get geminiTierPaid => 'Paid tier';
+
+  @override
+  String get geminiTierUnknown =>
+      'Tier not known yet (shown once a limit is reached)';
+
+  @override
+  String geminiCost(String cost) {
+    return 'At paid prices: $cost';
+  }
+
+  @override
+  String get geminiExhausted =>
+      'Today\'s quota is used up: the device translates until it resets.';
+
+  @override
+  String get geminiSafety => 'Safety filters';
+
+  @override
+  String get geminiSafetyHint =>
+      'For books rated 15+ or adult, leave these off. What Google always blocks (such as anything endangering children) stays blocked whatever is set; such paragraphs stay in the original.';
+
+  @override
+  String get geminiHarmHarassment => 'Harassment';
+
+  @override
+  String get geminiHarmHate => 'Hate speech';
+
+  @override
+  String get geminiHarmSexual => 'Sexual content';
+
+  @override
+  String get geminiHarmDangerous => 'Dangerous content';
+
+  @override
+  String get geminiBlockOff => 'Off';
+
+  @override
+  String get geminiBlockOnlyHigh => 'High only';
+
+  @override
+  String get geminiBlockMedium => 'Medium and above';
+
+  @override
+  String get geminiBlockLow => 'Low and above';
+
+  @override
+  String get geminiDeviceFallback =>
+      'Continue on the device when Gemini can\'t';
+
+  @override
+  String get geminiDeviceFallbackHint =>
+      'Quota used up, a filter, no connection: those paragraphs only, with the model on the phone.';
+
+  @override
+  String get geminiConcurrency => 'Requests at once';
+
+  @override
+  String get geminiPrivacyNote =>
+      'The book\'s text is sent to Google. On the free tier Google may use it to improve its products; on the paid tier it does not.';
 }

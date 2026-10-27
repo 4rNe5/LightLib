@@ -24,11 +24,14 @@ import 'package:openlib/services/epub_package.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/translation/background_translation_notice.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
-import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/reader_translation_controller.dart'
     show precedingContext;
+import 'package:openlib/services/translation/gemini/cloud_translator.dart';
+import 'package:openlib/services/translation/gemini/gemini_api.dart'
+    show GeminiError;
+import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/services/translation/translator.dart';
 
 /// Preference: translate library books in the background (off unless
@@ -83,7 +86,16 @@ BookTranslationWait backgroundWaitReason({
   bool priority = false,
   bool fullSpeed = false,
   bool cooling = false,
+  bool cloud = false,
 }) {
+  // Gemini works elsewhere: the phone's heat, battery and reader do not
+  // matter, only that the app runs (and the charger, when asked for).
+  if (cloud) {
+    if (!canRunNow) return BookTranslationWait.appClosed;
+    return !priority && chargingOnly && !load.charging
+        ? BookTranslationWait.needsCharger
+        : BookTranslationWait.none;
+  }
   if (reading && !priority) return BookTranslationWait.reading;
   if (!canRunNow) return BookTranslationWait.appClosed;
   if (priority && fullSpeed) {
@@ -229,6 +241,10 @@ class BookTranslationService extends ChangeNotifier
   int _bookNumber = 0;
   int _bookCount = 0;
   String? _currentFile;
+
+  /// Gemini translates this run: no heat or reader waits, several
+  /// requests at once.
+  bool _cloud = false;
   String? _priorityFile;
   String? _priorityDoneTitle;
   bool _cooling = false;
@@ -367,14 +383,18 @@ class BookTranslationService extends ChangeNotifier
     _running = true;
     _translatedThisRun = 0;
     notifyListeners();
-    LocalLlmTranslator? translator;
+    Translator? translator;
     var finished = false;
     try {
       while (_rescan) {
         _rescan = false;
         if (!_active) break;
-        final model = await TranslationModelStore.instance.activeModel();
-        if (model == null) break;
+        // The engine may have changed (Gemini on or off, another model).
+        await translator?.dispose();
+        translator = null;
+        final modelId = await TranslationEngines.cacheModelId();
+        if (modelId == null) break;
+        _cloud = await TranslationEngines.cloud();
         _l10n = await _localizations();
         final target = languageForCode(await MyLibraryDb.instance
             .getPreference(translationTargetLanguagePref)
@@ -423,14 +443,14 @@ class BookTranslationService extends ChangeNotifier
             }
             continue;
           }
-          translator ??= await SharedTranslationEngine.instance.acquire();
+          translator ??= await TranslationEngines.forLibrary();
           if (translator == null) break;
           await _translateBook(
             translator: translator,
             path: path,
             fileName: fileName,
             title: book.title,
-            modelId: TranslationStyle.cacheModelId(model.fileName),
+            modelId: modelId,
             targetLanguage: target,
           );
           if (fileName == _priorityFile &&
@@ -451,7 +471,7 @@ class BookTranslationService extends ChangeNotifier
       _logger.warning('Background book translation stopped',
           tag: 'BookTranslation', error: e);
     } finally {
-      if (translator != null) SharedTranslationEngine.instance.release();
+      await translator?.dispose().catchError((_) {});
       _running = false;
       _wait = BookTranslationWait.none;
       _currentFile = null;
@@ -510,6 +530,7 @@ class BookTranslationService extends ChangeNotifier
         priority: _urgent,
         fullSpeed: _fullSpeed,
         cooling: _cooling,
+        cloud: _cloud,
       );
       _cooling = reason == BookTranslationWait.warm;
       if (reason != _wait) {
@@ -566,17 +587,16 @@ class BookTranslationService extends ChangeNotifier
   }
 
   Future<void> _translateBook({
-    required LocalLlmTranslator translator,
+    required Translator translator,
     required String path,
     required String fileName,
     required String title,
     required String modelId,
     required TranslationLanguage targetLanguage,
   }) async {
-    final cache = await TranslationCache.open(
+    final cache = await TranslationEngines.openCache(
       bookFileName: fileName,
       targetLanguage: targetLanguage.code,
-      modelId: modelId,
     );
     final List<String?> texts;
     try {
@@ -632,30 +652,15 @@ class BookTranslationService extends ChangeNotifier
     final seen = <String>{};
     bool pending(String? t) =>
         t != null && !seen.contains(t) && cache.lookup(t) == null;
-    for (var i = 0; i < texts.length; i++) {
-      final text = texts[i];
-      if (!pending(text)) continue;
-      if (!await _waitForRoom()) {
-        report(BookTranslationState.waiting);
-        await cache.flush();
-        return;
-      }
-      // This paragraph and the next ones, as many as one request takes
-      // (a line-broken paragraph goes alone).
-      final batch = <int>[i];
-      final size = text!.contains('\n') ? 1 : translator.batchSize;
-      for (var k = i + 1; k < texts.length && batch.length < size; k++) {
-        final t = texts[k];
-        if (t == null) continue;
-        if (!pending(t) || t.contains('\n')) break;
-        batch.add(k);
-      }
-      for (final k in batch) {
-        seen.add(texts[k]!);
-      }
-      final started = DateTime.now();
+    // Gemini takes several requests at once; the phone one at a time.
+    final parallel = translator is CloudTranslator ? translator.concurrency : 1;
+    final inFlight = <Future<void>>{};
+    Object? fatal;
+
+    Future<void> work(int i, List<int> batch) async {
+      final text = texts[i]!;
       try {
-        if (batch.length == 1) {
+        if (batch.length == 1 && parallel == 1) {
           final out = await translator.translate(
             text,
             targetLanguage: targetLanguage.englishName,
@@ -669,9 +674,9 @@ class BookTranslationService extends ChangeNotifier
           }
         } else {
           final before = <String>[
-            for (var k = i - 1; k >= 0 && k >= i - 6; k--)
+            for (var k = i - 1; k >= 0 && k >= i - 12; k--)
               if (texts[k] != null) texts[k]!,
-          ].take(3).toList().reversed.toList();
+          ].take(parallel > 1 ? 6 : 3).toList().reversed.toList();
           await translator.translateBatch(
             [for (final k in batch) texts[k]!],
             targetLanguage: targetLanguage.englishName,
@@ -689,18 +694,63 @@ class BookTranslationService extends ChangeNotifier
       } catch (e) {
         _logger.warning('Paragraph translation failed',
             tag: 'BookTranslation', error: e);
-        // A model that cannot load fails every paragraph alike.
-        if (translator.deviceLabel == null) rethrow;
+        // A model that cannot load fails every paragraph alike, and so
+        // does a Gemini key that does not work.
+        if (e is GeminiError ||
+            (parallel == 1 && translator.deviceLabel == null)) {
+          fatal ??= e;
+        }
       }
-      i = batch.last;
-      await cache.flush();
+      // Requests at once save on their own timer (one writer at a time).
+      if (parallel == 1) await cache.flush();
       report(BookTranslationState.translating);
       await _updateNotice();
-      // The time includes waiting behind the reader's requests; resting
-      // in proportion to it only makes the pace gentler.
-      final rest = backgroundRest(DateTime.now().difference(started), _load,
-          priority: _urgent, fullSpeed: _fullSpeed);
-      if (rest > Duration.zero) await Future<void>.delayed(rest);
+    }
+
+    for (var i = 0; i < texts.length; i++) {
+      if (fatal != null) break;
+      final text = texts[i];
+      if (!pending(text)) continue;
+      if (!await _waitForRoom()) {
+        await Future.wait(inFlight);
+        report(BookTranslationState.waiting);
+        await cache.flush();
+        return;
+      }
+      // This paragraph and the next ones, as many as one request takes
+      // (on the phone a line-broken paragraph goes alone).
+      final alone = parallel == 1 && text!.contains('\n');
+      final batch = <int>[i];
+      final size = alone ? 1 : translator.batchSize;
+      for (var k = i + 1; k < texts.length && batch.length < size; k++) {
+        final t = texts[k];
+        if (t == null) continue;
+        if (!pending(t) || (parallel == 1 && t.contains('\n'))) break;
+        batch.add(k);
+      }
+      for (final k in batch) {
+        seen.add(texts[k]!);
+      }
+      final started = DateTime.now();
+      if (parallel > 1) {
+        late final Future<void> request;
+        request = work(i, batch).whenComplete(() => inFlight.remove(request));
+        inFlight.add(request);
+        if (inFlight.length >= parallel) await Future.any(inFlight);
+      } else {
+        await work(i, batch);
+        // The time includes waiting behind the reader's requests;
+        // resting in proportion to it only makes the pace gentler.
+        final rest = backgroundRest(DateTime.now().difference(started), _load,
+            priority: _urgent, fullSpeed: _fullSpeed);
+        if (rest > Duration.zero) await Future<void>.delayed(rest);
+      }
+      i = batch.last;
+    }
+    await Future.wait(inFlight);
+    if (fatal != null) {
+      await cache.flush();
+      throw fatal!;
     }
     await cache.flush();
     report(done() == unique.length

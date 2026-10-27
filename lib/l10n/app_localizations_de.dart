@@ -1507,4 +1507,157 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get coverHideHint =>
       'Bibliothek, Buchseite und Startbildschirm-Widgets zeigen stattdessen den Titel';
+
+  @override
+  String get translationEngine => 'Übersetzungs-Engine';
+
+  @override
+  String get translationEngineDevice => 'Auf dem Gerät';
+
+  @override
+  String get translationEngineGemini => 'Gemini';
+
+  @override
+  String get translationEngineGeminiHint =>
+      'Google Gemini übersetzt über das Internet: ein Buch in Minuten, besser als das Modell auf dem Telefon.';
+
+  @override
+  String get geminiKey => 'API-Schlüssel';
+
+  @override
+  String get geminiKeyHint =>
+      'Kostenlos bei Google AI Studio (aistudio.google.com/apikey). Nur auf diesem Gerät gespeichert, nie in Sicherungen.';
+
+  @override
+  String geminiKeySaved(String hint) {
+    return 'Gespeicherter Schlüssel $hint';
+  }
+
+  @override
+  String get geminiGetKey => 'Schlüssel holen';
+
+  @override
+  String get geminiTest => 'Speichern und testen';
+
+  @override
+  String get geminiTestOk => 'Verbunden';
+
+  @override
+  String get geminiTestBadKey => 'Der Schlüssel funktioniert nicht';
+
+  @override
+  String geminiTestFailed(String error) {
+    return 'Keine Verbindung: $error';
+  }
+
+  @override
+  String get geminiModel => 'Modell';
+
+  @override
+  String geminiModelInfo(int rpd, String input, String output) {
+    return 'Kostenlos: etwa $rpd Anfragen am Tag · bezahlt \$$input / \$$output pro 1 Mio. Tokens';
+  }
+
+  @override
+  String get geminiUsageTitle => 'Heutige Nutzung';
+
+  @override
+  String geminiUsageResets(String time) {
+    return 'Zurückgesetzt um $time (Mitternacht US-Pazifik)';
+  }
+
+  @override
+  String geminiUsageRequests(int count, int limit) {
+    return 'Anfragen $count / $limit';
+  }
+
+  @override
+  String geminiUsageRequestsEstimate(int count, int limit) {
+    return 'Anfragen $count (kostenloses Limit etwa $limit)';
+  }
+
+  @override
+  String geminiUsageTokens(String input, String output) {
+    return 'Tokens rein $input · raus $output';
+  }
+
+  @override
+  String geminiUsageParagraphs(int count) {
+    return 'Übersetzte Absätze $count';
+  }
+
+  @override
+  String geminiUsageBlocked(int safety, int prohibited) {
+    return 'Von Filtern blockiert $safety · laut Richtlinie abgelehnt $prohibited';
+  }
+
+  @override
+  String geminiUsageOnDevice(int count) {
+    return 'Stattdessen auf dem Gerät übersetzt $count';
+  }
+
+  @override
+  String get geminiTierFree => 'Kostenlose Stufe';
+
+  @override
+  String get geminiTierPaid => 'Bezahlte Stufe';
+
+  @override
+  String get geminiTierUnknown =>
+      'Stufe noch unbekannt (wird beim ersten Limit angezeigt)';
+
+  @override
+  String geminiCost(String cost) {
+    return 'Zu Bezahlpreisen: $cost';
+  }
+
+  @override
+  String get geminiExhausted =>
+      'Das heutige Kontingent ist aufgebraucht: bis zum Zurücksetzen übersetzt das Gerät.';
+
+  @override
+  String get geminiSafety => 'Sicherheitsfilter';
+
+  @override
+  String get geminiSafetyHint =>
+      'Für Bücher ab 15 oder für Erwachsene ausgeschaltet lassen. Was Google immer sperrt (etwa alles, was Kinder gefährdet), bleibt gesperrt; solche Absätze bleiben im Original.';
+
+  @override
+  String get geminiHarmHarassment => 'Belästigung';
+
+  @override
+  String get geminiHarmHate => 'Hassrede';
+
+  @override
+  String get geminiHarmSexual => 'Sexuelle Inhalte';
+
+  @override
+  String get geminiHarmDangerous => 'Gefährliche Inhalte';
+
+  @override
+  String get geminiBlockOff => 'Aus';
+
+  @override
+  String get geminiBlockOnlyHigh => 'Nur hoch';
+
+  @override
+  String get geminiBlockMedium => 'Mittel und höher';
+
+  @override
+  String get geminiBlockLow => 'Niedrig und höher';
+
+  @override
+  String get geminiDeviceFallback =>
+      'Auf dem Gerät weiter, wenn Gemini nicht kann';
+
+  @override
+  String get geminiDeviceFallbackHint =>
+      'Kontingent aufgebraucht, ein Filter, keine Verbindung: nur diese Absätze, mit dem Modell auf dem Telefon.';
+
+  @override
+  String get geminiConcurrency => 'Gleichzeitige Anfragen';
+
+  @override
+  String get geminiPrivacyNote =>
+      'Der Buchtext wird an Google gesendet. In der kostenlosen Stufe kann Google ihn zur Verbesserung seiner Produkte nutzen, in der bezahlten nicht.';
 }

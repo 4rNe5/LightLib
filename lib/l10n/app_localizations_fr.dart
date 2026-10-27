@@ -1516,4 +1516,157 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get coverHideHint =>
       'La bibliothèque, la page du livre et les widgets affichent le titre à la place';
+
+  @override
+  String get translationEngine => 'Moteur de traduction';
+
+  @override
+  String get translationEngineDevice => 'Sur l\'appareil';
+
+  @override
+  String get translationEngineGemini => 'Gemini';
+
+  @override
+  String get translationEngineGeminiHint =>
+      'Google Gemini traduit via Internet : un livre en quelques minutes, mieux que le modèle du téléphone.';
+
+  @override
+  String get geminiKey => 'Clé API';
+
+  @override
+  String get geminiKeyHint =>
+      'Gratuite sur Google AI Studio (aistudio.google.com/apikey). Gardée sur cet appareil seulement, jamais dans les sauvegardes.';
+
+  @override
+  String geminiKeySaved(String hint) {
+    return 'Clé enregistrée $hint';
+  }
+
+  @override
+  String get geminiGetKey => 'Obtenir une clé';
+
+  @override
+  String get geminiTest => 'Enregistrer et tester';
+
+  @override
+  String get geminiTestOk => 'Connecté';
+
+  @override
+  String get geminiTestBadKey => 'La clé ne fonctionne pas';
+
+  @override
+  String geminiTestFailed(String error) {
+    return 'Connexion impossible : $error';
+  }
+
+  @override
+  String get geminiModel => 'Modèle';
+
+  @override
+  String geminiModelInfo(int rpd, String input, String output) {
+    return 'Gratuit : environ $rpd requêtes par jour · payant \$$input / \$$output par million de jetons';
+  }
+
+  @override
+  String get geminiUsageTitle => 'Utilisation du jour';
+
+  @override
+  String geminiUsageResets(String time) {
+    return 'Remise à zéro à $time (minuit, heure du Pacifique)';
+  }
+
+  @override
+  String geminiUsageRequests(int count, int limit) {
+    return 'Requêtes $count / $limit';
+  }
+
+  @override
+  String geminiUsageRequestsEstimate(int count, int limit) {
+    return 'Requêtes $count (limite gratuite environ $limit)';
+  }
+
+  @override
+  String geminiUsageTokens(String input, String output) {
+    return 'Jetons entrée $input · sortie $output';
+  }
+
+  @override
+  String geminiUsageParagraphs(int count) {
+    return 'Paragraphes traduits $count';
+  }
+
+  @override
+  String geminiUsageBlocked(int safety, int prohibited) {
+    return 'Bloqués par les filtres $safety · refusés par la politique $prohibited';
+  }
+
+  @override
+  String geminiUsageOnDevice(int count) {
+    return 'Traduits sur l\'appareil à la place $count';
+  }
+
+  @override
+  String get geminiTierFree => 'Niveau gratuit';
+
+  @override
+  String get geminiTierPaid => 'Niveau payant';
+
+  @override
+  String get geminiTierUnknown =>
+      'Niveau encore inconnu (affiché dès qu’une limite est atteinte)';
+
+  @override
+  String geminiCost(String cost) {
+    return 'Au tarif payant : $cost';
+  }
+
+  @override
+  String get geminiExhausted =>
+      'Le quota du jour est épuisé : l\'appareil traduit jusqu\'à la remise à zéro.';
+
+  @override
+  String get geminiSafety => 'Filtres de sécurité';
+
+  @override
+  String get geminiSafetyHint =>
+      'Pour les livres 15+ ou adultes, laissez-les désactivés. Ce que Google bloque toujours (comme ce qui met des enfants en danger) reste bloqué ; ces paragraphes restent en version originale.';
+
+  @override
+  String get geminiHarmHarassment => 'Harcèlement';
+
+  @override
+  String get geminiHarmHate => 'Discours haineux';
+
+  @override
+  String get geminiHarmSexual => 'Contenu sexuel';
+
+  @override
+  String get geminiHarmDangerous => 'Contenu dangereux';
+
+  @override
+  String get geminiBlockOff => 'Désactivé';
+
+  @override
+  String get geminiBlockOnlyHigh => 'Élevé seulement';
+
+  @override
+  String get geminiBlockMedium => 'Moyen et plus';
+
+  @override
+  String get geminiBlockLow => 'Faible et plus';
+
+  @override
+  String get geminiDeviceFallback =>
+      'Continuer sur l\'appareil si Gemini ne peut pas';
+
+  @override
+  String get geminiDeviceFallbackHint =>
+      'Quota épuisé, un filtre, pas de connexion : seulement ces paragraphes, avec le modèle du téléphone.';
+
+  @override
+  String get geminiConcurrency => 'Requêtes simultanées';
+
+  @override
+  String get geminiPrivacyNote =>
+      'Le texte du livre est envoyé à Google. Au niveau gratuit, Google peut l\'utiliser pour améliorer ses produits ; au niveau payant, non.';
 }

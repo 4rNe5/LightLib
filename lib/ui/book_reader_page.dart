@@ -32,6 +32,7 @@ import 'package:openlib/services/translation/reader_translation_controller.dart'
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
 import 'package:openlib/state/state.dart' show saveEpubState;
@@ -524,9 +525,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     }
     setState(() => _translationStarting = true);
     try {
-      final model = await TranslationModelStore.instance.activeModel();
+      final modelId = await TranslationEngines.cacheModelId();
       if (!mounted) return;
-      if (model == null) {
+      if (modelId == null) {
         if (!quiet) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(l10n.translationNoModel),
@@ -541,20 +542,19 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       final target = languageForCode(await MyLibraryDb.instance
           .getPreference(translationTargetLanguagePref)
           .catchError((_) => null) as String?);
-      final cache = await TranslationCache.open(
+      final cache = await TranslationEngines.openCache(
         bookFileName: widget.fileName,
         targetLanguage: target.code,
-        modelId: TranslationStyle.cacheModelId(model.fileName),
       );
-      final shared = await SharedTranslationEngine.instance.acquire();
+      final shared = await TranslationEngines.forReader();
       if (!mounted || shared == null) {
-        if (shared != null) SharedTranslationEngine.instance.release();
+        await shared?.dispose();
         await cache.flush();
         return;
       }
       _targetCode = target.code;
       _cache = cache;
-      final urgent = UrgentTranslator(shared);
+      final urgent = shared;
       _glossaryTranslator = urgent;
       final controller = ReaderTranslationController(
         translator: urgent,
@@ -577,8 +577,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
           .load(widget.fileName)
           .then((_) => _onGlossaryChanged()));
       unawaited(GlossaryService.instance
-          .ensure(
-              bookFile: widget.fileName, bookPath: path, translator: urgent)
+          .ensure(bookFile: widget.fileName, bookPath: path, translator: urgent)
           .then((_) {}, onError: (e) {
         _logger.warning('Glossary not made', tag: 'Glossary', error: e);
       }));

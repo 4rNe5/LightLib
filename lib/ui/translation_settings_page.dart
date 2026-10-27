@@ -20,6 +20,7 @@ import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/ui/components/gemini_engine_section.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 
 String formatGigabytes(int bytes) => '${(bytes / 1e9).toStringAsFixed(2)} GB';
@@ -374,6 +375,8 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
             onChanged: _setLightNovelStyle,
           ),
           const SizedBox(height: 12),
+          GeminiEngineSection(onEngineChanged: _restartTranslation),
+          const SizedBox(height: 20),
           Text(l10n.translationModels,
               style: Theme.of(context).textTheme.titleSmall),
           const SizedBox(height: 4),

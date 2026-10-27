@@ -13,7 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/translation/book_translation_service.dart';
-import 'package:openlib/services/translation/translation_model_store.dart';
+import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 
 class PriorityTranslationCard extends StatelessWidget {
@@ -24,10 +24,9 @@ class PriorityTranslationCard extends StatelessWidget {
 
   Future<void> _start(BuildContext context) async {
     final l10n = AppLocalizations.of(context);
-    final model = await TranslationModelStore.instance
-        .activeModel()
-        .catchError((_) => null);
-    if (model == null) {
+    final engine =
+        await TranslationEngines.cacheModelId().catchError((_) => null);
+    if (engine == null) {
       if (context.mounted) {
         showSnackBar(context: context, message: l10n.priorityTranslateNoModel);
       }

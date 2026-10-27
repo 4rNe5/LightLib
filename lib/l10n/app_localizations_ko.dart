@@ -1442,4 +1442,154 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get coverHideHint => '서재, 책 화면, 홈 화면 위젯에 표지 대신 제목을 보여줍니다';
+
+  @override
+  String get translationEngine => '번역 엔진';
+
+  @override
+  String get translationEngineDevice => '기기';
+
+  @override
+  String get translationEngineGemini => 'Gemini';
+
+  @override
+  String get translationEngineGeminiHint =>
+      'Google Gemini가 인터넷으로 번역합니다. 한 권에 몇 분, 기기 모델보다 높은 품질.';
+
+  @override
+  String get geminiKey => 'API 키';
+
+  @override
+  String get geminiKeyHint =>
+      'Google AI Studio(aistudio.google.com/apikey)에서 무료로 발급. 이 기기에만 저장되고 백업에는 들어가지 않습니다.';
+
+  @override
+  String geminiKeySaved(String hint) {
+    return '저장된 키 $hint';
+  }
+
+  @override
+  String get geminiGetKey => '키 발급받기';
+
+  @override
+  String get geminiTest => '저장 후 연결 확인';
+
+  @override
+  String get geminiTestOk => '연결됨';
+
+  @override
+  String get geminiTestBadKey => '키가 올바르지 않습니다';
+
+  @override
+  String geminiTestFailed(String error) {
+    return '연결 실패: $error';
+  }
+
+  @override
+  String get geminiModel => '모델';
+
+  @override
+  String geminiModelInfo(int rpd, String input, String output) {
+    return '무료: 하루 약 $rpd회 · 유료 100만 토큰당 \$$input / \$$output';
+  }
+
+  @override
+  String get geminiUsageTitle => '오늘 사용량';
+
+  @override
+  String geminiUsageResets(String time) {
+    return '$time에 초기화 (미국 태평양 자정)';
+  }
+
+  @override
+  String geminiUsageRequests(int count, int limit) {
+    return '요청 $count / $limit회';
+  }
+
+  @override
+  String geminiUsageRequestsEstimate(int count, int limit) {
+    return '요청 $count회 (무료 한도 약 $limit회)';
+  }
+
+  @override
+  String geminiUsageTokens(String input, String output) {
+    return '토큰 입력 $input · 출력 $output';
+  }
+
+  @override
+  String geminiUsageParagraphs(int count) {
+    return '번역 문단 $count';
+  }
+
+  @override
+  String geminiUsageBlocked(int safety, int prohibited) {
+    return '필터 막힘 $safety · 정책 차단 $prohibited';
+  }
+
+  @override
+  String geminiUsageOnDevice(int count) {
+    return '기기 번역으로 대체 $count';
+  }
+
+  @override
+  String get geminiTierFree => '무료 등급';
+
+  @override
+  String get geminiTierPaid => '유료 등급';
+
+  @override
+  String get geminiTierUnknown => '등급 확인 전 (한도에 닿으면 자동 확인)';
+
+  @override
+  String geminiCost(String cost) {
+    return '유료 기준 예상 비용 $cost';
+  }
+
+  @override
+  String get geminiExhausted => '오늘 한도를 다 썼습니다. 초기화될 때까지 기기 번역으로 이어갑니다.';
+
+  @override
+  String get geminiSafety => '안전 필터';
+
+  @override
+  String get geminiSafetyHint =>
+      '15세·성인 등급 책은 \'차단 안 함\'을 권장합니다. 아동 안전처럼 구글이 항상 막는 내용은 설정과 관계없이 차단되며, 그런 문단은 원문으로 남습니다.';
+
+  @override
+  String get geminiHarmHarassment => '괴롭힘';
+
+  @override
+  String get geminiHarmHate => '혐오 발언';
+
+  @override
+  String get geminiHarmSexual => '성적인 내용';
+
+  @override
+  String get geminiHarmDangerous => '위험한 내용';
+
+  @override
+  String get geminiBlockOff => '차단 안 함';
+
+  @override
+  String get geminiBlockOnlyHigh => '높음만 차단';
+
+  @override
+  String get geminiBlockMedium => '중간 이상 차단';
+
+  @override
+  String get geminiBlockLow => '낮음 이상 차단';
+
+  @override
+  String get geminiDeviceFallback => '안 될 때 기기 번역으로 이어가기';
+
+  @override
+  String get geminiDeviceFallbackHint =>
+      '한도 초과·필터·연결 문제일 때 그 문단만 기기 모델이 번역합니다.';
+
+  @override
+  String get geminiConcurrency => '동시 요청';
+
+  @override
+  String get geminiPrivacyNote =>
+      '책 본문이 Google로 전송됩니다. 무료 등급에서는 Google 제품 개선에 쓰일 수 있고, 유료 등급에서는 쓰이지 않습니다.';
 }

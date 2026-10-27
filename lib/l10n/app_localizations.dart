@@ -2757,6 +2757,252 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The library, the book page and the home-screen widgets show the title instead'**
   String get coverHideHint;
+
+  /// translationEngine
+  ///
+  /// In en, this message translates to:
+  /// **'Translation engine'**
+  String get translationEngine;
+
+  /// translationEngineDevice
+  ///
+  /// In en, this message translates to:
+  /// **'On the device'**
+  String get translationEngineDevice;
+
+  /// translationEngineGemini
+  ///
+  /// In en, this message translates to:
+  /// **'Gemini'**
+  String get translationEngineGemini;
+
+  /// translationEngineGeminiHint
+  ///
+  /// In en, this message translates to:
+  /// **'Google Gemini translates over the internet: a book in minutes, better than the model on the phone.'**
+  String get translationEngineGeminiHint;
+
+  /// geminiKey
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get geminiKey;
+
+  /// geminiKeyHint
+  ///
+  /// In en, this message translates to:
+  /// **'Free from Google AI Studio (aistudio.google.com/apikey). Kept on this device only, never in backups.'**
+  String get geminiKeyHint;
+
+  /// geminiKeySaved
+  ///
+  /// In en, this message translates to:
+  /// **'Saved key {hint}'**
+  String geminiKeySaved(String hint);
+
+  /// geminiGetKey
+  ///
+  /// In en, this message translates to:
+  /// **'Get a key'**
+  String get geminiGetKey;
+
+  /// geminiTest
+  ///
+  /// In en, this message translates to:
+  /// **'Save and test'**
+  String get geminiTest;
+
+  /// geminiTestOk
+  ///
+  /// In en, this message translates to:
+  /// **'Connected'**
+  String get geminiTestOk;
+
+  /// geminiTestBadKey
+  ///
+  /// In en, this message translates to:
+  /// **'The key doesn\'t work'**
+  String get geminiTestBadKey;
+
+  /// geminiTestFailed
+  ///
+  /// In en, this message translates to:
+  /// **'Could not connect: {error}'**
+  String geminiTestFailed(String error);
+
+  /// geminiModel
+  ///
+  /// In en, this message translates to:
+  /// **'Model'**
+  String get geminiModel;
+
+  /// geminiModelInfo
+  ///
+  /// In en, this message translates to:
+  /// **'Free: about {rpd} requests a day · paid \${input} / \${output} per 1M tokens'**
+  String geminiModelInfo(int rpd, String input, String output);
+
+  /// geminiUsageTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s use'**
+  String get geminiUsageTitle;
+
+  /// geminiUsageResets
+  ///
+  /// In en, this message translates to:
+  /// **'Resets at {time} (midnight US Pacific)'**
+  String geminiUsageResets(String time);
+
+  /// geminiUsageRequests
+  ///
+  /// In en, this message translates to:
+  /// **'Requests {count} / {limit}'**
+  String geminiUsageRequests(int count, int limit);
+
+  /// geminiUsageRequestsEstimate
+  ///
+  /// In en, this message translates to:
+  /// **'Requests {count} (free limit about {limit})'**
+  String geminiUsageRequestsEstimate(int count, int limit);
+
+  /// geminiUsageTokens
+  ///
+  /// In en, this message translates to:
+  /// **'Tokens in {input} · out {output}'**
+  String geminiUsageTokens(String input, String output);
+
+  /// geminiUsageParagraphs
+  ///
+  /// In en, this message translates to:
+  /// **'Paragraphs translated {count}'**
+  String geminiUsageParagraphs(int count);
+
+  /// geminiUsageBlocked
+  ///
+  /// In en, this message translates to:
+  /// **'Blocked by filters {safety} · refused by policy {prohibited}'**
+  String geminiUsageBlocked(int safety, int prohibited);
+
+  /// geminiUsageOnDevice
+  ///
+  /// In en, this message translates to:
+  /// **'Translated on the device instead {count}'**
+  String geminiUsageOnDevice(int count);
+
+  /// geminiTierFree
+  ///
+  /// In en, this message translates to:
+  /// **'Free tier'**
+  String get geminiTierFree;
+
+  /// geminiTierPaid
+  ///
+  /// In en, this message translates to:
+  /// **'Paid tier'**
+  String get geminiTierPaid;
+
+  /// geminiTierUnknown
+  ///
+  /// In en, this message translates to:
+  /// **'Tier not known yet (shown once a limit is reached)'**
+  String get geminiTierUnknown;
+
+  /// geminiCost
+  ///
+  /// In en, this message translates to:
+  /// **'At paid prices: {cost}'**
+  String geminiCost(String cost);
+
+  /// geminiExhausted
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s quota is used up: the device translates until it resets.'**
+  String get geminiExhausted;
+
+  /// geminiSafety
+  ///
+  /// In en, this message translates to:
+  /// **'Safety filters'**
+  String get geminiSafety;
+
+  /// geminiSafetyHint
+  ///
+  /// In en, this message translates to:
+  /// **'For books rated 15+ or adult, leave these off. What Google always blocks (such as anything endangering children) stays blocked whatever is set; such paragraphs stay in the original.'**
+  String get geminiSafetyHint;
+
+  /// geminiHarmHarassment
+  ///
+  /// In en, this message translates to:
+  /// **'Harassment'**
+  String get geminiHarmHarassment;
+
+  /// geminiHarmHate
+  ///
+  /// In en, this message translates to:
+  /// **'Hate speech'**
+  String get geminiHarmHate;
+
+  /// geminiHarmSexual
+  ///
+  /// In en, this message translates to:
+  /// **'Sexual content'**
+  String get geminiHarmSexual;
+
+  /// geminiHarmDangerous
+  ///
+  /// In en, this message translates to:
+  /// **'Dangerous content'**
+  String get geminiHarmDangerous;
+
+  /// geminiBlockOff
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get geminiBlockOff;
+
+  /// geminiBlockOnlyHigh
+  ///
+  /// In en, this message translates to:
+  /// **'High only'**
+  String get geminiBlockOnlyHigh;
+
+  /// geminiBlockMedium
+  ///
+  /// In en, this message translates to:
+  /// **'Medium and above'**
+  String get geminiBlockMedium;
+
+  /// geminiBlockLow
+  ///
+  /// In en, this message translates to:
+  /// **'Low and above'**
+  String get geminiBlockLow;
+
+  /// geminiDeviceFallback
+  ///
+  /// In en, this message translates to:
+  /// **'Continue on the device when Gemini can\'t'**
+  String get geminiDeviceFallback;
+
+  /// geminiDeviceFallbackHint
+  ///
+  /// In en, this message translates to:
+  /// **'Quota used up, a filter, no connection: those paragraphs only, with the model on the phone.'**
+  String get geminiDeviceFallbackHint;
+
+  /// geminiConcurrency
+  ///
+  /// In en, this message translates to:
+  /// **'Requests at once'**
+  String get geminiConcurrency;
+
+  /// geminiPrivacyNote
+  ///
+  /// In en, this message translates to:
+  /// **'The book\'s text is sent to Google. On the free tier Google may use it to improve its products; on the paid tier it does not.'**
+  String get geminiPrivacyNote;
 }
 
 class _AppLocalizationsDelegate

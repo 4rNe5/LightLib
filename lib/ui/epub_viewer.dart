@@ -13,9 +13,9 @@ import 'package:open_file/open_file.dart';
 // Project imports:
 import 'package:openlib/services/files.dart' show getFilePath;
 import 'package:openlib/services/translation/reader_translation_controller.dart';
-import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
+import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
 import 'package:openlib/ui/components/translated_chapter_builder.dart';
@@ -329,8 +329,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       ? ReaderFonts.scriptForLanguage(_targetCode)
       : ReaderFonts.scriptForLanguage(_bookLanguage);
 
-  ReaderPalette _paletteOf(BuildContext context) => paletteFor(
-      _settings.theme,
+  ReaderPalette _paletteOf(BuildContext context) => paletteFor(_settings.theme,
       appDark: Theme.of(context).brightness == Brightness.dark);
 
   TextStyle _baseTextStyle(ReaderPalette palette) => TextStyle(
@@ -431,9 +430,9 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
 
     setState(() => _translationStarting = true);
     try {
-      final model = await TranslationModelStore.instance.activeModel();
+      final modelId = await TranslationEngines.cacheModelId();
       if (!mounted) return;
-      if (model == null) {
+      if (modelId == null) {
         if (!quiet) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(l10n.translationNoModel),
@@ -448,22 +447,21 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
       final target = languageForCode(await MyLibraryDb.instance
           .getPreference(translationTargetLanguagePref)
           .catchError((_) => null) as String?);
-      final cache = await TranslationCache.open(
+      final cache = await TranslationEngines.openCache(
         bookFileName: widget.fileName,
         targetLanguage: target.code,
-        modelId: TranslationStyle.cacheModelId(model.fileName),
       );
       // The shared engine: the background book translator uses the same
       // loaded model, and the page on screen jumps its queue.
-      final shared = await SharedTranslationEngine.instance.acquire();
+      final shared = await TranslationEngines.forReader();
       if (!mounted || shared == null) {
-        if (shared != null) SharedTranslationEngine.instance.release();
+        await shared?.dispose();
         await cache.flush();
         return;
       }
       _targetCode = target.code;
       final controller = ReaderTranslationController(
-        translator: UrgentTranslator(shared),
+        translator: shared,
         cache: cache,
         targetLanguage: target.englishName,
         sourceLanguage: sourceLanguageName(_bookLanguage),

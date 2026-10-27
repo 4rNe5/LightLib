@@ -1,4 +1,6 @@
-// Translations already made, kept per book, target language and model.
+// Translations already made, kept per book, target language and style -
+// one set whichever engine made each paragraph (the phone's model or
+// Gemini), so switching engines carries on where the other left off.
 
 // Dart imports:
 import 'dart:async';
@@ -46,6 +48,10 @@ class TranslationCache {
           .toString()
           .substring(0, 20);
 
+  /// The id of the one set of translations for a style.
+  static String sharedModelId({required bool lightNovel}) =>
+      lightNovel ? 'shared' : 'shared+plain';
+
   static String keyFor(String text) =>
       sha1.convert(utf8.encode(text)).toString();
 
@@ -56,6 +62,7 @@ class TranslationCache {
     required String targetLanguage,
     required String modelId,
     Directory? directory,
+    List<String> mergeFrom = const [],
   }) async {
     final base = directory ?? await bookFolderDirectory();
     if (!await base.exists()) await base.create(recursive: true);
@@ -76,8 +83,27 @@ class TranslationCache {
       } catch (_) {
         // A corrupt cache is only lost work; start over.
       }
+    } else if (mergeFrom.isNotEmpty) {
+      // First opened: what earlier versions kept per model comes along
+      // (the first listed wins where two translated the same text).
+      for (final old in mergeFrom) {
+        final f = File(p.join(
+            base.path, '${fileIdFor(bookFileName, targetLanguage, old)}.json'));
+        if (!await f.exists()) continue;
+        try {
+          final decoded = jsonDecode(await f.readAsString());
+          if (decoded is Map) {
+            decoded.forEach((k, v) => entries.putIfAbsent('$k', () => '$v'));
+          }
+        } catch (_) {}
+      }
     }
-    return _open[path] ??= TranslationCache._(file, entries);
+    final cache = _open[path] ??= TranslationCache._(file, entries);
+    if (!await file.exists() && entries.isNotEmpty) {
+      cache._dirty = true;
+      await cache.flush();
+    }
+    return cache;
   }
 
   /// Deletes every saved translation of [bookFileName] (all languages and
@@ -101,7 +127,11 @@ class TranslationCache {
       'th',
       'id'
     ]) {
-      for (final model in translationModelPresets.map((m) => m.fileName)) {
+      for (final model in [
+        sharedModelId(lightNovel: true),
+        sharedModelId(lightNovel: false),
+        ...translationModelPresets.map((m) => m.fileName),
+      ]) {
         final path = p.join(
             base.path, '${fileIdFor(bookFileName, language, model)}.json');
         _open.remove(path);
