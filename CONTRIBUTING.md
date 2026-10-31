@@ -1,30 +1,11 @@
-## Openlib Contribution guidelines
+# Contributing to LightLib
 
-### Getting started
+Thanks for helping. A few things keep changes easy to review:
 
-- This project is powered by Flutter. Make sure you have the latest version of Flutter.
+- **Start with an issue** for anything beyond a small fix, so we agree on the approach first. Bugs are easiest to fix with the app's log (*Settings → Export Logs*) and a screenshot.
+- **Keep translation quality first.** Changes to prompts, batching or checks should come with a before/after on the same chapter.
+- **Run the checks** before opening a pull request: `flutter analyze` and `flutter test`. New behaviour comes with tests; tests do not reach the network or platform channels (see the existing ones for how services are stubbed).
+- **Strings** go in `lib/l10n/app_en.arb` with their translations in the other five `.arb` files, then `flutter gen-l10n`.
+- **One topic per pull request**, with a description of what changed and how you checked it.
 
-- If you want to fix bug or implement a new feature, that already mention in the [issues](https://github.com/dstark5/Openlib/issues), please, assign this issue to you and/or comment about it.
-
-- Whether you have to implement new feature, please, open an issue or discussion regarding it to ensure it will be accepted.
-
-### Open a pull request
-When you're done making changes and you'd like to propose them for review, open your PR (pull request). You can use the GitHub user interface for some small changes, like fixing a typo or updating a readme. You can also fork the repo and then clone it locally, to view changes and run your tests on your machine.
-
-### Submit your PR & get it reviewed
-- Once you submit your PR, others from the Docs community will review it with you. The first thing you're going to want to do is a [self review](#self-review).
-- After that, we may have questions, check back on your PR to keep up with the conversation.
-- We may ask for changes to be made before a PR can be merged. You can make any other changes in your fork, then commit them to your branch.
-
-### Self review
-You should always review your own PR first.
-
-For content changes, make sure that you:
-- [ ] Confirm the changes doesn't break anything else.
-- [ ] Compare your pull request's source changes to staging to confirm that the output matches the source and that everything is rendering as expected. This helps spot issues like typos, content that doesn't follow the style guide, or content that isn't rendering due to versioning problems.
-- [ ] Review the content for technical accuracy.
-- [ ] Copy-edit the changes for grammar or spelling mistakes.
-
-### Notes
-- Please, do not modify readme and other information files (except for typos).
-- Avoid adding new dependencies unless required. APK size is important.
+[SETUP.md](SETUP.md) covers building the app.

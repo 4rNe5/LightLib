@@ -1,100 +1,48 @@
+# LightLib — Setup
 
-# Openlib Project Setup Guide
+## Prerequisites
+- [Flutter](https://docs.flutter.dev/get-started/install) 3.47 (Dart 3.13) — check with `flutter doctor`.
+- Android SDK (Android Studio, or the command-line tools) and an arm64 phone or emulator.
+- Node.js, only to rebuild the reader's web part.
 
-Welcome to the **Openlib Project**! This guide will walk you through setting up the project on your local machine, specifically focusing on **Android Studio**. 
-
-### Prerequisites
-Before you begin, make sure you have the following installed and configured on your system:
-
-- **Flutter**: Follow [Flutter installation instructions](https://docs.flutter.dev/get-started/install).
-  - To verify Flutter installation, run:
-    ```bash
-    flutter doctor
-    ```
-- **Git**: Required to clone the repository.
-- **Android Studio** (recommended): With Flutter plugin support.
-
----
-
-## Steps to Set Up Locally
-
-### 1. Create a Project Directory
-First, decide where you want the project folder to be created. You can do this from the terminal as follows:
+## Build and run
 ```bash
-mkdir OpenlibProject
-cd OpenlibProject
+git clone https://github.com/4rNe5/LightLib.git
+cd LightLib
+flutter pub get
+flutter run                 # debug, on a connected phone
 ```
 
-### 2. Clone the Repository
-Use Git to clone the project into your newly created directory:
+A release build:
 ```bash
-git clone https://github.com/warreth/OpenlibExtended.git
+flutter build apk --release --split-per-abi --target-platform android-arm64
+```
+Without `android/key.properties` it is signed with the debug key, so it does not install over a release from GitHub (different signature).
+
+## Checks
+```bash
+flutter analyze             # the known issues are all in third_party/epubx
+flutter test
+flutter gen-l10n            # after editing lib/l10n/*.arb
 ```
 
-### 3. Navigate to the Project Folder
-After cloning, move into the **OpenlibExtended** folder:
+## Project layout
+| Path | What |
+|---|---|
+| `lib/ui/` | Screens and components |
+| `lib/services/translation/` | Translation: device engine (`translator.dart`), Gemini (`gemini/`), saved translations, glossary, checks, export |
+| `lib/services/` | Library, downloads, catalogues, updates, widgets |
+| `reader_web/` | The reader (foliate-js), built into `assets/reader/` — see `reader_web/README.md` |
+| `third_party/llamadart` | The on-device model runtime with this app's patches (`PATCHES.md`) |
+| `android/app/src/main/kotlin/` | Widgets, the background-translation service, device readings |
+
+## Releases
+Every push to `main` (other than Markdown) runs `.github/workflows/android-release.yml`: tests, a build signed with the release key from the repository's secrets, and a GitHub release `v<version>-build.<n>`. Put `[skip ci]` in a commit message to skip it.
+
+## Linux desktop
+The desktop build needs WebKitGTK 4.1 for its browser window:
 ```bash
-cd OpenlibExtended
+sudo apt install libwebkit2gtk-4.1-dev     # Ubuntu / Debian
+sudo dnf install webkit2gtk4.1-devel       # Fedora
+sudo pacman -S webkit2gtk-4.1              # Arch
 ```
-
-### 4. Open the Project in Android Studio or VS Code
-To open the project:
-- **For VS Code**: Use:
-  ```bash
-  code .
-  ```
-- **For Android Studio**: Open Android Studio, and then use **File > Open** to navigate to the Openlib folder.
-
-### 5. local.properties changes
-To ensure compatibility with your target Android devices, update the minimum SDK version:
-1. Open **local.properties** (located in `android/`).
-2. Add the below properties:
-   ```gradle
-    flutter.buildMode=release
-    flutter.minSdkVersion=21
-    flutter.targetSdkVersion=34
-    flutter.compileSdkVersion=34
-   ```
-   Here, `"21"` represents the minimum SDK version supported.
-
-### 6. Enable Flutter Support in Android Studio
-To access the emulator options and additional Flutter-specific features:
-- Go to **File > Settings > Plugins** in Android Studio.
-- Ensure **Flutter** support is enabled.
-- This will provide access to the emulator tab, where you can choose the device for testing.
-
-### 7. Run the Application
-To run the app:
-1. Open **main.dart** (usually found under `lib/`).
-2. Use the **Run** button in Android Studio to launch the app on your selected emulator or connected device.
-
----
-
-## Linux Setup
-
-### Requirements
-To build and run on Linux, you need to install **WebKitGTK 4.1**. This is required for the internal browser window used for CAPTCHA verification and downloads.
-
-**Arch Linux / CachyOS:**
-```bash
-sudo pacman -S webkit2gtk-4.1
-```
-
-**Ubuntu / Debian:**
-```bash
-sudo apt install libwebkit2gtk-4.1-dev
-```
-
-**Fedora:**
-```bash
-sudo dnf install webkit2gtk4.1-devel
-```
-
----
-
-## Additional Resources and Troubleshooting
-If you encounter any issues, refer to the official [Flutter documentation](https://docs.flutter.dev/) for comprehensive troubleshooting and setup tips.
-
----
-
-Feel free to reach out or create an issue if you have any questions or need further assistance.
