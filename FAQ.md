@@ -1,5 +1,7 @@
 # 📖 LightLib — FAQ
 
+**English** | [한국어](FAQ.ko.md)
+
 ## What is LightLib?
 An e-book library and reader for Android, made for Japanese light novels. It keeps each book's own layout (vertical writing, ruby, images), translates as you read, and keeps track of your reading.
 

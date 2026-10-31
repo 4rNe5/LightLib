@@ -6,6 +6,8 @@
 
 **An e-book library and reader for Android, made for Japanese light novels: <br/> the book's own layout, translation as you read, and a library that remembers where you are.**
 
+**English** | [한국어](README.ko.md)
+
 [![made-with-flutter](https://img.shields.io/badge/Made%20with-Flutter-FF6B9D.svg?style=for-the-badge)](https://flutter.dev/)
 [![AGPLv3 License](https://img.shields.io/badge/License-AGPL%20v3-e63946.svg?style=for-the-badge)](https://www.gnu.org/licenses/agpl-3.0.html)
 [![Latest release](https://img.shields.io/github/release/4rNe5/LightLib.svg?style=for-the-badge)](https://github.com/4rNe5/LightLib/releases/latest)
