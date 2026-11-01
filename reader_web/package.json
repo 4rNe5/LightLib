@@ -6,10 +6,12 @@
   "type": "module",
   "license": "AGPL-3.0-only",
   "scripts": {
-    "build": "node build.mjs"
+    "build": "node build.mjs",
+    "test": "node --test test/*.test.mjs"
   },
   "dependencies": {
-    "construct-style-sheets-polyfill": "3.1.0"
+    "construct-style-sheets-polyfill": "3.1.0",
+    "kuromoji": "0.1.2"
   },
   "devDependencies": {
     "esbuild": "0.25.10"

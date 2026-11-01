@@ -58,6 +58,28 @@ export function applyTranslation(item, text, lang) {
     if (lang) el.setAttribute('lang', lang)
 }
 
+/** The translation under the original (side by side); [hidden] blurs it
+ *  until it is tapped. Kept out of positions (cfi-inert) and out of the
+ *  paragraph's text. */
+export function applyBilingual(item, text, lang, hidden) {
+    const doc = item.el.ownerDocument
+    let box = item.bi
+    if (!box || !box.isConnected) {
+        box = doc.createElement('span')
+        box.setAttribute('cfi-inert', '')
+        item.el.append(box)
+        item.bi = box
+    }
+    box.className = hidden ? 'll-bi ll-bi-hidden' : 'll-bi'
+    if (lang) box.setAttribute('lang', lang)
+    box.innerHTML = escapeHtml(text).replace(/\n/g, '<br/>')
+}
+
+export function removeBilingual(item) {
+    item.bi?.remove()
+    item.bi = null
+}
+
 export function restoreOriginal(item) {
     if (item.original == null) return
     const { el } = item

@@ -13,3 +13,13 @@ cd reader_web
 npm ci
 npm run build   # writes ../assets/reader/index.html and reader.js
 ```
+
+`src/study.js` holds the study helpers (furigana, the word under a tap, a
+book's JLPT spread) on [kuromoji.js](https://github.com/takuyaa/kuromoji.js)
+(Apache-2.0). Its dictionary is not bundled: the app downloads it once and
+serves it at `/reader/dict/`. Their text logic is tested with the real
+dictionary:
+
+```sh
+npm test
+```

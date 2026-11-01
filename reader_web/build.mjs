@@ -26,6 +26,8 @@ await build({
     legalComments: 'eof',
     outfile: new URL('reader.js', out).pathname,
     plugins: [noPdf],
+    // kuromoji's one Node import (path.join for its dictionary URLs).
+    alias: { path: new URL('./src/path-shim.cjs', import.meta.url).pathname },
     logLevel: 'info',
 })
 copyFileSync(new URL('./src/index.html', import.meta.url), new URL('index.html', out))

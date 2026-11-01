@@ -4,9 +4,11 @@
 // it to the Flutter app over flutter_inappwebview's JavaScript handlers:
 //
 //   app -> page: window.reader.open(), .next(), .goTo(), .setSettings(),
-//                .setTranslations(), .showOriginal() ...
+//                .setTranslations(), .showOriginal(), .setStudy(),
+//                .loadStudyTools(), .analyze() ...
 //   page -> app: {type: 'book' | 'relocate' | 'paragraphs' | 'visible' |
-//                 'tap' | 'error' | 'log', ...}
+//                 'tap' | 'word' | 'selection' | 'studyTools' |
+//                 'analysis' | 'error' | 'log', ...}
 //
 // The CSS overrides follow readest's (apps/readest-app/src/utils/style.ts,
 // AGPL-3.0, like this app).
@@ -14,7 +16,12 @@
 import 'construct-style-sheets-polyfill'
 import { makeBook } from '../foliate-js/view.js'
 import { readerStyles } from './styles.js'
-import { collectParagraphs, applyTranslation, restoreOriginal } from './paragraphs.js'
+import { collectParagraphs, applyTranslation, restoreOriginal, applyBilingual, removeBilingual } from './paragraphs.js'
+import {
+    loadTools, toolsReady, addFurigana, removeFurigana, furiganaFilter, tokenize, tokenAt,
+    describeWord, charAt, textOffset, rangeOf, highlight, sentenceAt, baseOf, levelOf,
+    countWords, newCount, summary,
+} from './study.js'
 
 // ---------------------------------------------------------------------------
 // Messages to the app
@@ -58,6 +65,11 @@ const state = {
     showTranslations: false,
     translationLang: null,
     lastRelocate: null,
+    // Study: how translations show ('replace' | 'below' | 'hidden'),
+    // furigana ('off' | 'hard' | 'all'), the reader's JLPT level (5..1),
+    // whether a tap on a word looks it up.
+    study: { layout: 'replace', furigana: 'off', level: 3, wordTap: false },
+    japanese: false,
 }
 
 const flattenToc = (items, depth = 0, out = []) => {
@@ -126,6 +138,8 @@ async function open(options) {
         state.file = await loadFile(options.url, options.name)
         const book = await makeBook(state.file)
         state.book = book
+        const lang = Array.isArray(book.metadata?.language) ? book.metadata.language[0] : book.metadata?.language
+        state.japanese = /^ja\b/i.test(lang ?? '')
         const view = await createView({ book, settings: state.settings, location: options })
         post({
             type: 'book',
@@ -212,10 +226,12 @@ function onDocLoad({ doc, index }) {
     themeDocument(doc, state.settings ?? {})
     fixImages(doc)
     listenForTaps(doc)
+    listenForSelection(doc, index)
     const items = collectParagraphs(doc)
     state.sections.set(index, items)
     post({ type: 'paragraphs', section: index, texts: items.map(p => p.text) })
     if (state.showTranslations) paintTranslations(index)
+    syncFurigana(index)
 }
 
 /** Images that sit inside a line of text, and image-led paragraphs, as
@@ -249,19 +265,169 @@ function listenForTaps(doc) {
         if (e.target.closest?.('a[href]')) return
         const selection = doc.getSelection?.()
         if (selection && !selection.isCollapsed) return
+        // A hidden translation shows on a tap (and hides on the next).
+        const hidden = e.target.closest?.('.ll-bi-hidden')
+        if (hidden) {
+            hidden.classList.toggle('ll-bi-shown')
+            post({ type: 'reveal' })
+            return
+        }
         const frame = doc.defaultView?.frameElement
         const rect = frame?.getBoundingClientRect?.() ?? { left: 0, top: 0 }
         const x = rect.left + e.clientX
         const width = window.innerWidth || 1
-        const zone = x < width * 0.28 ? 'left' : x > width * 0.72 ? 'right' : 'center'
-        if (zone === 'center' || state.settings?.flow === 'scrolled') {
+        const zone = x < width * 0.2 ? 'left' : x > width * 0.8 ? 'right' : 'center'
+        if (state.study.wordTap && zone === 'center' && lookUpAt(doc, e.clientX, e.clientY)) return
+        const turnZone = state.study.wordTap ? zone : (x < width * 0.28 ? 'left' : x > width * 0.72 ? 'right' : 'center')
+        if (turnZone === 'center' || state.settings?.flow === 'scrolled') {
             post({ type: 'tap', zone: 'center' })
             return
         }
         post({ type: 'turn' })
         if (pendingPaint.size) flushPaint()
-        zone === 'left' ? state.view?.goLeft() : state.view?.goRight()
+        turnZone === 'left' ? state.view?.goLeft() : state.view?.goRight()
     })
+}
+
+// ---------------------------------------------------------------------------
+// Study
+// ---------------------------------------------------------------------------
+
+/** The section and paragraph holding [node]. */
+function paragraphOf(node) {
+    for (const [section, items] of state.sections) {
+        for (let n = 0; n < items.length; n++) {
+            if (items[n].el.contains(node)) return { section, n, item: items[n] }
+        }
+    }
+    return null
+}
+
+let highlighted = null
+
+/** Looks up the word under (x, y) of [doc]; false when there is none. */
+function lookUpAt(doc, x, y) {
+    if (!toolsReady() || !state.japanese) return false
+    const hit = charAt(doc, x, y)
+    if (!hit) return false
+    const [node, offset] = hit
+    if (node.parentElement?.closest('rt, rp, .ll-bi')) return false
+    const where = paragraphOf(node)
+    // A paragraph showing its translation in place has no Japanese words.
+    if (!where || where.item.original != null) return false
+    const { section, n, item } = where
+    const at = textOffset(item.el, node, offset)
+    item.tokens ??= tokenize(item.text)
+    const found = tokenAt(item.text, at, item.tokens)
+    if (!found || !/[^\s]/.test(found.token.surface_form)) return false
+    const word = describeWord(found.token, item.text, found.start)
+    highlighted = doc
+    highlight(doc, rangeOf(item.el, found.start, found.start + found.token.surface_form.length))
+    post({ type: 'word', section, n, ...word })
+    return true
+}
+
+/** A selection held still for a moment: the app offers to look it up. */
+function listenForSelection(doc, index) {
+    if (doc.__llSelection) return
+    doc.__llSelection = true
+    let timer = null
+    doc.addEventListener('selectionchange', () => {
+        clearTimeout(timer)
+        timer = setTimeout(() => {
+            const sel = doc.getSelection?.()
+            const text = sel && !sel.isCollapsed ? sel.toString().replace(/\s+/g, ' ').trim() : ''
+            if (!text) { post({ type: 'selection', text: '' }); return }
+            const range = sel.getRangeAt(0)
+            const where = paragraphOf(range.startContainer)
+            const msg = { type: 'selection', text: text.slice(0, 400), section: index }
+            if (where && where.item.original == null) {
+                const start = textOffset(where.item.el, range.startContainer, range.startOffset)
+                msg.n = where.n
+                msg.sentence = sentenceAt(where.item.text, start)
+                if (toolsReady() && state.japanese) {
+                    const words = tokenize(text).filter(t => !/^\s+$/.test(t.surface_form))
+                    if (words.length === 1) {
+                        const { base, reading } = baseOf(words[0])
+                        Object.assign(msg, { base, reading, pos: words[0].pos, level: levelOf(base, reading) })
+                    }
+                }
+            }
+            post(msg)
+        }, 380)
+    })
+}
+
+/** Furigana as the study settings want them, on one loaded section. */
+function syncFurigana(section) {
+    const items = state.sections.get(section)
+    if (!items) return
+    const on = state.study.furigana !== 'off' && state.japanese && toolsReady()
+    const keep = on ? furiganaFilter(state.study.furigana, state.study.level) : null
+    for (const item of items) {
+        // Paragraphs showing a translation in place get theirs back with
+        // the original.
+        if (item.original != null) continue
+        if (item.furigana === (on ? state.study.furigana + state.study.level : null)) continue
+        removeFurigana(item.el)
+        if (on) addFurigana(item.el, keep)
+        item.furigana = on ? state.study.furigana + state.study.level : null
+    }
+}
+
+function setStudy(study) {
+    const before = state.study
+    state.study = { ...before, ...study }
+    if (study.japanese !== undefined) state.japanese = !!study.japanese
+    if (before.layout !== state.study.layout && state.showTranslations) {
+        for (const [section, items] of state.sections) {
+            for (const item of items) {
+                removeBilingual(item)
+                restoreOriginal(item)
+                item.shown = null
+            }
+            syncFurigana(section)
+            paintTranslations(section)
+        }
+    }
+    for (const section of state.sections.keys()) syncFurigana(section)
+    if (!state.study.wordTap) clearHighlight()
+}
+
+function clearHighlight() {
+    if (highlighted) highlight(highlighted, null)
+    highlighted = null
+}
+
+async function loadStudyTools() {
+    try {
+        await loadTools(new URL('.', location.href).href.replace(/\/$/, ''))
+        for (const section of state.sections.keys()) syncFurigana(section)
+        post({ type: 'studyTools', ready: true })
+    } catch (e) {
+        post({ type: 'studyTools', ready: false, message: String(e?.message ?? e) })
+    }
+}
+
+/** Every section's words by JLPT level; progress as it goes. */
+async function analyze() {
+    const book = state.book
+    if (!book || !toolsReady()) return post({ type: 'analysis', error: 'not ready' })
+    const acc = newCount()
+    const total = book.sections.length
+    for (let i = 0; i < total; i++) {
+        const section = book.sections[i]
+        try {
+            if (section.linear === 'no' || !section.createDocument) continue
+            const doc = await section.createDocument()
+            countWords(collectParagraphs(doc).map(p => p.text), acc)
+        } catch (e) {
+            post({ type: 'log', level: 'warn', message: `analysis skipped section ${i}: ${e}` })
+        }
+        post({ type: 'analysis', progress: (i + 1) / total })
+        await new Promise(r => setTimeout(r, 0))
+    }
+    post({ type: 'analysis', result: summary(acc) })
 }
 
 // ---------------------------------------------------------------------------
@@ -331,10 +497,16 @@ function paintTranslations(section) {
     const items = state.sections.get(section)
     const done = state.translations.get(section)
     if (!items || !done) return
+    const layout = state.study.layout
     for (const [n, text] of done) {
         const item = items[n]
         if (item && item.shown !== text) {
-            applyTranslation(item, text, state.translationLang)
+            if (layout === 'replace') {
+                removeBilingual(item)
+                applyTranslation(item, text, state.translationLang)
+            } else {
+                applyBilingual(item, text, state.translationLang, layout === 'hidden')
+            }
             item.shown = text
         }
     }
@@ -386,9 +558,13 @@ const reader = {
         state.showTranslations = !!on
         for (const [section, items] of state.sections) {
             if (on) paintTranslations(section)
-            else for (const item of items) {
-                restoreOriginal(item)
-                item.shown = null
+            else {
+                for (const item of items) {
+                    removeBilingual(item)
+                    restoreOriginal(item)
+                    item.shown = null
+                }
+                syncFurigana(section)
             }
         }
     },
@@ -408,6 +584,13 @@ const reader = {
         return { section: index, texts: items.slice(start).map(p => p.text), start }
     },
     nextSection: () => state.view?.renderer?.nextSection?.(),
+    setStudy,
+    loadStudyTools,
+    analyze,
+    clearHighlight,
+    clearSelection() {
+        for (const { doc } of state.view?.renderer?.getContents?.() ?? []) doc?.getSelection?.()?.removeAllRanges()
+    },
     reportVisible: () => state.lastRelocate && reportVisible(state.lastRelocate),
 }
 window.reader = reader

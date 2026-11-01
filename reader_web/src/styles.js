@@ -100,5 +100,18 @@ table { max-width: 100%; }
 p { display: block; }
 
 .ll-translated { font-family: inherit; }
+/* study: the translation under the original, hidden until tapped */
+.ll-bi {
+    display: block;
+    text-indent: 0 !important;
+    margin-block-start: .3em;
+    font-size: .94em;
+    opacity: .8;
+    transition: filter .18s ease;
+}
+.ll-bi-hidden { filter: blur(.3em); opacity: .6; cursor: pointer; }
+.ll-bi-hidden.ll-bi-shown { filter: none; opacity: .8; }
+ruby.ll-furi > rt { font-size: .5em; opacity: .85; }
+::highlight(ll-word) { background-color: ${s.highlight ?? 'rgba(255,190,0,.38)'}; }
 `
 }
