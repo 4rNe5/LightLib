@@ -87,7 +87,7 @@ flutter run
 ```
 
 - 리더의 웹 부분은 `reader_web/`에 있고 `assets/reader/`로 빌드됩니다(`reader_web/README.md` 참고).
-- `main`에 마크다운 외 변경을 푸시하면 `.github/workflows/android-release.yml`이 테스트·서명된 arm64 빌드·`v<버전>-build.<n>` 릴리즈를 만듭니다. `beta`에 푸시하면 같은 과정을 거쳐 프리릴리즈 `v<버전>-build.<n>-beta`가 나옵니다.
+- `main`에 마크다운 외 변경을 푸시하면 `.github/workflows/android-release.yml`이 테스트·서명된 arm64 빌드·다음 버전 번호(1.7.3, 1.7.4 …)의 릴리즈를 만듭니다. `beta`에 푸시하면 같은 과정을 거쳐 다음 버전의 프리릴리즈 `1.7.4-beta (build n)`가 나옵니다.
 - 첫 빌드는 [SETUP.md](SETUP.md), 기여 안내는 [CONTRIBUTING.md](CONTRIBUTING.md)를 보세요.
 
 ## 크레딧 🙏

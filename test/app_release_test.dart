@@ -36,6 +36,16 @@ void main() {
           isTrue);
     });
 
+    test('versions: each release a new patch, betas lead to the next', () {
+      final release = AppBuild.tryParse('v1.7.3-build.53')!;
+      final beta = AppBuild.tryParse('v1.7.4-build.54-beta')!;
+      final next = AppBuild.tryParse('v1.7.4-build.55')!;
+      expect(release > AppBuild.tryParse('v1.7.2-build.52-beta')!, isTrue);
+      expect(beta > release, isTrue);
+      expect(next > beta, isTrue);
+      expect(beta.label, '1.7.4 beta (build 54)');
+    });
+
     test('the running build: an arm64 versionCode is 2000 + the build', () {
       // PackageInfo.buildNumber on Android is the versionCode.
       final running = AppBuild.of('1.7.2', '2048');

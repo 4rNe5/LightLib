@@ -87,7 +87,7 @@ flutter run
 ```
 
 - The reader's web part lives in `reader_web/` and is bundled into `assets/reader/` (see `reader_web/README.md`).
-- Every push to `main` that changes more than Markdown runs `.github/workflows/android-release.yml`: tests, a signed arm64 build, and a release tagged `v<version>-build.<n>`. A push to `beta` does the same as a pre-release, `v<version>-build.<n>-beta`.
+- Every push to `main` that changes more than Markdown runs `.github/workflows/android-release.yml`: tests, a signed arm64 build, and a release with the next version number (1.7.3, 1.7.4, …). A push to `beta` does the same as a pre-release of the version to come, `1.7.4-beta (build n)`.
 - [SETUP.md](SETUP.md) walks through a first build; [CONTRIBUTING.md](CONTRIBUTING.md) has the guidelines.
 
 ## Credits 🙏

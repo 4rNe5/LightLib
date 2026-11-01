@@ -29,14 +29,19 @@ debug key (only CI signs releases).
 
 ## CI and releases
 - `.github/workflows/android-release.yml`: every push to `main` runs tests and
-  a signed arm64 build, then publishes `v<version>-build.<N>`
+  a signed arm64 build, then publishes a new version — the last release's
+  patch + 1 (1.7.3, 1.7.4 …), or pubspec's version when higher (edit
+  pubspec to 1.8.0 for a minor bump). Tag `v<version>-build.<N>`; N is the
+  run number + 16, shared with betas, and only orders installs
   (versionCode 2000 + N). `[skip ci]` skips it.
-- Beta: every push to `beta` runs the same workflow and publishes a
-  pre-release `v<version>-build.<N>-beta` (version name `<version>-beta`),
-  same package and key, one build counter with `main` — a beta installs
-  over the release before it and the next release over the beta. The app
-  offers betas only with Settings → Include Beta Updates. To ship a beta:
-  push the work to `beta`; when it holds up, merge into `main`.
+- Beta: every push to `beta` publishes the version the next release will
+  be as a pre-release, `<next>-beta (build N)`, tag
+  `v<next>-build.<N>-beta`; same package and key, so a beta installs over
+  the release before it and the next release over the beta. The app offers
+  betas only with Settings → Include Beta Updates. To ship a beta: push
+  the work to `beta`; when it holds up, merge into `main`.
+- The app reads its build from the versionCode (`AppBuild.buildOf`: 2048 →
+  48); builds before 52 read 2048 and never saw an update.
 - Signing: package `dev.arne5.lightlib`, certificate `CN=LightLib, O=4rNe5`;
   CI refuses any other key (`EXPECTED_CERT_SHA256`). Keystore and passwords
   live only in GitHub Secrets and with the owner.

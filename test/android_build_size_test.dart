@@ -125,6 +125,10 @@ void main() {
     expect(release, contains('refs/heads/beta'));
     expect(release, contains('MARK=--prerelease'));
     expect(release, contains("--exclude '*-beta'"));
+    // Each release is a new version (the last release's patch + 1),
+    // read from the tags.
+    expect(release, contains('fetch-depth: 0'));
+    expect(release, contains(r'NEXT="${LAST%.*}.$(( ${LAST##*.} + 1 ))"'));
     // One counter for both channels: versionCodes always grow.
     expect(RegExp(r'BUILD=\$\(\( \$\{\{ github\.run_number \}\}').hasMatch(release),
         isTrue);

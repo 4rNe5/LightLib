@@ -4,9 +4,13 @@ name: Android Release
 # Skip documentation-only pushes. Pull requests run test checks only.
 # Every release retains the original signing certificate and version scheme.
 #
-# Two channels, one build counter (this workflow's run number):
-#   main -> v<version>-build.<n>        release, marked latest
-#   beta -> v<version>-build.<n>-beta   pre-release, version name <version>-beta
+# Two channels, one build counter (this workflow's run number, which only
+# orders installs - versionCode 2000 + n):
+#   main -> a new version each push: 1.7.3, 1.7.4, ...  (the last release's
+#           patch + 1; pubspec's version when it is higher, e.g. 1.8.0)
+#           tag v<version>-build.<n>, marked latest
+#   beta -> the version the next release will be, as a beta:
+#           1.7.4-beta (build n), tag v<version>-build.<n>-beta, pre-release
 # Both are the same app (same package and key), so a beta installs over the
 # release before it and the next release installs over the beta. The app
 # offers betas only with Settings > Include Beta Updates on.
@@ -71,6 +75,9 @@ jobs:
       file: ${{ steps.apk.outputs.file }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The release tags, to number the next version.
+          fetch-depth: 0
 
       - name: Check signing secrets
         env:
@@ -91,7 +98,17 @@ jobs:
       - name: Version
         id: version
         run: |
-          NAME=$(grep '^version:' pubspec.yaml | sed 's/^version: //' | cut -d'+' -f1 | cut -d'-' -f1)
+          BASE=$(grep '^version:' pubspec.yaml | sed 's/^version: //' | cut -d'+' -f1 | cut -d'-' -f1)
+          # The last release (betas aside) and the version after it; the
+          # pubspec's version wins when it is higher (a minor or major bump).
+          LAST=$(git tag -l 'v*-build.*' | grep -v -- '-beta$' | sed -E 's/^v([0-9.]+)-build\..*/\1/' | sort -V | tail -1)
+          if [ -n "$LAST" ]; then
+            NEXT="${LAST%.*}.$(( ${LAST##*.} + 1 ))"
+          else
+            NEXT=$BASE
+          fi
+          NAME=$(printf '%s\n%s\n' "$NEXT" "$BASE" | sort -V | tail -1)
+          echo "Last release: ${LAST:-none}, pubspec: $BASE, this build: $NAME"
           BUILD=$(( ${{ github.run_number }} + BUILD_NUMBER_OFFSET ))
           if [ "$GITHUB_REF" = "refs/heads/beta" ]; then
             CHANNEL=beta
@@ -261,7 +278,7 @@ jobs:
             TITLE="LightLib ${{ needs.build.outputs.name }} beta (build ${{ needs.build.outputs.build }})"
             MARK=--prerelease
           else
-            TITLE="LightLib ${{ needs.build.outputs.name }} (build ${{ needs.build.outputs.build }})"
+            TITLE="LightLib ${{ needs.build.outputs.name }}"
             MARK=--latest
           fi
           gh release create "${{ needs.build.outputs.tag }}" \
