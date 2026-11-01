@@ -253,13 +253,17 @@ class UpdateCheckerService {
 
   /// The changes released after [after] up to [upTo] as markdown (one
   /// heading per build, newest first), '' when none or offline.
+  ///
+  /// Betas count only on the way to a beta ([upTo] is one): a release's
+  /// notes already list what its betas brought.
   Future<String> fetchChangeLog(
       {AppBuild? after, AppBuild? upTo, int? limit}) async {
     try {
       final releases = await fetchReleases();
+      final betas = upTo?.preRelease != null;
       return changeLog([
         for (final r in releases)
-          if (r.build != null)
+          if (r.build != null && (betas || !r.isPrerelease))
             (build: r.build!, body: r.body, publishedAt: r.publishedAt),
       ], after: after, upTo: upTo, limit: limit);
     } catch (e) {

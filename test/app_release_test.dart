@@ -36,6 +36,18 @@ void main() {
           isTrue);
     });
 
+    test('betas: one build sequence with releases, told apart by name', () {
+      final beta = AppBuild.tryParse('v1.7.2-build.52-beta')!;
+      expect((beta.build, beta.preRelease), (52, 'beta'));
+      expect(beta.label, '1.7.2 beta (build 52)');
+      // The running beta (version name 1.7.2-beta, build 52) is its tag.
+      expect(AppBuild.of('1.7.2-beta', '52'), beta);
+      // A beta installs over the release before it, the next release
+      // over the beta.
+      expect(beta > AppBuild.tryParse('v1.7.2-build.51')!, isTrue);
+      expect(AppBuild.tryParse('v1.7.2-build.53')! > beta, isTrue);
+    });
+
     test('the upgrade check sees a new build of the same version', () {
       expect(UpgradeDetector.compareVersions('1.7.2', '1.7.2+36'), lessThan(0));
       expect(UpgradeDetector.compareVersions('1.7.2+35', '1.7.2+36'),

@@ -116,6 +116,19 @@ void main() {
       expect(pubspec, isNot(contains('dev: ^')));
     });
   });
+
+  test('beta channel: pushes to beta publish pre-releases on the same counter',
+      () {
+    final release =
+        File('.github/workflows/android-release.yml').readAsStringSync();
+    expect(release, contains('branches: [main, beta]'));
+    expect(release, contains('refs/heads/beta'));
+    expect(release, contains('MARK=--prerelease'));
+    expect(release, contains("--exclude '*-beta'"));
+    // One counter for both channels: versionCodes always grow.
+    expect(RegExp(r'BUILD=\$\(\( \$\{\{ github\.run_number \}\}').hasMatch(release),
+        isTrue);
+  });
 }
 
 /// Extracts the release buildTypes block from the gradle file.

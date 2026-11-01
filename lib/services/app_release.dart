@@ -1,7 +1,8 @@
 // The app's own releases on GitHub (4rNe5/LightLib): which build a tag
 // names, which one is newer, and the change list a release describes.
-// Every push to main is released as v<version>-build.<n>, so builds of
-// one version differ only in their build number.
+// Every push to main is released as v<version>-build.<n>, and every push
+// to beta as v<version>-build.<n>-beta (a pre-release); the build numbers
+// are one sequence, so builds of one version differ in their number.
 
 /// A version plus build number: `v1.7.2-build.35`, `1.7.2+35`, `1.7.2`.
 class AppBuild implements Comparable<AppBuild> {
@@ -41,8 +42,11 @@ class AppBuild implements Comparable<AppBuild> {
 
   String get version => '$major.$minor.$patch';
 
-  /// `1.7.2 (build 35)`.
-  String get label => build > 0 ? '$version (build $build)' : version;
+  /// `1.7.2 (build 35)`, `1.7.2 beta (build 36)`.
+  String get label {
+    final name = preRelease == null ? version : '$version $preRelease';
+    return build > 0 ? '$name (build $build)' : name;
+  }
 
   /// What the upgrade check stores: `1.7.2+35`.
   String get stored => build > 0 ? '$version+$build' : version;

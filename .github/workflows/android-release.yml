@@ -3,10 +3,17 @@ name: Android Release
 # Run tests and signed arm64 builds concurrently; publish only if both succeed.
 # Skip documentation-only pushes. Pull requests run test checks only.
 # Every release retains the original signing certificate and version scheme.
+#
+# Two channels, one build counter (this workflow's run number):
+#   main -> v<version>-build.<n>        release, marked latest
+#   beta -> v<version>-build.<n>-beta   pre-release, version name <version>-beta
+# Both are the same app (same package and key), so a beta installs over the
+# release before it and the next release installs over the beta. The app
+# offers betas only with Settings > Include Beta Updates on.
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta]
     paths-ignore:
       - "**/*.md"
   pull_request:
@@ -60,6 +67,7 @@ jobs:
       name: ${{ steps.version.outputs.name }}
       build: ${{ steps.version.outputs.build }}
       tag: ${{ steps.version.outputs.tag }}
+      channel: ${{ steps.version.outputs.channel }}
       file: ${{ steps.apk.outputs.file }}
     steps:
       - uses: actions/checkout@v5
@@ -83,13 +91,23 @@ jobs:
       - name: Version
         id: version
         run: |
-          NAME=$(grep '^version:' pubspec.yaml | sed 's/^version: //' | cut -d'+' -f1)
+          NAME=$(grep '^version:' pubspec.yaml | sed 's/^version: //' | cut -d'+' -f1 | cut -d'-' -f1)
           BUILD=$(( ${{ github.run_number }} + BUILD_NUMBER_OFFSET ))
+          if [ "$GITHUB_REF" = "refs/heads/beta" ]; then
+            CHANNEL=beta
+            SUFFIX=-beta
+          else
+            CHANNEL=release
+            SUFFIX=
+          fi
           echo "name=$NAME" >> "$GITHUB_OUTPUT"
           echo "build=$BUILD" >> "$GITHUB_OUTPUT"
-          echo "tag=v$NAME-build.$BUILD" >> "$GITHUB_OUTPUT"
-          sed -i "s/^version: .*/version: $NAME+$BUILD/" pubspec.yaml
-          echo "Building $NAME+$BUILD"
+          echo "channel=$CHANNEL" >> "$GITHUB_OUTPUT"
+          echo "suffix=$SUFFIX" >> "$GITHUB_OUTPUT"
+          echo "tag=v$NAME-build.$BUILD$SUFFIX" >> "$GITHUB_OUTPUT"
+          # A beta names itself (1.7.2-beta), so the app knows its channel.
+          sed -i "s/^version: .*/version: $NAME$SUFFIX+$BUILD/" pubspec.yaml
+          echo "Building $NAME$SUFFIX+$BUILD ($CHANNEL)"
 
       - uses: actions/setup-java@v5
         with:
@@ -134,6 +152,7 @@ jobs:
           echo "### Android release performance" >> "$GITHUB_STEP_SUMMARY"
           echo "- APK compilation: ${elapsed}s" >> "$GITHUB_STEP_SUMMARY"
           echo "- Commit: ${GITHUB_SHA:0:7}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Channel: ${{ steps.version.outputs.channel }}" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify signature and version
         id: apk
@@ -166,7 +185,7 @@ jobs:
             exit 1
           fi
           "$TOOLS/aapt2" dump badging "$APK" | sed -n 1p
-          OUT="LightLib-${{ steps.version.outputs.name }}-build.${{ steps.version.outputs.build }}-arm64.apk"
+          OUT="LightLib-${{ steps.version.outputs.name }}-build.${{ steps.version.outputs.build }}${{ steps.version.outputs.suffix }}-arm64.apk"
           mv "$APK" "$OUT"
           sha256sum "$OUT" > "$OUT.sha256"
           echo "file=$OUT" >> "$GITHUB_OUTPUT"
@@ -209,8 +228,18 @@ jobs:
 
       - name: Release notes
         run: |
-          PREV=$(git describe --tags --match 'v*-build.*' --abbrev=0 HEAD^ 2>/dev/null || true)
+          # A release lists everything since the last release (betas
+          # included); a beta, since the last build of either channel.
+          if [ "${{ needs.build.outputs.channel }}" = "beta" ]; then
+            PREV=$(git describe --tags --match 'v*-build.*' --abbrev=0 HEAD^ 2>/dev/null || true)
+          else
+            PREV=$(git describe --tags --match 'v*-build.*' --exclude '*-beta' --abbrev=0 HEAD^ 2>/dev/null || true)
+          fi
           {
+            if [ "${{ needs.build.outputs.channel }}" = "beta" ]; then
+              echo "Beta: for testing before the next release. In the app: Settings > Include Beta Updates."
+              echo
+            fi
             echo "Commit: ${GITHUB_SHA:0:7}"
             echo
             if [ -n "$PREV" ]; then
@@ -228,11 +257,18 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          if [ "${{ needs.build.outputs.channel }}" = "beta" ]; then
+            TITLE="LightLib ${{ needs.build.outputs.name }} beta (build ${{ needs.build.outputs.build }})"
+            MARK=--prerelease
+          else
+            TITLE="LightLib ${{ needs.build.outputs.name }} (build ${{ needs.build.outputs.build }})"
+            MARK=--latest
+          fi
           gh release create "${{ needs.build.outputs.tag }}" \
             "${{ needs.build.outputs.file }}" \
             "${{ needs.build.outputs.file }}.sha256" \
             --target "$GITHUB_SHA" \
-            --title "LightLib ${{ needs.build.outputs.name }} (build ${{ needs.build.outputs.build }})" \
+            --title "$TITLE" \
             --notes-file notes.md \
-            --latest
+            "$MARK"
 
