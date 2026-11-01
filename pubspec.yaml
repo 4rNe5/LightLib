@@ -178,6 +178,9 @@ flutter:
     # (assets/icons/ is only the launcher icons' source, not bundled.)
     # The book renderer page (built from reader_web/).
     - assets/reader/
+    # Study lists: JLPT levels, Korean readings of kanji
+    # (tool/build_study_data.py).
+    - assets/study/
     - google_fonts/
     - pubspec.yaml
   # An image asset can refer to one or more resolution-specific "variants", see
