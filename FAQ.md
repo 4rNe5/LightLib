@@ -10,6 +10,9 @@ An e-book library and reader for Android, made for Japanese light novels. It kee
 ## How do I install it?
 Download `LightLib-<version>-build.<n>-arm64.apk` from the [latest release](https://github.com/4rNe5/LightLib/releases/latest) and open it on your phone (allow installs from your browser or file manager when Android asks). After that, updates come through the app.
 
+## Can I try builds before they are released?
+Turn on *Settings → Include Beta Updates*. Betas are the same app with a newer build, so they install over your current one and keep your library; the next release installs over a beta. Turn it off to wait for releases again.
+
 ## Samsung says the app may be harmful. Is it?
 Galaxy phones check apps installed from outside the stores against the store's records; an app the store has never seen can be flagged on its first run. Choose to keep the app, or report the warning as a mistake through Samsung Members. The APK's SHA-256 is on every release page if you want to compare.
 
@@ -45,6 +48,14 @@ Your library, positions, glossaries and translations stay on the phone (and in y
 - **Continue on the device** — when the day's quota runs out, a paragraph is filtered, or there is no connection, the phone's model takes over.
 - **Today's use** — requests against your limits, tokens, blocked paragraphs, your tier, the cost at paid prices, and when the quota resets.
 
+## Can it help me learn Japanese?
+Open the *Study* button (🎓) in the reader:
+- **Translation shows** — *Below* or *Tap to see* keeps the book in Japanese with the translation under each paragraph.
+- **Furigana** and **Tap a word for its meaning** need the word tools (about 18 MB, downloaded once).
+- Long-press any text for **Meaning** or **Explain**. Meanings come from your translation engine, in the sentence where you met the word, so there is no separate dictionary to download.
+- Words you add go to the **word book** (*My Library* → 🗂, or from the Study sheet): review them there, or export them for Anki (*File → Import*, tab separated).
+- **This book's difficulty** shows how much of the book is above your level and the words worth learning first.
+
 ## The phone gets warm while translating.
 Translation runs the GPU hard. Background translation slows down as the phone warms and stops near the limit; *Translate this whole book* runs at full speed only while the app is open. Gemini does the work off the phone, so it stays cool.
 
@@ -68,4 +79,4 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md), or open an issue.
 
 ---
 
-*Last updated: 2026-10-31*
+*Last updated: 2026-11-01*

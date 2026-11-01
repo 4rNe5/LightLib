@@ -1630,4 +1630,241 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get translationExportFailed => 'この本は書き出せません';
+
+  @override
+  String get studyTitle => '学習';
+
+  @override
+  String get studyTranslationLayout => '訳の表示';
+
+  @override
+  String get studyLayoutReplace => '原文の代わり';
+
+  @override
+  String get studyLayoutBelow => '原文の下';
+
+  @override
+  String get studyLayoutHidden => 'タップで表示';
+
+  @override
+  String get studyLayoutHint => '原文の下・タップで表示では本は原文のまま、段落ごとに下へ訳が付きます。';
+
+  @override
+  String get studyFurigana => 'ふりがな';
+
+  @override
+  String get studyFuriganaOff => 'オフ';
+
+  @override
+  String get studyFuriganaHard => 'レベル以上';
+
+  @override
+  String get studyFuriganaAll => 'すべて';
+
+  @override
+  String get studyLevel => '自分のレベル';
+
+  @override
+  String get studyWordTap => '単語をタップして意味を見る';
+
+  @override
+  String get studyWordTapHint => '画面の両端はそのままページをめくります。';
+
+  @override
+  String get studyTools => '単語ツール';
+
+  @override
+  String studyToolsDownload(String size) {
+    return 'ダウンロード（$size）';
+  }
+
+  @override
+  String get studyToolsWhy =>
+      'ふりがな・単語タップ・難易度には日本語の形態素辞書（kuromoji）が必要で、一度だけダウンロードします。';
+
+  @override
+  String studyToolsDownloading(int percent) {
+    return 'ダウンロード中… $percent%';
+  }
+
+  @override
+  String get studyToolsFailed => 'ダウンロードできませんでした';
+
+  @override
+  String get studyToolsReady => '準備完了';
+
+  @override
+  String get studyDifficulty => 'この本の難易度';
+
+  @override
+  String get studyWordBook => '単語帳';
+
+  @override
+  String get studySelectHint => '文字を長押しで選ぶと、単語の意味や文の解説が見られます。';
+
+  @override
+  String get studyMeaning => '意味';
+
+  @override
+  String get studyExplain => '文の解説';
+
+  @override
+  String get studyAddWord => '単語帳に追加';
+
+  @override
+  String get studyWordAdded => '単語帳にあり';
+
+  @override
+  String get studyLookingUp => '調べています…';
+
+  @override
+  String get studyExplaining => '解説しています…';
+
+  @override
+  String get studyNoEngine => '単語を調べるには翻訳（端末のモデルかGemini）を設定してください。';
+
+  @override
+  String get studyNoAnswer => '答えが返りませんでした。';
+
+  @override
+  String get studyOtherMeanings => 'ほかの意味';
+
+  @override
+  String get studyKanji => '漢字';
+
+  @override
+  String get studyNotOnList => 'JLPT外';
+
+  @override
+  String get studySentence => '文';
+
+  @override
+  String get studyTranslation => '訳';
+
+  @override
+  String get studyWords => '単語';
+
+  @override
+  String get studyGrammar => '文法';
+
+  @override
+  String get studyNuance => 'ニュアンス';
+
+  @override
+  String studyAnalyzing(int percent) {
+    return '本を読んでいます… $percent%';
+  }
+
+  @override
+  String get studyAnalysisFailed => '本を読めませんでした';
+
+  @override
+  String get studyLevelShare => 'JLPTレベル別の単語';
+
+  @override
+  String studyHarderShare(int percent, String level) {
+    return 'JLPTの単語の$percent%が$levelより難しい';
+  }
+
+  @override
+  String get studyFrequentHard => 'よく出るレベル以上の単語';
+
+  @override
+  String studyTimes(int count) {
+    return '$count回';
+  }
+
+  @override
+  String studyAddAll(int count) {
+    return '$count語を単語帳に追加';
+  }
+
+  @override
+  String studyAddedCount(int count) {
+    return '$count語を追加しました';
+  }
+
+  @override
+  String get studyToday => '今日';
+
+  @override
+  String studyStreak(int days) {
+    return '$days日連続';
+  }
+
+  @override
+  String studyLookedUp(int count) {
+    return '調べた単語 $count';
+  }
+
+  @override
+  String studyExplainedCount(int count) {
+    return '解説 $count';
+  }
+
+  @override
+  String studyReviewedCount(int count) {
+    return '復習 $count';
+  }
+
+  @override
+  String studyCharsRead(int count) {
+    return '原文 $count字';
+  }
+
+  @override
+  String studyDue(int count) {
+    return '$count枚';
+  }
+
+  @override
+  String get studyStartReview => '復習';
+
+  @override
+  String get studyNothingDue => '今は復習するカードがありません';
+
+  @override
+  String get studyEmpty => '読みながら追加した単語がここに出ます。';
+
+  @override
+  String get studyExportAnki => 'Ankiへ書き出す';
+
+  @override
+  String get studyShowAnswer => '答えを見る';
+
+  @override
+  String get studyAgain => 'もう一度';
+
+  @override
+  String get studyHard => '難しい';
+
+  @override
+  String get studyGood => '普通';
+
+  @override
+  String get studyEasy => '簡単';
+
+  @override
+  String get studyReviewDone => '今日の復習は終わり';
+
+  @override
+  String get studyDueNow => '今';
+
+  @override
+  String get studyNew => '新規';
+
+  @override
+  String studyMinutes(int count) {
+    return '$count分';
+  }
+
+  @override
+  String studyDays(int count) {
+    return '$count日';
+  }
+
+  @override
+  String studyTotalWords(int count) {
+    return '$count語';
+  }
 }

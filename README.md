@@ -34,6 +34,15 @@
 - **Background translation** — optionally, the rest of the library is translated a little at a time, slowing down as the phone warms up and pausing for a low battery, with progress in the notification shade.
 - **Translated EPUB** — export any book with its translation as a regular EPUB, horizontal and in the target language, to keep or open in another reading app.
 
+### Learning Japanese while you read
+- **Side by side** — the translation under each paragraph, or hidden under it until you tap, with the book left in Japanese.
+- **Words in their sentence** — tap a word (or long-press any text) for its dictionary form, reading, JLPT level, the kanji's Korean readings, and its meaning *in that sentence*, from the engine you translate with.
+- **Sentences explained** — a translation, the words and grammar a reader at your level may not know, and the nuance.
+- **Furigana** — over every kanji word, or only over those above your level.
+- **A word book** — words you add keep their sentence and book, come back for review the way Anki schedules them, and export to Anki.
+- **How hard is this book?** — its words by JLPT level, the share above yours, and the words above your level it uses most, ready to add.
+- **A study record** — words looked up, sentences explained, cards reviewed, characters read in the original, and the streak.
+
 ### Gemini, if you want it
 Add your own key from [Google AI Studio](https://aistudio.google.com/apikey) (the free tier covers several books a day) and choose a model. The settings show today's use against your limits, with the reset time and the cost at paid prices; let you choose how much the model thinks (speed, balance or quality); and set the content filters, which are off by default so books rated 15+ and adult read in full. When the day's quota runs out or a paragraph cannot be done, the phone's model carries on.
 
@@ -49,7 +58,7 @@ Add your own key from [Google AI Studio](https://aistudio.google.com/apikey) (th
 
 ## Your data 🔒
 
-Your library, reading positions, glossaries and translations stay on your phone (and in your backups). Translating on the phone keeps everything there too. When you choose Gemini, the paragraphs being translated go to Google with your own key, the same way any app using Gemini works; on Google's free tier they may be used to improve Google's services, and on a paid key they are not. The key itself is kept on the device only and is never part of a backup.
+Your library, reading positions, glossaries and translations stay on your phone (and in your backups). Translating on the phone keeps everything there too. The study features ask the same engine, so with Gemini the word or sentence you look up goes along the same way. The Japanese word tools (about 18 MB) come once from a public package mirror (jsDelivr, or unpkg) the first time you turn on furigana or word taps. When you choose Gemini, the paragraphs being translated go to Google with your own key, the same way any app using Gemini works; on Google's free tier they may be used to improve Google's services, and on a paid key they are not. The key itself is kept on the device only and is never part of a backup.
 
 ## Screenshots 🖼️
 
@@ -78,7 +87,7 @@ flutter run
 ```
 
 - The reader's web part lives in `reader_web/` and is bundled into `assets/reader/` (see `reader_web/README.md`).
-- Every push to `main` that changes more than Markdown runs `.github/workflows/android-release.yml`: tests, a signed arm64 build, and a release tagged `v<version>-build.<n>`.
+- Every push to `main` that changes more than Markdown runs `.github/workflows/android-release.yml`: tests, a signed arm64 build, and a release tagged `v<version>-build.<n>`. A push to `beta` does the same as a pre-release, `v<version>-build.<n>-beta`.
 - [SETUP.md](SETUP.md) walks through a first build; [CONTRIBUTING.md](CONTRIBUTING.md) has the guidelines.
 
 ## Credits 🙏
@@ -87,6 +96,7 @@ flutter run
 - [foliate-js](https://github.com/johnfactotum/foliate-js) (MIT) and [Readest](https://github.com/readest/readest) (AGPL-3.0) for the reader.
 - [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), [llamadart](https://pub.dev/packages/llamadart), the [Gemma](https://ai.google.dev/gemma) models and the [Gemini API](https://ai.google.dev/gemini-api) for translation.
 - [Glossarion](https://github.com/Shirochi-stack/Glossarion) (AGPL-3.0) for the approach of the glossary and quality checks.
+- For study: [kuromoji.js](https://github.com/takuyaa/kuromoji.js) (Apache-2.0) with mecab-ipadic (NAIST), [KANJIDIC2](http://www.edrdg.org/wiki/index.php/KANJIDIC_Project) (CC BY-SA 4.0, EDRDG) for the Korean readings of kanji, and [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT) for JLPT levels.
 
 ## License 📜
 

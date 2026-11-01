@@ -3075,6 +3075,414 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This book could not be exported'**
   String get translationExportFailed;
+
+  /// studyTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Study'**
+  String get studyTitle;
+
+  /// studyTranslationLayout
+  ///
+  /// In en, this message translates to:
+  /// **'Translation shows'**
+  String get studyTranslationLayout;
+
+  /// studyLayoutReplace
+  ///
+  /// In en, this message translates to:
+  /// **'In place'**
+  String get studyLayoutReplace;
+
+  /// studyLayoutBelow
+  ///
+  /// In en, this message translates to:
+  /// **'Below'**
+  String get studyLayoutBelow;
+
+  /// studyLayoutHidden
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to see'**
+  String get studyLayoutHidden;
+
+  /// studyLayoutHint
+  ///
+  /// In en, this message translates to:
+  /// **'Below and tap-to-see keep the book in its own language, with the translation under each paragraph.'**
+  String get studyLayoutHint;
+
+  /// studyFurigana
+  ///
+  /// In en, this message translates to:
+  /// **'Furigana'**
+  String get studyFurigana;
+
+  /// studyFuriganaOff
+  ///
+  /// In en, this message translates to:
+  /// **'Off'**
+  String get studyFuriganaOff;
+
+  /// studyFuriganaHard
+  ///
+  /// In en, this message translates to:
+  /// **'Above my level'**
+  String get studyFuriganaHard;
+
+  /// studyFuriganaAll
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get studyFuriganaAll;
+
+  /// studyLevel
+  ///
+  /// In en, this message translates to:
+  /// **'My level'**
+  String get studyLevel;
+
+  /// studyWordTap
+  ///
+  /// In en, this message translates to:
+  /// **'Tap a word for its meaning'**
+  String get studyWordTap;
+
+  /// studyWordTapHint
+  ///
+  /// In en, this message translates to:
+  /// **'The page edges still turn pages.'**
+  String get studyWordTapHint;
+
+  /// studyTools
+  ///
+  /// In en, this message translates to:
+  /// **'Word tools'**
+  String get studyTools;
+
+  /// studyToolsDownload
+  ///
+  /// In en, this message translates to:
+  /// **'Download ({size})'**
+  String studyToolsDownload(String size);
+
+  /// studyToolsWhy
+  ///
+  /// In en, this message translates to:
+  /// **'Furigana, word taps and a book\'s difficulty need a Japanese word dictionary (kuromoji), downloaded once.'**
+  String get studyToolsWhy;
+
+  /// studyToolsDownloading
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading… {percent}%'**
+  String studyToolsDownloading(int percent);
+
+  /// studyToolsFailed
+  ///
+  /// In en, this message translates to:
+  /// **'Download failed'**
+  String get studyToolsFailed;
+
+  /// studyToolsReady
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get studyToolsReady;
+
+  /// studyDifficulty
+  ///
+  /// In en, this message translates to:
+  /// **'This book\'s difficulty'**
+  String get studyDifficulty;
+
+  /// studyWordBook
+  ///
+  /// In en, this message translates to:
+  /// **'Word book'**
+  String get studyWordBook;
+
+  /// studySelectHint
+  ///
+  /// In en, this message translates to:
+  /// **'Long-press text to see a word\'s meaning or have a sentence explained.'**
+  String get studySelectHint;
+
+  /// studyMeaning
+  ///
+  /// In en, this message translates to:
+  /// **'Meaning'**
+  String get studyMeaning;
+
+  /// studyExplain
+  ///
+  /// In en, this message translates to:
+  /// **'Explain'**
+  String get studyExplain;
+
+  /// studyAddWord
+  ///
+  /// In en, this message translates to:
+  /// **'Add to word book'**
+  String get studyAddWord;
+
+  /// studyWordAdded
+  ///
+  /// In en, this message translates to:
+  /// **'In word book'**
+  String get studyWordAdded;
+
+  /// studyLookingUp
+  ///
+  /// In en, this message translates to:
+  /// **'Looking it up…'**
+  String get studyLookingUp;
+
+  /// studyExplaining
+  ///
+  /// In en, this message translates to:
+  /// **'Explaining…'**
+  String get studyExplaining;
+
+  /// studyNoEngine
+  ///
+  /// In en, this message translates to:
+  /// **'Set up translation (a model on the phone or Gemini) to look words up.'**
+  String get studyNoEngine;
+
+  /// studyNoAnswer
+  ///
+  /// In en, this message translates to:
+  /// **'No answer came.'**
+  String get studyNoAnswer;
+
+  /// studyOtherMeanings
+  ///
+  /// In en, this message translates to:
+  /// **'Also'**
+  String get studyOtherMeanings;
+
+  /// studyKanji
+  ///
+  /// In en, this message translates to:
+  /// **'Kanji'**
+  String get studyKanji;
+
+  /// studyNotOnList
+  ///
+  /// In en, this message translates to:
+  /// **'Not on JLPT lists'**
+  String get studyNotOnList;
+
+  /// studySentence
+  ///
+  /// In en, this message translates to:
+  /// **'Sentence'**
+  String get studySentence;
+
+  /// studyTranslation
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get studyTranslation;
+
+  /// studyWords
+  ///
+  /// In en, this message translates to:
+  /// **'Words'**
+  String get studyWords;
+
+  /// studyGrammar
+  ///
+  /// In en, this message translates to:
+  /// **'Grammar'**
+  String get studyGrammar;
+
+  /// studyNuance
+  ///
+  /// In en, this message translates to:
+  /// **'Nuance'**
+  String get studyNuance;
+
+  /// studyAnalyzing
+  ///
+  /// In en, this message translates to:
+  /// **'Reading the book… {percent}%'**
+  String studyAnalyzing(int percent);
+
+  /// studyAnalysisFailed
+  ///
+  /// In en, this message translates to:
+  /// **'The book could not be read'**
+  String get studyAnalysisFailed;
+
+  /// studyLevelShare
+  ///
+  /// In en, this message translates to:
+  /// **'Words by JLPT level'**
+  String get studyLevelShare;
+
+  /// studyHarderShare
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% of the listed words are harder than {level}'**
+  String studyHarderShare(int percent, String level);
+
+  /// studyFrequentHard
+  ///
+  /// In en, this message translates to:
+  /// **'Frequent words above your level'**
+  String get studyFrequentHard;
+
+  /// studyTimes
+  ///
+  /// In en, this message translates to:
+  /// **'{count}×'**
+  String studyTimes(int count);
+
+  /// studyAddAll
+  ///
+  /// In en, this message translates to:
+  /// **'Add {count} to word book'**
+  String studyAddAll(int count);
+
+  /// studyAddedCount
+  ///
+  /// In en, this message translates to:
+  /// **'Added {count} words'**
+  String studyAddedCount(int count);
+
+  /// studyToday
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get studyToday;
+
+  /// studyStreak
+  ///
+  /// In en, this message translates to:
+  /// **'{days}-day streak'**
+  String studyStreak(int days);
+
+  /// studyLookedUp
+  ///
+  /// In en, this message translates to:
+  /// **'{count} looked up'**
+  String studyLookedUp(int count);
+
+  /// studyExplainedCount
+  ///
+  /// In en, this message translates to:
+  /// **'{count} explained'**
+  String studyExplainedCount(int count);
+
+  /// studyReviewedCount
+  ///
+  /// In en, this message translates to:
+  /// **'{count} reviewed'**
+  String studyReviewedCount(int count);
+
+  /// studyCharsRead
+  ///
+  /// In en, this message translates to:
+  /// **'{count} characters in the original'**
+  String studyCharsRead(int count);
+
+  /// studyDue
+  ///
+  /// In en, this message translates to:
+  /// **'{count} due'**
+  String studyDue(int count);
+
+  /// studyStartReview
+  ///
+  /// In en, this message translates to:
+  /// **'Review'**
+  String get studyStartReview;
+
+  /// studyNothingDue
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to review now'**
+  String get studyNothingDue;
+
+  /// studyEmpty
+  ///
+  /// In en, this message translates to:
+  /// **'Words you add while reading show here.'**
+  String get studyEmpty;
+
+  /// studyExportAnki
+  ///
+  /// In en, this message translates to:
+  /// **'Export for Anki'**
+  String get studyExportAnki;
+
+  /// studyShowAnswer
+  ///
+  /// In en, this message translates to:
+  /// **'Show answer'**
+  String get studyShowAnswer;
+
+  /// studyAgain
+  ///
+  /// In en, this message translates to:
+  /// **'Again'**
+  String get studyAgain;
+
+  /// studyHard
+  ///
+  /// In en, this message translates to:
+  /// **'Hard'**
+  String get studyHard;
+
+  /// studyGood
+  ///
+  /// In en, this message translates to:
+  /// **'Good'**
+  String get studyGood;
+
+  /// studyEasy
+  ///
+  /// In en, this message translates to:
+  /// **'Easy'**
+  String get studyEasy;
+
+  /// studyReviewDone
+  ///
+  /// In en, this message translates to:
+  /// **'Done for now'**
+  String get studyReviewDone;
+
+  /// studyDueNow
+  ///
+  /// In en, this message translates to:
+  /// **'Now'**
+  String get studyDueNow;
+
+  /// studyNew
+  ///
+  /// In en, this message translates to:
+  /// **'New'**
+  String get studyNew;
+
+  /// studyMinutes
+  ///
+  /// In en, this message translates to:
+  /// **'{count} min'**
+  String studyMinutes(int count);
+
+  /// studyDays
+  ///
+  /// In en, this message translates to:
+  /// **'{count} d'**
+  String studyDays(int count);
+
+  /// studyTotalWords
+  ///
+  /// In en, this message translates to:
+  /// **'{count} words'**
+  String studyTotalWords(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -10,6 +10,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Project imports:
+import 'package:openlib/services/study/japanese_tools.dart';
 import 'package:openlib/ui/book_reader_page.dart';
 
 class _Bundle extends CachingAssetBundle {
@@ -20,6 +21,9 @@ class _Bundle extends CachingAssetBundle {
     }
     if (key == 'assets/reader/reader.js') {
       return ByteData.sublistView(utf8.encode('export {}'));
+    }
+    if (key == 'assets/study/jlpt.tsv') {
+      return ByteData.sublistView(utf8.encode('食べる\tたべる\t5\n'));
     }
     throw StateError('missing $key');
   }
@@ -64,6 +68,25 @@ void main() {
     expect(await resources.resolve(Uri.parse('$base/../secret')), isNull);
     expect(await resources.resolve(Uri.parse('$base/fonts/f9.ttf')), isNull);
     expect(await resources.resolve(Uri.parse('$base/other.js')), isNull);
+  });
+
+  test('serves the word tools\' dictionary and the JLPT list', () async {
+    final toolsDir = Directory('${dir.path}/tools')..createSync();
+    File('${toolsDir.path}/base.dat.gz').writeAsBytesSync([31, 139, 8]);
+    final withTools = ReaderResources(
+      bookPath: '${dir.path}/book.epub',
+      bundle: _Bundle(),
+      tools: JapaneseTools(directory: () async => toolsDir),
+    );
+    const base = 'https://appassets.androidplatform.net/reader';
+    final dict = await withTools.resolve(Uri.parse('$base/dict/base.dat.gz'));
+    expect(dict!.bytes, [31, 139, 8]);
+    expect(dict.contentType, 'application/octet-stream');
+    // Only the dictionary's own files, and only once downloaded.
+    expect(await withTools.resolve(Uri.parse('$base/dict/cc.dat.gz')), isNull);
+    expect(await withTools.resolve(Uri.parse('$base/dict/book.epub')), isNull);
+    final list = await withTools.resolve(Uri.parse('$base/study/jlpt.tsv'));
+    expect(utf8.decode(list!.bytes), startsWith('食べる'));
   });
 
   test('a missing book file is not served', () async {

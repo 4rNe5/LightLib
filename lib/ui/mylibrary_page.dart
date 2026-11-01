@@ -21,6 +21,7 @@ import 'package:openlib/services/reading_recap.dart';
 import 'package:openlib/ui/components/library_recap.dart';
 import 'package:openlib/ui/components/library_tiles.dart';
 import 'package:openlib/ui/mybook_page.dart';
+import 'package:openlib/ui/study_page.dart';
 
 class MyLibraryPage extends ConsumerStatefulWidget {
   const MyLibraryPage({super.key});
@@ -206,6 +207,13 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                 ),
               ],
             ),
+          ),
+          IconButton(
+            key: const ValueKey('libraryWordBook'),
+            tooltip: l10n.studyWordBook,
+            icon: const Icon(Icons.style_outlined),
+            onPressed: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const StudyPage())),
           ),
           _buildImportButton(context),
           PopupMenuButton<LibrarySortMode>(

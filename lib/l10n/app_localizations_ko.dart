@@ -1632,4 +1632,242 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get translationExportFailed => '이 책은 내보낼 수 없습니다';
+
+  @override
+  String get studyTitle => '학습';
+
+  @override
+  String get studyTranslationLayout => '번역 보기';
+
+  @override
+  String get studyLayoutReplace => '원문 대신';
+
+  @override
+  String get studyLayoutBelow => '원문 아래';
+
+  @override
+  String get studyLayoutHidden => '탭하면 보기';
+
+  @override
+  String get studyLayoutHint =>
+      '원문 아래·탭하면 보기에서는 책이 원문 그대로 남고, 문단마다 아래에 번역이 붙습니다.';
+
+  @override
+  String get studyFurigana => '후리가나';
+
+  @override
+  String get studyFuriganaOff => '끄기';
+
+  @override
+  String get studyFuriganaHard => '내 수준 이상';
+
+  @override
+  String get studyFuriganaAll => '모두';
+
+  @override
+  String get studyLevel => '내 수준';
+
+  @override
+  String get studyWordTap => '단어를 탭해 뜻 보기';
+
+  @override
+  String get studyWordTapHint => '화면 양쪽 끝은 그대로 페이지를 넘깁니다.';
+
+  @override
+  String get studyTools => '단어 도구';
+
+  @override
+  String studyToolsDownload(String size) {
+    return '받기 ($size)';
+  }
+
+  @override
+  String get studyToolsWhy =>
+      '후리가나·단어 탭·난이도 보기에는 일본어 형태소 사전(kuromoji)이 필요해 한 번 받습니다.';
+
+  @override
+  String studyToolsDownloading(int percent) {
+    return '받는 중… $percent%';
+  }
+
+  @override
+  String get studyToolsFailed => '받지 못했습니다';
+
+  @override
+  String get studyToolsReady => '준비됨';
+
+  @override
+  String get studyDifficulty => '이 책 난이도';
+
+  @override
+  String get studyWordBook => '단어장';
+
+  @override
+  String get studySelectHint => '글자를 길게 눌러 선택하면 단어 뜻이나 문장 해설을 볼 수 있습니다.';
+
+  @override
+  String get studyMeaning => '뜻';
+
+  @override
+  String get studyExplain => '문장 해설';
+
+  @override
+  String get studyAddWord => '단어장에 추가';
+
+  @override
+  String get studyWordAdded => '단어장에 있음';
+
+  @override
+  String get studyLookingUp => '뜻을 찾는 중…';
+
+  @override
+  String get studyExplaining => '해설을 만드는 중…';
+
+  @override
+  String get studyNoEngine => '단어를 찾으려면 번역(휴대폰 모델이나 Gemini)을 설정하세요.';
+
+  @override
+  String get studyNoAnswer => '답을 받지 못했습니다.';
+
+  @override
+  String get studyOtherMeanings => '다른 뜻';
+
+  @override
+  String get studyKanji => '한자';
+
+  @override
+  String get studyNotOnList => 'JLPT 목록 외';
+
+  @override
+  String get studySentence => '문장';
+
+  @override
+  String get studyTranslation => '번역';
+
+  @override
+  String get studyWords => '단어';
+
+  @override
+  String get studyGrammar => '문법';
+
+  @override
+  String get studyNuance => '뉘앙스';
+
+  @override
+  String studyAnalyzing(int percent) {
+    return '책을 읽는 중… $percent%';
+  }
+
+  @override
+  String get studyAnalysisFailed => '책을 읽지 못했습니다';
+
+  @override
+  String get studyLevelShare => 'JLPT 단계별 단어';
+
+  @override
+  String studyHarderShare(int percent, String level) {
+    return 'JLPT 단어의 $percent%가 $level보다 어렵습니다';
+  }
+
+  @override
+  String get studyFrequentHard => '자주 나오는 내 수준 이상 단어';
+
+  @override
+  String studyTimes(int count) {
+    return '$count회';
+  }
+
+  @override
+  String studyAddAll(int count) {
+    return '$count개 단어장에 추가';
+  }
+
+  @override
+  String studyAddedCount(int count) {
+    return '단어 $count개를 추가했습니다';
+  }
+
+  @override
+  String get studyToday => '오늘';
+
+  @override
+  String studyStreak(int days) {
+    return '$days일 연속';
+  }
+
+  @override
+  String studyLookedUp(int count) {
+    return '찾은 단어 $count';
+  }
+
+  @override
+  String studyExplainedCount(int count) {
+    return '해설 $count';
+  }
+
+  @override
+  String studyReviewedCount(int count) {
+    return '복습 $count';
+  }
+
+  @override
+  String studyCharsRead(int count) {
+    return '원문 $count자';
+  }
+
+  @override
+  String studyDue(int count) {
+    return '$count장';
+  }
+
+  @override
+  String get studyStartReview => '복습';
+
+  @override
+  String get studyNothingDue => '지금 복습할 카드가 없습니다';
+
+  @override
+  String get studyEmpty => '읽으면서 추가한 단어가 여기에 나옵니다.';
+
+  @override
+  String get studyExportAnki => 'Anki로 내보내기';
+
+  @override
+  String get studyShowAnswer => '정답 보기';
+
+  @override
+  String get studyAgain => '다시';
+
+  @override
+  String get studyHard => '어려움';
+
+  @override
+  String get studyGood => '알맞음';
+
+  @override
+  String get studyEasy => '쉬움';
+
+  @override
+  String get studyReviewDone => '오늘 복습 끝';
+
+  @override
+  String get studyDueNow => '지금';
+
+  @override
+  String get studyNew => '새 카드';
+
+  @override
+  String studyMinutes(int count) {
+    return '$count분';
+  }
+
+  @override
+  String studyDays(int count) {
+    return '$count일';
+  }
+
+  @override
+  String studyTotalWords(int count) {
+    return '단어 $count개';
+  }
 }

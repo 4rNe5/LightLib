@@ -34,6 +34,15 @@
 - **백그라운드 번역** — 원하면 나머지 서재도 조금씩 번역합니다. 휴대폰이 따뜻해지면 속도를 낮추고 배터리가 부족하면 쉬며, 진행 상황은 알림창에 보입니다.
 - **번역본 EPUB** — 번역이 들어간 일반 EPUB으로 내보내 보관하거나 다른 리더 앱에서 열 수 있습니다. 가로쓰기, 번역 언어로 설정돼 나옵니다.
 
+### 읽으면서 일본어 공부
+- **대역 보기** — 문단마다 아래에 번역을 붙이거나, 가려 두었다가 탭하면 보이게. 책은 일본어 그대로 남습니다.
+- **문장 속 단어 뜻** — 단어를 탭하거나 아무 글자나 길게 눌러 선택하면 기본형, 읽기, JLPT 단계, 한자의 한국어 음, 그리고 *그 문장에서의* 뜻을 번역 엔진이 알려 줍니다.
+- **문장 해설** — 번역, 내 수준에서 모를 만한 단어와 문법, 뉘앙스.
+- **후리가나** — 모든 한자 단어에, 또는 내 수준 이상 단어에만.
+- **단어장** — 추가한 단어는 만난 문장·책과 함께 남고, Anki처럼 간격을 두고 복습하며, Anki로 내보낼 수 있습니다.
+- **이 책 난이도** — JLPT 단계별 단어 비율, 내 수준 이상 비율, 자주 나오는 어려운 단어를 바로 단어장으로.
+- **학습 기록** — 찾은 단어, 해설, 복습, 원문으로 읽은 글자 수, 연속 학습일.
+
 ### Gemini를 쓴다면
 [Google AI Studio](https://aistudio.google.com/apikey)에서 받은 본인 키를 넣고 모델을 고르면 됩니다(무료 등급으로 하루 여러 권). 설정에서 오늘 사용량과 한도·초기화 시각·유료 기준 비용을 볼 수 있고, 생각 비중(속도·균형·퀄리티)과 안전 필터를 정할 수 있습니다. 필터는 기본으로 꺼져 있어 15세·성인 등급 책도 끝까지 번역됩니다. 하루 한도를 다 쓰거나 번역이 안 되는 문단은 휴대폰 모델이 이어 받습니다.
 
@@ -49,7 +58,7 @@
 
 ## 내 데이터 🔒
 
-서재, 읽던 위치, 용어집, 번역은 휴대폰(과 백업)에 남습니다. 휴대폰 안에서 번역하면 모든 게 그대로 기기 안에 머뭅니다. Gemini를 고르면 번역 중인 문단이 본인 키로 Google에 전달되는데, Gemini를 쓰는 앱이라면 모두 같은 방식입니다. Google 무료 등급에서는 서비스 개선에 쓰일 수 있고, 유료 키에서는 쓰이지 않습니다. 키는 이 기기에만 보관되고 백업에는 들어가지 않습니다.
+서재, 읽던 위치, 용어집, 번역은 휴대폰(과 백업)에 남습니다. 휴대폰 안에서 번역하면 모든 게 그대로 기기 안에 머뭅니다. 학습 기능도 같은 엔진에 묻기 때문에, Gemini라면 찾아본 단어나 문장도 같은 방식으로 전달됩니다. 일본어 단어 도구(약 18MB)는 후리가나나 단어 탭을 처음 켤 때 공개 패키지 미러(jsDelivr 또는 unpkg)에서 한 번 받습니다. Gemini를 고르면 번역 중인 문단이 본인 키로 Google에 전달되는데, Gemini를 쓰는 앱이라면 모두 같은 방식입니다. Google 무료 등급에서는 서비스 개선에 쓰일 수 있고, 유료 키에서는 쓰이지 않습니다. 키는 이 기기에만 보관되고 백업에는 들어가지 않습니다.
 
 ## 스크린샷 🖼️
 
@@ -78,7 +87,7 @@ flutter run
 ```
 
 - 리더의 웹 부분은 `reader_web/`에 있고 `assets/reader/`로 빌드됩니다(`reader_web/README.md` 참고).
-- `main`에 마크다운 외 변경을 푸시하면 `.github/workflows/android-release.yml`이 테스트·서명된 arm64 빌드·`v<버전>-build.<n>` 릴리즈를 만듭니다.
+- `main`에 마크다운 외 변경을 푸시하면 `.github/workflows/android-release.yml`이 테스트·서명된 arm64 빌드·`v<버전>-build.<n>` 릴리즈를 만듭니다. `beta`에 푸시하면 같은 과정을 거쳐 프리릴리즈 `v<버전>-build.<n>-beta`가 나옵니다.
 - 첫 빌드는 [SETUP.md](SETUP.md), 기여 안내는 [CONTRIBUTING.md](CONTRIBUTING.md)를 보세요.
 
 ## 크레딧 🙏
@@ -87,6 +96,7 @@ flutter run
 - 리더: [foliate-js](https://github.com/johnfactotum/foliate-js) (MIT), [Readest](https://github.com/readest/readest) (AGPL-3.0).
 - 번역: [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), [llamadart](https://pub.dev/packages/llamadart), [Gemma](https://ai.google.dev/gemma) 모델, [Gemini API](https://ai.google.dev/gemini-api).
 - 용어집과 품질 검사의 접근 방식: [Glossarion](https://github.com/Shirochi-stack/Glossarion) (AGPL-3.0).
+- 학습: [kuromoji.js](https://github.com/takuyaa/kuromoji.js) (Apache-2.0)와 mecab-ipadic(NAIST), 한자의 한국어 음은 [KANJIDIC2](http://www.edrdg.org/wiki/index.php/KANJIDIC_Project) (CC BY-SA 4.0, EDRDG), JLPT 단계는 [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT).
 
 ## 라이선스 📜
 

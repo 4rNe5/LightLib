@@ -1699,4 +1699,244 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get translationExportFailed => 'No se pudo exportar este libro';
+
+  @override
+  String get studyTitle => 'Estudio';
+
+  @override
+  String get studyTranslationLayout => 'Mostrar traducción';
+
+  @override
+  String get studyLayoutReplace => 'En su lugar';
+
+  @override
+  String get studyLayoutBelow => 'Debajo';
+
+  @override
+  String get studyLayoutHidden => 'Al tocar';
+
+  @override
+  String get studyLayoutHint =>
+      'Debajo y Al tocar dejan el libro en su idioma, con la traducción bajo cada párrafo.';
+
+  @override
+  String get studyFurigana => 'Furigana';
+
+  @override
+  String get studyFuriganaOff => 'No';
+
+  @override
+  String get studyFuriganaHard => 'Sobre mi nivel';
+
+  @override
+  String get studyFuriganaAll => 'Todas';
+
+  @override
+  String get studyLevel => 'Mi nivel';
+
+  @override
+  String get studyWordTap => 'Tocar una palabra para ver su significado';
+
+  @override
+  String get studyWordTapHint => 'Los bordes siguen pasando página.';
+
+  @override
+  String get studyTools => 'Herramientas de palabras';
+
+  @override
+  String studyToolsDownload(String size) {
+    return 'Descargar ($size)';
+  }
+
+  @override
+  String get studyToolsWhy =>
+      'Furigana, tocar palabras y la dificultad de un libro necesitan un diccionario japonés (kuromoji), descargado una vez.';
+
+  @override
+  String studyToolsDownloading(int percent) {
+    return 'Descargando… $percent %';
+  }
+
+  @override
+  String get studyToolsFailed => 'No se pudo descargar';
+
+  @override
+  String get studyToolsReady => 'Listo';
+
+  @override
+  String get studyDifficulty => 'Dificultad de este libro';
+
+  @override
+  String get studyWordBook => 'Vocabulario';
+
+  @override
+  String get studySelectHint =>
+      'Mantén pulsado el texto para ver el significado de una palabra o la explicación de una frase.';
+
+  @override
+  String get studyMeaning => 'Significado';
+
+  @override
+  String get studyExplain => 'Explicar';
+
+  @override
+  String get studyAddWord => 'Añadir al vocabulario';
+
+  @override
+  String get studyWordAdded => 'En el vocabulario';
+
+  @override
+  String get studyLookingUp => 'Buscando…';
+
+  @override
+  String get studyExplaining => 'Explicando…';
+
+  @override
+  String get studyNoEngine =>
+      'Configura la traducción (un modelo en el teléfono o Gemini) para buscar palabras.';
+
+  @override
+  String get studyNoAnswer => 'No llegó respuesta.';
+
+  @override
+  String get studyOtherMeanings => 'También';
+
+  @override
+  String get studyKanji => 'Kanji';
+
+  @override
+  String get studyNotOnList => 'Fuera del JLPT';
+
+  @override
+  String get studySentence => 'Frase';
+
+  @override
+  String get studyTranslation => 'Traducción';
+
+  @override
+  String get studyWords => 'Palabras';
+
+  @override
+  String get studyGrammar => 'Gramática';
+
+  @override
+  String get studyNuance => 'Matiz';
+
+  @override
+  String studyAnalyzing(int percent) {
+    return 'Leyendo el libro… $percent %';
+  }
+
+  @override
+  String get studyAnalysisFailed => 'No se pudo leer el libro';
+
+  @override
+  String get studyLevelShare => 'Palabras por nivel JLPT';
+
+  @override
+  String studyHarderShare(int percent, String level) {
+    return 'El $percent % de las palabras listadas supera $level';
+  }
+
+  @override
+  String get studyFrequentHard => 'Palabras frecuentes sobre tu nivel';
+
+  @override
+  String studyTimes(int count) {
+    return '$count×';
+  }
+
+  @override
+  String studyAddAll(int count) {
+    return 'Añadir $count al vocabulario';
+  }
+
+  @override
+  String studyAddedCount(int count) {
+    return '$count palabras añadidas';
+  }
+
+  @override
+  String get studyToday => 'Hoy';
+
+  @override
+  String studyStreak(int days) {
+    return '$days días seguidos';
+  }
+
+  @override
+  String studyLookedUp(int count) {
+    return '$count buscadas';
+  }
+
+  @override
+  String studyExplainedCount(int count) {
+    return '$count explicadas';
+  }
+
+  @override
+  String studyReviewedCount(int count) {
+    return '$count repasadas';
+  }
+
+  @override
+  String studyCharsRead(int count) {
+    return '$count caracteres en original';
+  }
+
+  @override
+  String studyDue(int count) {
+    return '$count pendientes';
+  }
+
+  @override
+  String get studyStartReview => 'Repasar';
+
+  @override
+  String get studyNothingDue => 'Nada que repasar ahora';
+
+  @override
+  String get studyEmpty => 'Las palabras que añadas al leer aparecen aquí.';
+
+  @override
+  String get studyExportAnki => 'Exportar para Anki';
+
+  @override
+  String get studyShowAnswer => 'Mostrar respuesta';
+
+  @override
+  String get studyAgain => 'Otra vez';
+
+  @override
+  String get studyHard => 'Difícil';
+
+  @override
+  String get studyGood => 'Bien';
+
+  @override
+  String get studyEasy => 'Fácil';
+
+  @override
+  String get studyReviewDone => 'Listo por ahora';
+
+  @override
+  String get studyDueNow => 'Ahora';
+
+  @override
+  String get studyNew => 'Nueva';
+
+  @override
+  String studyMinutes(int count) {
+    return '$count min';
+  }
+
+  @override
+  String studyDays(int count) {
+    return '$count d';
+  }
+
+  @override
+  String studyTotalWords(int count) {
+    return '$count palabras';
+  }
 }

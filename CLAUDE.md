@@ -31,6 +31,12 @@ debug key (only CI signs releases).
 - `.github/workflows/android-release.yml`: every push to `main` runs tests and
   a signed arm64 build, then publishes `v<version>-build.<N>`
   (versionCode 2000 + N). `[skip ci]` skips it.
+- Beta: every push to `beta` runs the same workflow and publishes a
+  pre-release `v<version>-build.<N>-beta` (version name `<version>-beta`),
+  same package and key, one build counter with `main` — a beta installs
+  over the release before it and the next release over the beta. The app
+  offers betas only with Settings → Include Beta Updates. To ship a beta:
+  push the work to `beta`; when it holds up, merge into `main`.
 - Signing: package `dev.arne5.lightlib`, certificate `CN=LightLib, O=4rNe5`;
   CI refuses any other key (`EXPECTED_CERT_SHA256`). Keystore and passwords
   live only in GitHub Secrets and with the owner.
@@ -56,6 +62,7 @@ debug key (only CI signs releases).
 | Translated EPUB export | `translated_epub.dart` |
 | Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
 | Hidden covers | `lib/services/hidden_covers.dart` |
+| Study (no bundled dictionary) | `lib/services/study/` — `study_assistant` (word/sentence questions to the engine, cached), `study_store` (word book, SM-2 review, days, Anki TSV in `<books>/.study/`), `japanese_tools` (kuromoji dict, 18 MB, downloaded + SHA-256), `study_data` (`assets/study/` from `tool/build_study_data.py`), `book_difficulty`; UI `lib/ui/components/study_sheets.dart`, `lib/ui/study_page.dart`; page side `reader_web/src/study.js` (`npm test`) |
 
 ## Things that bit before
 - EPUB XHTML may use CRLF: the `html` parser's offsets count CRLF as one
@@ -69,6 +76,9 @@ debug key (only CI signs releases).
   in the original; they are not routed to the device model.
 - GPU conversation clone (KV reuse) is slower on Adreno; it is judged per
   device and switched off where slow.
+- Reader DOM changes must not move positions: injected nodes carry
+  `cfi-inert` (translation under the original, furigana `<rt>`) or
+  `cfi-skip` (furigana `<ruby>`), which foliate's CFI code ignores.
 - Tests: no network, no platform channels — inject `Dio` adapters, use
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.
@@ -85,3 +95,6 @@ debug key (only CI signs releases).
 3. Smaller: `[n]`→`n.` numbering, token-budget batches, translator-note
    stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
    two-page spread on unfolded screens.
+4. Study, later: a bundled pre-translated dictionary (JMdict + Korean
+   meanings) as an extension; the word sheet would show it before the
+   engine's contextual meaning.

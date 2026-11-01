@@ -27,6 +27,12 @@ import 'package:openlib/services/epub_package.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/reader_fonts.dart';
 import 'package:openlib/services/reader_settings.dart';
+import 'package:openlib/services/study/book_difficulty.dart';
+import 'package:openlib/services/study/japanese_tools.dart';
+import 'package:openlib/services/study/study_assistant.dart';
+import 'package:openlib/services/study/study_data.dart';
+import 'package:openlib/services/study/study_settings.dart';
+import 'package:openlib/services/study/study_store.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/reader_translation_controller.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
@@ -40,6 +46,8 @@ import 'package:openlib/ui/components/paged_book_view.dart' show ReaderLayout;
 import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/ui/components/reader_settings_sheet.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
+import 'package:openlib/ui/components/study_sheets.dart';
+import 'package:openlib/ui/study_page.dart';
 import 'package:openlib/ui/translation_settings_page.dart';
 
 /// Whether this platform has the web view the book reader needs (Android
@@ -72,11 +80,14 @@ class ReaderResource {
 /// one origin, so the page can fetch them (Android intercepts an https
 /// origin, Apple platforms a custom scheme).
 class ReaderResources {
-  ReaderResources({required this.bookPath, AssetBundle? bundle})
-      : _bundle = bundle ?? rootBundle;
+  ReaderResources(
+      {required this.bookPath, AssetBundle? bundle, JapaneseTools? tools})
+      : _bundle = bundle ?? rootBundle,
+        _tools = tools ?? JapaneseTools.instance;
 
   final String bookPath;
   final AssetBundle _bundle;
+  final JapaneseTools _tools;
   final Map<String, File> _fonts = {};
 
   static const androidOrigin = 'https://appassets.androidplatform.net';
@@ -135,6 +146,18 @@ class ReaderResources {
       if (path == '/index.html' || path == '/reader.js') {
         final data = await _bundle.load('assets/reader$path');
         return ReaderResource(_typeOf(path), data.buffer.asUint8List());
+      }
+      // The word tools' dictionary (downloaded) and the study lists.
+      if (path.startsWith('/dict/')) {
+        final bytes = await _tools.read(path.substring('/dict/'.length));
+        return bytes == null
+            ? null
+            : ReaderResource('application/octet-stream', bytes);
+      }
+      if (path == '/study/jlpt.tsv') {
+        final data = await _bundle.load('assets/study/jlpt.tsv');
+        return ReaderResource(
+            'text/tab-separated-values', data.buffer.asUint8List());
       }
     } catch (_) {
       return null;
@@ -209,6 +232,21 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   String? _targetCode;
   bool _pushScheduled = false;
 
+  // Study.
+  StudySettingsData get _study => StudySettings.instance.value;
+  bool _toolsLoaded = false;
+  bool _toolsLoading = false;
+  Translator? _studyTranslator;
+  Future<Translator?>? _studyTranslatorFuture;
+  StudyAssistant? _assistantCache;
+  TranslationLanguage? _studyLanguage;
+  Map<String, dynamic>? _selection;
+  final ValueNotifier<double> _analysisProgress = ValueNotifier(0);
+  Completer<BookDifficulty?>? _analysis;
+  final Map<int, Set<int>> _readParagraphs = {};
+  int _unsavedChars = 0;
+  String? _lastStudyJson;
+
   // Reading aloud.
   TtsService? _tts;
   TtsState _ttsState = TtsState.idle;
@@ -231,6 +269,11 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     ReaderFonts.instance.addListener(_onSettingsChanged);
     unawaited(ReaderSettings.instance.load());
     unawaited(ReaderFonts.instance.load());
+    StudySettings.instance.addListener(_onStudyChanged);
+    JapaneseTools.instance.addListener(_onStudyChanged);
+    unawaited(StudySettings.instance.load());
+    unawaited(StudyStore.instance.load());
+    unawaited(StudyData.instance.load());
     if (ttsAvailableOnPlatform()) {
       _tts = TtsService();
       _tts!.onStateChanged.listen((s) {
@@ -253,6 +296,10 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     SharedTranslationEngine.instance.leaveReader();
     ReaderSettings.instance.removeListener(_onSettingsChanged);
     ReaderFonts.instance.removeListener(_onSettingsChanged);
+    StudySettings.instance.removeListener(_onStudyChanged);
+    JapaneseTools.instance.removeListener(_onStudyChanged);
+    _analysisProgress.dispose();
+    unawaited(_studyTranslator?.dispose());
     _lifecycle?.dispose();
     _saveTimer?.cancel();
     _settingsTimer?.cancel();
@@ -310,6 +357,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
           ];
         });
         unawaited(_restoreTranslation());
+        _lastStudyJson = null;
+        unawaited(_pushStudy());
       case 'relocate':
         final cfi = msg['cfi'] as String?;
         setState(() {
@@ -332,6 +381,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         final section = (msg['section'] as num).toInt();
         final first = (msg['first'] as num).toInt();
         final last = (msg['last'] as num).toInt();
+        _countRead(section, first, last);
         if (_translateOn && first >= 0) {
           _translation?.ensureAhead(
             section * _sectionStride + first,
@@ -345,6 +395,35 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         if (_chrome) setState(() => _chrome = false);
       case 'tap':
         setState(() => _chrome = !_chrome);
+      case 'word':
+        unawaited(_openWord(msg));
+      case 'selection':
+        // Japanese books: the questions are about Japanese.
+        final text = '${msg['text'] ?? ''}';
+        if (!_japanese && _selection == null) return;
+        setState(() => _selection = text.isEmpty ? null : msg);
+      case 'studyTools':
+        _toolsLoading = false;
+        _toolsLoaded = msg['ready'] == true;
+        if (!_toolsLoaded) {
+          _logger.warning('Word tools not loaded',
+              tag: 'Study', metadata: {'message': '${msg['message']}'});
+        }
+        if (mounted) setState(() {});
+      case 'analysis':
+        final result = msg['result'];
+        if (msg['progress'] is num) {
+          _analysisProgress.value = (msg['progress'] as num).toDouble();
+        }
+        if (result is Map) {
+          final d = BookDifficulty.fromJson(Map<String, dynamic>.from(result));
+          StudyStore.instance.keepAnswer(_analysisKey, d.toJson());
+          _analysis?.complete(d);
+          _analysis = null;
+        } else if (msg['error'] != null) {
+          _analysis?.complete(null);
+          _analysis = null;
+        }
       case 'externalLink':
         final href = msg['href'] as String?;
         if (href != null) {
@@ -379,6 +458,10 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
 
   void _saveNow() {
     _saveTimer?.cancel();
+    if (_unsavedChars > 0) {
+      StudyStore.instance.count(StudyDay(chars: _unsavedChars));
+      _unsavedChars = 0;
+    }
     final cfi = _cfi;
     if (cfi == null || cfi.isEmpty) return;
     unawaited(
@@ -417,7 +500,11 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     return ReaderWriting.auto;
   }
 
-  FontScript get _displayScript => _translateOn && _targetCode != null
+  /// The script on the page: the translation's while it shows in place,
+  /// the book's otherwise (side by side, the original leads).
+  FontScript get _displayScript => _translateOn &&
+          _targetCode != null &&
+          _study.layout == TranslationLayout.replace
       ? ReaderFonts.scriptForLanguage(_targetCode)
       : ReaderFonts.scriptForLanguage(_language);
 
@@ -660,6 +747,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       MaterialPageRoute(builder: (_) => const TranslationSettingsPage()),
     );
     // A new model or language applies from the next start.
+    _studyLanguage = null;
+    _assistantCache = null;
     final old = _translation;
     if (old != null && mounted) {
       final wasOn = _translateOn;
@@ -672,6 +761,284 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       await _js('window.reader.clearTranslations()');
       if (wasOn) await _setTranslation(true, quiet: true);
     }
+  }
+
+  // ------------------------------------------------------------------
+  // Study
+  // ------------------------------------------------------------------
+
+  bool get _japanese =>
+      RegExp(r'^ja', caseSensitive: false).hasMatch(_language ?? '');
+
+  String get _bookTitle =>
+      _title?.isNotEmpty == true ? _title! : widget.fileName;
+
+  String get _analysisKey => 'a\u0001${widget.fileName}';
+
+  void _onStudyChanged() {
+    if (!mounted) return;
+    setState(() {});
+    unawaited(_pushStudy());
+    // Side by side or in place changes the shown script (fonts).
+    _onSettingsChanged();
+  }
+
+  /// Sends the study settings to the page, loading the word tools there
+  /// when they are wanted and downloaded.
+  Future<void> _pushStudy() async {
+    if (!_opened) return;
+    final s = _study;
+    final json = jsonEncode({
+      'layout': s.layout.name,
+      'furigana': s.furigana.name,
+      'level': s.level,
+      'wordTap': s.wordTap,
+    });
+    if (json != _lastStudyJson) {
+      _lastStudyJson = json;
+      await _js('window.reader.setStudy($json)');
+    }
+    if (s.needsTools && _japanese) await _loadTools();
+  }
+
+  /// Loads the word tools in the page; false when they are not
+  /// downloaded.
+  Future<bool> _loadTools() async {
+    if (_toolsLoaded) return true;
+    if (!await JapaneseTools.instance.installed()) return false;
+    if (!_toolsLoading) {
+      _toolsLoading = true;
+      await _js('window.reader.loadStudyTools()');
+    }
+    return false;
+  }
+
+  Future<TranslationLanguage> _studyTarget() async =>
+      _studyLanguage ??= languageForCode(await MyLibraryDb.instance
+          .getPreference(translationTargetLanguagePref)
+          .catchError((_) => null) as String?);
+
+  /// The engine study questions go to: the reader's translator when it
+  /// runs, else one of its own (made on the first question).
+  Future<Translator?> _studyEngine() async {
+    final reader = _glossaryTranslator;
+    if (reader != null && _translation != null) return reader;
+    if (_studyTranslator != null) return _studyTranslator;
+    return _studyTranslatorFuture ??= () async {
+      if (await TranslationEngines.cacheModelId() == null) return null;
+      final t = await TranslationEngines.forReader();
+      if (!mounted) {
+        await t?.dispose();
+        return null;
+      }
+      return _studyTranslator = t;
+    }()
+        .whenComplete(() => _studyTranslatorFuture = null);
+  }
+
+  Future<StudyAssistant?> _assistant() async {
+    if (await TranslationEngines.cacheModelId() == null) return null;
+    final target = await _studyTarget();
+    return _assistantCache ??= StudyAssistant(
+      translator: _studyEngine,
+      targetLanguage: target.englishName,
+      targetCode: target.code,
+    );
+  }
+
+  Future<void> _openWord(Map<String, dynamic> msg) async {
+    final query = WordQuery(
+      base: '${msg['base'] ?? msg['surface'] ?? ''}',
+      surface: '${msg['surface'] ?? ''}',
+      reading: '${msg['reading'] ?? ''}',
+      sentence: '${msg['sentence'] ?? ''}',
+      pos: '${msg['pos'] ?? ''}',
+      level: (msg['level'] as num?)?.toInt() ?? 0,
+    );
+    if (query.base.isEmpty) return;
+    final assistant = await _assistant();
+    final target = await _studyTarget();
+    if (!mounted) return;
+    await showWordSheet(context,
+        query: query,
+        assistant: assistant,
+        book: _bookTitle,
+        targetCode: target.code,
+        onExplain: _explain);
+    await _js('window.reader.clearHighlight()');
+  }
+
+  Future<void> _explain(String sentence) async {
+    final assistant = await _assistant();
+    if (!mounted) return;
+    await showExplanationSheet(context,
+        sentence: sentence,
+        assistant: assistant,
+        book: _bookTitle,
+        level: _study.level);
+  }
+
+  /// The selection bar's actions.
+  Future<void> _lookUpSelection() async {
+    final sel = _selection;
+    if (sel == null) return;
+    setState(() => _selection = null);
+    await _js('window.reader.clearSelection()');
+    final text = '${sel['text']}';
+    final base = '${sel['base'] ?? text}';
+    await _openWord({
+      'base': base,
+      'surface': text,
+      'reading': sel['reading'] ??
+          (RegExp(r'^[\u3040-\u30FFー]+$').hasMatch(base)
+              ? StudyData.hiragana(base)
+              : ''),
+      'sentence': sel['sentence'] ?? '',
+      'pos': sel['pos'] ?? '',
+      'level': sel['level'] ?? StudyData.instance.levelOf(base),
+    });
+  }
+
+  Future<void> _explainSelection() async {
+    final sel = _selection;
+    if (sel == null) return;
+    setState(() => _selection = null);
+    await _js('window.reader.clearSelection()');
+    final text = '${sel['text']}';
+    final sentence = '${sel['sentence'] ?? ''}';
+    // A long selection is the thing to explain; a word, its sentence.
+    await _explain(text.length > 12 || sentence.isEmpty ? text : sentence);
+  }
+
+  Future<void> _openStudySheet() => showStudySettingsSheet(
+        context,
+        japanese: _japanese,
+        translating: _translateOn,
+        onDifficulty: _openDifficulty,
+        onWordBook: () => Navigator.push(context,
+            MaterialPageRoute(builder: (_) => const StudyPage())),
+      );
+
+  Future<void> _openDifficulty() async {
+    final l10n = AppLocalizations.of(context);
+    final known = StudyStore.instance.answer(_analysisKey);
+    Future<BookDifficulty?> result;
+    if (known is Map) {
+      result = Future.value(
+          BookDifficulty.fromJson(Map<String, dynamic>.from(known)));
+    } else {
+      if (!await JapaneseTools.instance.installed()) {
+        if (mounted) {
+          showSnackBar(context: context, message: l10n.studyToolsWhy);
+          await _openStudySheet();
+        }
+        return;
+      }
+      if (!_toolsLoaded) {
+        await _loadTools();
+        for (var i = 0; i < 100 && !_toolsLoaded && _toolsLoading; i++) {
+          await Future<void>.delayed(const Duration(milliseconds: 200));
+        }
+        if (!_toolsLoaded) {
+          if (mounted) {
+            showSnackBar(context: context, message: l10n.studyAnalysisFailed);
+          }
+          return;
+        }
+      }
+      final job = _analysis ??= Completer<BookDifficulty?>();
+      _analysisProgress.value = 0;
+      unawaited(_js('window.reader.analyze()'));
+      result = job.future;
+    }
+    if (!mounted) return;
+    final glossary = GlossaryService.instance.cached(widget.fileName) ??
+        await GlossaryService.instance.load(widget.fileName);
+    if (!mounted) return;
+    await showDifficultySheet(
+      context,
+      progress: _analysisProgress,
+      result: result,
+      book: _bookTitle,
+      names: {for (final e in glossary.entries) e.source},
+      onAdded: (words) => unawaited(_fillMeanings(words)),
+    );
+  }
+
+  /// Looks up words added without a meaning (from the difficulty list),
+  /// one at a time.
+  Future<void> _fillMeanings(List<BookWord> words) async {
+    final assistant = await _assistant();
+    if (assistant == null) return;
+    for (final w in words) {
+      if (!mounted) return;
+      final m = await assistant
+          .meaning(WordQuery(
+              base: w.base, reading: w.reading, sentence: w.sentence))
+          .catchError((_) => null);
+      if (m != null && StudyStore.instance.has(w.base, w.reading)) {
+        await StudyStore.instance
+            .add(word: w.base, reading: w.reading, meaning: m.meaning);
+      }
+    }
+  }
+
+  /// Characters read in the original (a Japanese book, not shown
+  /// translated in place), once per paragraph a session.
+  void _countRead(int section, int first, int last) {
+    if (!_japanese || first < 0) return;
+    if (_translateOn && _study.layout == TranslationLayout.replace) return;
+    final texts = _sections[section];
+    if (texts == null) return;
+    final seen = _readParagraphs.putIfAbsent(section, () => {});
+    for (var n = first; n <= last && n < texts.length; n++) {
+      if (seen.add(n)) _unsavedChars += texts[n].length;
+    }
+  }
+
+  Widget _selectionBar(ReaderPalette palette) {
+    final l10n = AppLocalizations.of(context);
+    final sel = _selection;
+    if (sel == null) return const SizedBox.shrink();
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      key: const ValueKey('studySelectionBar'),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: palette.dark ? scheme.surfaceContainerHigh : scheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: const [
+          BoxShadow(blurRadius: 12, color: Color(0x33000000), offset: Offset(0, 3))
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextButton.icon(
+            key: const ValueKey('studySelectionMeaning'),
+            onPressed: _lookUpSelection,
+            icon: const Icon(Icons.search, size: 18),
+            label: Text(l10n.studyMeaning),
+          ),
+          TextButton.icon(
+            key: const ValueKey('studySelectionExplain'),
+            onPressed: _explainSelection,
+            icon: const Icon(Icons.menu_book_outlined, size: 18),
+            label: Text(l10n.studyExplain),
+          ),
+          IconButton(
+            visualDensity: VisualDensity.compact,
+            tooltip: MaterialLocalizations.of(context).closeButtonTooltip,
+            icon: const Icon(Icons.close, size: 18),
+            onPressed: () {
+              setState(() => _selection = null);
+              unawaited(_js('window.reader.clearSelection()'));
+            },
+          ),
+        ],
+      ),
+    );
   }
 
   // ------------------------------------------------------------------
@@ -1012,6 +1379,13 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   icon: Icon(Icons.stop_circle, color: iconColor),
                   onPressed: () => _tts?.stop(),
                 ),
+              if (!_fixedLayout)
+                IconButton(
+                  key: const ValueKey('studyButton'),
+                  tooltip: l10n.studyTitle,
+                  icon: Icon(Icons.school_outlined, color: iconColor),
+                  onPressed: _openStudySheet,
+                ),
               IconButton(
                 key: const ValueKey('readerContents'),
                 tooltip: l10n.readerContents,
@@ -1272,6 +1646,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                      _selectionBar(palette),
                       _status(palette),
                       if (_error != null)
                         const SizedBox.shrink()

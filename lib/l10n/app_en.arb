@@ -2301,5 +2301,360 @@
   "translationExportFailed": "This book could not be exported",
   "@translationExportFailed": {
     "description": "translationExportFailed"
+  },
+  "studyTitle": "Study",
+  "@studyTitle": {
+    "description": "studyTitle"
+  },
+  "studyTranslationLayout": "Translation shows",
+  "@studyTranslationLayout": {
+    "description": "studyTranslationLayout"
+  },
+  "studyLayoutReplace": "In place",
+  "@studyLayoutReplace": {
+    "description": "studyLayoutReplace"
+  },
+  "studyLayoutBelow": "Below",
+  "@studyLayoutBelow": {
+    "description": "studyLayoutBelow"
+  },
+  "studyLayoutHidden": "Tap to see",
+  "@studyLayoutHidden": {
+    "description": "studyLayoutHidden"
+  },
+  "studyLayoutHint": "Below and tap-to-see keep the book in its own language, with the translation under each paragraph.",
+  "@studyLayoutHint": {
+    "description": "studyLayoutHint"
+  },
+  "studyFurigana": "Furigana",
+  "@studyFurigana": {
+    "description": "studyFurigana"
+  },
+  "studyFuriganaOff": "Off",
+  "@studyFuriganaOff": {
+    "description": "studyFuriganaOff"
+  },
+  "studyFuriganaHard": "Above my level",
+  "@studyFuriganaHard": {
+    "description": "studyFuriganaHard"
+  },
+  "studyFuriganaAll": "All",
+  "@studyFuriganaAll": {
+    "description": "studyFuriganaAll"
+  },
+  "studyLevel": "My level",
+  "@studyLevel": {
+    "description": "studyLevel"
+  },
+  "studyWordTap": "Tap a word for its meaning",
+  "@studyWordTap": {
+    "description": "studyWordTap"
+  },
+  "studyWordTapHint": "The page edges still turn pages.",
+  "@studyWordTapHint": {
+    "description": "studyWordTapHint"
+  },
+  "studyTools": "Word tools",
+  "@studyTools": {
+    "description": "studyTools"
+  },
+  "studyToolsDownload": "Download ({size})",
+  "@studyToolsDownload": {
+    "description": "studyToolsDownload",
+    "placeholders": {
+      "size": {
+        "type": "String"
+      }
+    }
+  },
+  "studyToolsWhy": "Furigana, word taps and a book's difficulty need a Japanese word dictionary (kuromoji), downloaded once.",
+  "@studyToolsWhy": {
+    "description": "studyToolsWhy"
+  },
+  "studyToolsDownloading": "Downloading… {percent}%",
+  "@studyToolsDownloading": {
+    "description": "studyToolsDownloading",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "studyToolsFailed": "Download failed",
+  "@studyToolsFailed": {
+    "description": "studyToolsFailed"
+  },
+  "studyToolsReady": "Ready",
+  "@studyToolsReady": {
+    "description": "studyToolsReady"
+  },
+  "studyDifficulty": "This book's difficulty",
+  "@studyDifficulty": {
+    "description": "studyDifficulty"
+  },
+  "studyWordBook": "Word book",
+  "@studyWordBook": {
+    "description": "studyWordBook"
+  },
+  "studySelectHint": "Long-press text to see a word's meaning or have a sentence explained.",
+  "@studySelectHint": {
+    "description": "studySelectHint"
+  },
+  "studyMeaning": "Meaning",
+  "@studyMeaning": {
+    "description": "studyMeaning"
+  },
+  "studyExplain": "Explain",
+  "@studyExplain": {
+    "description": "studyExplain"
+  },
+  "studyAddWord": "Add to word book",
+  "@studyAddWord": {
+    "description": "studyAddWord"
+  },
+  "studyWordAdded": "In word book",
+  "@studyWordAdded": {
+    "description": "studyWordAdded"
+  },
+  "studyLookingUp": "Looking it up…",
+  "@studyLookingUp": {
+    "description": "studyLookingUp"
+  },
+  "studyExplaining": "Explaining…",
+  "@studyExplaining": {
+    "description": "studyExplaining"
+  },
+  "studyNoEngine": "Set up translation (a model on the phone or Gemini) to look words up.",
+  "@studyNoEngine": {
+    "description": "studyNoEngine"
+  },
+  "studyNoAnswer": "No answer came.",
+  "@studyNoAnswer": {
+    "description": "studyNoAnswer"
+  },
+  "studyOtherMeanings": "Also",
+  "@studyOtherMeanings": {
+    "description": "studyOtherMeanings"
+  },
+  "studyKanji": "Kanji",
+  "@studyKanji": {
+    "description": "studyKanji"
+  },
+  "studyNotOnList": "Not on JLPT lists",
+  "@studyNotOnList": {
+    "description": "studyNotOnList"
+  },
+  "studySentence": "Sentence",
+  "@studySentence": {
+    "description": "studySentence"
+  },
+  "studyTranslation": "Translation",
+  "@studyTranslation": {
+    "description": "studyTranslation"
+  },
+  "studyWords": "Words",
+  "@studyWords": {
+    "description": "studyWords"
+  },
+  "studyGrammar": "Grammar",
+  "@studyGrammar": {
+    "description": "studyGrammar"
+  },
+  "studyNuance": "Nuance",
+  "@studyNuance": {
+    "description": "studyNuance"
+  },
+  "studyAnalyzing": "Reading the book… {percent}%",
+  "@studyAnalyzing": {
+    "description": "studyAnalyzing",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "studyAnalysisFailed": "The book could not be read",
+  "@studyAnalysisFailed": {
+    "description": "studyAnalysisFailed"
+  },
+  "studyLevelShare": "Words by JLPT level",
+  "@studyLevelShare": {
+    "description": "studyLevelShare"
+  },
+  "studyHarderShare": "{percent}% of the listed words are harder than {level}",
+  "@studyHarderShare": {
+    "description": "studyHarderShare",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      },
+      "level": {
+        "type": "String"
+      }
+    }
+  },
+  "studyFrequentHard": "Frequent words above your level",
+  "@studyFrequentHard": {
+    "description": "studyFrequentHard"
+  },
+  "studyTimes": "{count}×",
+  "@studyTimes": {
+    "description": "studyTimes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyAddAll": "Add {count} to word book",
+  "@studyAddAll": {
+    "description": "studyAddAll",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyAddedCount": "Added {count} words",
+  "@studyAddedCount": {
+    "description": "studyAddedCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyToday": "Today",
+  "@studyToday": {
+    "description": "studyToday"
+  },
+  "studyStreak": "{days}-day streak",
+  "@studyStreak": {
+    "description": "studyStreak",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "studyLookedUp": "{count} looked up",
+  "@studyLookedUp": {
+    "description": "studyLookedUp",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyExplainedCount": "{count} explained",
+  "@studyExplainedCount": {
+    "description": "studyExplainedCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyReviewedCount": "{count} reviewed",
+  "@studyReviewedCount": {
+    "description": "studyReviewedCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyCharsRead": "{count} characters in the original",
+  "@studyCharsRead": {
+    "description": "studyCharsRead",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyDue": "{count} due",
+  "@studyDue": {
+    "description": "studyDue",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyStartReview": "Review",
+  "@studyStartReview": {
+    "description": "studyStartReview"
+  },
+  "studyNothingDue": "Nothing to review now",
+  "@studyNothingDue": {
+    "description": "studyNothingDue"
+  },
+  "studyEmpty": "Words you add while reading show here.",
+  "@studyEmpty": {
+    "description": "studyEmpty"
+  },
+  "studyExportAnki": "Export for Anki",
+  "@studyExportAnki": {
+    "description": "studyExportAnki"
+  },
+  "studyShowAnswer": "Show answer",
+  "@studyShowAnswer": {
+    "description": "studyShowAnswer"
+  },
+  "studyAgain": "Again",
+  "@studyAgain": {
+    "description": "studyAgain"
+  },
+  "studyHard": "Hard",
+  "@studyHard": {
+    "description": "studyHard"
+  },
+  "studyGood": "Good",
+  "@studyGood": {
+    "description": "studyGood"
+  },
+  "studyEasy": "Easy",
+  "@studyEasy": {
+    "description": "studyEasy"
+  },
+  "studyReviewDone": "Done for now",
+  "@studyReviewDone": {
+    "description": "studyReviewDone"
+  },
+  "studyDueNow": "Now",
+  "@studyDueNow": {
+    "description": "studyDueNow"
+  },
+  "studyNew": "New",
+  "@studyNew": {
+    "description": "studyNew"
+  },
+  "studyMinutes": "{count} min",
+  "@studyMinutes": {
+    "description": "studyMinutes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyDays": "{count} d",
+  "@studyDays": {
+    "description": "studyDays",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "studyTotalWords": "{count} words",
+  "@studyTotalWords": {
+    "description": "studyTotalWords",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
