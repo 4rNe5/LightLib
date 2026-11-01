@@ -36,6 +36,21 @@ void main() {
           isTrue);
     });
 
+    test('the running build: an arm64 versionCode is 2000 + the build', () {
+      // PackageInfo.buildNumber on Android is the versionCode.
+      final running = AppBuild.of('1.7.2', '2048');
+      expect(running.build, 48);
+      expect(AppBuild.tryParse('v1.7.2-build.49')! > running, isTrue);
+      expect(AppBuild.tryParse('v1.7.2-build.51-beta')! > running, isTrue);
+      expect(AppBuild.of('1.7.2-beta', '2051'),
+          AppBuild.tryParse('v1.7.2-build.51-beta'));
+      // A stored version from a build with the bug compares the same way.
+      expect(AppBuild.tryParse('1.7.2+2048')!.build, 48);
+      expect(UpgradeDetector.compareVersions('1.7.2+2048', '1.7.2+52'),
+          lessThan(0));
+      expect(AppBuild.of('1.7.2', '36').build, 36);
+    });
+
     test('betas: one build sequence with releases, told apart by name', () {
       final beta = AppBuild.tryParse('v1.7.2-build.52-beta')!;
       expect((beta.build, beta.preRelease), (52, 'beta'));

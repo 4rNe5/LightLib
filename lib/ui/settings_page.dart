@@ -5,6 +5,7 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/backup_service.dart';
 
 // Flutter imports:
@@ -754,7 +755,7 @@ class SettingsPage extends ConsumerWidget {
                   if (snapshot.hasData) {
                     return Center(
                       child: Text(
-                        "Version ${snapshot.data!.version}+${snapshot.data!.buildNumber}",
+                        "Version ${AppBuild.of(snapshot.data!.version, snapshot.data!.buildNumber).label}",
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                           fontSize: 12,

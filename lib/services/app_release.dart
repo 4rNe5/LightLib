@@ -27,18 +27,26 @@ class AppBuild implements Comparable<AppBuild> {
     final m = _pattern.firstMatch(text.trim());
     if (m == null) return null;
     int part(int i) => int.tryParse(m.group(i) ?? '') ?? 0;
+    final plus = int.tryParse(m.group(5) ?? '');
     return AppBuild(part(1), part(2), part(3),
-        build: int.tryParse(m.group(4) ?? m.group(5) ?? '') ?? 0,
+        build: int.tryParse(m.group(4) ?? '') ?? (plus == null ? 0 : buildOf(plus)),
         preRelease: m.group(6));
   }
 
   /// From the platform's version name and build number.
   static AppBuild of(String version, String buildNumber) {
     final base = tryParse(version) ?? const AppBuild(0, 0, 0);
+    final number = int.tryParse(buildNumber);
     return AppBuild(base.major, base.minor, base.patch,
-        build: int.tryParse(buildNumber) ?? base.build,
+        build: number == null ? base.build : buildOf(number),
         preRelease: base.preRelease);
   }
+
+  /// The build number in an Android versionCode: `--split-per-abi` adds
+  /// 1000 x the ABI (arm64: 2000), so build 48 runs as 2048. Builds stay
+  /// under 1000 (the release workflow's run number).
+  static int buildOf(int versionCode) =>
+      versionCode >= 1000 ? versionCode % 1000 : versionCode;
 
   String get version => '$major.$minor.$patch';
 
