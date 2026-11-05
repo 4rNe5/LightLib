@@ -67,6 +67,7 @@ debug key (only CI signs releases).
 | Translated EPUB export | `translated_epub.dart` |
 | Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
 | Hidden covers | `lib/services/hidden_covers.dart` |
+| Search | `lib/ui/search_page.dart` (field, suggestions: BOOK☆WALKER `suggest`, Google `hl=ja`, history; Korean → Japanese title via `original_title.dart`), filters in `components/search_filter_sheet.dart` (default Japanese + EPUB); results `results_page.dart` grouped by `search_results.dart` (series/volume from titles, best file per volume — only what the libraries returned); catalogs in `search_manager.dart` |
 | Study (no bundled dictionary) | `lib/services/study/` — `study_assistant` (word/sentence questions to the engine, cached), `study_store` (word book, SM-2 review, days, Anki TSV in `<books>/.study/`), `japanese_tools` (kuromoji dict, 18 MB, downloaded + SHA-256), `study_data` (`assets/study/` from `tool/build_study_data.py`), `book_difficulty`; UI `lib/ui/components/study_sheets.dart`, `lib/ui/study_page.dart`; page side `reader_web/src/study.js` (`npm test`) |
 
 ## Things that bit before
@@ -84,6 +85,8 @@ debug key (only CI signs releases).
 - Reader DOM changes must not move positions: injected nodes carry
   `cfi-inert` (translation under the original, furigana `<rt>`) or
   `cfi-skip` (furigana `<ruby>`), which foliate's CFI code ignores.
+- Search candidates come only from the libraries: BOOK☆WALKER lists books
+  the libraries do not have, so it only fills the search field.
 - Tests: no network, no platform channels — inject `Dio` adapters, use
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.

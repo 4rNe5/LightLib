@@ -15,6 +15,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 // Project imports:
 import 'package:openlib/services/annas_archieve.dart';
+import 'package:openlib/services/search_manager.dart' show SearchProviderId;
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/book_card_widget.dart';
@@ -131,12 +132,16 @@ void main() {
     await tester.pump(const Duration(milliseconds: 100));
 
     // Every visible card carries the catalog chip...
-    expect(find.text('LibGen'), findsWidgets);
+    expect(
+        find.descendant(
+            of: find.byType(BookInfoCard).first,
+            matching: find.text('LibGen')),
+        findsOneWidget);
 
     // ...and the list header states where the results came from.
     final l10n =
         AppLocalizations.of(tester.element(find.byType(ResultPage).first));
-    expect(find.text(l10n.searchingOn('LibGen')), findsOneWidget);
+    expect(find.text('${l10n.resultFileCount(20)} · LibGen'), findsOneWidget);
   });
 
   testWidgets('untagged results render without a source chip', (tester) async {
@@ -156,12 +161,15 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
 
-    // No 'LibGen'/'Z-Library' chip anywhere, and no header line for a
-    // source that does not exist.
-    expect(find.text('LibGen'), findsNothing);
+    // No 'LibGen'/'Z-Library' chip on the cards (only the source picker
+    // names them), and no source in the header line.
+    expect(
+        find.descendant(
+            of: find.byType(BookInfoCard), matching: find.text('LibGen')),
+        findsNothing);
     final l10n =
         AppLocalizations.of(tester.element(find.byType(ResultPage).first));
-    expect(find.text(l10n.searchingOn('LibGen')), findsNothing);
+    expect(find.text(l10n.resultFileCount(20)), findsOneWidget);
   });
 
   testWidgets('while searching, shows a spinner and never "No results found"',
@@ -206,5 +214,120 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));
     expect(find.text('No results found'), findsOneWidget);
+  });
+
+  BookData volume(String title, String info, String md5) => BookData(
+      title: title,
+      author: 'Author',
+      link: 'https://example.com/md5/$md5',
+      md5: md5,
+      info: info,
+      source: "Anna's Archive");
+
+  testWidgets('a series shows as one card with a chip per volume found',
+      (tester) async {
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        searchProvider.overrideWith((ref, key) async {
+          if (key.page >= 2) return [];
+          return [
+            volume('死亡遊戯で飯を食う。2', 'Japanese [ja] · EPUB · 3MB', 'a2'),
+            volume('死亡遊戯で飯を食う。1', 'Japanese [ja] · EPUB · 3MB', 'a1'),
+            volume('死亡遊戯で飯を食う。1', 'Japanese [ja] · PDF · 9MB', 'a1p'),
+            volume('死亡遊戯で飯を食う。10', 'Japanese [ja] · EPUB · 3MB', 'a10'),
+            volume('別の本', 'Japanese [ja] · EPUB · 2MB', 'b'),
+          ];
+        }),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ResultPage(searchQuery: '死亡遊戯'),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    expect(find.byKey(const ValueKey('series-死亡遊戯で飯を食う。')), findsOneWidget);
+    for (final v in ['1', '2', '10']) {
+      expect(find.byKey(ValueKey('volume-死亡遊戯で飯を食う。-$v')), findsOneWidget);
+    }
+    // The rest stays a file of its own.
+    expect(find.widgetWithText(BookInfoCard, '別の本'), findsOneWidget);
+    // Volume 1 has two files: a long press lists them, EPUB first.
+    await tester.longPress(find.byKey(const ValueKey('volume-死亡遊戯で飯を食う。-1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+    final cards = tester.widgetList<BookInfoCard>(find.byType(BookInfoCard)).toList();
+    expect(cards.where((c) => c.md5 == 'a1' || c.md5 == 'a1p').map((c) => c.md5),
+        ['a1', 'a1p']);
+    Navigator.of(tester.element(find.byType(BookInfoCard).last)).pop();
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // The plain list of files is a tap away.
+    await tester.tap(find.text('Files'));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('series-死亡遊戯で飯を食う。')), findsNothing);
+    // In the libraries' own order.
+    expect(tester.widget<BookInfoCard>(find.byType(BookInfoCard).first).md5,
+        'a2');
+    await tester.tap(find.text('Series'));
+    await tester.pump();
+  });
+
+  testWidgets('a picked source searches that catalog only', (tester) async {
+    final asked = <SearchPageKey>[];
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        searchProvider.overrideWith((ref, key) async {
+          asked.add(key);
+          return key.page >= 2 ? [] : fakePage(1);
+        }),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ResultPage(searchQuery: 'docker'),
+      ),
+    ));
+    await tester.pump();
+    expect(asked.first.source, isNull);
+    await tester.tap(find.byKey(const ValueKey('source-zlibrary')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(asked.last.source, SearchProviderId.zlibrary);
+    expect(asked.last.page, 1);
+  });
+
+  testWidgets('a next page that fails can be tried again', (tester) async {
+    var failNext = true;
+    await tester.pumpWidget(ProviderScope(
+      overrides: [
+        searchProvider.overrideWith((ref, key) async {
+          if (key.page == 2 && failNext) throw Exception('offline');
+          if (key.page >= 3) return [];
+          return fakePage(key.page);
+        }),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const ResultPage(searchQuery: 'docker'),
+      ),
+    ));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -4000));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    await tester.drag(find.byType(CustomScrollView), const Offset(0, -4000));
+    await tester.pump();
+    expect(find.byKey(const ValueKey('paginationError')), findsOneWidget);
+    failNext = false;
+    await tester.tap(find.text('Retry'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(find.byKey(const ValueKey('paginationError')), findsNothing);
   });
 }
