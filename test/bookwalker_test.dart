@@ -120,6 +120,29 @@ void main() {
     expect(asked.length, 2);
   });
 
+  test('suggestions: the store\'s titles, never through the browser',
+      () async {
+    final dio = Dio()..httpClientAdapter = _Answer(200, _searchPage);
+    var browsed = 0;
+    final bw = BookWalker(dio: dio, browser: (_) async {
+      browsed++;
+      return _searchPage;
+    });
+    final books = await bw.suggest('青春');
+    expect(books.first.searchQuery, '青春ブタ野郎');
+    expect(await bw.suggest('青'), isEmpty); // too short to ask
+    // A bot check: no suggestions, and no browser.
+    final blocked = BookWalker(
+        dio: Dio()..httpClientAdapter = _Answer(202, ''),
+        browser: (_) async {
+          browsed++;
+          return _searchPage;
+        });
+    expect(await blocked.suggest('青春'), isEmpty);
+    expect(await blocked.suggest('青春ブタ'), isEmpty);
+    expect(browsed, 0);
+  });
+
   test('a ranking page: its products', () {
     final books = parseBookWalkerRanking(_rankingPage);
     expect(books.length, 2);

@@ -1943,4 +1943,152 @@ class AppLocalizationsDe extends AppLocalizations {
   String studyTotalWords(int count) {
     return '$count Wörter';
   }
+
+  @override
+  String get searchHint => 'Titel oder Autor';
+
+  @override
+  String get searchEmptyField => 'Gib einen Suchbegriff ein';
+
+  @override
+  String get searchFilters => 'Filter';
+
+  @override
+  String get filterLanguage => 'Sprache';
+
+  @override
+  String get filterFormat => 'Dateityp';
+
+  @override
+  String get filterSort => 'Sortieren';
+
+  @override
+  String get filterType => 'Art';
+
+  @override
+  String get filterYear => 'Erscheinungsjahr';
+
+  @override
+  String get filterAll => 'Alle';
+
+  @override
+  String get filterOther => 'Andere';
+
+  @override
+  String get filterReset => 'Zurücksetzen';
+
+  @override
+  String get filterDone => 'Fertig';
+
+  @override
+  String get languageJapanese => 'Japanisch';
+
+  @override
+  String get languageKorean => 'Koreanisch';
+
+  @override
+  String get languageEnglish => 'Englisch';
+
+  @override
+  String get languageChinese => 'Chinesisch';
+
+  @override
+  String get sortRelevant => 'Relevanz';
+
+  @override
+  String get sortNewest => 'Neueste';
+
+  @override
+  String get sortOldest => 'Älteste';
+
+  @override
+  String get sortLargest => 'Größte';
+
+  @override
+  String get sortSmallest => 'Kleinste';
+
+  @override
+  String get typeAnyBook => 'Alle Bücher';
+
+  @override
+  String get typeUnknownBook => 'Ohne Kategorie';
+
+  @override
+  String get typeFiction => 'Belletristik';
+
+  @override
+  String get typeNonfiction => 'Sachbuch';
+
+  @override
+  String get typeComic => 'Comics';
+
+  @override
+  String get typeMagazine => 'Zeitschriften';
+
+  @override
+  String get typeStandards => 'Normen';
+
+  @override
+  String get typeArticle => 'Artikel';
+
+  @override
+  String get yearBefore1980 => 'Vor 1980';
+
+  @override
+  String get searchStoreTitles => 'Titel bei BOOK☆WALKER';
+
+  @override
+  String get searchSuggestions => 'Vorschläge';
+
+  @override
+  String get findOriginalTitle => 'Japanischen Titel finden';
+
+  @override
+  String get originalTitleSearching => 'Japanischer Titel wird gesucht…';
+
+  @override
+  String get originalTitleNone => 'Kein japanischer Titel gefunden';
+
+  @override
+  String get originalTitleNoEngine =>
+      'Richte die Übersetzung ein (Modell auf dem Telefon oder Gemini), um japanische Titel zu finden';
+
+  @override
+  String get automaticSource => 'Automatisch';
+
+  @override
+  String get viewSeries => 'Reihen';
+
+  @override
+  String get viewFiles => 'Dateien';
+
+  @override
+  String resultFileCount(int count) {
+    return '$count Dateien';
+  }
+
+  @override
+  String get otherResults => 'Weitere Ergebnisse';
+
+  @override
+  String get nextPageFailed => 'Die nächste Seite konnte nicht geladen werden';
+
+  @override
+  String get noResultsHint =>
+      'Versuche den japanischen Titel, weniger Wörter oder oben eine andere Quelle.';
+
+  @override
+  String seriesVolumes(int count) {
+    return '$count Bände';
+  }
+
+  @override
+  String seriesOthers(int count) {
+    return '+$count weitere';
+  }
+
+  @override
+  String volumeNumber(String number) {
+    return 'Band $number';
+  }
 }

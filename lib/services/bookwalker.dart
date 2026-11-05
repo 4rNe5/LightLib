@@ -249,9 +249,26 @@ class BookWalker {
           refresh: refresh)
       .then(onePerSeries);
 
+  /// Titles on the store for [word], for the search field's suggestions:
+  /// one per series. Never through the browser (too slow to type
+  /// against): nothing while the store answers plain requests with its
+  /// bot check.
+  Future<List<BookWalkerBook>> suggest(String word) async {
+    final w = word.trim();
+    if (w.length < 2 || _blocked) return const [];
+    try {
+      return onePerSeries(await _get(
+          '$_base/search/?word=${Uri.encodeQueryComponent(w)}',
+          parseBookWalkerSearch,
+          browser: false));
+    } catch (_) {
+      return const [];
+    }
+  }
+
   Future<List<BookWalkerBook>> _get(
       String url, List<BookWalkerBook> Function(String html) parser,
-      {bool refresh = false}) async {
+      {bool refresh = false, bool browser = true}) async {
     final kept = _cache[url];
     if (!refresh &&
         kept != null &&
@@ -287,6 +304,7 @@ class BookWalker {
       // 202 with no page, cleared by a browser running its script.
       if (books.isEmpty && (response.statusCode == 202 || body.isEmpty)) {
         _blocked = true;
+        if (!browser) return books;
         body = await _browser(url) ?? '';
         books = parser(body);
       }

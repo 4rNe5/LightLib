@@ -141,12 +141,14 @@ void main(List<String> args) async {
       'Most Relevant';
   String savedFileType = await dataBase
           .getPreference('filterFileType')
-          .catchError((e) => 'All') as String? ??
-      'All';
+          .catchError((e) => 'Epub') as String? ??
+      // Japanese books in EPUB unless chosen otherwise.
+      'Epub';
   String savedLanguage = await dataBase
           .getPreference('filterLanguage')
-          .catchError((e) => 'All') as String? ??
-      'All';
+          .catchError((e) => 'Japanese') as String? ??
+      // Japanese books in EPUB unless chosen otherwise.
+      'Japanese';
   String savedYear = await dataBase
           .getPreference('filterYear')
           .catchError((e) => 'All') as String? ??

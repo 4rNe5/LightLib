@@ -130,17 +130,8 @@ Map<String, String> languageCodeToDisplay = {
 // Year filter values for publishing year range
 List<String> yearValues = [
   "All",
-  "2025",
-  "2024",
-  "2023",
-  "2022",
-  "2021",
-  "2020",
-  "2019",
-  "2018",
-  "2017",
-  "2016",
-  "2015",
+  // This year back to 2015, one by one (a fixed list stopped at 2025).
+  for (var y = DateTime.now().year; y >= 2015; y--) '$y',
   "2010-2014",
   "2005-2009",
   "2000-2004",
@@ -432,14 +423,20 @@ class SearchPageKey {
   final String query;
   final int page;
 
-  const SearchPageKey(this.query, this.page);
+  /// One catalog only; null searches the enabled ones in order.
+  final SearchProviderId? source;
+
+  const SearchPageKey(this.query, this.page, {this.source});
 
   @override
   bool operator ==(Object other) =>
-      other is SearchPageKey && other.query == query && other.page == page;
+      other is SearchPageKey &&
+      other.query == query &&
+      other.page == page &&
+      other.source == source;
 
   @override
-  int get hashCode => Object.hash(query, page);
+  int get hashCode => Object.hash(query, page, source);
 }
 
 // Provider for one page of search results across all enabled providers
@@ -473,6 +470,7 @@ final searchProvider = FutureProvider.family
     publisher: ref.watch(searchPublisherProvider),
     filtersEnabled: ref.watch(enableFiltersState),
     page: key.page,
+    source: key.source,
   ), onProgress: (progress) {
     // Called after the first await, so updating another provider here is
     // allowed.

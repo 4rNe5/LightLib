@@ -7,6 +7,8 @@ import 'dart:io';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 // Package imports:
@@ -22,6 +24,7 @@ import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/reading_recap.dart';
 import 'package:openlib/services/search_history.dart';
 import 'package:openlib/ui/components/library_recap.dart';
+import 'package:openlib/services/google_suggest_api.dart';
 import 'package:openlib/ui/search_page.dart';
 
 class _FakePathProvider extends PathProviderPlatform {
@@ -387,7 +390,13 @@ void main() {
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
-          home: const Scaffold(body: SearchPage()),
+          home: Scaffold(
+              body: SearchPage(
+            suggestApi: GoogleSuggestApi(
+                client: MockClient(
+                    (_) async => http.Response('["zer",["zero kara"]]', 200))),
+            store: (_) async => const [],
+          )),
         ),
       ));
       await pumpUntil(
@@ -402,10 +411,10 @@ void main() {
       expect(find.byKey(const ValueKey('history-Overlord')), findsOneWidget);
       // Newest first.
       expect(
-          tester.getTopLeft(find.byKey(const ValueKey('history-Re:Zero'))).dx,
+          tester.getTopLeft(find.byKey(const ValueKey('history-Re:Zero'))).dy,
           lessThan(tester
               .getTopLeft(find.byKey(const ValueKey('history-Overlord')))
-              .dx));
+              .dy));
 
       await tester.tap(find.descendant(
           of: find.byKey(const ValueKey('history-Overlord')),

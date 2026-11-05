@@ -1870,4 +1870,150 @@ class AppLocalizationsKo extends AppLocalizations {
   String studyTotalWords(int count) {
     return '단어 $count개';
   }
+
+  @override
+  String get searchHint => '작품명·작가 (한국어도 OK)';
+
+  @override
+  String get searchEmptyField => '검색어를 입력하세요';
+
+  @override
+  String get searchFilters => '필터';
+
+  @override
+  String get filterLanguage => '언어';
+
+  @override
+  String get filterFormat => '파일 형식';
+
+  @override
+  String get filterSort => '정렬';
+
+  @override
+  String get filterType => '종류';
+
+  @override
+  String get filterYear => '출간 연도';
+
+  @override
+  String get filterAll => '전체';
+
+  @override
+  String get filterOther => '기타';
+
+  @override
+  String get filterReset => '초기화';
+
+  @override
+  String get filterDone => '완료';
+
+  @override
+  String get languageJapanese => '일본어';
+
+  @override
+  String get languageKorean => '한국어';
+
+  @override
+  String get languageEnglish => '영어';
+
+  @override
+  String get languageChinese => '중국어';
+
+  @override
+  String get sortRelevant => '관련도순';
+
+  @override
+  String get sortNewest => '최신순';
+
+  @override
+  String get sortOldest => '오래된 순';
+
+  @override
+  String get sortLargest => '큰 파일순';
+
+  @override
+  String get sortSmallest => '작은 파일순';
+
+  @override
+  String get typeAnyBook => '모든 책';
+
+  @override
+  String get typeUnknownBook => '분류 없음';
+
+  @override
+  String get typeFiction => '소설';
+
+  @override
+  String get typeNonfiction => '비소설';
+
+  @override
+  String get typeComic => '만화';
+
+  @override
+  String get typeMagazine => '잡지';
+
+  @override
+  String get typeStandards => '표준 문서';
+
+  @override
+  String get typeArticle => '논문';
+
+  @override
+  String get yearBefore1980 => '1980년 이전';
+
+  @override
+  String get searchStoreTitles => 'BOOK☆WALKER 작품';
+
+  @override
+  String get searchSuggestions => '추천 검색어';
+
+  @override
+  String get findOriginalTitle => '일본 원제 찾기';
+
+  @override
+  String get originalTitleSearching => '원제를 찾는 중…';
+
+  @override
+  String get originalTitleNone => '원제를 찾지 못했습니다';
+
+  @override
+  String get originalTitleNoEngine => '원제를 찾으려면 번역(휴대폰 모델이나 Gemini)을 설정하세요';
+
+  @override
+  String get automaticSource => '자동';
+
+  @override
+  String get viewSeries => '시리즈';
+
+  @override
+  String get viewFiles => '파일';
+
+  @override
+  String resultFileCount(int count) {
+    return '파일 $count개';
+  }
+
+  @override
+  String get otherResults => '그 밖의 결과';
+
+  @override
+  String get nextPageFailed => '다음 페이지를 불러오지 못했습니다';
+
+  @override
+  String get noResultsHint => '일본어 원제나 더 짧은 검색어, 또는 위에서 다른 출처를 골라 보세요.';
+
+  @override
+  String seriesVolumes(int count) {
+    return '$count권';
+  }
+
+  @override
+  String seriesOthers(int count) {
+    return '기타 $count';
+  }
+
+  @override
+  String volumeNumber(String number) {
+    return '$number권';
+  }
 }

@@ -3483,6 +3483,282 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} words'**
   String studyTotalWords(int count);
+
+  /// searchHint
+  ///
+  /// In en, this message translates to:
+  /// **'Title or author (Korean works too)'**
+  String get searchHint;
+
+  /// searchEmptyField
+  ///
+  /// In en, this message translates to:
+  /// **'Type something to search for'**
+  String get searchEmptyField;
+
+  /// searchFilters
+  ///
+  /// In en, this message translates to:
+  /// **'Filters'**
+  String get searchFilters;
+
+  /// filterLanguage
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get filterLanguage;
+
+  /// filterFormat
+  ///
+  /// In en, this message translates to:
+  /// **'File type'**
+  String get filterFormat;
+
+  /// filterSort
+  ///
+  /// In en, this message translates to:
+  /// **'Sort by'**
+  String get filterSort;
+
+  /// filterType
+  ///
+  /// In en, this message translates to:
+  /// **'Kind'**
+  String get filterType;
+
+  /// filterYear
+  ///
+  /// In en, this message translates to:
+  /// **'Year published'**
+  String get filterYear;
+
+  /// filterAll
+  ///
+  /// In en, this message translates to:
+  /// **'All'**
+  String get filterAll;
+
+  /// filterOther
+  ///
+  /// In en, this message translates to:
+  /// **'Other'**
+  String get filterOther;
+
+  /// filterReset
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get filterReset;
+
+  /// filterDone
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get filterDone;
+
+  /// languageJapanese
+  ///
+  /// In en, this message translates to:
+  /// **'Japanese'**
+  String get languageJapanese;
+
+  /// languageKorean
+  ///
+  /// In en, this message translates to:
+  /// **'Korean'**
+  String get languageKorean;
+
+  /// languageEnglish
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get languageEnglish;
+
+  /// languageChinese
+  ///
+  /// In en, this message translates to:
+  /// **'Chinese'**
+  String get languageChinese;
+
+  /// sortRelevant
+  ///
+  /// In en, this message translates to:
+  /// **'Most relevant'**
+  String get sortRelevant;
+
+  /// sortNewest
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get sortNewest;
+
+  /// sortOldest
+  ///
+  /// In en, this message translates to:
+  /// **'Oldest'**
+  String get sortOldest;
+
+  /// sortLargest
+  ///
+  /// In en, this message translates to:
+  /// **'Largest'**
+  String get sortLargest;
+
+  /// sortSmallest
+  ///
+  /// In en, this message translates to:
+  /// **'Smallest'**
+  String get sortSmallest;
+
+  /// typeAnyBook
+  ///
+  /// In en, this message translates to:
+  /// **'Any book'**
+  String get typeAnyBook;
+
+  /// typeUnknownBook
+  ///
+  /// In en, this message translates to:
+  /// **'Unclassified'**
+  String get typeUnknownBook;
+
+  /// typeFiction
+  ///
+  /// In en, this message translates to:
+  /// **'Fiction'**
+  String get typeFiction;
+
+  /// typeNonfiction
+  ///
+  /// In en, this message translates to:
+  /// **'Non-fiction'**
+  String get typeNonfiction;
+
+  /// typeComic
+  ///
+  /// In en, this message translates to:
+  /// **'Comics'**
+  String get typeComic;
+
+  /// typeMagazine
+  ///
+  /// In en, this message translates to:
+  /// **'Magazines'**
+  String get typeMagazine;
+
+  /// typeStandards
+  ///
+  /// In en, this message translates to:
+  /// **'Standards'**
+  String get typeStandards;
+
+  /// typeArticle
+  ///
+  /// In en, this message translates to:
+  /// **'Articles'**
+  String get typeArticle;
+
+  /// yearBefore1980
+  ///
+  /// In en, this message translates to:
+  /// **'Before 1980'**
+  String get yearBefore1980;
+
+  /// searchStoreTitles
+  ///
+  /// In en, this message translates to:
+  /// **'Titles on BOOK☆WALKER'**
+  String get searchStoreTitles;
+
+  /// searchSuggestions
+  ///
+  /// In en, this message translates to:
+  /// **'Suggestions'**
+  String get searchSuggestions;
+
+  /// findOriginalTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Find the Japanese title'**
+  String get findOriginalTitle;
+
+  /// originalTitleSearching
+  ///
+  /// In en, this message translates to:
+  /// **'Looking for the Japanese title…'**
+  String get originalTitleSearching;
+
+  /// originalTitleNone
+  ///
+  /// In en, this message translates to:
+  /// **'No Japanese title found'**
+  String get originalTitleNone;
+
+  /// originalTitleNoEngine
+  ///
+  /// In en, this message translates to:
+  /// **'Set up translation (a model on the phone or Gemini) to find Japanese titles'**
+  String get originalTitleNoEngine;
+
+  /// automaticSource
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic'**
+  String get automaticSource;
+
+  /// viewSeries
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get viewSeries;
+
+  /// viewFiles
+  ///
+  /// In en, this message translates to:
+  /// **'Files'**
+  String get viewFiles;
+
+  /// resultFileCount
+  ///
+  /// In en, this message translates to:
+  /// **'{count} files'**
+  String resultFileCount(int count);
+
+  /// otherResults
+  ///
+  /// In en, this message translates to:
+  /// **'Other results'**
+  String get otherResults;
+
+  /// nextPageFailed
+  ///
+  /// In en, this message translates to:
+  /// **'The next page could not be loaded'**
+  String get nextPageFailed;
+
+  /// noResultsHint
+  ///
+  /// In en, this message translates to:
+  /// **'Try the Japanese title, fewer words, or another source above.'**
+  String get noResultsHint;
+
+  /// seriesVolumes
+  ///
+  /// In en, this message translates to:
+  /// **'{count} volumes'**
+  String seriesVolumes(int count);
+
+  /// seriesOthers
+  ///
+  /// In en, this message translates to:
+  /// **'+{count} more'**
+  String seriesOthers(int count);
+
+  /// volumeNumber
+  ///
+  /// In en, this message translates to:
+  /// **'Volume {number}'**
+  String volumeNumber(String number);
 }
 
 class _AppLocalizationsDelegate

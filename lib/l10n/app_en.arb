@@ -2656,5 +2656,209 @@
         "type": "int"
       }
     }
+  },
+  "searchHint": "Title or author (Korean works too)",
+  "@searchHint": {
+    "description": "searchHint"
+  },
+  "searchEmptyField": "Type something to search for",
+  "@searchEmptyField": {
+    "description": "searchEmptyField"
+  },
+  "searchFilters": "Filters",
+  "@searchFilters": {
+    "description": "searchFilters"
+  },
+  "filterLanguage": "Language",
+  "@filterLanguage": {
+    "description": "filterLanguage"
+  },
+  "filterFormat": "File type",
+  "@filterFormat": {
+    "description": "filterFormat"
+  },
+  "filterSort": "Sort by",
+  "@filterSort": {
+    "description": "filterSort"
+  },
+  "filterType": "Kind",
+  "@filterType": {
+    "description": "filterType"
+  },
+  "filterYear": "Year published",
+  "@filterYear": {
+    "description": "filterYear"
+  },
+  "filterAll": "All",
+  "@filterAll": {
+    "description": "filterAll"
+  },
+  "filterOther": "Other",
+  "@filterOther": {
+    "description": "filterOther"
+  },
+  "filterReset": "Reset",
+  "@filterReset": {
+    "description": "filterReset"
+  },
+  "filterDone": "Done",
+  "@filterDone": {
+    "description": "filterDone"
+  },
+  "languageJapanese": "Japanese",
+  "@languageJapanese": {
+    "description": "languageJapanese"
+  },
+  "languageKorean": "Korean",
+  "@languageKorean": {
+    "description": "languageKorean"
+  },
+  "languageEnglish": "English",
+  "@languageEnglish": {
+    "description": "languageEnglish"
+  },
+  "languageChinese": "Chinese",
+  "@languageChinese": {
+    "description": "languageChinese"
+  },
+  "sortRelevant": "Most relevant",
+  "@sortRelevant": {
+    "description": "sortRelevant"
+  },
+  "sortNewest": "Newest",
+  "@sortNewest": {
+    "description": "sortNewest"
+  },
+  "sortOldest": "Oldest",
+  "@sortOldest": {
+    "description": "sortOldest"
+  },
+  "sortLargest": "Largest",
+  "@sortLargest": {
+    "description": "sortLargest"
+  },
+  "sortSmallest": "Smallest",
+  "@sortSmallest": {
+    "description": "sortSmallest"
+  },
+  "typeAnyBook": "Any book",
+  "@typeAnyBook": {
+    "description": "typeAnyBook"
+  },
+  "typeUnknownBook": "Unclassified",
+  "@typeUnknownBook": {
+    "description": "typeUnknownBook"
+  },
+  "typeFiction": "Fiction",
+  "@typeFiction": {
+    "description": "typeFiction"
+  },
+  "typeNonfiction": "Non-fiction",
+  "@typeNonfiction": {
+    "description": "typeNonfiction"
+  },
+  "typeComic": "Comics",
+  "@typeComic": {
+    "description": "typeComic"
+  },
+  "typeMagazine": "Magazines",
+  "@typeMagazine": {
+    "description": "typeMagazine"
+  },
+  "typeStandards": "Standards",
+  "@typeStandards": {
+    "description": "typeStandards"
+  },
+  "typeArticle": "Articles",
+  "@typeArticle": {
+    "description": "typeArticle"
+  },
+  "yearBefore1980": "Before 1980",
+  "@yearBefore1980": {
+    "description": "yearBefore1980"
+  },
+  "searchStoreTitles": "Titles on BOOK☆WALKER",
+  "@searchStoreTitles": {
+    "description": "searchStoreTitles"
+  },
+  "searchSuggestions": "Suggestions",
+  "@searchSuggestions": {
+    "description": "searchSuggestions"
+  },
+  "findOriginalTitle": "Find the Japanese title",
+  "@findOriginalTitle": {
+    "description": "findOriginalTitle"
+  },
+  "originalTitleSearching": "Looking for the Japanese title…",
+  "@originalTitleSearching": {
+    "description": "originalTitleSearching"
+  },
+  "originalTitleNone": "No Japanese title found",
+  "@originalTitleNone": {
+    "description": "originalTitleNone"
+  },
+  "originalTitleNoEngine": "Set up translation (a model on the phone or Gemini) to find Japanese titles",
+  "@originalTitleNoEngine": {
+    "description": "originalTitleNoEngine"
+  },
+  "automaticSource": "Automatic",
+  "@automaticSource": {
+    "description": "automaticSource"
+  },
+  "viewSeries": "Series",
+  "@viewSeries": {
+    "description": "viewSeries"
+  },
+  "viewFiles": "Files",
+  "@viewFiles": {
+    "description": "viewFiles"
+  },
+  "resultFileCount": "{count} files",
+  "@resultFileCount": {
+    "description": "resultFileCount",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "otherResults": "Other results",
+  "@otherResults": {
+    "description": "otherResults"
+  },
+  "nextPageFailed": "The next page could not be loaded",
+  "@nextPageFailed": {
+    "description": "nextPageFailed"
+  },
+  "noResultsHint": "Try the Japanese title, fewer words, or another source above.",
+  "@noResultsHint": {
+    "description": "noResultsHint"
+  },
+  "seriesVolumes": "{count} volumes",
+  "@seriesVolumes": {
+    "description": "seriesVolumes",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesOthers": "+{count} more",
+  "@seriesOthers": {
+    "description": "seriesOthers",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "volumeNumber": "Volume {number}",
+  "@volumeNumber": {
+    "description": "volumeNumber",
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
   }
 }
