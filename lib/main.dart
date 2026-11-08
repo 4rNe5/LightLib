@@ -521,6 +521,8 @@ class _MainScreenState extends ConsumerState<MainScreen>
     );
   }
 
+  final GlobalKey _pageKey = GlobalKey();
+
   @override
   Widget build(BuildContext context) {
     final selectedIndex = ref.watch(selectedIndexProvider);
@@ -530,48 +532,65 @@ class _MainScreenState extends ConsumerState<MainScreen>
       ref.listen(readingRecapProvider, (_, __) => _updateHomeWidgets());
     }
 
+    final items = [
+      AppNavItem(
+          icon: Icons.explore_outlined,
+          selectedIcon: Icons.explore_rounded,
+          label: l10n.navHome),
+      AppNavItem(
+          icon: Icons.search_rounded,
+          selectedIcon: Icons.manage_search_rounded,
+          label: l10n.navSearch),
+      AppNavItem(
+          icon: Icons.collections_bookmark_outlined,
+          selectedIcon: Icons.collections_bookmark_rounded,
+          label: l10n.navMyLibrary),
+      AppNavItem(
+          icon: Icons.settings_outlined,
+          selectedIcon: Icons.settings_rounded,
+          label: l10n.navSettings),
+    ];
+    void select(int index) =>
+        ref.read(selectedIndexProvider.notifier).state = index;
+    // One key across both layouts: folding or unfolding the phone moves
+    // the page instead of building it again (its scroll stays).
+    final page = KeyedSubtree(
+      key: _pageKey,
+      child: AppTabSwitcher(
+        index: selectedIndex,
+        child: _widgetOptions.elementAt(selectedIndex),
+      ),
+    );
+
     // No shared app bar: each tab draws its own large title (Home,
     // Search, My Library, Settings) and pushed pages carry the title of
     // what they show.
-    return Scaffold(
-      body: SafeArea(
-        bottom: false,
-        child: AppTabSwitcher(
-          index: selectedIndex,
-          child: _widgetOptions.elementAt(selectedIndex),
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        // Phone-sized on a tablet or an unfolded phone, centred.
-        child: Align(
-          alignment: Alignment.bottomCenter,
-          heightFactor: 1,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 520),
-            child: AppNavBar(
+    // A wide screen (unfolded, a tablet, on its side): the tabs down the
+    // left edge.
+    if (useNavRail(context)) {
+      return Scaffold(
+        body: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            AppNavRail(
               selectedIndex: selectedIndex,
-              onSelected: (index) =>
-                  ref.read(selectedIndexProvider.notifier).state = index,
-              items: [
-                AppNavItem(
-                    icon: Icons.explore_outlined,
-                    selectedIcon: Icons.explore_rounded,
-                    label: l10n.navHome),
-                AppNavItem(
-                    icon: Icons.search_rounded,
-                    selectedIcon: Icons.manage_search_rounded,
-                    label: l10n.navSearch),
-                AppNavItem(
-                    icon: Icons.collections_bookmark_outlined,
-                    selectedIcon: Icons.collections_bookmark_rounded,
-                    label: l10n.navMyLibrary),
-                AppNavItem(
-                    icon: Icons.settings_outlined,
-                    selectedIcon: Icons.settings_rounded,
-                    label: l10n.navSettings),
-              ],
+              onSelected: select,
+              items: items,
             ),
-          ),
+            Expanded(
+              child: SafeArea(left: false, child: page),
+            ),
+          ],
+        ),
+      );
+    }
+    return Scaffold(
+      body: SafeArea(bottom: false, child: page),
+      bottomNavigationBar: SafeArea(
+        child: AppNavBar(
+          selectedIndex: selectedIndex,
+          onSelected: select,
+          items: items,
         ),
       ),
     );

@@ -1,7 +1,9 @@
-// The app's bottom tab bar: a floating, frosted pill. The selected tab
-// widens into a filled capsule that slides between tabs with a little
-// overshoot; its icon pops and its label slides in. Motion follows the
-// system's reduce-motion setting.
+// The app's tab bar. On a phone, a floating, frosted pill at the bottom:
+// the selected tab widens into a filled capsule that slides between tabs;
+// its icon pops and its label slides in. On a wide screen (an unfolded
+// phone, a tablet, a phone on its side), a rail down the left edge with
+// the same capsule behind the selected icon. Motion follows the system's
+// reduce-motion setting.
 
 // Dart imports:
 import 'dart:ui' as ui;
@@ -156,18 +158,22 @@ class AppNavBar extends StatelessWidget {
 /// The capsule's move: its leading edge sets off first and its trailing
 /// edge follows, so it stretches toward the new tab and settles there.
 /// Both edges only travel between the old and the new place, never past.
+/// [vertical]: the same down a column ([left] and [width] are then the
+/// top and the height).
 class _LiquidIndicator extends StatefulWidget {
   const _LiquidIndicator({
     required this.left,
     required this.width,
     required this.duration,
     required this.child,
+    this.vertical = false,
   });
 
   final double left;
   final double width;
   final Duration duration;
   final Widget child;
+  final bool vertical;
 
   @override
   State<_LiquidIndicator> createState() => _LiquidIndicatorState();
@@ -225,8 +231,11 @@ class _LiquidIndicatorState extends State<_LiquidIndicator>
       animation: _controller,
       builder: (context, child) {
         final (l, r) = _edges();
-        return Positioned(
-            left: l, top: 0, bottom: 0, width: r - l, child: child!);
+        return widget.vertical
+            ? Positioned(
+                top: l, left: 0, right: 0, height: r - l, child: child!)
+            : Positioned(
+                left: l, top: 0, bottom: 0, width: r - l, child: child!);
       },
       child: widget.child,
     );
@@ -325,6 +334,258 @@ class _NavButton extends StatelessWidget {
                         )
                       : const SizedBox.shrink(),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Screens this wide (logical pixels) or wider get the rail instead of
+/// the bottom bar: an unfolded phone (about 840-900), a tablet, a phone
+/// on its side. A folded phone is 360-420.
+const appNavRailMinWidth = 600.0;
+
+bool useNavRail(BuildContext context) =>
+    MediaQuery.sizeOf(context).width >= appNavRailMinWidth;
+
+/// The tabs down the left edge: the bottom bar's frosted pill stood on
+/// end, centred top to bottom. The selected tab grows into the accent
+/// capsule with its name under the icon, and the capsule slides between
+/// tabs the way it does in the bar.
+class AppNavRail extends StatelessWidget {
+  const AppNavRail({
+    super.key,
+    required this.items,
+    required this.selectedIndex,
+    required this.onSelected,
+  });
+
+  final List<AppNavItem> items;
+  final int selectedIndex;
+  final ValueChanged<int> onSelected;
+
+  /// The pill's width, and the room the rail takes beside the page.
+  static const pillWidth = 72.0;
+  static const width = pillWidth + 12 + 8;
+
+  /// A tab's height; the selected one is taller (its name shows).
+  static const _tab = 58.0;
+  static const _selectedTab = 80.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
+    final accent = theme.colorScheme.secondary;
+    final reduce = MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+    final slide = reduce ? Duration.zero : const Duration(milliseconds: 460);
+    const curve = Curves.easeOutCubic;
+    final barColor = dark
+        ? const Color(0xFF1B1B1D).withValues(alpha: 0.86)
+        : Colors.white.withValues(alpha: 0.88);
+    final idleColor = dark ? const Color(0xFFB9B9BE) : const Color(0xFF5E5E66);
+    final n = items.length;
+    const inset = 6.0;
+    // The tabs, the inset and the 1 px border on both ends.
+    final height = _selectedTab + (n - 1) * _tab + inset * 2 + 2;
+    double top(int i) =>
+        i <= selectedIndex ? i * _tab : _selectedTab + (i - 1) * _tab;
+    const radius = pillWidth / 2;
+
+    return SafeArea(
+      key: const ValueKey('navRail'),
+      right: false,
+      child: SizedBox(
+        width: width,
+        child: Center(
+          child: Padding(
+            padding: const EdgeInsets.only(left: 12, right: 8),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(radius),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: dark ? 0.45 : 0.07),
+                    blurRadius: 18,
+                    offset: const Offset(2, 4),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(radius),
+                child: BackdropFilter(
+                  filter: ui.ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+                  child: Container(
+                    width: pillWidth,
+                    height: height,
+                    padding: const EdgeInsets.all(inset),
+                    decoration: BoxDecoration(
+                      color: barColor,
+                      borderRadius: BorderRadius.circular(radius),
+                      border: Border.all(
+                        color: dark
+                            ? Colors.white.withValues(alpha: 0.08)
+                            : Colors.black.withValues(alpha: 0.06),
+                      ),
+                    ),
+                    child: Stack(
+                      children: [
+                        _LiquidIndicator(
+                          vertical: true,
+                          duration: slide,
+                          left: top(selectedIndex),
+                          width: _selectedTab,
+                          child: DecoratedBox(
+                            key: const ValueKey('navRailIndicator'),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(radius),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Color.lerp(accent, Colors.white, 0.06)!,
+                                  Color.lerp(accent, Colors.black, 0.18)!,
+                                ],
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: accent.withValues(alpha: 0.22),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                        for (var i = 0; i < n; i++)
+                          AnimatedPositioned(
+                            duration: slide,
+                            curve: curve,
+                            top: top(i),
+                            left: 0,
+                            right: 0,
+                            height: i == selectedIndex ? _selectedTab : _tab,
+                            child: _RailButton(
+                              key: ValueKey('navRailTab-$i'),
+                              item: items[i],
+                              selected: i == selectedIndex,
+                              idleColor: idleColor,
+                              reduceMotion: reduce,
+                              onTap: () {
+                                if (i == selectedIndex) return;
+                                HapticFeedback.selectionClick();
+                                onSelected(i);
+                              },
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RailButton extends StatelessWidget {
+  const _RailButton({
+    super.key,
+    required this.item,
+    required this.selected,
+    required this.idleColor,
+    required this.reduceMotion,
+    required this.onTap,
+  });
+
+  final AppNavItem item;
+  final bool selected;
+  final Color idleColor;
+  final bool reduceMotion;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final fade =
+        reduceMotion ? Duration.zero : const Duration(milliseconds: 260);
+    final color = selected ? Colors.white : idleColor;
+    final icon = TweenAnimationBuilder<double>(
+      // A new key for each selection replays the pop.
+      key: ValueKey(selected),
+      tween: Tween(begin: selected && !reduceMotion ? 0.0 : 1.0, end: 1.0),
+      duration: reduceMotion ? Duration.zero : const Duration(milliseconds: 520),
+      curve: Curves.elasticOut,
+      builder: (context, t, child) => Transform.scale(
+        scale: selected ? 0.7 + 0.3 * t : 1.0,
+        child: child,
+      ),
+      child: AnimatedSwitcher(
+        duration: fade,
+        transitionBuilder: (child, animation) =>
+            FadeTransition(opacity: animation, child: child),
+        child: Icon(
+          selected ? item.selectedIcon : item.icon,
+          key: ValueKey(selected),
+          size: 24,
+          color: color,
+        ),
+      ),
+    );
+
+    return Semantics(
+      selected: selected,
+      button: true,
+      label: item.label,
+      child: InkWell(
+        onTap: onTap,
+        customBorder: const StadiumBorder(),
+        splashColor: Colors.transparent,
+        highlightColor: Colors.transparent,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              icon,
+              // The selected tab's name slides in under its icon.
+              AnimatedSize(
+                duration: fade,
+                curve: Curves.easeOutCubic,
+                child: selected
+                    ? Padding(
+                        padding: const EdgeInsets.only(top: 5, left: 4, right: 4),
+                        child: TweenAnimationBuilder<double>(
+                          tween: Tween(begin: reduceMotion ? 1 : 0, end: 1),
+                          duration: fade,
+                          curve: Curves.easeOutCubic,
+                          builder: (context, t, child) => Opacity(
+                            opacity: t,
+                            child: Transform.translate(
+                                offset: Offset(0, 6 * (1 - t)), child: child),
+                          ),
+                          child: Text(
+                            item.label,
+                            maxLines: 1,
+                            overflow: TextOverflow.fade,
+                            softWrap: false,
+                            textAlign: TextAlign.center,
+                            style: (Theme.of(context).textTheme.labelMedium ??
+                                    DefaultTextStyle.of(context).style)
+                                .copyWith(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ),
+                      )
+                    : const SizedBox.shrink(),
               ),
             ],
           ),

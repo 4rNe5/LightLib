@@ -23,7 +23,7 @@
 
 ### Reading
 - **A reader that keeps the book as it was made** — built on [foliate-js](https://github.com/johnfactotum/foliate-js): the book's own layout, images and covers, vertical (縦書き) or horizontal writing, ruby (furigana), paged or scrolled. Fonts, sizes, spacing and themes per script (Korean, Japanese, Latin), styled after [Readest](https://github.com/readest/readest).
-- **Foldables and tablets** — cover grids add columns as the screen widens, and the tab bar stays phone-sized on an unfolded screen.
+- **Foldables and tablets** — cover grids add columns as the screen widens, and on an unfolded screen (or a phone on its side) the tabs move to a rail down the left edge.
 
 ### Translation
 - **Translation as you read** — open a Japanese book and read it in Korean (or another of 14 languages), paragraph by paragraph, in a light-novel style tuned for Korean: past-tense narration, each character's own 존댓말 or 반말, names as the book reads them.
