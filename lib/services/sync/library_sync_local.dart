@@ -151,6 +151,18 @@ class LibrarySyncLocal implements SyncLocal {
     );
     return _CacheSet(cache, keepOpen: wasOpen);
   }
+
+  @override
+  Future<String?> glossary(String fileName) =>
+      GlossaryService.instance.savedText(fileName);
+
+  @override
+  Future<void> applyGlossary(String fileName, String data, DateTime at) async {
+    await GlossaryService.instance.applySynced(fileName, data);
+    final ms = '${at.millisecondsSinceEpoch}';
+    await _db.setSyncState('gls:$fileName', ms);
+    await _db.setSyncState('glsSent:$fileName', ms);
+  }
 }
 
 class _CacheSet implements LocalTranslations {

@@ -24,14 +24,18 @@ class GlossaryService extends ChangeNotifier {
   static final GlossaryService instance = GlossaryService._();
 
   /// Where glossaries are kept (replaceable in tests).
-  Future<String> Function() folder = () async =>
-      p.join(await AppFiles.instance.supportPath(), 'glossaries');
+  Future<String> Function() folder =
+      () async => p.join(await AppFiles.instance.supportPath(), 'glossaries');
 
   /// Tests: keep glossaries in [dir].
   set directory(Future<Directory> Function() dir) =>
       folder = () async => (await dir()).path;
 
   final Map<String, BookGlossary> _loaded = {};
+
+  /// Called with a book's file name after its glossary is saved here
+  /// (sync sends it on); not for one that came from another device.
+  static void Function(String bookFile)? onSaved;
   final Map<String, Future<BookGlossary>> _making = {};
   final AppLogger _logger = AppLogger();
 
@@ -65,9 +69,23 @@ class GlossaryService extends ChangeNotifier {
     try {
       await AppFiles.instance
           .writeString(await _file(bookFile), glossary.encode());
+      onSaved?.call(bookFile);
     } catch (e) {
       _logger.warning('Glossary not saved', tag: 'Glossary', error: e);
     }
+  }
+
+  /// [bookFile]'s glossary as saved (JSON), or null.
+  Future<String?> savedText(String bookFile) async =>
+      AppFiles.instance.readString(await _file(bookFile));
+
+  /// A glossary from another device ([data] is its JSON): kept and shown,
+  /// without counting as a change made here.
+  Future<void> applySynced(String bookFile, String data) async {
+    final glossary = BookGlossary.decode(data);
+    await AppFiles.instance.writeString(await _file(bookFile), data);
+    _loaded[bookFile] = glossary;
+    notifyListeners();
   }
 
   /// [bookFile]'s glossary, made with [translator] when the book has none
@@ -97,8 +115,8 @@ class GlossaryService extends ChangeNotifier {
   }) {
     final running = _making[bookFile];
     if (running != null) return running;
-    final job = _make(bookFile, bookPath, translator, priority)
-        .whenComplete(() {
+    final job =
+        _make(bookFile, bookPath, translator, priority).whenComplete(() {
       _making.remove(bookFile);
       notifyListeners();
     });
@@ -136,8 +154,8 @@ class GlossaryService extends ChangeNotifier {
       entries.addAll(parseGlossaryAnswer(answer, chunk));
     }
     if (!answered) return old;
-    final glossary = mergeGlossary(old, entries).copyWith(
-        narration: survey.narration, hero: survey.hero);
+    final glossary = mergeGlossary(old, entries)
+        .copyWith(narration: survey.narration, hero: survey.hero);
     _logger.info('Glossary made', tag: 'Glossary', metadata: {
       'book': bookFile,
       'candidates': candidates.length,

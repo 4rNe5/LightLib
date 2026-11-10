@@ -18,6 +18,7 @@ import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/sync/library_sync_local.dart';
 import 'package:openlib/services/sync/supabase_remote.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
+import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 
 /// The owner's project (the publishable key is meant for apps; the tables
@@ -86,6 +87,7 @@ class SyncService extends ChangeNotifier {
         0;
     MyLibraryDb.onPositionSaved = _onPositionSaved;
     TranslationCache.onChanged = _onTranslationsSaved;
+    GlossaryService.onSaved = _onGlossarySaved;
     _auth = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
       notifyListeners();
       if (state.event == AuthChangeEvent.signedIn && _auto) {
@@ -137,7 +139,7 @@ class SyncService extends ChangeNotifier {
       report = await SyncEngine(
         local: LibrarySyncLocal(),
         remote: SupabaseRemote(Supabase.instance.client),
-      ).run(positionsOnly: positionsOnly);
+      ).run(quick: positionsOnly);
       lastReport = report;
       lastRun = DateTime.now();
       lastError = report.errors.isEmpty ? null : report.errors.first;
@@ -180,6 +182,13 @@ class SyncService extends ChangeNotifier {
     unawaited(MyLibraryDb.instance
         .setSyncState('trdirty:${p.normalize(path)}',
             '${DateTime.now().microsecondsSinceEpoch}')
+        .catchError((_) {}));
+  }
+
+  void _onGlossarySaved(String bookFile) {
+    unawaited(MyLibraryDb.instance
+        .setSyncState(
+            'gls:$bookFile', '${DateTime.now().millisecondsSinceEpoch}')
         .catchError((_) {}));
   }
 

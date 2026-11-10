@@ -171,4 +171,33 @@ class SupabaseRemote implements SyncRemote {
       updatedAt: _time(row['updated_at']),
     );
   }
+
+  @override
+  Future<Map<String, DateTime>> glossaryIndex() async {
+    final rows = await _client.from('glossaries').select('md5, updated_at');
+    return {
+      for (final r in rows) r['md5'] as String: _time(r['updated_at']),
+    };
+  }
+
+  @override
+  Future<String?> glossary(String md5) async {
+    final row = await _client
+        .from('glossaries')
+        .select('data')
+        .eq('md5', md5)
+        .maybeSingle();
+    return row?['data'] as String?;
+  }
+
+  @override
+  Future<void> putGlossary(String md5, String data, DateTime at,
+      {required String device}) async {
+    await _client.rpc('put_glossary', params: {
+      'p_md5': md5,
+      'p_data': data,
+      'p_device': device,
+      'p_updated_at': at.toUtc().toIso8601String(),
+    });
+  }
 }

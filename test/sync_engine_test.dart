@@ -1,5 +1,6 @@
 // Sync between this device and the owner's project: which books go
-// where, which position wins, and how translations merge.
+// where, which position and glossary win, how translations merge, and
+// what a run reports while it goes.
 
 // Dart imports:
 import 'dart:typed_data';
@@ -16,6 +17,7 @@ class _Remote implements SyncRemote {
   final progressRows = <String, RemoteProgress>{};
   final translations = <String, Map<String, String>>{};
   final translationTimes = <String, DateTime>{};
+  final glossaryRows = <String, (String, DateTime)>{};
   final calls = <String>[];
   var clock = DateTime.utc(2026, 11, 9, 12);
 
@@ -102,6 +104,21 @@ class _Remote implements SyncRemote {
         count: translations[key]!.length,
         updatedAt: clock);
   }
+
+  @override
+  Future<Map<String, DateTime>> glossaryIndex() async =>
+      {for (final e in glossaryRows.entries) e.key: e.value.$2};
+
+  @override
+  Future<String?> glossary(String md5) async => glossaryRows[md5]?.$1;
+
+  @override
+  Future<void> putGlossary(String md5, String data, DateTime at,
+      {required String device}) async {
+    calls.add('putGlossary $md5 $data');
+    final old = glossaryRows[md5];
+    if (old == null || old.$2.isBefore(at)) glossaryRows[md5] = (data, at);
+  }
 }
 
 class _Set implements LocalTranslations {
@@ -135,6 +152,7 @@ class _Local implements SyncLocal {
   final kv = <String, String>{};
   final sets = <String, Map<String, String>>{};
   final saved = <String>[];
+  final glossaries = <String, String>{};
 
   void addLocal(String md5, String fileName, List<int> bytes) {
     held[md5] = (
@@ -223,6 +241,16 @@ class _Local implements SyncLocal {
   Future<LocalTranslations> openTranslations(
           String fileName, String lang, String style) async =>
       _Set(this, await translationPath(fileName, lang, style));
+
+  @override
+  Future<String?> glossary(String fileName) async => glossaries[fileName];
+
+  @override
+  Future<void> applyGlossary(String fileName, String data, DateTime at) async {
+    glossaries[fileName] = data;
+    kv['gls:$fileName'] = '${at.millisecondsSinceEpoch}';
+    kv['glsSent:$fileName'] = '${at.millisecondsSinceEpoch}';
+  }
 }
 
 const a = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -347,7 +375,7 @@ void main() {
           completed: false,
           updatedAt: early);
 
-      final report = await engine().run(positionsOnly: true);
+      final report = await engine().run(quick: true);
 
       expect(report.positionsSent, 1);
       expect(remote.progressRows[a]!.position, 'foliate:here');
@@ -360,19 +388,64 @@ void main() {
       remote.progressRows[a] = RemoteProgress(
           md5: a, position: 'foliate:there', completed: false, updatedAt: late);
 
-      final report = await engine().run(positionsOnly: true);
+      final report = await engine().run(quick: true);
 
       expect(report.positionsReceived, 1);
       expect(local.positions['a.epub']!.position, 'foliate:there');
       // Taken, not a change to send back.
       remote.calls.clear();
-      await engine().run(positionsOnly: true);
+      await engine().run(quick: true);
       expect(remote.calls.where((c) => c.startsWith('putProgress')), isEmpty);
     });
 
-    test('positions only: books are neither sent nor fetched', () async {
+    test('saved before sync (no time): up when the remote has none', () async {
       local.addLocal(a, 'a.epub', [1]);
-      await engine().run(positionsOnly: true);
+      local.positions['a.epub'] = (position: 'foliate:old', completed: false);
+
+      final report = await engine().run(quick: true);
+
+      expect(report.positionsSent, 1);
+      expect(remote.progressRows[a]!.position, 'foliate:old');
+      expect(remote.progressRows[a]!.updatedAt, unknownAge);
+      // Sent once, not again.
+      remote.calls.clear();
+      await engine().run(quick: true);
+      expect(remote.calls.where((c) => c.startsWith('putProgress')), isEmpty);
+    });
+
+    test('saved before sync (no time): the remote one wins', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.positions['a.epub'] = (position: 'foliate:old', completed: false);
+      remote.progressRows[a] = RemoteProgress(
+          md5: a, position: 'foliate:there', completed: true, updatedAt: early);
+
+      final report = await engine().run(quick: true);
+
+      expect(report.positionsReceived, 1);
+      expect(local.positions['a.epub'],
+          (position: 'foliate:there', completed: true));
+      expect(remote.calls.where((c) => c.startsWith('putProgress')), isEmpty);
+    });
+
+    test('an unknown-age position from elsewhere loses to one read here',
+        () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.read('a.epub', 'foliate:here', early);
+      remote.progressRows[a] = RemoteProgress(
+          md5: a,
+          position: 'foliate:old',
+          completed: false,
+          updatedAt: unknownAge);
+
+      await engine().run(quick: true);
+
+      expect(remote.progressRows[a]!.position, 'foliate:here');
+      expect(local.positions['a.epub']!.position, 'foliate:here');
+    });
+
+    test('a quick run: books are neither sent nor fetched', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      await engine().run(quick: true);
       expect(remote.calls.where((c) => c.startsWith('upload')), isEmpty);
     });
   });
@@ -440,6 +513,136 @@ void main() {
       await engine().run();
       expect(remote.calls.where((c) => c.startsWith('merge')).length, 3);
       expect(remote.translations['$a|ko|shared']!.length, 5);
+    });
+  });
+
+  group('a book that comes down', () {
+    test('brings its position, translations and glossary with it', () async {
+      remote.bookRows[b] = const RemoteBook(
+          md5: b, bookId: b, fileName: 'b.epub', title: 'B', hasFile: true);
+      remote.files['$b.epub'] = Uint8List.fromList([9]);
+      remote.progressRows[b] = RemoteProgress(
+          md5: b,
+          position: 'foliate:p',
+          completed: false,
+          updatedAt: DateTime.utc(2026, 11, 9, 10));
+      remote.translations['$b|ko|shared'] = {'h1': '번역'};
+      remote.translationTimes['$b|ko|shared'] = DateTime.utc(2026, 11, 9, 10);
+      remote.glossaryRows[b] =
+          ('{"entries":[]}', DateTime.utc(2026, 11, 9, 10));
+      final events = <String>[];
+      final report = await SyncEngine(
+        local: local,
+        remote: remote,
+        onLocalChange: () => events.add(
+            'book here, translations ${local.sets['/tr/b.epub.ko.shared']}'),
+      ).run();
+
+      expect(report.downloaded, 1);
+      expect(local.positions['b.epub']!.position, 'foliate:p');
+      expect(local.sets['/tr/b.epub.ko.shared'], {'h1': '번역'});
+      expect(local.glossaries['b.epub'], '{"entries":[]}');
+      // Whole before the library is told it is there.
+      expect(events, ['book here, translations {h1: 번역}']);
+      // Fetched once: the run's own pass does not fetch them again.
+      expect(report.translationsReceived, 1);
+    });
+
+    test('several at once, all of them', () async {
+      for (final d in ['1', '2', '3', '4', '5']) {
+        final md5 = d * 32;
+        remote.bookRows[md5] = RemoteBook(
+            md5: md5,
+            bookId: md5,
+            fileName: '$d.epub',
+            title: d,
+            hasFile: true);
+        remote.files['$md5.epub'] = Uint8List.fromList([int.parse(d)]);
+      }
+      final report =
+          await SyncEngine(local: local, remote: remote, transfers: 3).run();
+      expect(report.downloaded, 5);
+      expect(local.held.length, 5);
+    });
+  });
+
+  group('glossaries', () {
+    test('made here before sync: up when the remote has none', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.glossaries['a.epub'] = 'mine';
+      final report = await engine().run(quick: true);
+      expect(report.glossariesSent, 1);
+      expect(remote.glossaryRows[a]!.$1, 'mine');
+    });
+
+    test('changed here last: up; changed there last: taken', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.glossaries['a.epub'] = 'mine';
+      local.kv['gls:a.epub'] =
+          '${DateTime.utc(2026, 11, 9, 11).millisecondsSinceEpoch}';
+      remote.glossaryRows[a] = ('theirs', DateTime.utc(2026, 11, 9, 10));
+
+      await engine().run(quick: true);
+      expect(remote.glossaryRows[a]!.$1, 'mine');
+
+      remote.glossaryRows[a] = ('newer', DateTime.utc(2026, 11, 9, 12));
+      final report = await engine().run(quick: true);
+      expect(report.glossariesReceived, 1);
+      expect(local.glossaries['a.epub'], 'newer');
+      // Taken, not sent back.
+      remote.calls.clear();
+      await engine().run(quick: true);
+      expect(remote.calls.where((c) => c.startsWith('putGlossary')), isEmpty);
+    });
+  });
+
+  group('one book (opened)', () {
+    test('its position and translations both ways, nothing else', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.addLocal(b, 'b.epub', [2]);
+      remote.translations['$a|ko|shared'] = {'h1': 'x'};
+      remote.translationTimes['$a|ko|shared'] = DateTime.utc(2026, 11, 9, 10);
+      remote.translations['$b|ko|shared'] = {'h2': 'y'};
+      remote.translationTimes['$b|ko|shared'] = DateTime.utc(2026, 11, 9, 10);
+
+      final report = await engine().runBook('a.epub');
+
+      expect(report!.translationsReceived, 1);
+      expect(local.sets['/tr/a.epub.ko.shared'], {'h1': 'x'});
+      expect(local.sets.containsKey('/tr/b.epub.ko.shared'), isFalse);
+      expect(remote.calls.where((c) => c.startsWith('upload')), isEmpty);
+      expect(await engine().runBook('missing.epub'), isNull);
+    });
+  });
+
+  group('progress', () {
+    test('says each stage with its count', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.sets['/tr/a.epub.ko.shared'] = {'h1': 'x'};
+      remote.bookRows[b] = const RemoteBook(
+          md5: b, bookId: b, fileName: 'b.epub', title: 'B', hasFile: true);
+      remote.files['$b.epub'] = Uint8List.fromList([9]);
+      final seen = <String>[];
+      await SyncEngine(
+        local: local,
+        remote: remote,
+        onProgress: (p) => seen.add('${p.stage.name} ${p.done}/${p.total}'),
+      ).run();
+      expect(seen, [
+        'checking 0/0',
+        'translations 0/1',
+        'translations 1/1',
+        'uploading 0/1',
+        'downloading 0/1',
+        'downloading 1/1',
+      ]);
+    });
+
+    test('a run with nothing to move reports no transfers', () async {
+      final seen = <SyncProgress>[];
+      await SyncEngine(local: local, remote: remote, onProgress: seen.add)
+          .run();
+      expect(seen.where((p) => p.transfers), isEmpty);
     });
   });
 }
