@@ -550,7 +550,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         if (await _showSavedTranslations(quiet: quiet)) return;
         if (!quiet && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(_messageWithAction(
-              l10n.translationNoModel,
+              kIsWeb ? l10n.translationNoGeminiKey : l10n.translationNoModel,
               l10n.translationOpenSettings,
               _openTranslationSettings));
         }

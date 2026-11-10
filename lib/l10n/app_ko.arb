@@ -226,6 +226,7 @@
   "translationTranslate": "번역",
   "translationShowOriginal": "원문 보기",
   "translationNoModel": "아직 번역 모델이 설치되지 않았습니다.",
+  "translationNoGeminiKey": "번역하려면 Gemini API 키를 넣어 주세요.",
   "translationOpenSettings": "설정",
   "translationLoadingModel": "번역 모델 준비 중… (처음 한 번은 몇 분 걸릴 수 있어요)",
   "translationTranslating": "번역 중 · 남은 문단 {count} · {device}",

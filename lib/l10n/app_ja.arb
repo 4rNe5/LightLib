@@ -226,6 +226,7 @@
   "translationTranslate": "翻訳",
   "translationShowOriginal": "原文を表示",
   "translationNoModel": "翻訳モデルがまだインストールされていません。",
+  "translationNoGeminiKey": "翻訳するには Gemini API キーを登録してください。",
   "translationOpenSettings": "設定",
   "translationLoadingModel": "翻訳モデルを準備中…(初回は数分かかることがあります)",
   "translationTranslating": "翻訳中 · 残り {count} 段落 · {device}",

@@ -735,6 +735,9 @@ class AppLocalizationsJa extends AppLocalizations {
   String get translationNoModel => '翻訳モデルがまだインストールされていません。';
 
   @override
+  String get translationNoGeminiKey => '翻訳するには Gemini API キーを登録してください。';
+
+  @override
   String get translationOpenSettings => '設定';
 
   @override

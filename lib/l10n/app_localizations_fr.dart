@@ -764,6 +764,10 @@ class AppLocalizationsFr extends AppLocalizations {
   String get translationNoModel => 'Aucun modèle de traduction installé.';
 
   @override
+  String get translationNoGeminiKey =>
+      'Ajoutez une clé API Gemini pour traduire.';
+
+  @override
   String get translationOpenSettings => 'Configurer';
 
   @override

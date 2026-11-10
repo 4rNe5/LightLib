@@ -232,6 +232,7 @@
   "translationTranslate": "Übersetzen",
   "translationShowOriginal": "Original anzeigen",
   "translationNoModel": "Noch kein Übersetzungsmodell installiert.",
+  "translationNoGeminiKey": "Für Übersetzungen einen Gemini-API-Schlüssel hinzufügen.",
   "translationOpenSettings": "Einrichten",
   "translationLoadingModel": "Übersetzungsmodell wird vorbereitet… (beim ersten Mal einige Minuten)",
   "translationTranslating": "Übersetze · noch {count} · {device}",

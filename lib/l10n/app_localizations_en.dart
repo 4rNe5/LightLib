@@ -750,6 +750,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get translationNoModel => 'No translation model installed yet.';
 
   @override
+  String get translationNoGeminiKey => 'Add a Gemini API key to translate.';
+
+  @override
   String get translationOpenSettings => 'Set up';
 
   @override

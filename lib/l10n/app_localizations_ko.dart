@@ -737,6 +737,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get translationNoModel => '아직 번역 모델이 설치되지 않았습니다.';
 
   @override
+  String get translationNoGeminiKey => '번역하려면 Gemini API 키를 넣어 주세요.';
+
+  @override
   String get translationOpenSettings => '설정';
 
   @override

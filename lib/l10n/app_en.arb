@@ -1002,6 +1002,10 @@
     "description": "Reader toolbar: turn translation off"
   },
   "translationNoModel": "No translation model installed yet.",
+  "translationNoGeminiKey": "Add a Gemini API key to translate.",
+  "@translationNoGeminiKey": {
+    "description": "Web reader: translation was turned on but no Gemini API key is saved"
+  },
   "@translationNoModel": {
     "description": "Snackbar when no translation model is installed"
   },

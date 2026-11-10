@@ -1462,6 +1462,12 @@ abstract class AppLocalizations {
   /// **'No translation model installed yet.'**
   String get translationNoModel;
 
+  /// Web reader: translation was turned on but no Gemini API key is saved
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Gemini API key to translate.'**
+  String get translationNoGeminiKey;
+
   /// Snackbar action opening translation settings
   ///
   /// In en, this message translates to:
