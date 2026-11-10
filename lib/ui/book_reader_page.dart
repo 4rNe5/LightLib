@@ -53,6 +53,7 @@ import 'package:openlib/ui/study_page.dart';
 import 'package:openlib/ui/translation_settings_page.dart';
 import 'package:openlib/ui/reader_host/reader_host.dart';
 import 'package:openlib/ui/reader_host/reader_resources.dart';
+import 'package:openlib/web/web_settings_page.dart';
 
 export 'package:openlib/ui/reader_host/reader_resources.dart';
 
@@ -669,7 +670,11 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   Future<void> _openTranslationSettings() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const TranslationSettingsPage()),
+      MaterialPageRoute(
+          builder: (_) => kIsWeb
+              // The web has Gemini only: no models to manage.
+              ? const WebSettingsPage()
+              : const TranslationSettingsPage()),
     );
     // A new model or language applies from the next start.
     _studyLanguage = null;

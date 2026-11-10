@@ -23,6 +23,7 @@ export ANDROID_HOME=/opt/android-sdk          # cloud sessions
 /opt/flutter/bin/flutter test --no-pub        # ~530 tests, ~2.5 min
 /opt/flutter/bin/flutter gen-l10n             # after editing lib/l10n/*.arb
 /opt/flutter/bin/flutter build apk --release --split-per-abi --target-platform android-arm64   # ~7 min
+/opt/flutter/bin/flutter build web --release -t lib/main_web.dart   # the web app, ~2 min
 ```
 Without `android/key.properties` a local release build is signed with the
 debug key (only CI signs releases).
@@ -47,13 +48,31 @@ debug key (only CI signs releases).
   live only in GitHub Secrets and with the owner.
 - `gh` works through REST only (no GraphQL, no Actions secrets).
 
+## Web and sync
+- Web app = `lib/main_web.dart` (library, the same reader, Gemini only):
+  Vercel project `lightlib` builds it on every push that touches the app
+  (`vercel.json`, `tool/vercel_build.sh`; CSP in `vercel.json` - test a
+  new outside host against it). Not built: search/downloads, the device
+  model, widgets, updates.
+- Platform checks go through `PlatformUtils` (`Platform` throws on the
+  web); files the app keeps through `AppFiles` (dart:io / IndexedDB);
+  isolates through `runHeavy`.
+- Sync = owner's Supabase project `lightlib` (ggagbhdqdrmomrednwfx,
+  schema in `supabase/migrations/`): books by file MD5 (EPUB files in the
+  private `books` bucket), positions (newest wins), translations (union).
+  Only emails in `public.owners` can read or write (RLS). Engine rules
+  and tests: `sync_engine.dart`, `test/sync_engine_test.dart`.
+
 ## Map
 | Area | Where |
 |---|---|
 | App start, tabs, home widgets update | `lib/main.dart` |
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
-| Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`) |
+| Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
+| Web app | `lib/main_web.dart`, `lib/web/` (library, settings) |
+| Sync | `lib/services/sync/` (`sync_engine`, `supabase_remote`, `library_sync_local`, `sync_service`); settings `lib/ui/components/sync_section.dart` |
+| Files the app keeps (web: IndexedDB) | `lib/services/storage/` (`AppFiles`) |
 | Older reader | `lib/ui/epub_viewer.dart` |
 | Engine choice (device / Gemini) | `lib/services/translation/translation_engine.dart` |
 | Device translation | `translator.dart` (`LocalLlmTranslator`, scheduler, `SharedTranslationEngine`), `third_party/llamadart` (see `PATCHES.md`) |
@@ -93,10 +112,10 @@ debug key (only CI signs releases).
    allows (MLX or llama-server, OpenAI-compatible), reachable only by the
    owner (Tailscale preferred, or a tunnel with an API key); an app engine
    "내 서버" (URL + key) reusing `CloudTranslator`'s structure.
-2. Flutter Web (static hosting, IndexedDB, Gemini with the user's own key):
-   no public relay for shadow-library search/downloads; books reach the web
-   through the owner's own Google Drive app folder sync, upload, or
-   public-domain sources.
+2. Web + sync (built, see "Web and sync"): next - books fetched on open
+   instead of all at once, whole-book translation on the web, the reader's
+   fonts and word tools on the web. No public relay for shadow-library
+   search/downloads.
 3. Smaller: `[n]`→`n.` numbering, token-budget batches, translator-note
    stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
    two-page spread on unfolded screens.
