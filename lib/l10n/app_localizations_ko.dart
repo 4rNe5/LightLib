@@ -1876,7 +1876,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get syncHint =>
-      '책, 읽던 위치, 번역을 이 앱과 LightLib 웹이 함께 씁니다(내 Supabase 프로젝트).';
+      '책, 읽던 위치, 번역, 용어집을 이 앱과 LightLib 웹이 함께 씁니다(내 Supabase 프로젝트).';
 
   @override
   String get syncSignIn => 'Google로 로그인';
@@ -1902,9 +1902,8 @@ class AppLocalizationsKo extends AppLocalizations {
   String get syncAutoHint => '앱을 열 때, 다시 돌아올 때, 읽기를 마칠 때.';
 
   @override
-  String syncLast(String time, int up, int down, int positionsUp,
-      int positionsDown, int translationsUp, int translationsDown) {
-    return '마지막 동기화 $time: 책 ↑$up ↓$down, 위치 ↑$positionsUp ↓$positionsDown, 번역 ↑$translationsUp ↓$translationsDown';
+  String syncLast(String time, String summary) {
+    return '마지막 동기화 $time: $summary';
   }
 
   @override
@@ -1950,4 +1949,48 @@ class AppLocalizationsKo extends AppLocalizations {
   String syncDeletesHeld(int count) {
     return '이 기기에서 $count권이 한꺼번에 사라져, 다른 기기에서는 지우지 않았습니다.';
   }
+
+  @override
+  String get syncNotifyTitle => 'LightLib 동기화';
+
+  @override
+  String get syncStageChecking => '바뀐 내용 확인 중…';
+
+  @override
+  String syncStageUploading(int done, int total) {
+    return '책 올리는 중 $done/$total';
+  }
+
+  @override
+  String syncStageDownloading(int done, int total) {
+    return '책 받는 중 $done/$total';
+  }
+
+  @override
+  String syncStageTranslations(int done, int total) {
+    return '번역 $done/$total';
+  }
+
+  @override
+  String syncSummary(
+      int up,
+      int down,
+      int positionsUp,
+      int positionsDown,
+      int translationsUp,
+      int translationsDown,
+      int glossariesUp,
+      int glossariesDown) {
+    return '책 ↑$up ↓$down · 위치 ↑$positionsUp ↓$positionsDown · 번역 ↑$translationsUp ↓$translationsDown · 용어집 ↑$glossariesUp ↓$glossariesDown';
+  }
+
+  @override
+  String get syncUpToDate => '모두 최신 상태입니다.';
+
+  @override
+  String get syncDoneTitle => '동기화 완료';
+
+  @override
+  String get translationSavedOnly =>
+      '지금까지 저장된 번역을 보여 줍니다. 나머지를 번역하려면 번역 엔진을 설정하세요.';
 }

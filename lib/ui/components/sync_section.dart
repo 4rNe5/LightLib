@@ -63,7 +63,7 @@ class _SyncSectionState extends State<SyncSection> {
                 children: [
                   ElevatedButton.icon(
                     key: const ValueKey('syncNow'),
-                    onPressed: _sync.running ? null : _sync.syncNow,
+                    onPressed: _sync.running ? null : _sync.syncByHand,
                     icon: _sync.running
                         ? const SizedBox(
                             width: 16,
@@ -80,6 +80,17 @@ class _SyncSectionState extends State<SyncSection> {
                   ),
                 ],
               ),
+              if (_sync.progress case final progress?) ...[
+                const SizedBox(height: 10),
+                LinearProgressIndicator(
+                  key: const ValueKey('syncProgress'),
+                  value: progress.total > 0
+                      ? progress.done / progress.total
+                      : null,
+                ),
+                const SizedBox(height: 4),
+                Text(syncProgressText(l10n, progress), style: small),
+              ],
               SwitchListTile(
                 key: const ValueKey('syncAuto'),
                 contentPadding: EdgeInsets.zero,
@@ -91,14 +102,7 @@ class _SyncSectionState extends State<SyncSection> {
               if (report != null && _sync.lastRun != null)
                 Text(
                   l10n.syncLast(
-                    _time(_sync.lastRun!),
-                    report.uploaded,
-                    report.downloaded,
-                    report.positionsSent,
-                    report.positionsReceived,
-                    report.translationsSent,
-                    report.translationsReceived,
-                  ),
+                      _time(_sync.lastRun!), syncSummaryText(l10n, report)),
                   style: small,
                 ),
               if (report != null && report.skippedForSpace > 0)

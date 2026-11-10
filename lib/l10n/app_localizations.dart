@@ -3493,7 +3493,7 @@ abstract class AppLocalizations {
   /// Settings: what sync shares and with what
   ///
   /// In en, this message translates to:
-  /// **'Your books, reading positions and translations, shared between this app and the LightLib web (your own Supabase project).'**
+  /// **'Your books, reading positions, translations and glossaries, shared between this app and the LightLib web (your own Supabase project).'**
   String get syncHint;
 
   /// Settings: button that signs in for sync
@@ -3538,12 +3538,11 @@ abstract class AppLocalizations {
   /// **'When the app opens, when you come back to it and after reading.'**
   String get syncAutoHint;
 
-  /// Settings: what the last sync sent (up) and received (down)
+  /// Settings: when the last sync ran and what it moved
   ///
   /// In en, this message translates to:
-  /// **'Last sync {time}: books ↑{up} ↓{down}, positions ↑{positionsUp} ↓{positionsDown}, translations ↑{translationsUp} ↓{translationsDown}'**
-  String syncLast(String time, int up, int down, int positionsUp,
-      int positionsDown, int translationsUp, int translationsDown);
+  /// **'Last sync {time}: {summary}'**
+  String syncLast(String time, String summary);
 
   /// Settings: books not uploaded because the storage is full
   ///
@@ -3610,6 +3609,68 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} books went missing here at once, so they were not deleted on your other devices.'**
   String syncDeletesHeld(int count);
+
+  /// Notification title while syncing
+  ///
+  /// In en, this message translates to:
+  /// **'LightLib sync'**
+  String get syncNotifyTitle;
+
+  /// Sync step: looking for changes
+  ///
+  /// In en, this message translates to:
+  /// **'Checking what changed…'**
+  String get syncStageChecking;
+
+  /// Sync step: book files going up
+  ///
+  /// In en, this message translates to:
+  /// **'Uploading books {done}/{total}'**
+  String syncStageUploading(int done, int total);
+
+  /// Sync step: book files coming down
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading books {done}/{total}'**
+  String syncStageDownloading(int done, int total);
+
+  /// Sync step: translations being merged
+  ///
+  /// In en, this message translates to:
+  /// **'Translations {done}/{total}'**
+  String syncStageTranslations(int done, int total);
+
+  /// What a sync sent (up) and received (down)
+  ///
+  /// In en, this message translates to:
+  /// **'Books ↑{up} ↓{down} · positions ↑{positionsUp} ↓{positionsDown} · translations ↑{translationsUp} ↓{translationsDown} · glossaries ↑{glossariesUp} ↓{glossariesDown}'**
+  String syncSummary(
+      int up,
+      int down,
+      int positionsUp,
+      int positionsDown,
+      int translationsUp,
+      int translationsDown,
+      int glossariesUp,
+      int glossariesDown);
+
+  /// A sync that found nothing to move
+  ///
+  /// In en, this message translates to:
+  /// **'Everything is up to date.'**
+  String get syncUpToDate;
+
+  /// Notification title when a sync ends
+  ///
+  /// In en, this message translates to:
+  /// **'Sync complete'**
+  String get syncDoneTitle;
+
+  /// Reader: translations shown without an engine to make more
+  ///
+  /// In en, this message translates to:
+  /// **'Showing the translations saved so far. To translate the rest, set up a translation engine.'**
+  String get translationSavedOnly;
 }
 
 class _AppLocalizationsDelegate

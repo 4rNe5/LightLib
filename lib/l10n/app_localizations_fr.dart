@@ -1955,7 +1955,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get syncHint =>
-      'Vos livres, positions de lecture et traductions, partagés entre cette app et LightLib web (votre propre projet Supabase).';
+      'Vos livres, positions de lecture, traductions et glossaires, partagés entre cette app et LightLib web (votre propre projet Supabase).';
 
   @override
   String get syncSignIn => 'Se connecter avec Google';
@@ -1982,9 +1982,8 @@ class AppLocalizationsFr extends AppLocalizations {
       'À l’ouverture de l’app, au retour et après la lecture.';
 
   @override
-  String syncLast(String time, int up, int down, int positionsUp,
-      int positionsDown, int translationsUp, int translationsDown) {
-    return 'Dernière synchronisation $time : livres ↑$up ↓$down, positions ↑$positionsUp ↓$positionsDown, traductions ↑$translationsUp ↓$translationsDown';
+  String syncLast(String time, String summary) {
+    return 'Dernière synchronisation $time : $summary';
   }
 
   @override
@@ -2031,4 +2030,48 @@ class AppLocalizationsFr extends AppLocalizations {
   String syncDeletesHeld(int count) {
     return '$count livres ont disparu ici d’un coup : ils n’ont pas été supprimés sur vos autres appareils.';
   }
+
+  @override
+  String get syncNotifyTitle => 'Synchronisation LightLib';
+
+  @override
+  String get syncStageChecking => 'Vérification des changements…';
+
+  @override
+  String syncStageUploading(int done, int total) {
+    return 'Envoi des livres $done/$total';
+  }
+
+  @override
+  String syncStageDownloading(int done, int total) {
+    return 'Téléchargement des livres $done/$total';
+  }
+
+  @override
+  String syncStageTranslations(int done, int total) {
+    return 'Traductions $done/$total';
+  }
+
+  @override
+  String syncSummary(
+      int up,
+      int down,
+      int positionsUp,
+      int positionsDown,
+      int translationsUp,
+      int translationsDown,
+      int glossariesUp,
+      int glossariesDown) {
+    return 'Livres ↑$up ↓$down · positions ↑$positionsUp ↓$positionsDown · traductions ↑$translationsUp ↓$translationsDown · glossaires ↑$glossariesUp ↓$glossariesDown';
+  }
+
+  @override
+  String get syncUpToDate => 'Tout est à jour.';
+
+  @override
+  String get syncDoneTitle => 'Synchronisation terminée';
+
+  @override
+  String get translationSavedOnly =>
+      'Les traductions enregistrées jusqu’ici sont affichées. Pour traduire le reste, configurez un moteur de traduction.';
 }

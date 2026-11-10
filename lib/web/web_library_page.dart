@@ -35,18 +35,32 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   final _sync = SyncService.instance;
   List<MyBook>? _books;
   bool _adding = false;
+  StreamSubscription<SyncReport>? _finished;
 
   @override
   void initState() {
     super.initState();
     _sync.onLocalChanges = _reload;
+    _finished = _sync.finished.listen(_onSynced);
     _reload();
   }
 
   @override
   void dispose() {
     if (_sync.onLocalChanges == _reload) _sync.onLocalChanges = null;
+    _finished?.cancel();
     super.dispose();
+  }
+
+  /// A run ended: what it did, when it did anything.
+  void _onSynced(SyncReport report) {
+    if (!mounted || (!report.changedAnything && report.errors.isEmpty)) return;
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(report.errors.isEmpty
+          ? '${l10n.syncDoneTitle} · ${syncSummaryText(l10n, report)}'
+          : l10n.syncFailed(report.errors.first)),
+    ));
   }
 
   Future<void> _reload() async {
@@ -134,7 +148,7 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
                 : IconButton(
                     key: const ValueKey('webSync'),
                     tooltip: l10n.syncNow,
-                    onPressed: _sync.running ? null : _sync.syncNow,
+                    onPressed: _sync.running ? null : _sync.syncByHand,
                     icon: _sync.running
                         ? const SizedBox(
                             width: 18,
@@ -172,32 +186,67 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
         label: Text(l10n.webAddBooks,
             style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
-      body: books == null
-          ? const Center(child: CircularProgressIndicator())
-          : books.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child:
-                        Text(l10n.webLibraryEmpty, textAlign: TextAlign.center),
-                  ),
-                )
-              : GridView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
-                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-                    maxCrossAxisExtent: 170,
-                    mainAxisSpacing: 16,
-                    crossAxisSpacing: 16,
-                    childAspectRatio: 0.56,
-                  ),
-                  itemCount: books.length,
-                  itemBuilder: (context, i) => _BookTile(
-                    book: books[i],
-                    onOpen: () => _open(books[i]),
-                    onDelete: () => _delete(books[i]),
-                  ),
+      body: Column(
+        children: [
+          // How far a sync is (the first one brings the whole library).
+          ListenableBuilder(
+            listenable: _sync,
+            builder: (context, _) {
+              final progress = _sync.progress;
+              if (progress == null) return const SizedBox.shrink();
+              return Padding(
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    LinearProgressIndicator(
+                      key: const ValueKey('webSyncProgress'),
+                      value: progress.total > 0
+                          ? progress.done / progress.total
+                          : null,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(syncProgressText(l10n, progress),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontSize: 12)),
+                  ],
                 ),
+              );
+            },
+          ),
+          Expanded(child: _body(l10n, books)),
+        ],
+      ),
     );
+  }
+
+  Widget _body(AppLocalizations l10n, List<MyBook>? books) {
+    return books == null
+        ? const Center(child: CircularProgressIndicator())
+        : books.isEmpty
+            ? Center(
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child:
+                      Text(l10n.webLibraryEmpty, textAlign: TextAlign.center),
+                ),
+              )
+            : GridView.builder(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 170,
+                  mainAxisSpacing: 16,
+                  crossAxisSpacing: 16,
+                  childAspectRatio: 0.56,
+                ),
+                itemCount: books.length,
+                itemBuilder: (context, i) => _BookTile(
+                  book: books[i],
+                  onOpen: () => _open(books[i]),
+                  onDelete: () => _delete(books[i]),
+                ),
+              );
   }
 }
 

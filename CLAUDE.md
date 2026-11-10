@@ -59,9 +59,14 @@ debug key (only CI signs releases).
   isolates through `runHeavy`.
 - Sync = owner's Supabase project `lightlib` (ggagbhdqdrmomrednwfx,
   schema in `supabase/migrations/`): books by file MD5 (EPUB files in the
-  private `books` bucket), positions (newest wins), translations (union).
-  Only emails in `public.owners` can read or write (RLS). Engine rules
-  and tests: `sync_engine.dart`, `test/sync_engine_test.dart`.
+  private `books` bucket), positions and glossaries (newest wins; saved
+  before sync = `unknownAge`), translations (union). Order: deletions,
+  then positions/translations/glossaries of books here, then files - a
+  downloaded book brings its own before the library hears of it. Quick
+  runs (while reading) skip files; opening a book runs `runBook` first.
+  Progress/result notifications: `sync_notifier*.dart`. Only emails in
+  `public.owners` can read or write (RLS). Engine rules and tests:
+  `sync_engine.dart`, `test/sync_engine_test.dart`.
 
 ## Map
 | Area | Where |

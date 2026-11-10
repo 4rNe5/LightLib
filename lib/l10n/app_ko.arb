@@ -564,7 +564,7 @@
   "studyDays": "{count}일",
   "studyTotalWords": "단어 {count}개",
   "syncTitle": "동기화",
-  "syncHint": "책, 읽던 위치, 번역을 이 앱과 LightLib 웹이 함께 씁니다(내 Supabase 프로젝트).",
+  "syncHint": "책, 읽던 위치, 번역, 용어집을 이 앱과 LightLib 웹이 함께 씁니다(내 Supabase 프로젝트).",
   "syncSignIn": "Google로 로그인",
   "syncSignOut": "로그아웃",
   "syncSignedInAs": "{email}(으)로 로그인됨",
@@ -572,7 +572,7 @@
   "syncRunning": "동기화 중…",
   "syncAuto": "자동 동기화",
   "syncAutoHint": "앱을 열 때, 다시 돌아올 때, 읽기를 마칠 때.",
-  "syncLast": "마지막 동기화 {time}: 책 ↑{up} ↓{down}, 위치 ↑{positionsUp} ↓{positionsDown}, 번역 ↑{translationsUp} ↓{translationsDown}",
+  "syncLast": "마지막 동기화 {time}: {summary}",
   "syncNoSpace": "저장 공간이 차서 {count}권은 올리지 못했습니다.",
   "syncFailed": "동기화 실패: {error}",
   "syncUnavailable": "지금은 동기화를 쓸 수 없습니다.",
@@ -583,5 +583,14 @@
   "webDeleteConfirm": "“{title}”을(를) 삭제할까요? 동기화 중이면 다른 기기에서도 지워집니다.",
   "webCancel": "취소",
   "webDelete": "삭제",
-  "syncDeletesHeld": "이 기기에서 {count}권이 한꺼번에 사라져, 다른 기기에서는 지우지 않았습니다."
+  "syncDeletesHeld": "이 기기에서 {count}권이 한꺼번에 사라져, 다른 기기에서는 지우지 않았습니다.",
+  "syncNotifyTitle": "LightLib 동기화",
+  "syncStageChecking": "바뀐 내용 확인 중…",
+  "syncStageUploading": "책 올리는 중 {done}/{total}",
+  "syncStageDownloading": "책 받는 중 {done}/{total}",
+  "syncStageTranslations": "번역 {done}/{total}",
+  "syncSummary": "책 ↑{up} ↓{down} · 위치 ↑{positionsUp} ↓{positionsDown} · 번역 ↑{translationsUp} ↓{translationsDown} · 용어집 ↑{glossariesUp} ↓{glossariesDown}",
+  "syncUpToDate": "모두 최신 상태입니다.",
+  "syncDoneTitle": "동기화 완료",
+  "translationSavedOnly": "지금까지 저장된 번역을 보여 줍니다. 나머지를 번역하려면 번역 엔진을 설정하세요."
 }

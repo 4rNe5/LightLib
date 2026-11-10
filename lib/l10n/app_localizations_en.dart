@@ -1928,7 +1928,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get syncHint =>
-      'Your books, reading positions and translations, shared between this app and the LightLib web (your own Supabase project).';
+      'Your books, reading positions, translations and glossaries, shared between this app and the LightLib web (your own Supabase project).';
 
   @override
   String get syncSignIn => 'Sign in with Google';
@@ -1955,9 +1955,8 @@ class AppLocalizationsEn extends AppLocalizations {
       'When the app opens, when you come back to it and after reading.';
 
   @override
-  String syncLast(String time, int up, int down, int positionsUp,
-      int positionsDown, int translationsUp, int translationsDown) {
-    return 'Last sync $time: books ↑$up ↓$down, positions ↑$positionsUp ↓$positionsDown, translations ↑$translationsUp ↓$translationsDown';
+  String syncLast(String time, String summary) {
+    return 'Last sync $time: $summary';
   }
 
   @override
@@ -2003,4 +2002,48 @@ class AppLocalizationsEn extends AppLocalizations {
   String syncDeletesHeld(int count) {
     return '$count books went missing here at once, so they were not deleted on your other devices.';
   }
+
+  @override
+  String get syncNotifyTitle => 'LightLib sync';
+
+  @override
+  String get syncStageChecking => 'Checking what changed…';
+
+  @override
+  String syncStageUploading(int done, int total) {
+    return 'Uploading books $done/$total';
+  }
+
+  @override
+  String syncStageDownloading(int done, int total) {
+    return 'Downloading books $done/$total';
+  }
+
+  @override
+  String syncStageTranslations(int done, int total) {
+    return 'Translations $done/$total';
+  }
+
+  @override
+  String syncSummary(
+      int up,
+      int down,
+      int positionsUp,
+      int positionsDown,
+      int translationsUp,
+      int translationsDown,
+      int glossariesUp,
+      int glossariesDown) {
+    return 'Books ↑$up ↓$down · positions ↑$positionsUp ↓$positionsDown · translations ↑$translationsUp ↓$translationsDown · glossaries ↑$glossariesUp ↓$glossariesDown';
+  }
+
+  @override
+  String get syncUpToDate => 'Everything is up to date.';
+
+  @override
+  String get syncDoneTitle => 'Sync complete';
+
+  @override
+  String get translationSavedOnly =>
+      'Showing the translations saved so far. To translate the rest, set up a translation engine.';
 }

@@ -1873,7 +1873,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get syncHint =>
-      '本・読んだ位置・翻訳を、このアプリとLightLib Webで共有します(自分のSupabaseプロジェクト)。';
+      '本・読んだ位置・翻訳・用語集を、このアプリとLightLib Webで共有します(自分のSupabaseプロジェクト)。';
 
   @override
   String get syncSignIn => 'Googleでログイン';
@@ -1899,9 +1899,8 @@ class AppLocalizationsJa extends AppLocalizations {
   String get syncAutoHint => 'アプリを開いたとき、戻ったとき、読み終えたとき。';
 
   @override
-  String syncLast(String time, int up, int down, int positionsUp,
-      int positionsDown, int translationsUp, int translationsDown) {
-    return '前回の同期 $time: 本 ↑$up ↓$down、位置 ↑$positionsUp ↓$positionsDown、翻訳 ↑$translationsUp ↓$translationsDown';
+  String syncLast(String time, String summary) {
+    return '前回の同期 $time: $summary';
   }
 
   @override
@@ -1946,4 +1945,48 @@ class AppLocalizationsJa extends AppLocalizations {
   String syncDeletesHeld(int count) {
     return 'この端末で $count 冊が一度に消えたため、他の端末では削除していません。';
   }
+
+  @override
+  String get syncNotifyTitle => 'LightLib 同期';
+
+  @override
+  String get syncStageChecking => '変更を確認中…';
+
+  @override
+  String syncStageUploading(int done, int total) {
+    return '本をアップロード中 $done/$total';
+  }
+
+  @override
+  String syncStageDownloading(int done, int total) {
+    return '本をダウンロード中 $done/$total';
+  }
+
+  @override
+  String syncStageTranslations(int done, int total) {
+    return '翻訳 $done/$total';
+  }
+
+  @override
+  String syncSummary(
+      int up,
+      int down,
+      int positionsUp,
+      int positionsDown,
+      int translationsUp,
+      int translationsDown,
+      int glossariesUp,
+      int glossariesDown) {
+    return '本 ↑$up ↓$down · 位置 ↑$positionsUp ↓$positionsDown · 翻訳 ↑$translationsUp ↓$translationsDown · 用語集 ↑$glossariesUp ↓$glossariesDown';
+  }
+
+  @override
+  String get syncUpToDate => 'すべて最新です。';
+
+  @override
+  String get syncDoneTitle => '同期完了';
+
+  @override
+  String get translationSavedOnly =>
+      'これまでに保存された翻訳を表示しています。残りを翻訳するには翻訳エンジンを設定してください。';
 }

@@ -564,7 +564,7 @@
   "studyDays": "{count}日",
   "studyTotalWords": "{count}語",
   "syncTitle": "同期",
-  "syncHint": "本・読んだ位置・翻訳を、このアプリとLightLib Webで共有します(自分のSupabaseプロジェクト)。",
+  "syncHint": "本・読んだ位置・翻訳・用語集を、このアプリとLightLib Webで共有します(自分のSupabaseプロジェクト)。",
   "syncSignIn": "Googleでログイン",
   "syncSignOut": "ログアウト",
   "syncSignedInAs": "{email} でログイン中",
@@ -572,7 +572,7 @@
   "syncRunning": "同期中…",
   "syncAuto": "自動で同期",
   "syncAutoHint": "アプリを開いたとき、戻ったとき、読み終えたとき。",
-  "syncLast": "前回の同期 {time}: 本 ↑{up} ↓{down}、位置 ↑{positionsUp} ↓{positionsDown}、翻訳 ↑{translationsUp} ↓{translationsDown}",
+  "syncLast": "前回の同期 {time}: {summary}",
   "syncNoSpace": "容量がいっぱいのため {count} 冊はアップロードできませんでした。",
   "syncFailed": "同期に失敗しました: {error}",
   "syncUnavailable": "今は同期を使えません。",
@@ -583,5 +583,14 @@
   "webDeleteConfirm": "「{title}」を削除しますか?同期中は他の端末からも削除されます。",
   "webCancel": "キャンセル",
   "webDelete": "削除",
-  "syncDeletesHeld": "この端末で {count} 冊が一度に消えたため、他の端末では削除していません。"
+  "syncDeletesHeld": "この端末で {count} 冊が一度に消えたため、他の端末では削除していません。",
+  "syncNotifyTitle": "LightLib 同期",
+  "syncStageChecking": "変更を確認中…",
+  "syncStageUploading": "本をアップロード中 {done}/{total}",
+  "syncStageDownloading": "本をダウンロード中 {done}/{total}",
+  "syncStageTranslations": "翻訳 {done}/{total}",
+  "syncSummary": "本 ↑{up} ↓{down} · 位置 ↑{positionsUp} ↓{positionsDown} · 翻訳 ↑{translationsUp} ↓{translationsDown} · 用語集 ↑{glossariesUp} ↓{glossariesDown}",
+  "syncUpToDate": "すべて最新です。",
+  "syncDoneTitle": "同期完了",
+  "translationSavedOnly": "これまでに保存された翻訳を表示しています。残りを翻訳するには翻訳エンジンを設定してください。"
 }

@@ -570,7 +570,7 @@
   "studyDays": "{count} j",
   "studyTotalWords": "{count} mots",
   "syncTitle": "Synchronisation",
-  "syncHint": "Vos livres, positions de lecture et traductions, partagés entre cette app et LightLib web (votre propre projet Supabase).",
+  "syncHint": "Vos livres, positions de lecture, traductions et glossaires, partagés entre cette app et LightLib web (votre propre projet Supabase).",
   "syncSignIn": "Se connecter avec Google",
   "syncSignOut": "Se déconnecter",
   "syncSignedInAs": "Connecté en tant que {email}",
@@ -578,7 +578,7 @@
   "syncRunning": "Synchronisation…",
   "syncAuto": "Synchroniser automatiquement",
   "syncAutoHint": "À l’ouverture de l’app, au retour et après la lecture.",
-  "syncLast": "Dernière synchronisation {time} : livres ↑{up} ↓{down}, positions ↑{positionsUp} ↓{positionsDown}, traductions ↑{translationsUp} ↓{translationsDown}",
+  "syncLast": "Dernière synchronisation {time} : {summary}",
   "syncNoSpace": "{count} livres non envoyés : stockage plein.",
   "syncFailed": "Échec de la synchronisation : {error}",
   "syncUnavailable": "La synchronisation n’est pas disponible pour le moment.",
@@ -589,5 +589,14 @@
   "webDeleteConfirm": "Supprimer « {title} » ? Avec la synchronisation, il est aussi supprimé sur vos autres appareils.",
   "webCancel": "Annuler",
   "webDelete": "Supprimer",
-  "syncDeletesHeld": "{count} livres ont disparu ici d’un coup : ils n’ont pas été supprimés sur vos autres appareils."
+  "syncDeletesHeld": "{count} livres ont disparu ici d’un coup : ils n’ont pas été supprimés sur vos autres appareils.",
+  "syncNotifyTitle": "Synchronisation LightLib",
+  "syncStageChecking": "Vérification des changements…",
+  "syncStageUploading": "Envoi des livres {done}/{total}",
+  "syncStageDownloading": "Téléchargement des livres {done}/{total}",
+  "syncStageTranslations": "Traductions {done}/{total}",
+  "syncSummary": "Livres ↑{up} ↓{down} · positions ↑{positionsUp} ↓{positionsDown} · traductions ↑{translationsUp} ↓{translationsDown} · glossaires ↑{glossariesUp} ↓{glossariesDown}",
+  "syncUpToDate": "Tout est à jour.",
+  "syncDoneTitle": "Synchronisation terminée",
+  "translationSavedOnly": "Les traductions enregistrées jusqu’ici sont affichées. Pour traduire le reste, configurez un moteur de traduction."
 }

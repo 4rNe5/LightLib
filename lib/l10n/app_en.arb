@@ -2661,7 +2661,7 @@
   "@syncTitle": {
     "description": "Settings: heading of the sync section"
   },
-  "syncHint": "Your books, reading positions and translations, shared between this app and the LightLib web (your own Supabase project).",
+  "syncHint": "Your books, reading positions, translations and glossaries, shared between this app and the LightLib web (your own Supabase project).",
   "@syncHint": {
     "description": "Settings: what sync shares and with what"
   },
@@ -2698,30 +2698,15 @@
   "@syncAutoHint": {
     "description": "Settings: when automatic sync runs"
   },
-  "syncLast": "Last sync {time}: books ↑{up} ↓{down}, positions ↑{positionsUp} ↓{positionsDown}, translations ↑{translationsUp} ↓{translationsDown}",
+  "syncLast": "Last sync {time}: {summary}",
   "@syncLast": {
-    "description": "Settings: what the last sync sent (up) and received (down)",
+    "description": "Settings: when the last sync ran and what it moved",
     "placeholders": {
       "time": {
         "type": "String"
       },
-      "up": {
-        "type": "int"
-      },
-      "down": {
-        "type": "int"
-      },
-      "positionsUp": {
-        "type": "int"
-      },
-      "positionsDown": {
-        "type": "int"
-      },
-      "translationsUp": {
-        "type": "int"
-      },
-      "translationsDown": {
-        "type": "int"
+      "summary": {
+        "type": "String"
       }
     }
   },
@@ -2793,5 +2778,91 @@
         "type": "int"
       }
     }
+  },
+  "syncNotifyTitle": "LightLib sync",
+  "@syncNotifyTitle": {
+    "description": "Notification title while syncing"
+  },
+  "syncStageChecking": "Checking what changed…",
+  "@syncStageChecking": {
+    "description": "Sync step: looking for changes"
+  },
+  "syncStageUploading": "Uploading books {done}/{total}",
+  "@syncStageUploading": {
+    "description": "Sync step: book files going up",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStageDownloading": "Downloading books {done}/{total}",
+  "@syncStageDownloading": {
+    "description": "Sync step: book files coming down",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "syncStageTranslations": "Translations {done}/{total}",
+  "@syncStageTranslations": {
+    "description": "Sync step: translations being merged",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "syncSummary": "Books ↑{up} ↓{down} · positions ↑{positionsUp} ↓{positionsDown} · translations ↑{translationsUp} ↓{translationsDown} · glossaries ↑{glossariesUp} ↓{glossariesDown}",
+  "@syncSummary": {
+    "description": "What a sync sent (up) and received (down)",
+    "placeholders": {
+      "up": {
+        "type": "int"
+      },
+      "down": {
+        "type": "int"
+      },
+      "positionsUp": {
+        "type": "int"
+      },
+      "positionsDown": {
+        "type": "int"
+      },
+      "translationsUp": {
+        "type": "int"
+      },
+      "translationsDown": {
+        "type": "int"
+      },
+      "glossariesUp": {
+        "type": "int"
+      },
+      "glossariesDown": {
+        "type": "int"
+      }
+    }
+  },
+  "syncUpToDate": "Everything is up to date.",
+  "@syncUpToDate": {
+    "description": "A sync that found nothing to move"
+  },
+  "syncDoneTitle": "Sync complete",
+  "@syncDoneTitle": {
+    "description": "Notification title when a sync ends"
+  },
+  "translationSavedOnly": "Showing the translations saved so far. To translate the rest, set up a translation engine.",
+  "@translationSavedOnly": {
+    "description": "Reader: translations shown without an engine to make more"
   }
 }

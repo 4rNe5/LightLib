@@ -570,7 +570,7 @@
   "studyDays": "{count} T.",
   "studyTotalWords": "{count} Wörter",
   "syncTitle": "Synchronisierung",
-  "syncHint": "Bücher, Lesepositionen und Übersetzungen, geteilt zwischen dieser App und LightLib im Web (dein eigenes Supabase-Projekt).",
+  "syncHint": "Bücher, Lesepositionen, Übersetzungen und Glossare, geteilt zwischen dieser App und LightLib im Web (dein eigenes Supabase-Projekt).",
   "syncSignIn": "Mit Google anmelden",
   "syncSignOut": "Abmelden",
   "syncSignedInAs": "Angemeldet als {email}",
@@ -578,7 +578,7 @@
   "syncRunning": "Wird synchronisiert…",
   "syncAuto": "Automatisch synchronisieren",
   "syncAutoHint": "Beim Öffnen, bei der Rückkehr zur App und nach dem Lesen.",
-  "syncLast": "Zuletzt {time}: Bücher ↑{up} ↓{down}, Positionen ↑{positionsUp} ↓{positionsDown}, Übersetzungen ↑{translationsUp} ↓{translationsDown}",
+  "syncLast": "Zuletzt {time}: {summary}",
   "syncNoSpace": "{count} Bücher nicht hochgeladen: Speicher voll.",
   "syncFailed": "Synchronisierung fehlgeschlagen: {error}",
   "syncUnavailable": "Synchronisierung ist gerade nicht verfügbar.",
@@ -589,5 +589,14 @@
   "webDeleteConfirm": "„{title}“ löschen? Bei aktiver Synchronisierung auch auf deinen anderen Geräten.",
   "webCancel": "Abbrechen",
   "webDelete": "Löschen",
-  "syncDeletesHeld": "{count} Bücher fehlen hier auf einmal; auf deinen anderen Geräten wurden sie nicht gelöscht."
+  "syncDeletesHeld": "{count} Bücher fehlen hier auf einmal; auf deinen anderen Geräten wurden sie nicht gelöscht.",
+  "syncNotifyTitle": "LightLib-Synchronisierung",
+  "syncStageChecking": "Änderungen werden geprüft…",
+  "syncStageUploading": "Bücher werden hochgeladen {done}/{total}",
+  "syncStageDownloading": "Bücher werden geladen {done}/{total}",
+  "syncStageTranslations": "Übersetzungen {done}/{total}",
+  "syncSummary": "Bücher ↑{up} ↓{down} · Positionen ↑{positionsUp} ↓{positionsDown} · Übersetzungen ↑{translationsUp} ↓{translationsDown} · Glossare ↑{glossariesUp} ↓{glossariesDown}",
+  "syncUpToDate": "Alles ist aktuell.",
+  "syncDoneTitle": "Synchronisierung abgeschlossen",
+  "translationSavedOnly": "Die bisher gespeicherten Übersetzungen werden gezeigt. Um den Rest zu übersetzen, richte eine Übersetzungs-Engine ein."
 }

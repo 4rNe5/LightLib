@@ -176,6 +176,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   @override
   void initState() {
     super.initState();
+    SyncService.instance.arrived.addListener(_onSyncArrived);
     SharedTranslationEngine.instance.enterReader();
     ReaderSettings.instance.addListener(_onSettingsChanged);
     ReaderFonts.instance.addListener(_onSettingsChanged);
@@ -206,6 +207,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   void dispose() {
     _saveNow();
     // What was read and translated goes to the other devices.
+    SyncService.instance.arrived.removeListener(_onSyncArrived);
     SyncService.instance.readerClosed();
     SharedTranslationEngine.instance.leaveReader();
     ReaderSettings.instance.removeListener(_onSettingsChanged);
@@ -240,6 +242,11 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   Future<void> _openBook() async {
     if (_opened || !_pageReady) return;
     _opened = true;
+    // Where the book was left on another device, and what was translated
+    // there - waited for a few seconds at most (offline, it opens as is).
+    await SyncService.instance
+        .syncBook(widget.fileName)
+        .timeout(const Duration(seconds: 4), onTimeout: () {});
     final saved = await MyLibraryDb.instance
         .getBookState(widget.fileName)
         .catchError((_) => null);
@@ -536,7 +543,11 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       final modelId = await TranslationEngines.cacheModelId();
       if (!mounted) return;
       if (modelId == null) {
-        if (!quiet) {
+        // No engine here (the web without a Gemini key, a phone without a
+        // model): what was already translated - here or on another
+        // device - still shows.
+        if (await _showSavedTranslations(quiet: quiet)) return;
+        if (!quiet && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(l10n.translationNoModel),
             action: SnackBarAction(
@@ -615,6 +626,49 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     }
   }
 
+  /// Turns translation on with the saved translations only (no engine to
+  /// make more); false when this book has none in the chosen language.
+  Future<bool> _showSavedTranslations({required bool quiet}) async {
+    final target = languageForCode(await MyLibraryDb.instance
+        .getPreference(translationTargetLanguagePref)
+        .catchError((_) => null) as String?);
+    final cache = await TranslationEngines.openCache(
+      bookFileName: widget.fileName,
+      targetLanguage: target.code,
+    );
+    if (cache.length == 0 || !mounted) return false;
+    _targetCode = target.code;
+    _cache = cache;
+    setState(() => _translateOn = true);
+    for (final s in _sent.values) {
+      s.clear();
+    }
+    await _js("window.reader.clearTranslations();"
+        "window.reader.showTranslations(true, '${target.code}')");
+    unawaited(_pushSettings());
+    _pushTranslations();
+    await MyLibraryDb.instance
+        .savePreference(_translatePref, 1)
+        .catchError((_) {});
+    if (!quiet && mounted) {
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(l10n.translationSavedOnly),
+        action: SnackBarAction(
+          label: l10n.translationOpenSettings,
+          onPressed: _openTranslationSettings,
+        ),
+      ));
+    }
+    return true;
+  }
+
+  /// Sync brought translations (from another device): the page gets the
+  /// ones it has not shown.
+  void _onSyncArrived() {
+    if (mounted && _translateOn) _pushTranslations();
+  }
+
   void _onTranslationChanged() {
     if (!mounted) return;
     setState(() {});
@@ -690,6 +744,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       old.dispose();
       await _js('window.reader.clearTranslations()');
       if (wasOn) await _setTranslation(true, quiet: true);
+    } else if (_translateOn && mounted) {
+      // Saved translations only so far: an engine may be set up now.
+      await _setTranslation(true, quiet: true);
     }
   }
 
@@ -845,8 +902,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         japanese: _japanese,
         translating: _translateOn,
         onDifficulty: _openDifficulty,
-        onWordBook: () => Navigator.push(context,
-            MaterialPageRoute(builder: (_) => const StudyPage())),
+        onWordBook: () => Navigator.push(
+            context, MaterialPageRoute(builder: (_) => const StudyPage())),
       );
 
   Future<void> _openDifficulty() async {
@@ -903,8 +960,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     for (final w in words) {
       if (!mounted) return;
       final m = await assistant
-          .meaning(WordQuery(
-              base: w.base, reading: w.reading, sentence: w.sentence))
+          .meaning(
+              WordQuery(base: w.base, reading: w.reading, sentence: w.sentence))
           .catchError((_) => null);
       if (m != null && StudyStore.instance.has(w.base, w.reading)) {
         await StudyStore.instance
@@ -939,7 +996,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         color: palette.dark ? scheme.surfaceContainerHigh : scheme.surface,
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
-          BoxShadow(blurRadius: 12, color: Color(0x33000000), offset: Offset(0, 3))
+          BoxShadow(
+              blurRadius: 12, color: Color(0x33000000), offset: Offset(0, 3))
         ],
       ),
       child: Row(
@@ -984,8 +1042,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   }
 
   Future<List<String>> _textsFromHere() async {
-    final result = await _host
-        ?.evaluate('JSON.stringify(window.reader.textFromHere())');
+    final result =
+        await _host?.evaluate('JSON.stringify(window.reader.textFromHere())');
     if (result is! String) return const [];
     final data = jsonDecode(result) as Map<String, dynamic>;
     final texts = [for (final t in (data['texts'] as List? ?? [])) '$t'];
