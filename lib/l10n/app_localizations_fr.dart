@@ -1949,4 +1949,86 @@ class AppLocalizationsFr extends AppLocalizations {
   String studyTotalWords(int count) {
     return '$count mots';
   }
+
+  @override
+  String get syncTitle => 'Synchronisation';
+
+  @override
+  String get syncHint =>
+      'Vos livres, positions de lecture et traductions, partagés entre cette app et LightLib web (votre propre projet Supabase).';
+
+  @override
+  String get syncSignIn => 'Se connecter avec Google';
+
+  @override
+  String get syncSignOut => 'Se déconnecter';
+
+  @override
+  String syncSignedInAs(String email) {
+    return 'Connecté en tant que $email';
+  }
+
+  @override
+  String get syncNow => 'Synchroniser maintenant';
+
+  @override
+  String get syncRunning => 'Synchronisation…';
+
+  @override
+  String get syncAuto => 'Synchroniser automatiquement';
+
+  @override
+  String get syncAutoHint =>
+      'À l’ouverture de l’app, au retour et après la lecture.';
+
+  @override
+  String syncLast(String time, int up, int down, int positionsUp,
+      int positionsDown, int translationsUp, int translationsDown) {
+    return 'Dernière synchronisation $time : livres ↑$up ↓$down, positions ↑$positionsUp ↓$positionsDown, traductions ↑$translationsUp ↓$translationsDown';
+  }
+
+  @override
+  String syncNoSpace(int count) {
+    return '$count livres non envoyés : stockage plein.';
+  }
+
+  @override
+  String syncFailed(String error) {
+    return 'Échec de la synchronisation : $error';
+  }
+
+  @override
+  String get syncUnavailable =>
+      'La synchronisation n’est pas disponible pour le moment.';
+
+  @override
+  String get webAddBooks => 'Ajouter un EPUB';
+
+  @override
+  String get webLibraryEmpty =>
+      'Aucun livre pour l’instant. Ajoutez des fichiers EPUB ou connectez-vous pour récupérer la bibliothèque du téléphone.';
+
+  @override
+  String webAdded(int count) {
+    return '$count ajoutés';
+  }
+
+  @override
+  String get webDeleteBook => 'Supprimer le livre';
+
+  @override
+  String webDeleteConfirm(String title) {
+    return 'Supprimer « $title » ? Avec la synchronisation, il est aussi supprimé sur vos autres appareils.';
+  }
+
+  @override
+  String get webCancel => 'Annuler';
+
+  @override
+  String get webDelete => 'Supprimer';
+
+  @override
+  String syncDeletesHeld(int count) {
+    return '$count livres ont disparu ici d’un coup : ils n’ont pas été supprimés sur vos autres appareils.';
+  }
 }

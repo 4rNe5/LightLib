@@ -1943,4 +1943,85 @@ class AppLocalizationsDe extends AppLocalizations {
   String studyTotalWords(int count) {
     return '$count Wörter';
   }
+
+  @override
+  String get syncTitle => 'Synchronisierung';
+
+  @override
+  String get syncHint =>
+      'Bücher, Lesepositionen und Übersetzungen, geteilt zwischen dieser App und LightLib im Web (dein eigenes Supabase-Projekt).';
+
+  @override
+  String get syncSignIn => 'Mit Google anmelden';
+
+  @override
+  String get syncSignOut => 'Abmelden';
+
+  @override
+  String syncSignedInAs(String email) {
+    return 'Angemeldet als $email';
+  }
+
+  @override
+  String get syncNow => 'Jetzt synchronisieren';
+
+  @override
+  String get syncRunning => 'Wird synchronisiert…';
+
+  @override
+  String get syncAuto => 'Automatisch synchronisieren';
+
+  @override
+  String get syncAutoHint =>
+      'Beim Öffnen, bei der Rückkehr zur App und nach dem Lesen.';
+
+  @override
+  String syncLast(String time, int up, int down, int positionsUp,
+      int positionsDown, int translationsUp, int translationsDown) {
+    return 'Zuletzt $time: Bücher ↑$up ↓$down, Positionen ↑$positionsUp ↓$positionsDown, Übersetzungen ↑$translationsUp ↓$translationsDown';
+  }
+
+  @override
+  String syncNoSpace(int count) {
+    return '$count Bücher nicht hochgeladen: Speicher voll.';
+  }
+
+  @override
+  String syncFailed(String error) {
+    return 'Synchronisierung fehlgeschlagen: $error';
+  }
+
+  @override
+  String get syncUnavailable => 'Synchronisierung ist gerade nicht verfügbar.';
+
+  @override
+  String get webAddBooks => 'EPUB hinzufügen';
+
+  @override
+  String get webLibraryEmpty =>
+      'Noch keine Bücher. Füge EPUB-Dateien hinzu oder melde dich an, um deine Bibliothek vom Handy zu holen.';
+
+  @override
+  String webAdded(int count) {
+    return '$count hinzugefügt';
+  }
+
+  @override
+  String get webDeleteBook => 'Buch löschen';
+
+  @override
+  String webDeleteConfirm(String title) {
+    return '„$title“ löschen? Bei aktiver Synchronisierung auch auf deinen anderen Geräten.';
+  }
+
+  @override
+  String get webCancel => 'Abbrechen';
+
+  @override
+  String get webDelete => 'Löschen';
+
+  @override
+  String syncDeletesHeld(int count) {
+    return '$count Bücher fehlen hier auf einmal; auf deinen anderen Geräten wurden sie nicht gelöscht.';
+  }
 }

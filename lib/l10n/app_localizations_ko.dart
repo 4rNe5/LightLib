@@ -1870,4 +1870,84 @@ class AppLocalizationsKo extends AppLocalizations {
   String studyTotalWords(int count) {
     return '단어 $count개';
   }
+
+  @override
+  String get syncTitle => '동기화';
+
+  @override
+  String get syncHint =>
+      '책, 읽던 위치, 번역을 이 앱과 LightLib 웹이 함께 씁니다(내 Supabase 프로젝트).';
+
+  @override
+  String get syncSignIn => 'Google로 로그인';
+
+  @override
+  String get syncSignOut => '로그아웃';
+
+  @override
+  String syncSignedInAs(String email) {
+    return '$email(으)로 로그인됨';
+  }
+
+  @override
+  String get syncNow => '지금 동기화';
+
+  @override
+  String get syncRunning => '동기화 중…';
+
+  @override
+  String get syncAuto => '자동 동기화';
+
+  @override
+  String get syncAutoHint => '앱을 열 때, 다시 돌아올 때, 읽기를 마칠 때.';
+
+  @override
+  String syncLast(String time, int up, int down, int positionsUp,
+      int positionsDown, int translationsUp, int translationsDown) {
+    return '마지막 동기화 $time: 책 ↑$up ↓$down, 위치 ↑$positionsUp ↓$positionsDown, 번역 ↑$translationsUp ↓$translationsDown';
+  }
+
+  @override
+  String syncNoSpace(int count) {
+    return '저장 공간이 차서 $count권은 올리지 못했습니다.';
+  }
+
+  @override
+  String syncFailed(String error) {
+    return '동기화 실패: $error';
+  }
+
+  @override
+  String get syncUnavailable => '지금은 동기화를 쓸 수 없습니다.';
+
+  @override
+  String get webAddBooks => 'EPUB 추가';
+
+  @override
+  String get webLibraryEmpty =>
+      '아직 책이 없습니다. EPUB 파일을 추가하거나, 로그인해 폰의 서재를 가져오세요.';
+
+  @override
+  String webAdded(int count) {
+    return '$count권 추가됨';
+  }
+
+  @override
+  String get webDeleteBook => '책 삭제';
+
+  @override
+  String webDeleteConfirm(String title) {
+    return '“$title”을(를) 삭제할까요? 동기화 중이면 다른 기기에서도 지워집니다.';
+  }
+
+  @override
+  String get webCancel => '취소';
+
+  @override
+  String get webDelete => '삭제';
+
+  @override
+  String syncDeletesHeld(int count) {
+    return '이 기기에서 $count권이 한꺼번에 사라져, 다른 기기에서는 지우지 않았습니다.';
+  }
 }

@@ -27,7 +27,14 @@
             </intent-filter><!-- Intent filter for android_package_installer -->
             <intent-filter>
                 <action android:name="com.android_package_installer.content.SESSION_API_PACKAGE_INSTALLED"/>
-            </intent-filter>
+            </intent-filter><!-- Sign-in for sync: the browser returns here (supabase_flutter reads the link). -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="dev.arne5.lightlib" android:host="login-callback"/>
+            </intent-filter><!-- Links are read by app_links, not turned into routes. -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
         </activity><!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <!-- Keeps library-book translation running while the app is in the background, with a progress notification. -->

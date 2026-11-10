@@ -3483,6 +3483,133 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} words'**
   String studyTotalWords(int count);
+
+  /// Settings: heading of the sync section
+  ///
+  /// In en, this message translates to:
+  /// **'Sync'**
+  String get syncTitle;
+
+  /// Settings: what sync shares and with what
+  ///
+  /// In en, this message translates to:
+  /// **'Your books, reading positions and translations, shared between this app and the LightLib web (your own Supabase project).'**
+  String get syncHint;
+
+  /// Settings: button that signs in for sync
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in with Google'**
+  String get syncSignIn;
+
+  /// Settings: button that signs out of sync
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get syncSignOut;
+
+  /// Settings: the account sync uses
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in as {email}'**
+  String syncSignedInAs(String email);
+
+  /// Button and tooltip that runs a sync now
+  ///
+  /// In en, this message translates to:
+  /// **'Sync now'**
+  String get syncNow;
+
+  /// Shown while a sync runs
+  ///
+  /// In en, this message translates to:
+  /// **'Syncing…'**
+  String get syncRunning;
+
+  /// Settings: switch for automatic sync
+  ///
+  /// In en, this message translates to:
+  /// **'Sync automatically'**
+  String get syncAuto;
+
+  /// Settings: when automatic sync runs
+  ///
+  /// In en, this message translates to:
+  /// **'When the app opens, when you come back to it and after reading.'**
+  String get syncAutoHint;
+
+  /// Settings: what the last sync sent (up) and received (down)
+  ///
+  /// In en, this message translates to:
+  /// **'Last sync {time}: books ↑{up} ↓{down}, positions ↑{positionsUp} ↓{positionsDown}, translations ↑{translationsUp} ↓{translationsDown}'**
+  String syncLast(String time, int up, int down, int positionsUp,
+      int positionsDown, int translationsUp, int translationsDown);
+
+  /// Settings: books not uploaded because the storage is full
+  ///
+  /// In en, this message translates to:
+  /// **'{count} books were not uploaded: the storage is full.'**
+  String syncNoSpace(int count);
+
+  /// Settings: the last sync failed
+  ///
+  /// In en, this message translates to:
+  /// **'Sync failed: {error}'**
+  String syncFailed(String error);
+
+  /// Settings: sync could not start on this device
+  ///
+  /// In en, this message translates to:
+  /// **'Sync is not available right now.'**
+  String get syncUnavailable;
+
+  /// Web library: button that adds EPUB files
+  ///
+  /// In en, this message translates to:
+  /// **'Add EPUB'**
+  String get webAddBooks;
+
+  /// Web library: shown when it has no books
+  ///
+  /// In en, this message translates to:
+  /// **'No books yet. Add EPUB files, or sign in to bring your library from the phone.'**
+  String get webLibraryEmpty;
+
+  /// Web library: how many books were added
+  ///
+  /// In en, this message translates to:
+  /// **'{count} added'**
+  String webAdded(int count);
+
+  /// Web library: menu item and dialog title to delete a book
+  ///
+  /// In en, this message translates to:
+  /// **'Delete book'**
+  String get webDeleteBook;
+
+  /// Web library: confirmation before deleting a book
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{title}”? With sync on, it is deleted on your other devices too.'**
+  String webDeleteConfirm(String title);
+
+  /// Web library: dialog cancel button
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get webCancel;
+
+  /// Web library: dialog delete button
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get webDelete;
+
+  /// Settings: books missing all at once were not deleted elsewhere
+  ///
+  /// In en, this message translates to:
+  /// **'{count} books went missing here at once, so they were not deleted on your other devices.'**
+  String syncDeletesHeld(int count);
 }
 
 class _AppLocalizationsDelegate

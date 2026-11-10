@@ -1922,4 +1922,85 @@ class AppLocalizationsEn extends AppLocalizations {
   String studyTotalWords(int count) {
     return '$count words';
   }
+
+  @override
+  String get syncTitle => 'Sync';
+
+  @override
+  String get syncHint =>
+      'Your books, reading positions and translations, shared between this app and the LightLib web (your own Supabase project).';
+
+  @override
+  String get syncSignIn => 'Sign in with Google';
+
+  @override
+  String get syncSignOut => 'Sign out';
+
+  @override
+  String syncSignedInAs(String email) {
+    return 'Signed in as $email';
+  }
+
+  @override
+  String get syncNow => 'Sync now';
+
+  @override
+  String get syncRunning => 'Syncing…';
+
+  @override
+  String get syncAuto => 'Sync automatically';
+
+  @override
+  String get syncAutoHint =>
+      'When the app opens, when you come back to it and after reading.';
+
+  @override
+  String syncLast(String time, int up, int down, int positionsUp,
+      int positionsDown, int translationsUp, int translationsDown) {
+    return 'Last sync $time: books ↑$up ↓$down, positions ↑$positionsUp ↓$positionsDown, translations ↑$translationsUp ↓$translationsDown';
+  }
+
+  @override
+  String syncNoSpace(int count) {
+    return '$count books were not uploaded: the storage is full.';
+  }
+
+  @override
+  String syncFailed(String error) {
+    return 'Sync failed: $error';
+  }
+
+  @override
+  String get syncUnavailable => 'Sync is not available right now.';
+
+  @override
+  String get webAddBooks => 'Add EPUB';
+
+  @override
+  String get webLibraryEmpty =>
+      'No books yet. Add EPUB files, or sign in to bring your library from the phone.';
+
+  @override
+  String webAdded(int count) {
+    return '$count added';
+  }
+
+  @override
+  String get webDeleteBook => 'Delete book';
+
+  @override
+  String webDeleteConfirm(String title) {
+    return 'Delete “$title”? With sync on, it is deleted on your other devices too.';
+  }
+
+  @override
+  String get webCancel => 'Cancel';
+
+  @override
+  String get webDelete => 'Delete';
+
+  @override
+  String syncDeletesHeld(int count) {
+    return '$count books went missing here at once, so they were not deleted on your other devices.';
+  }
 }

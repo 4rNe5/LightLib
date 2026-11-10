@@ -1867,4 +1867,83 @@ class AppLocalizationsJa extends AppLocalizations {
   String studyTotalWords(int count) {
     return '$count語';
   }
+
+  @override
+  String get syncTitle => '同期';
+
+  @override
+  String get syncHint =>
+      '本・読んだ位置・翻訳を、このアプリとLightLib Webで共有します(自分のSupabaseプロジェクト)。';
+
+  @override
+  String get syncSignIn => 'Googleでログイン';
+
+  @override
+  String get syncSignOut => 'ログアウト';
+
+  @override
+  String syncSignedInAs(String email) {
+    return '$email でログイン中';
+  }
+
+  @override
+  String get syncNow => '今すぐ同期';
+
+  @override
+  String get syncRunning => '同期中…';
+
+  @override
+  String get syncAuto => '自動で同期';
+
+  @override
+  String get syncAutoHint => 'アプリを開いたとき、戻ったとき、読み終えたとき。';
+
+  @override
+  String syncLast(String time, int up, int down, int positionsUp,
+      int positionsDown, int translationsUp, int translationsDown) {
+    return '前回の同期 $time: 本 ↑$up ↓$down、位置 ↑$positionsUp ↓$positionsDown、翻訳 ↑$translationsUp ↓$translationsDown';
+  }
+
+  @override
+  String syncNoSpace(int count) {
+    return '容量がいっぱいのため $count 冊はアップロードできませんでした。';
+  }
+
+  @override
+  String syncFailed(String error) {
+    return '同期に失敗しました: $error';
+  }
+
+  @override
+  String get syncUnavailable => '今は同期を使えません。';
+
+  @override
+  String get webAddBooks => 'EPUBを追加';
+
+  @override
+  String get webLibraryEmpty => 'まだ本がありません。EPUBを追加するか、ログインしてスマホの本棚を取り込んでください。';
+
+  @override
+  String webAdded(int count) {
+    return '$count 冊追加';
+  }
+
+  @override
+  String get webDeleteBook => '本を削除';
+
+  @override
+  String webDeleteConfirm(String title) {
+    return '「$title」を削除しますか?同期中は他の端末からも削除されます。';
+  }
+
+  @override
+  String get webCancel => 'キャンセル';
+
+  @override
+  String get webDelete => '削除';
+
+  @override
+  String syncDeletesHeld(int count) {
+    return 'この端末で $count 冊が一度に消えたため、他の端末では削除していません。';
+  }
 }

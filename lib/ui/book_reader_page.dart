@@ -33,6 +33,7 @@ import 'package:openlib/services/study/study_assistant.dart';
 import 'package:openlib/services/study/study_data.dart';
 import 'package:openlib/services/study/study_settings.dart';
 import 'package:openlib/services/storage/app_files.dart';
+import 'package:openlib/services/sync/sync_service.dart';
 import 'package:openlib/services/study/study_store.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/reader_translation_controller.dart';
@@ -203,6 +204,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   @override
   void dispose() {
     _saveNow();
+    // What was read and translated goes to the other devices.
+    SyncService.instance.readerClosed();
     SharedTranslationEngine.instance.leaveReader();
     ReaderSettings.instance.removeListener(_onSettingsChanged);
     ReaderFonts.instance.removeListener(_onSettingsChanged);

@@ -2656,5 +2656,142 @@
         "type": "int"
       }
     }
+  },
+  "syncTitle": "Sync",
+  "@syncTitle": {
+    "description": "Settings: heading of the sync section"
+  },
+  "syncHint": "Your books, reading positions and translations, shared between this app and the LightLib web (your own Supabase project).",
+  "@syncHint": {
+    "description": "Settings: what sync shares and with what"
+  },
+  "syncSignIn": "Sign in with Google",
+  "@syncSignIn": {
+    "description": "Settings: button that signs in for sync"
+  },
+  "syncSignOut": "Sign out",
+  "@syncSignOut": {
+    "description": "Settings: button that signs out of sync"
+  },
+  "syncSignedInAs": "Signed in as {email}",
+  "@syncSignedInAs": {
+    "description": "Settings: the account sync uses",
+    "placeholders": {
+      "email": {
+        "type": "String"
+      }
+    }
+  },
+  "syncNow": "Sync now",
+  "@syncNow": {
+    "description": "Button and tooltip that runs a sync now"
+  },
+  "syncRunning": "Syncing…",
+  "@syncRunning": {
+    "description": "Shown while a sync runs"
+  },
+  "syncAuto": "Sync automatically",
+  "@syncAuto": {
+    "description": "Settings: switch for automatic sync"
+  },
+  "syncAutoHint": "When the app opens, when you come back to it and after reading.",
+  "@syncAutoHint": {
+    "description": "Settings: when automatic sync runs"
+  },
+  "syncLast": "Last sync {time}: books ↑{up} ↓{down}, positions ↑{positionsUp} ↓{positionsDown}, translations ↑{translationsUp} ↓{translationsDown}",
+  "@syncLast": {
+    "description": "Settings: what the last sync sent (up) and received (down)",
+    "placeholders": {
+      "time": {
+        "type": "String"
+      },
+      "up": {
+        "type": "int"
+      },
+      "down": {
+        "type": "int"
+      },
+      "positionsUp": {
+        "type": "int"
+      },
+      "positionsDown": {
+        "type": "int"
+      },
+      "translationsUp": {
+        "type": "int"
+      },
+      "translationsDown": {
+        "type": "int"
+      }
+    }
+  },
+  "syncNoSpace": "{count} books were not uploaded: the storage is full.",
+  "@syncNoSpace": {
+    "description": "Settings: books not uploaded because the storage is full",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "syncFailed": "Sync failed: {error}",
+  "@syncFailed": {
+    "description": "Settings: the last sync failed",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "syncUnavailable": "Sync is not available right now.",
+  "@syncUnavailable": {
+    "description": "Settings: sync could not start on this device"
+  },
+  "webAddBooks": "Add EPUB",
+  "@webAddBooks": {
+    "description": "Web library: button that adds EPUB files"
+  },
+  "webLibraryEmpty": "No books yet. Add EPUB files, or sign in to bring your library from the phone.",
+  "@webLibraryEmpty": {
+    "description": "Web library: shown when it has no books"
+  },
+  "webAdded": "{count} added",
+  "@webAdded": {
+    "description": "Web library: how many books were added",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "webDeleteBook": "Delete book",
+  "@webDeleteBook": {
+    "description": "Web library: menu item and dialog title to delete a book"
+  },
+  "webDeleteConfirm": "Delete “{title}”? With sync on, it is deleted on your other devices too.",
+  "@webDeleteConfirm": {
+    "description": "Web library: confirmation before deleting a book",
+    "placeholders": {
+      "title": {
+        "type": "String"
+      }
+    }
+  },
+  "webCancel": "Cancel",
+  "@webCancel": {
+    "description": "Web library: dialog cancel button"
+  },
+  "webDelete": "Delete",
+  "@webDelete": {
+    "description": "Web library: dialog delete button"
+  },
+  "syncDeletesHeld": "{count} books went missing here at once, so they were not deleted on your other devices.",
+  "@syncDeletesHeld": {
+    "description": "Settings: books missing all at once were not deleted elsewhere",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }
