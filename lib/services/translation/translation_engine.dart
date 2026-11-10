@@ -2,6 +2,9 @@
 // reader and for library books, and under which id their translations
 // are kept (each engine's apart, like each model's).
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 // Project imports:
 import 'package:openlib/services/translation/gemini/cloud_translator.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
@@ -25,7 +28,8 @@ class TranslationEngines {
   /// Gemini not set up).
   static Future<String?> cacheModelId() async {
     if (!await cloud() &&
-        await TranslationModelStore.instance.activeModel() == null) {
+        (kIsWeb ||
+            await TranslationModelStore.instance.activeModel() == null)) {
       return null;
     }
     return TranslationCache.sharedModelId(
@@ -40,6 +44,20 @@ class TranslationEngines {
     required String targetLanguage,
   }) async {
     final lightNovel = TranslationStyle.lightNovel;
+    return TranslationCache.open(
+      bookFileName: bookFileName,
+      targetLanguage: targetLanguage,
+      modelId: TranslationCache.sharedModelId(lightNovel: lightNovel),
+      mergeFrom: await legacyCacheIds(lightNovel: lightNovel),
+    );
+  }
+
+  /// The ids earlier versions kept translations under (per model and
+  /// prompt format), the active model's first: merged into the shared
+  /// set when it is first made.
+  static Future<List<String>> legacyCacheIds({required bool lightNovel}) async {
+    // The web never had any.
+    if (kIsWeb) return const [];
     final active = await TranslationModelStore.instance
         .activeModel()
         .catchError((_) => null);
@@ -52,18 +70,13 @@ class TranslationEngines {
       for (final m in translationModelPresets) m.fileName,
     };
     final style = lightNovel ? '' : '+plain';
-    return TranslationCache.open(
-      bookFileName: bookFileName,
-      targetLanguage: targetLanguage,
-      modelId: TranslationCache.sharedModelId(lightNovel: lightNovel),
-      mergeFrom: [
-        for (final n in names) ...[
-          '$n$style',
-          for (final f in TranslationPromptFormat.values)
-            if (f != TranslationPromptFormat.general) '$n$style+${f.name}',
-        ],
+    return [
+      for (final n in names) ...[
+        '$n$style',
+        for (final f in TranslationPromptFormat.values)
+          if (f != TranslationPromptFormat.general) '$n$style+${f.name}',
       ],
-    );
+    ];
   }
 
   /// The reader's translator: the page on screen goes first.

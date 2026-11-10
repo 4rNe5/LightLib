@@ -19,7 +19,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 version: 1.7.2+16
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.4.0 <4.0.0"
 
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
@@ -61,7 +61,8 @@ dependencies:
   flutter_svg: ^2.3.0
   google_fonts: ^8.2.1
 
-  cached_network_image: 3.3.0
+  # 3.3.0's web implementation calls an engine API Flutter web no longer has.
+  cached_network_image: 3.4.1
 
   sqflite_common_ffi: ^2.3.0+2
   # Bundles sqlite3 for desktop/mobile builds. package:sqlite3 3.x's
@@ -99,6 +100,14 @@ dependencies:
   image: ^4.12.0
   # Reading covers straight out of EPUB files (pinned by the override).
   archive: ^4.5.2
+  # Sync with the owner's Supabase project (books, positions, translations).
+  supabase_flutter: ^2.18.3
+  # Web: books, covers and translation files in IndexedDB; the settings
+  # database through sqlite3 compiled to WebAssembly.
+  idb_shim: ^2.6.0
+  sqflite_common_ffi_web: ^1.2.0
+  # The reader's iframe and its messages (web only).
+  web: ^1.1.0
 
 # permission_handler 13.x resolves permission_handler_android 14.0.0,
 # whose Kotlin-DSL build file needs the Android 37 platform and a

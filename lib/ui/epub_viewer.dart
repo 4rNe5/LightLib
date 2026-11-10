@@ -198,7 +198,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
     SharedTranslationEngine.instance.enterReader();
     // Initialize with standard options
     _epubReaderController = EpubController(
-      document: EpubDocument.openFile(File(widget.filePath)),
+      document: File(widget.filePath).readAsBytes().then(EpubDocument.openData),
       // NOTE: We'll set CFI later in onDocumentLoaded because we need to fetch it async
     );
 
@@ -279,7 +279,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   /// as the scroll view splits them, so positions carry over).
   Future<void> _ensurePagedBook() async {
     if (_pagedBook != null) return;
-    final book = await EpubDocument.openFile(File(widget.filePath));
+    final book = await File(widget.filePath).readAsBytes().then(EpubDocument.openData);
     final paragraphs =
         parseParagraphs(parseChapters(book), book.Content).flatParagraphs;
     final languages = book.Schema?.Package?.Metadata?.Languages;

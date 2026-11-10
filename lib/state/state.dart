@@ -4,6 +4,7 @@ import 'dart:io';
 import 'dart:ui' as ui;
 
 // Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -17,6 +18,7 @@ import 'package:openlib/services/book_covers.dart';
 import 'package:openlib/services/bookwalker.dart';
 import 'package:openlib/services/book_detail_routing.dart';
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/libgen_service.dart';
 import 'package:openlib/services/search_manager.dart';
 import 'package:openlib/services/files.dart';
@@ -181,7 +183,7 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
   }
 
   static void updateSystemUi(ThemeMode mode) {
-    if (Platform.isAndroid) {
+    if (PlatformUtils.isAndroid) {
       bool isDark = mode == ThemeMode.dark;
       if (mode == ThemeMode.system) {
         isDark = ui.PlatformDispatcher.instance.platformBrightness ==
@@ -579,6 +581,7 @@ ReadingStatus _readingStatus({String? position, required bool completed}) {
 
 Future<int?> _fileSizeOf(MyBook book) async {
   try {
+    if (kIsWeb) return null;
     final path = await getFilePath(book.getFileName());
     final file = File(path);
     if (await file.exists()) return await file.length();

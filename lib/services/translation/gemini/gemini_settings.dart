@@ -4,17 +4,16 @@
 
 // Dart imports:
 import 'dart:convert';
-import 'dart:io';
 
 // Flutter imports:
 import 'package:flutter/foundation.dart';
 
 // Package imports:
 import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart';
 
 /// Preference: `device` (the model on the phone) or `gemini`.
@@ -163,8 +162,8 @@ class GeminiSettings extends ChangeNotifier {
   /// Where the key is kept: a file of its own in the app's private
   /// folder, so library backups (the database) never carry it.
   @visibleForTesting
-  Future<File> Function() keyFile = () async => File(
-      p.join((await getApplicationSupportDirectory()).path, 'gemini_api_key'));
+  Future<String> Function() keyPath = () async =>
+      p.join(await AppFiles.instance.supportPath(), 'gemini_api_key');
 
   @visibleForTesting
   DateTime Function() clock = DateTime.now;
@@ -212,18 +211,18 @@ class GeminiSettings extends ChangeNotifier {
     final db = MyLibraryDb.instance;
     Future<Object?> pref(String k) =>
         db.getPreference(k).catchError((_) => null);
-    _useGemini = await pref(translationEnginePref) == 'gemini';
+    // The web has no model of its own: Gemini is the only engine there.
+    _useGemini = kIsWeb || await pref(translationEnginePref) == 'gemini';
     _model = geminiModelFor(await pref(geminiModelPref) as String?);
     _safety = decodeSafety(await pref(geminiSafetyPref));
     final c = int.tryParse('${await pref(geminiConcurrencyPref)}');
     if (c != null) _concurrency = c.clamp(1, 8);
-    _deviceFallback = await pref(geminiDeviceFallbackPref) != 0;
+    _deviceFallback = !kIsWeb && await pref(geminiDeviceFallbackPref) != 0;
     _thinking = GeminiThinking.parse(await pref(geminiThinkingPref));
     _usage =
         GeminiUsage.fromJson(await pref(geminiUsagePref), quotaDay(clock()));
     try {
-      final f = await keyFile();
-      if (await f.exists()) _key = (await f.readAsString()).trim();
+      _key = (await AppFiles.instance.readString(await keyPath()))?.trim() ?? '';
     } catch (_) {}
     notifyListeners();
   }
@@ -254,12 +253,11 @@ class GeminiSettings extends ChangeNotifier {
     _key = key.trim();
     notifyListeners();
     try {
-      final f = await keyFile();
+      final path = await keyPath();
       if (_key.isEmpty) {
-        if (await f.exists()) await f.delete();
+        await AppFiles.instance.delete(path);
       } else {
-        await f.parent.create(recursive: true);
-        await f.writeAsString(_key, flush: true);
+        await AppFiles.instance.writeString(path, _key);
       }
     } catch (_) {}
   }

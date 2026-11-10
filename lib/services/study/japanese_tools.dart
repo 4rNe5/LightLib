@@ -102,6 +102,8 @@ class JapaneseTools extends ChangeNotifier {
   /// Whether every file is there at its size (checked once a session;
   /// hashes were checked when they were downloaded).
   Future<bool> installed() async {
+    // The web build has no word tools yet (the dictionary is files).
+    if (kIsWeb) return false;
     if (_phase == ToolsPhase.ready) return true;
     if (_phase == ToolsPhase.downloading) return false;
     if (_checked && _phase != ToolsPhase.ready) return false;
@@ -141,6 +143,10 @@ class JapaneseTools extends ChangeNotifier {
       });
 
   Future<bool> _run() async {
+    if (kIsWeb) {
+      error = 'unsupported on the web';
+      return false;
+    }
     final client = dio ??
         Dio(BaseOptions(
           connectTimeout: const Duration(seconds: 20),

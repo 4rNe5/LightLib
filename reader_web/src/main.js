@@ -1,7 +1,8 @@
 // LightLib's reader page. foliate-js (readest's fork) lays the book out -
 // reflowable EPUBs in pages or one scroll, vertical Japanese with ruby,
 // fixed-layout and SVG pages, the book's own CSS - and this file connects
-// it to the Flutter app over flutter_inappwebview's JavaScript handlers:
+// it to the Flutter app over flutter_inappwebview's JavaScript handlers
+// (the web app: postMessage to the page around this one's iframe):
 //
 //   app -> page: window.reader.open(), .next(), .goTo(), .setSettings(),
 //                .setTranslations(), .showOriginal(), .setStudy(),
@@ -29,9 +30,13 @@ import {
 
 let bridgeReady = false
 const pending = []
+// The web app shows this page in an iframe of its own origin and listens
+// for messages on its window; the phone app injects flutter_inappwebview.
+const embedded = window.parent !== window
 const deliver = msg => {
     try {
-        window.flutter_inappwebview.callHandler('reader', msg)
+        if (window.flutter_inappwebview?.callHandler) window.flutter_inappwebview.callHandler('reader', msg)
+        else if (embedded) window.parent.postMessage({ lightlibReader: msg }, location.origin)
     } catch (e) {
         console.log('[reader] message lost', e)
     }
@@ -43,7 +48,7 @@ const onBridge = () => {
     pending.splice(0).forEach(deliver)
 }
 window.addEventListener('flutterInAppWebViewPlatformReady', onBridge)
-if (window.flutter_inappwebview?.callHandler) onBridge()
+if (window.flutter_inappwebview?.callHandler || embedded) onBridge()
 
 window.addEventListener('error', e => post({ type: 'log', level: 'error', message: String(e.message) }))
 window.addEventListener('unhandledrejection', e =>

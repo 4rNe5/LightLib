@@ -8,15 +8,13 @@
 // Dart imports:
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
-import 'dart:isolate';
 
 // Flutter imports:
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 // Package imports:
-import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -24,6 +22,8 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/epub_package.dart';
+import 'package:openlib/services/heavy_work.dart';
+import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/reader_fonts.dart';
 import 'package:openlib/services/reader_settings.dart';
@@ -32,6 +32,7 @@ import 'package:openlib/services/study/japanese_tools.dart';
 import 'package:openlib/services/study/study_assistant.dart';
 import 'package:openlib/services/study/study_data.dart';
 import 'package:openlib/services/study/study_settings.dart';
+import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/study/study_store.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/reader_translation_controller.dart';
@@ -49,11 +50,18 @@ import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/components/study_sheets.dart';
 import 'package:openlib/ui/study_page.dart';
 import 'package:openlib/ui/translation_settings_page.dart';
+import 'package:openlib/ui/reader_host/reader_host.dart';
+import 'package:openlib/ui/reader_host/reader_resources.dart';
 
-/// Whether this platform has the web view the book reader needs (Android
-/// and Apple platforms); elsewhere the Flutter-drawn reader is used.
+export 'package:openlib/ui/reader_host/reader_resources.dart';
+
+/// Whether this platform has the web view the book reader needs (Android,
+/// Apple platforms and the web); elsewhere the Flutter-drawn reader is used.
 bool bookReaderSupported() =>
-    Platform.isAndroid || Platform.isIOS || Platform.isMacOS;
+    PlatformUtils.isWeb ||
+    PlatformUtils.isAndroid ||
+    PlatformUtils.isIOS ||
+    PlatformUtils.isMacOS;
 
 /// Saved positions of this reader carry this prefix (a foliate CFI); the
 /// older reader's positions are not CFIs it can resolve.
@@ -67,104 +75,6 @@ String? bookReaderCfi(String? saved) =>
 
 /// Paragraph keys for the translator: one index space across sections.
 const _sectionStride = 100000;
-
-/// What the reader serves to the page, by path.
-@immutable
-class ReaderResource {
-  const ReaderResource(this.contentType, this.bytes);
-  final String contentType;
-  final Uint8List bytes;
-}
-
-/// Serves the reader page, the book and font files to the web view from
-/// one origin, so the page can fetch them (Android intercepts an https
-/// origin, Apple platforms a custom scheme).
-class ReaderResources {
-  ReaderResources(
-      {required this.bookPath, AssetBundle? bundle, JapaneseTools? tools})
-      : _bundle = bundle ?? rootBundle,
-        _tools = tools ?? JapaneseTools.instance;
-
-  final String bookPath;
-  final AssetBundle _bundle;
-  final JapaneseTools _tools;
-  final Map<String, File> _fonts = {};
-
-  static const androidOrigin = 'https://appassets.androidplatform.net';
-  static const appleScheme = 'lightlib';
-  static const appleOrigin = '$appleScheme://reader';
-
-  static String get origin =>
-      Platform.isAndroid ? '$androidOrigin/reader' : appleOrigin;
-
-  /// Makes [file] loadable at the returned URL.
-  String addFont(File file) {
-    final key = 'f${_fonts.length}${_extensionOf(file.path)}';
-    _fonts[key] = file;
-    return '$origin/fonts/$key';
-  }
-
-  static String _extensionOf(String path) {
-    final dot = path.lastIndexOf('.');
-    return dot < 0 ? '' : path.substring(dot).toLowerCase();
-  }
-
-  static String _typeOf(String path) {
-    switch (_extensionOf(path)) {
-      case '.html':
-        return 'text/html';
-      case '.js':
-        return 'text/javascript';
-      case '.css':
-        return 'text/css';
-      case '.otf':
-        return 'font/otf';
-      case '.ttf':
-        return 'font/ttf';
-      case '.woff2':
-        return 'font/woff2';
-      default:
-        return 'application/octet-stream';
-    }
-  }
-
-  /// The resource at [uri], or null for anything else.
-  Future<ReaderResource?> resolve(Uri uri) async {
-    var path = uri.path;
-    if (path.startsWith('/reader/')) path = path.substring('/reader'.length);
-    if (path == '/' || path.isEmpty) path = '/index.html';
-    try {
-      if (path == '/book') {
-        final bytes = await File(bookPath).readAsBytes();
-        return ReaderResource('application/epub+zip', bytes);
-      }
-      if (path.startsWith('/fonts/')) {
-        final file = _fonts[path.substring('/fonts/'.length)];
-        if (file == null) return null;
-        return ReaderResource(_typeOf(file.path), await file.readAsBytes());
-      }
-      if (path == '/index.html' || path == '/reader.js') {
-        final data = await _bundle.load('assets/reader$path');
-        return ReaderResource(_typeOf(path), data.buffer.asUint8List());
-      }
-      // The word tools' dictionary (downloaded) and the study lists.
-      if (path.startsWith('/dict/')) {
-        final bytes = await _tools.read(path.substring('/dict/'.length));
-        return bytes == null
-            ? null
-            : ReaderResource('application/octet-stream', bytes);
-      }
-      if (path == '/study/jlpt.tsv') {
-        final data = await _bundle.load('assets/study/jlpt.tsv');
-        return ReaderResource(
-            'text/tab-separated-values', data.buffer.asUint8List());
-      }
-    } catch (_) {
-      return null;
-    }
-    return null;
-  }
-}
 
 class BookReaderPage extends ConsumerStatefulWidget {
   const BookReaderPage({
@@ -196,7 +106,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   final AppLogger _logger = AppLogger();
   late final ReaderResources _resources =
       ReaderResources(bookPath: widget.filePath);
-  InAppWebViewController? _web;
+  ReaderHostController? _host;
   bool _pageReady = false;
   bool _opened = false;
   String? _error;
@@ -317,7 +227,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
 
   Future<void> _js(String code) async {
     try {
-      await _web?.evaluateJavascript(source: code);
+      await _host?.evaluate(code);
     } catch (e) {
       _logger.warning('Reader script failed', tag: 'Reader', error: e);
     }
@@ -329,8 +239,15 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     final saved = await MyLibraryDb.instance
         .getBookState(widget.fileName)
         .catchError((_) => null);
+    final String url;
+    try {
+      url = await _host!.bookUrl();
+    } catch (e) {
+      if (mounted) setState(() => _error = '$e');
+      return;
+    }
     final options = {
-      'url': '${ReaderResources.origin}/book',
+      'url': url,
       'name': widget.fileName,
       'cfi': bookReaderCfi(saved),
       'settings': await _jsSettings(),
@@ -652,10 +569,15 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       controller.addListener(_onTranslationChanged);
       // How the book's names are read, from its ruby, for the model.
       final path = widget.filePath;
-      unawaited(Isolate.run(() async {
-        final book = EpubPackage.open(await File(path).readAsBytes());
-        return book == null ? <String, String>{} : epubRubyReadings(book);
-      }).then((r) => controller.readings = r, onError: (_) {}));
+      unawaited(AppFiles.instance
+          .readBytes(path)
+          .then((bytes) => runHeavy(() {
+                final book = bytes == null ? null : EpubPackage.open(bytes);
+                return book == null
+                    ? <String, String>{}
+                    : epubRubyReadings(book);
+              }))
+          .then((r) => controller.readings = r, onError: (_) {}));
       // The book's names and terms: loaded, or made once by the model
       // while the first pages are translated ([_onGlossaryChanged]).
       GlossaryService.instance.removeListener(_onGlossaryChanged);
@@ -1054,8 +976,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   }
 
   Future<List<String>> _textsFromHere() async {
-    final result = await _web?.evaluateJavascript(
-        source: 'JSON.stringify(window.reader.textFromHere())');
+    final result = await _host
+        ?.evaluate('JSON.stringify(window.reader.textFromHere())');
     if (result is! String) return const [];
     final data = jsonDecode(result) as Map<String, dynamic>;
     final texts = [for (final t in (data['texts'] as List? ?? [])) '$t'];
@@ -1151,78 +1073,15 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   /// rebuild the bars around it, never the web view.
   late final Widget _webViewWidget = RepaintBoundary(child: _webView());
 
-  Widget _webView() {
-    final settings = InAppWebViewSettings(
-      javaScriptEnabled: true,
-      transparentBackground: true,
-      supportZoom: false,
-      builtInZoomControls: false,
-      displayZoomControls: false,
-      disableHorizontalScroll: false,
-      verticalScrollBarEnabled: false,
-      horizontalScrollBarEnabled: false,
-      overScrollMode: OverScrollMode.NEVER,
-      useShouldInterceptRequest: true,
-      resourceCustomSchemes: const [ReaderResources.appleScheme],
-      allowFileAccess: false,
-      allowContentAccess: false,
-      mediaPlaybackRequiresUserGesture: true,
-      isInspectable: false,
-      useHybridComposition: true,
-    );
-    return InAppWebView(
-      key: const ValueKey('bookReaderWebView'),
-      initialUrlRequest:
-          URLRequest(url: WebUri('${ReaderResources.origin}/index.html')),
-      initialSettings: settings,
-      onWebViewCreated: (controller) {
-        _web = controller;
-        controller.addJavaScriptHandler(
-          handlerName: 'reader',
-          callback: (args) {
-            final msg = args.isEmpty ? null : args.first;
-            if (msg is Map) _onMessage(Map<String, dynamic>.from(msg));
-            return null;
-          },
-        );
-      },
-      shouldInterceptRequest: (controller, request) async {
-        final uri = request.url;
-        if (uri.host != Uri.parse(ReaderResources.androidOrigin).host) {
-          return null;
-        }
-        final res = await _resources.resolve(uri);
-        if (res == null) {
-          return WebResourceResponse(
-              statusCode: 404, reasonPhrase: 'Not Found', data: Uint8List(0));
-        }
-        return WebResourceResponse(
-          contentType: res.contentType,
-          contentEncoding: 'utf-8',
-          data: res.bytes,
-          statusCode: 200,
-          reasonPhrase: 'OK',
-          headers: const {'Cache-Control': 'no-store'},
-        );
-      },
-      onLoadResourceWithCustomScheme: (controller, request) async {
-        final res = await _resources.resolve(request.url);
-        if (res == null) return null;
-        return CustomSchemeResponse(
-            data: res.bytes, contentType: res.contentType);
-      },
-      onConsoleMessage: (controller, message) {
-        if (message.messageLevel == ConsoleMessageLevel.ERROR) {
-          _logger.warning(message.message, tag: 'ReaderPage');
-        }
-      },
-      onReceivedError: (controller, request, error) {
-        if (request.isForMainFrame == true && mounted) {
-          setState(() => _error = error.description);
-        }
-      },
-    );
-  }
+  Widget _webView() => readerHostView(
+        resources: _resources,
+        onCreated: (host) => _host = host,
+        onMessage: _onMessage,
+        onPageError: (message) => _logger.warning(message, tag: 'ReaderPage'),
+        onLoadError: (description) {
+          if (mounted) setState(() => _error = description);
+        },
+      );
 
   Widget _status(ReaderPalette palette) {
     final controller = _translation;

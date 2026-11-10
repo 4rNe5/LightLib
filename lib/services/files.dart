@@ -1,12 +1,16 @@
 // Dart imports:
 import 'dart:io';
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 
 // Project imports:
+import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/database.dart';
@@ -148,7 +152,11 @@ Future<String?> pickBookStorageDirectory({bool? isIOS}) async {
   }
 }
 
+/// Where the web build keeps books (IndexedDB paths).
+const webBookStorageDirectory = '/books';
+
 Future<String> get getBookStorageDefaultDirectory async {
+  if (kIsWeb) return webBookStorageDirectory;
   if (Platform.isAndroid) {
     final directory = await getExternalStorageDirectory();
     return directory!.path;
@@ -213,15 +221,10 @@ Future<void> moveLibraryFiles(String sourcePath, String destinationPath) async {
   }
 }
 
-Future<bool> isFileExists(String filePath) async {
-  return await File(filePath).exists();
-}
+Future<bool> isFileExists(String filePath) =>
+    AppFiles.instance.exists(filePath);
 
-Future<void> deleteFile(String filePath) async {
-  if (await isFileExists(filePath) == true) {
-    await File(filePath).delete();
-  }
-}
+Future<void> deleteFile(String filePath) => AppFiles.instance.delete(filePath);
 
 Future<String> getFilePath(String fileName) async {
   final bookStorageDirectory =

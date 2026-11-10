@@ -1,6 +1,9 @@
 // Dart imports:
 import 'dart:io';
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 // Package imports:
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -80,7 +83,10 @@ class MyLibraryDb {
 
   Future<Database> _initDatabase() async {
     String databasePath;
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    if (kIsWeb) {
+      // sqlite (WebAssembly) in IndexedDB, under this name.
+      databasePath = '';
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       final directory = await getApplicationSupportDirectory();
       databasePath = directory.path;
       try {
@@ -89,7 +95,8 @@ class MyLibraryDb {
     } else {
       databasePath = await getDatabasesPath();
     }
-    final path = join(databasePath, 'mylibrary.db');
+    final path =
+        databasePath.isEmpty ? 'mylibrary.db' : join(databasePath, 'mylibrary.db');
 
     return await openDatabase(
       path,

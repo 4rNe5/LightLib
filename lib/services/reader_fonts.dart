@@ -119,12 +119,15 @@ class ReaderFonts extends ChangeNotifier {
         _choices[script] = FontChoice(saved);
       }
     }
-    try {
-      final dir = await _fontDir();
-      await for (final entity in dir.list()) {
-        if (entity is File) await _register(entity);
-      }
-    } catch (_) {}
+    // Imported fonts are files on the device; the web has none yet.
+    if (!kIsWeb) {
+      try {
+        final dir = await _fontDir();
+        await for (final entity in dir.list()) {
+          if (entity is File) await _register(entity);
+        }
+      } catch (_) {}
+    }
     notifyListeners();
   }
 
@@ -179,6 +182,7 @@ class ReaderFonts extends ChangeNotifier {
   /// or the Google Font files cached on the device (regular first). Empty
   /// for the system font or a Google Font not downloaded yet.
   Future<List<File>> filesOf(FontChoice choice) async {
+    if (kIsWeb) return const [];
     try {
       if (choice.isFile) {
         final dir = await _fontDir();
