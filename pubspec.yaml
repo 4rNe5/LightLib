@@ -108,6 +108,9 @@ dependencies:
   sqflite_common_ffi_web: ^1.2.0
   # The reader's iframe and its messages (web only).
   web: ^1.1.0
+  # Web: the reader's bars and buttons over its iframe get the taps (the
+  # browser gives them to the iframe otherwise).
+  pointer_interceptor: ^0.10.1
 
 # permission_handler 13.x resolves permission_handler_android 14.0.0,
 # whose Kotlin-DSL build file needs the Android 37 platform and a

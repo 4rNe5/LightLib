@@ -113,8 +113,26 @@ class _FrameViewState extends State<_FrameView> {
     super.dispose();
   }
 
+  /// The page takes taps only while the reader is the route on top: a
+  /// sheet, dialog or menu over it gets its own (the browser would give
+  /// the iframe every tap inside its box).
+  void _applyPointerEvents() {
+    _frame?.style.pointerEvents = _onTop ? 'auto' : 'none';
+  }
+
+  bool _onTop = true;
+
   @override
-  Widget build(BuildContext context) => HtmlElementView.fromTagName(
+  Widget build(BuildContext context) {
+    final onTop = ModalRoute.isCurrentOf(context) ?? true;
+    if (onTop != _onTop) {
+      _onTop = onTop;
+      _applyPointerEvents();
+    }
+    return _frameView();
+  }
+
+  Widget _frameView() => HtmlElementView.fromTagName(
         key: const ValueKey('bookReaderFrame'),
         tagName: 'iframe',
         onElementCreated: (Object element) {
@@ -127,6 +145,7 @@ class _FrameViewState extends State<_FrameView> {
           frame.src =
               ui_web.assetManager.getAssetUrl('assets/reader/index.html');
           _frame = frame;
+          _applyPointerEvents();
           final host = _host = _FrameHost(frame, widget.resources);
           widget.onCreated(host);
         },

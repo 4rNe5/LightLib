@@ -108,6 +108,12 @@ debug key (only CI signs releases).
 - Reader DOM changes must not move positions: injected nodes carry
   `cfi-inert` (translation under the original, furigana `<rt>`) or
   `cfi-skip` (furigana `<ruby>`), which foliate's CFI code ignores.
+- Web reader: the iframe takes every tap inside its box, Flutter widgets
+  drawn over it included. Bars and buttons over the page go in
+  `PointerInterceptor` (`_onPage` in `book_reader_page.dart`); the iframe's
+  `pointer-events` is off while another route (sheet, dialog) is on top
+  (`reader_host_web.dart`). Browser tests tap real coordinates: clicks on
+  semantics nodes passed while real taps did not.
 - Tests: no network, no platform channels — inject `Dio` adapters, use
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.

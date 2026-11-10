@@ -16,6 +16,7 @@ import 'package:flutter/services.dart';
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:pointer_interceptor/pointer_interceptor.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 // Project imports:
@@ -548,13 +549,10 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         // device - still shows.
         if (await _showSavedTranslations(quiet: quiet)) return;
         if (!quiet && mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(l10n.translationNoModel),
-            action: SnackBarAction(
-              label: l10n.translationOpenSettings,
-              onPressed: _openTranslationSettings,
-            ),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(_messageWithAction(
+              l10n.translationNoModel,
+              l10n.translationOpenSettings,
+              _openTranslationSettings));
         }
         return;
       }
@@ -652,13 +650,10 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         .catchError((_) {});
     if (!quiet && mounted) {
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(l10n.translationSavedOnly),
-        action: SnackBarAction(
-          label: l10n.translationOpenSettings,
-          onPressed: _openTranslationSettings,
-        ),
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(_messageWithAction(
+          l10n.translationSavedOnly,
+          l10n.translationOpenSettings,
+          _openTranslationSettings));
     }
     return true;
   }
@@ -1506,6 +1501,43 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         ),
       );
 
+  /// [child] drawn over the book's page takes its own taps. On the web
+  /// the page is an iframe, and the browser gives it every tap inside its
+  /// box - the bars over it included - unless something of the page's
+  /// own sits under them.
+  Widget _onPage(Widget child) =>
+      PointerInterceptor(intercepting: kIsWeb, child: child);
+
+  /// A message with a button. On the web the button sits in the message
+  /// itself, which takes its taps (see [_onPage]).
+  SnackBar _messageWithAction(
+      String text, String label, VoidCallback onPressed) {
+    if (!kIsWeb) {
+      return SnackBar(
+        content: Text(text),
+        action: SnackBarAction(label: label, onPressed: onPressed),
+      );
+    }
+    final theme = Theme.of(context);
+    return SnackBar(
+      content: _onPage(Row(
+        children: [
+          Expanded(child: Text(text)),
+          TextButton(
+            style: TextButton.styleFrom(
+                foregroundColor: theme.snackBarTheme.actionTextColor ??
+                    theme.colorScheme.inversePrimary),
+            onPressed: () {
+              ScaffoldMessenger.of(context).hideCurrentSnackBar();
+              onPressed();
+            },
+            child: Text(label),
+          ),
+        ],
+      )),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final palette = _palette();
@@ -1557,7 +1589,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   offset: _chrome || _error != null
                       ? Offset.zero
                       : const Offset(0, -1.2),
-                  child: _topBar(palette, l10n),
+                  child: _onPage(_topBar(palette, l10n)),
                 ),
               ),
               Positioned(
@@ -1571,12 +1603,12 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      _selectionBar(palette),
-                      _status(palette),
+                      _onPage(_selectionBar(palette)),
+                      _onPage(_status(palette)),
                       if (_error != null)
                         const SizedBox.shrink()
                       else if (_chrome)
-                        _bottomBar(palette)
+                        _onPage(_bottomBar(palette))
                       else
                         _footer(palette),
                     ],
