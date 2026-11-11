@@ -19,6 +19,10 @@ node translate.mjs http://127.0.0.1:8094/ /tmp/haru.epub /tmp/shots
 node reader_taps.mjs http://127.0.0.1:8094/ /tmp/haru.epub /tmp/shots
 node desktop_reading.mjs http://127.0.0.1:8094/ /tmp/horizontal.epub /tmp/shots
 node drop.mjs http://127.0.0.1:8094/ /tmp/other.epub /tmp/shots
+
+BARE=1 node mock_project.mjs /tmp/lib24 8098 &            # an account no device has put covers on
+node covers.mjs http://127.0.0.1:8094/ http://127.0.0.1:8098 /tmp/shots mobile
+node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 ```
 
 | Script | What it shows |
@@ -29,6 +33,8 @@ node drop.mjs http://127.0.0.1:8094/ /tmp/other.epub /tmp/shots
 | `reader_taps.mjs` | A phone: the reader's bars, a sheet over the page and a message's button take real taps |
 | `desktop_reading.mjs` | A horizontal book in a wide window: the column's width when scrolling, two pages when turning, keys and wheel |
 | `drop.mjs` | An EPUB dropped on the window is added |
+| `covers.mjs` | An account without small covers: every book's real cover shows without one book fetched (read out of each file by byte ranges), and is kept for the other devices |
+| `busy.mjs`, `start_busy.mjs` | As a phone with a CPU four times slower: frames drawn and time the page's thread is busy while idle, scrolling the library, in the reader, and in the first 15 s |
 | `load.mjs` | First load as a phone on 4G or a desktop: first paint, first frame, bytes, memory (`node load.mjs <url> mobile`) |
 | `visit.mjs` | A signed-in visit to the 24-book account: what is fetched before the library is ready, what the tab holds |
 | `reading_memory.mjs` | The tab while a book is read |

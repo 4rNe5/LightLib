@@ -279,7 +279,7 @@ class _WebBookOpenPageState extends State<WebBookOpenPage> {
     _total = total ?? _total;
     // A few times a second is plenty.
     final now = DateTime.now();
-    if (!mounted || now.difference(_painted).inMilliseconds < 80) return;
+    if (!mounted || now.difference(_painted).inMilliseconds < 160) return;
     _painted = now;
     setState(() {});
   }

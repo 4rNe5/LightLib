@@ -29,9 +29,10 @@ Future<WebBookAction?> showWebBookDialog(BuildContext context, WebBook book) =>
       transitionBuilder: (context, animation, _, child) {
         final t =
             CurvedAnimation(parent: animation, curve: Curves.easeOutCubic);
+        // One strength throughout: a blur that grows is worked out anew
+        // for every frame of the opening.
         return BackdropFilter(
-          filter: ImageFilter.blur(
-              sigmaX: 14 * animation.value, sigmaY: 14 * animation.value),
+          filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: FadeTransition(
             opacity: t,
             child: ScaleTransition(

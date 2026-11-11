@@ -298,14 +298,27 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         unawaited(_pushStudy());
       case 'relocate':
         final cfi = msg['cfi'] as String?;
-        setState(() {
+        final fraction = (msg['fraction'] as num?)?.toDouble() ?? _fraction;
+        final label = msg['tocLabel'] as String? ?? '';
+        // The web: every frame the app draws is drawn on the thread the
+        // page scrolls on, so one is asked for only when something on
+        // screen changes (the footer's chapter or whole percent; with the
+        // bars up, the slider).
+        final seen = !kIsWeb ||
+            _chrome ||
+            !_shown ||
+            label != _tocLabel ||
+            (fraction * 100).round() != (_fraction * 100).round();
+        void take() {
           _shown = true;
           if (cfi != null && cfi.isNotEmpty) _cfi = cfi;
-          _fraction = (msg['fraction'] as num?)?.toDouble() ?? _fraction;
-          _tocLabel = msg['tocLabel'] as String? ?? '';
+          _fraction = fraction;
+          _tocLabel = label;
           _tocHref = msg['tocHref'] as String? ?? '';
           _section = (msg['section'] as num?)?.toInt() ?? _section;
-        });
+        }
+
+        seen ? setState(take) : take();
         _saveSoon();
         if (_speechWaitsForSection) _continueSpeechInSection();
       case 'paragraphs':
@@ -1526,8 +1539,14 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   /// the page is an iframe, and the browser gives it every tap inside its
   /// box - the bars over it included - unless something of the page's
   /// own sits under them.
-  Widget _onPage(Widget child) =>
-      PointerInterceptor(intercepting: kIsWeb, child: child);
+  /// [shown] false (a bar slid away) or nothing to show: no element is
+  /// laid over the page for it - each one is another layer the browser
+  /// composes with every frame.
+  Widget _onPage(Widget child, {bool shown = true}) => PointerInterceptor(
+      intercepting: kIsWeb &&
+          shown &&
+          !(child is SizedBox && child.width == 0 && child.height == 0),
+      child: child);
 
   /// A message with a button. On the web the button sits in the message
   /// itself, which takes its taps (see [_onPage]).
@@ -1624,7 +1643,8 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   offset: _chrome || _error != null
                       ? Offset.zero
                       : const Offset(0, -1.2),
-                  child: _onPage(_topBar(palette, l10n)),
+                  child: _onPage(_topBar(palette, l10n),
+                      shown: _chrome || _error != null),
                 ),
               ),
               Positioned(

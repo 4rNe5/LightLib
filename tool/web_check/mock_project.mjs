@@ -12,6 +12,8 @@ const fresh = () => ({
   books: structuredClone(seed.books), progress: structuredClone(seed.progress), translations: structuredClone(seed.translations),
   glossaries: [], settings: [], uploads: {}, removed: [], calls: [], times: [],
 })
+// BARE=1: as the owner's project was before any device put covers or details.
+if (process.env.BARE) for (const b of seed.books) { b.cover_at = null; b.description = null; b.publisher = null }
 let db = fresh()
 const cors = {
   'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,POST,PATCH,PUT,DELETE,OPTIONS',
@@ -101,6 +103,15 @@ http.createServer((req, res) => {
         const file = `${dir}/files/${name}`
         const body = db.removed.some(p => p.endsWith('/' + name)) ? null : db.uploads[name] ?? (existsSync(file) ? readFileSync(file) : null)
         if (!body) return send(res, 400, { statusCode: '404', error: 'not_found', message: 'Object not found' })
+        // A part of the file (a cover is read out of a book this way).
+        const range = /^bytes=(\d+)-(\d+)$/.exec(req.headers.range ?? '')
+        if (range) {
+          const part = body.subarray(Number(range[1]), Number(range[2]) + 1)
+          db.ranged = (db.ranged ?? 0) + part.length
+          res.writeHead(206, { ...cors, 'Content-Type': 'application/octet-stream', 'Content-Length': part.length, 'Content-Range': `bytes ${range[1]}-${range[2]}/${body.length}` })
+          return res.end(part)
+        }
+        db.whole = (db.whole ?? 0) + 1
         res.writeHead(200, { ...cors, 'Content-Type': name.endsWith('.jpg') ? 'image/jpeg' : 'application/epub+zip', 'Content-Length': body.length })
         // Slowly, so progress shows: 256 KB every 70 ms.
         let at = 0

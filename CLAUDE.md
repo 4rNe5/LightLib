@@ -59,7 +59,10 @@ debug key (only CI signs releases).
   `<md5>.cover.jpg`) and fetches a book's file only when it is opened
   (`SyncEngine(onDemand: true)`, `fetchBook`; `WebBookOpenPage`). A file
   missing in the browser deletes nothing; deleting is `deleteBook`,
-  freeing space `dropLocalCopy`. The first frame waits for nothing
+  freeing space `dropLocalCopy`. A book no device has put a small cover
+  of gets its cover read out of its file on the account by byte ranges
+  (`epub_remote_cover.dart`, `SyncService.cardFromFile`; never the whole
+  book) and kept for the others. The first frame waits for nothing
   (`main_web.dart`); `web/index.html` shows the app's name until then.
   A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
 - Web checks: `tool/web_check/` (its README) - the built app in headless
@@ -133,6 +136,13 @@ debug key (only CI signs releases).
 - Web reader: nothing may keep animating over the iframe (a spinner, a
   running progress bar) - each frame of it is drawn on the thread the
   page works on; a running bar made a 3 s opening take 12 s.
+- Web frames are dear: each is drawn, then copied to the page, at the
+  full pixel size (in headless Chrome `createImageBitmap` is 60% of a
+  scroll). So `web/splash.js` caps the app's device pixel ratio at 2,
+  nothing on the web animates without end (sync shows a still icon and a
+  bar only when it knows how far), tiles have no blurred shadow at rest,
+  the reader asks for a frame on `relocate` only when the footer changes,
+  and a bar that slid away has no `PointerInterceptor`.
 - Web bundle: `GoogleFonts.getFont(name)` pulls the table of every font
   (3.4 MB of JS) - it sits behind `google_font_family_io/web.dart`.
   Full-size covers decoded per tile cost ~30 MB each; the web draws

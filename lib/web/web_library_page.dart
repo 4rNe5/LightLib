@@ -418,12 +418,7 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
               key: const ValueKey('webSync'),
               tooltip: l10n.syncNow,
               onPressed: _sync.running ? null : _sync.syncByHand,
-              icon: _sync.running
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
-                  : const Icon(Icons.sync),
+              icon: const Icon(Icons.sync),
             ),
           IconButton(
             key: const ValueKey('webSettings'),
@@ -877,7 +872,9 @@ class _Account extends StatelessWidget {
                       ? muted.copyWith(color: scheme.error)
                       : muted,
                 ),
-                if (progress != null) ...[
+                // Only a bar that says how far (a running one would have
+                // the whole library drawn again sixty times a second).
+                if (progress != null && progress.total > 0) ...[
                   const SizedBox(height: 7),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(2),
@@ -886,9 +883,7 @@ class _Account extends StatelessWidget {
                       minHeight: 3,
                       color: scheme.secondary,
                       backgroundColor: scheme.onSurface.withAlpha(24),
-                      value: progress.total > 0
-                          ? progress.done / progress.total
-                          : null,
+                      value: progress.done / progress.total,
                     ),
                   ),
                 ],
@@ -900,12 +895,7 @@ class _Account extends StatelessWidget {
             tooltip: l10n.syncNow,
             visualDensity: VisualDensity.compact,
             onPressed: sync.running ? null : sync.syncByHand,
-            icon: sync.running
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.sync, size: 19),
+            icon: const Icon(Icons.sync, size: 19),
           ),
         ],
       );
@@ -1080,13 +1070,22 @@ class _BookTileState extends State<_BookTile> {
                 border: _focused
                     ? Border.all(color: scheme.secondary, width: 2)
                     : null,
+                // A shadow only under the tile the pointer is on: one
+                // under every tile is blurred again for every frame of a
+                // scroll.
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(lifted ? 60 : 26),
-                    blurRadius: lifted ? 22 : 8,
-                    offset: Offset(0, lifted ? 12 : 3),
-                  ),
+                  if (lifted)
+                    BoxShadow(
+                      color: Colors.black.withAlpha(60),
+                      blurRadius: 22,
+                      offset: const Offset(0, 12),
+                    ),
                 ],
+              ),
+              foregroundDecoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: scheme.onSurface.withAlpha(22), width: 0.6),
               ),
               child: AspectRatio(
                 aspectRatio: 0.7,
