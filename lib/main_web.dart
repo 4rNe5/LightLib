@@ -1,10 +1,19 @@
 // The web build's entry point (flutter build web -t lib/main_web.dart):
-// the library in this browser, the reader, Gemini translation and sync.
-// The phone app's other parts (search and downloads, the model on the
-// device, widgets, updates) are not part of it.
+// the library (this browser's books and the account's), the reader,
+// Gemini translation and sync. The phone app's other parts (search and
+// downloads, the model on the device, widgets, updates) are not part of
+// it.
+//
+// The first frame does not wait for anything: the library's frame shows
+// while the database opens and the account answers (web/index.html shows
+// the app's name until that frame).
+
+// Dart imports:
+import 'dart:async';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 // Package imports:
@@ -20,19 +29,23 @@ import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/ui/themes.dart';
 import 'package:openlib/web/web_library_page.dart';
 
-Future<void> main() async {
+void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // The settings and library database: sqlite (WebAssembly) in IndexedDB.
   databaseFactory = databaseFactoryFfiWeb;
-  final db = MyLibraryDb.instance;
-  await db.database;
-  TranslationStyle.lightNovel = await db
+  // Right-click belongs to the library's own menus.
+  unawaited(BrowserContextMenu.disableContextMenu());
+  runApp(const ProviderScope(child: LightLibWebApp()));
+  unawaited(_afterFirstFrame());
+}
+
+Future<void> _afterFirstFrame() async {
+  // Also finishes a Google sign-in this page was sent back from.
+  unawaited(SyncService.instance.init());
+  TranslationStyle.lightNovel = await MyLibraryDb.instance
           .getPreference(translationLightNovelStylePref)
           .catchError((_) => null) !=
       0;
-  // Also finishes a Google sign-in this page was sent back from.
-  await SyncService.instance.init();
-  runApp(const ProviderScope(child: LightLibWebApp()));
 }
 
 class LightLibWebApp extends StatelessWidget {
