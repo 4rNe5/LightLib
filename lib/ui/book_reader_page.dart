@@ -85,10 +85,15 @@ class BookReaderPage extends ConsumerStatefulWidget {
     required this.fileName,
     required this.filePath,
     this.onFallback,
+    this.opening,
   });
 
   final String fileName;
   final String filePath;
+
+  /// What to show until the book's first page is up, instead of the
+  /// spinner (the web: the book's cover and name).
+  final WidgetBuilder? opening;
 
   /// Opens the book in the older reader instead (shown when this one
   /// cannot display it).
@@ -112,6 +117,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   ReaderHostController? _host;
   bool _pageReady = false;
   bool _opened = false;
+
+  /// The book's first page is on screen.
+  bool _shown = false;
   String? _error;
 
   // The book.
@@ -291,6 +299,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       case 'relocate':
         final cfi = msg['cfi'] as String?;
         setState(() {
+          _shown = true;
           if (cfi != null && cfi.isNotEmpty) _cfi = cfi;
           _fraction = (msg['fraction'] as num?)?.toDouble() ?? _fraction;
           _tocLabel = msg['tocLabel'] as String? ?? '';
@@ -393,9 +402,15 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     }
     final cfi = _cfi;
     if (cfi == null || cfi.isEmpty) return;
-    unawaited(
-        saveEpubState(widget.fileName, '$bookReaderPositionPrefix$cfi', ref)
-            .catchError((_) {}));
+    // How far that is, for a library that lists the book without its
+    // file (written first: saving the position starts the sync).
+    unawaited(MyLibraryDb.instance
+        .setSyncState(
+            'frac:${widget.fileName}', _fraction.clamp(0, 1).toStringAsFixed(4))
+        .catchError((_) {})
+        .then((_) => saveEpubState(
+            widget.fileName, '$bookReaderPositionPrefix$cfi', ref))
+        .catchError((_) {}));
   }
 
   // ------------------------------------------------------------------
@@ -480,6 +495,10 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       'fontFamily': families.isEmpty ? null : families.join(', '),
       'fontFaces': faces,
       'animated': true,
+      // A wide window: a column a line can be read across (one when
+      // scrolling, two side by side when turning pages).
+      if (kIsWeb) 'maxInlineSize': 760,
+      if (kIsWeb) 'maxColumns': s.layout == ReaderLayout.scroll ? 1 : 2,
     };
   }
 
@@ -1186,7 +1205,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (busy)
+          // The web: nothing keeps moving over the book's page (every
+          // frame of it is drawn on the thread the page works on).
+          if (busy && !kIsWeb)
             SizedBox(
               width: 12,
               height: 12,
@@ -1544,6 +1565,20 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     final l10n = AppLocalizations.of(context);
     final overlay =
         palette.dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark;
+    if (kIsWeb) {
+      // The browser tab says which book is open.
+      return Title(
+        title:
+            _title?.isNotEmpty == true ? '${_title!} · LightLib' : 'LightLib',
+        color: palette.background,
+        child: _page(palette, l10n, overlay),
+      );
+    }
+    return _page(palette, l10n, overlay);
+  }
+
+  Widget _page(ReaderPalette palette, AppLocalizations l10n,
+      SystemUiOverlayStyle overlay) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay.copyWith(
           statusBarColor: Colors.transparent,
@@ -1563,7 +1598,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                       : _webViewWidget,
                 ),
               ),
-              if (!_opened && _error == null)
+              if (!_opened && _error == null && widget.opening == null)
                 Positioned.fill(
                   child: IgnorePointer(
                     child: ColoredBox(
@@ -1615,6 +1650,17 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   ),
                 ),
               ),
+              // Over everything until the first page is up; gone from the
+              // tree afterwards (it would take the page's taps).
+              if (widget.opening case final opening?)
+                Positioned.fill(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 280),
+                    child: _shown || _error != null
+                        ? const SizedBox.shrink()
+                        : _onPage(opening(context)),
+                  ),
+                ),
             ],
           ),
         ),

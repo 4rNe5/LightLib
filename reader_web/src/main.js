@@ -231,6 +231,7 @@ function onDocLoad({ doc, index }) {
     themeDocument(doc, state.settings ?? {})
     fixImages(doc)
     listenForTaps(doc)
+    listenForKeys(doc)
     listenForSelection(doc, index)
     const items = collectParagraphs(doc)
     state.sections.set(index, items)
@@ -259,6 +260,57 @@ function fixImages(doc) {
         }
     }
 }
+
+/** A keyboard and a mouse wheel (the web on a desktop): the arrows, Page
+ *  Up/Down and Space turn pages, and so does the wheel where pages are
+ *  turned rather than scrolled. The app handles the same keys when they
+ *  reach it instead of this page. */
+function turnByKey(e) {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
+    const target = e.target
+    if (target?.isContentEditable || /^(input|textarea|select)$/i.test(target?.tagName ?? '')) return
+    const view = state.view
+    if (!view) return
+    const scrolled = state.settings?.flow === 'scrolled'
+    switch (e.key) {
+        case 'ArrowLeft': view.goLeft(); break
+        case 'ArrowRight': view.goRight(); break
+        case 'PageDown': view.next(); break
+        case 'PageUp': view.prev(); break
+        case ' ': e.shiftKey ? view.prev() : view.next(); break
+        // Scrolling text keeps the browser's own line-by-line arrows.
+        case 'ArrowDown': if (scrolled) return; view.next(); break
+        case 'ArrowUp': if (scrolled) return; view.prev(); break
+        default: return
+    }
+    e.preventDefault()
+    post({ type: 'turn' })
+    if (pendingPaint.size) flushPaint()
+}
+
+let wheelLockedUntil = 0
+function turnByWheel(e) {
+    if (e.ctrlKey || state.settings?.flow === 'scrolled' || !state.view) return
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX
+    e.preventDefault()
+    if (Math.abs(delta) < 8) return
+    const now = Date.now()
+    if (now < wheelLockedUntil) return
+    // A wheel's notch turns one page; a touchpad's glide (many small
+    // steps) turns one too.
+    wheelLockedUntil = now + (Math.abs(delta) >= 60 ? 260 : 620)
+    post({ type: 'turn' })
+    if (pendingPaint.size) flushPaint()
+    delta > 0 ? state.view.next() : state.view.prev()
+}
+
+function listenForKeys(target) {
+    if (target.__llKeys) return
+    target.__llKeys = true
+    target.addEventListener('keydown', turnByKey)
+    target.addEventListener('wheel', turnByWheel, { passive: false })
+}
+listenForKeys(document)
 
 /** Taps: the outer thirds turn pages, the middle shows or hides the app's
  *  bars. A tap that ends a selection or follows a link is not a turn. */
