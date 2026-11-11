@@ -19,6 +19,15 @@
 // translations, glossaries), then book files - each book fetched brings
 // its position, translations and glossary with it, so a book is whole
 // as soon as it shows up.
+//
+// The web keeps only the books it was asked to open ([SyncEngine.onDemand]):
+// it lists the library from the remote's rows ([RemoteLibrary] - title,
+// author, a small cover) and fetches one file when its book is opened
+// ([SyncEngine.fetchBook]). Nothing is deleted there because a file is
+// not in the browser; a deletion is asked for ([SyncEngine.deleteBook]).
+//
+// Settings the devices share (the Gemini key) follow the newest-wins rule
+// of positions.
 
 // Dart imports:
 import 'dart:async';
@@ -36,6 +45,10 @@ class RemoteBook {
     this.sizeBytes,
     this.hasFile = false,
     this.deleted = false,
+    this.publisher,
+    this.description,
+    this.hasCover = false,
+    this.addedAt,
   });
 
   final String md5;
@@ -47,6 +60,73 @@ class RemoteBook {
   final int? sizeBytes;
   final bool hasFile;
   final bool deleted;
+  final String? publisher;
+
+  /// Null: put by a version that sent no details ('' = the book has none).
+  final String? description;
+
+  /// A small cover is kept beside the file ([SyncRemote.downloadCover]).
+  final bool hasCover;
+  final DateTime? addedAt;
+
+  RemoteBook copyWith({
+    int? sizeBytes,
+    bool? hasFile,
+    bool? deleted,
+    String? publisher,
+    String? description,
+    bool? hasCover,
+  }) =>
+      RemoteBook(
+        md5: md5,
+        bookId: bookId,
+        fileName: fileName,
+        title: title,
+        author: author,
+        format: format,
+        sizeBytes: sizeBytes ?? this.sizeBytes,
+        hasFile: hasFile ?? this.hasFile,
+        deleted: deleted ?? this.deleted,
+        publisher: publisher ?? this.publisher,
+        description: description ?? this.description,
+        hasCover: hasCover ?? this.hasCover,
+        addedAt: addedAt,
+      );
+
+  Map<String, dynamic> toJson() => {
+        'md5': md5,
+        'bookId': bookId,
+        'fileName': fileName,
+        'title': title,
+        if (author != null) 'author': author,
+        'format': format,
+        if (sizeBytes != null) 'sizeBytes': sizeBytes,
+        'hasFile': hasFile,
+        if (publisher != null) 'publisher': publisher,
+        if (description != null) 'description': description,
+        'hasCover': hasCover,
+        if (addedAt != null) 'addedAt': addedAt!.toIso8601String(),
+      };
+
+  static RemoteBook? fromJson(Object? json) {
+    if (json is! Map) return null;
+    final md5 = json['md5'], bookId = json['bookId'], file = json['fileName'];
+    if (md5 is! String || bookId is! String || file is! String) return null;
+    return RemoteBook(
+      md5: md5,
+      bookId: bookId,
+      fileName: file,
+      title: '${json['title'] ?? ''}',
+      author: json['author'] as String?,
+      format: '${json['format'] ?? 'epub'}',
+      sizeBytes: (json['sizeBytes'] as num?)?.toInt(),
+      hasFile: json['hasFile'] == true,
+      publisher: json['publisher'] as String?,
+      description: json['description'] as String?,
+      hasCover: json['hasCover'] == true,
+      addedAt: DateTime.tryParse('${json['addedAt'] ?? ''}'),
+    );
+  }
 }
 
 class RemoteProgress {
@@ -55,12 +135,99 @@ class RemoteProgress {
     required this.position,
     required this.completed,
     required this.updatedAt,
+    this.fraction,
   });
 
   final String md5;
   final String position;
   final bool completed;
   final DateTime updatedAt;
+
+  /// How far the book was read (0..1); null when the device that saved
+  /// the position did not say.
+  final double? fraction;
+
+  Map<String, dynamic> toJson() => {
+        'position': position,
+        'completed': completed,
+        'updatedAt': updatedAt.toIso8601String(),
+        if (fraction != null) 'fraction': fraction,
+      };
+
+  static RemoteProgress? fromJson(String md5, Object? json) {
+    if (json is! Map) return null;
+    final at = DateTime.tryParse('${json['updatedAt'] ?? ''}');
+    if (at == null) return null;
+    return RemoteProgress(
+      md5: md5,
+      position: '${json['position'] ?? ''}',
+      completed: json['completed'] == true,
+      updatedAt: at,
+      fraction: (json['fraction'] as num?)?.toDouble(),
+    );
+  }
+}
+
+/// A setting as the remote keeps it.
+class RemoteSetting {
+  const RemoteSetting(this.value, this.updatedAt);
+  final String value;
+  final DateTime updatedAt;
+}
+
+/// The library as the remote lists it, for a device that does not keep
+/// every file: the books that have one, where each was read, and how many
+/// paragraphs are translated (by book, then language).
+class RemoteLibrary {
+  const RemoteLibrary({
+    this.books = const [],
+    this.progress = const {},
+    this.translated = const {},
+  });
+
+  final List<RemoteBook> books;
+  final Map<String, RemoteProgress> progress;
+  final Map<String, Map<String, int>> translated;
+
+  Map<String, dynamic> toJson() => {
+        'books': [for (final b in books) b.toJson()],
+        'progress': {
+          for (final e in progress.entries) e.key: e.value.toJson(),
+        },
+        'translated': translated,
+      };
+
+  static RemoteLibrary fromJson(Object? json) {
+    if (json is! Map) return const RemoteLibrary();
+    final progress = <String, RemoteProgress>{};
+    final rows = json['progress'];
+    if (rows is Map) {
+      rows.forEach((k, v) {
+        final p = RemoteProgress.fromJson('$k', v);
+        if (p != null) progress['$k'] = p;
+      });
+    }
+    final translated = <String, Map<String, int>>{};
+    final counts = json['translated'];
+    if (counts is Map) {
+      counts.forEach((k, v) {
+        if (v is Map) {
+          translated['$k'] = {
+            for (final e in v.entries)
+              if (e.value is num) '${e.key}': (e.value as num).toInt(),
+          };
+        }
+      });
+    }
+    return RemoteLibrary(
+      books: [
+        for (final b in (json['books'] as List? ?? const []))
+          if (RemoteBook.fromJson(b) case final book?) book,
+      ],
+      progress: progress,
+      translated: translated,
+    );
+  }
 }
 
 class RemoteTranslations {
@@ -94,8 +261,17 @@ abstract class SyncRemote {
   Future<void> putBook(RemoteBook book);
   Future<void> markDeleted(String md5);
   Future<void> uploadBook(String md5, String format, Uint8List bytes);
-  Future<Uint8List> downloadBook(String md5, String format);
+
+  /// The file; [onProgress] hears how much of it has come.
+  Future<Uint8List> downloadBook(String md5, String format,
+      {void Function(int received, int? total)? onProgress});
+
+  /// Removes the file and its cover.
   Future<void> removeBookFile(String md5, String format);
+
+  /// A small JPEG of the book's cover, kept beside its file.
+  Future<void> uploadCover(String md5, Uint8List jpeg);
+  Future<Uint8List?> downloadCover(String md5);
   Future<List<RemoteProgress>> progress();
   Future<void> putProgress(RemoteProgress progress, {required String device});
   Future<List<RemoteTranslations>> translationIndex();
@@ -113,6 +289,14 @@ abstract class SyncRemote {
   /// Keeps [data] unless the remote's is newer than [at].
   Future<void> putGlossary(String md5, String data, DateTime at,
       {required String device});
+
+  /// The shared settings, by name.
+  Future<Map<String, RemoteSetting>> settings();
+
+  /// Keeps [value] unless the remote's is newer than [at].
+  Future<void> putSetting(String name, String value, DateTime at,
+      {required String device});
+  Future<void> removeSetting(String name);
 }
 
 class LocalBook {
@@ -122,6 +306,8 @@ class LocalBook {
     required this.title,
     this.author,
     required this.format,
+    this.publisher,
+    this.description,
   });
 
   final String id;
@@ -129,6 +315,8 @@ class LocalBook {
   final String title;
   final String? author;
   final String format;
+  final String? publisher;
+  final String? description;
 }
 
 /// One book's translations into one language and style, open for merging.
@@ -180,6 +368,21 @@ abstract class SyncLocal {
   /// A glossary from another device: saved without counting as a change
   /// made here.
   Future<void> applyGlossary(String fileName, String data, DateTime at);
+
+  /// A small JPEG of [book]'s cover for the other devices' libraries, or
+  /// null when it has none.
+  Future<Uint8List?> coverThumbnail(LocalBook book);
+
+  /// Names of the settings this device shares (none when the owner
+  /// turned that off here).
+  Future<List<String>> syncedSettings();
+
+  /// The value of the setting [name] here ('' = not set).
+  Future<String> setting(String name);
+
+  /// A setting from another device: saved without counting as a change
+  /// made here.
+  Future<void> applySetting(String name, String value);
 }
 
 enum SyncStage { checking, translations, uploading, downloading }
@@ -211,6 +414,9 @@ class SyncReport {
   int translationsReceived = 0;
   int glossariesSent = 0;
   int glossariesReceived = 0;
+  int coversSent = 0;
+  int settingsSent = 0;
+  int settingsReceived = 0;
   final List<String> errors = [];
 
   bool get changedHere =>
@@ -233,7 +439,8 @@ class SyncReport {
       'removed here $removedHere / there $removedThere, '
       'no space $skippedForSpace, positions $positionsSent/$positionsReceived, '
       'translations $translationsSent/$translationsReceived, '
-      'glossaries $glossariesSent/$glossariesReceived'
+      'glossaries $glossariesSent/$glossariesReceived, covers $coversSent, '
+      'settings $settingsSent/$settingsReceived'
       '${errors.isEmpty ? '' : ', errors ${errors.length}'}';
 }
 
@@ -248,6 +455,7 @@ class _Run {
   Map<String, String> positionSent = {};
   Map<String, String> glossaryStamps = {};
   Map<String, String> glossarySent = {};
+  Map<String, String> fractions = {};
   Map<String, String> dirty = {};
   Map<String, String> seenAt = {};
   Set<String> kept = {};
@@ -263,8 +471,10 @@ class SyncEngine {
     this.massDeleteFloor = 3,
     this.massDeleteShare = 0.25,
     this.transfers = 3,
+    this.onDemand = false,
     this.onProgress,
     this.onLocalChange,
+    this.onRemote,
   });
 
   final SyncLocal local;
@@ -284,6 +494,14 @@ class SyncEngine {
 
   /// Book files moved at once.
   final int transfers;
+
+  /// This device keeps only the books it was asked for ([fetchBook]): a
+  /// run brings no file, and a file missing here deletes nothing.
+  final bool onDemand;
+
+  /// The library as the remote lists it, as a run learns it (at its start
+  /// and again when it ends).
+  final void Function(RemoteLibrary library)? onRemote;
 
   /// Where the run is (for a progress bar or notification).
   final void Function(SyncProgress progress)? onProgress;
@@ -306,15 +524,108 @@ class SyncEngine {
     if (there != null) await _deletions(here, there, seen, report);
 
     final run = await _load(report);
+    if (there != null) _tell(there, run);
     for (final MapEntry(key: md5, value: book) in here.entries) {
       await _position(md5, book, run);
       await _glossary(md5, book, run);
     }
     await _translations(here, run);
 
-    if (there != null) await _transfers(here, there, seen, run);
+    if (there != null) {
+      await _transfers(here, there, seen, run);
+      await _covers(here, there, run);
+      await _settings(report);
+      _tell(there, run);
+    }
     if (run.firstRun) await local.setState('trinit', '1');
     return report;
+  }
+
+  void _tell(Map<String, RemoteBook> there, _Run run) {
+    final tell = onRemote;
+    if (tell == null) return;
+    final translated = <String, Map<String, int>>{};
+    for (final t in run.translations.values) {
+      final byLang = translated[t.md5] ??= {};
+      // The fuller of a language's two styles.
+      byLang[t.lang] = math.max(byLang[t.lang] ?? 0, t.count);
+    }
+    tell(RemoteLibrary(
+      books: [
+        for (final b in there.values)
+          if (b.hasFile && !b.deleted) b,
+      ],
+      progress: Map.of(run.progress),
+      translated: translated,
+    ));
+  }
+
+  /// Only the shared settings (one was changed here).
+  Future<SyncReport> runSettings() async {
+    final report = SyncReport();
+    await _settings(report);
+    return report;
+  }
+
+  /// Fetches one book the remote has and this device does not (the web,
+  /// when it is opened), with its position, translations and glossary.
+  /// The book as it is here, or null when it could not be added.
+  Future<LocalBook?> fetchBook(RemoteBook remoteBook,
+      {void Function(int received, int? total)? onProgress}) async {
+    for (final MapEntry(key: md5, value: book)
+        in (await _localBooks()).entries) {
+      if (md5 == remoteBook.md5) return book;
+    }
+    final bytes = await remote.downloadBook(remoteBook.md5, remoteBook.format,
+        onProgress: onProgress);
+    final added = await local.addBook(remoteBook, bytes);
+    if (added == null) return null;
+    await local.setState('seen:${remoteBook.md5}', '1');
+    final run = await _load(SyncReport());
+    await _position(remoteBook.md5, added, run);
+    await _glossary(remoteBook.md5, added, run);
+    await _translations({remoteBook.md5: added}, run, quiet: true);
+    onLocalChange?.call();
+    return added;
+  }
+
+  /// Deletes the book everywhere: here, and on the remote (the other
+  /// devices follow at their next run).
+  Future<void> deleteBook(String md5) async {
+    final book = (await _localBooks())[md5];
+    if (book != null) await local.removeBook(book);
+    await local.setState('seen:$md5', null);
+    RemoteBook? row;
+    for (final b in await remote.books()) {
+      if (b.md5 == md5) row = b;
+    }
+    if (row != null && !row.deleted) {
+      await remote.markDeleted(md5);
+      await remote.removeBookFile(md5, row.format);
+    }
+    if (book != null) onLocalChange?.call();
+  }
+
+  /// Removes this device's copy of a book the remote keeps (the web
+  /// freeing space): what was read and translated goes up first. False
+  /// when the remote does not have the file (it would be lost).
+  Future<bool> dropLocalCopy(String md5) async {
+    final book = (await _localBooks())[md5];
+    if (book == null) return true;
+    RemoteBook? row;
+    for (final b in await remote.books()) {
+      if (b.md5 == md5) row = b;
+    }
+    if (row == null || row.deleted || !row.hasFile) return false;
+    final run = await _load(SyncReport());
+    await _position(md5, book, run);
+    await _glossary(md5, book, run);
+    await _translations({md5: book}, run, quiet: true);
+    if (run.report.errors.isNotEmpty) return false;
+    await local.removeBook(book);
+    await local.setState('seen:$md5', null);
+    onLocalChange?.call();
+    return true;
   }
 
   /// Brings one book up to date both ways (when it is opened): its
@@ -353,6 +664,7 @@ class SyncEngine {
     run.positionSent = await local.state('posSent:');
     run.glossaryStamps = await local.state('gls:');
     run.glossarySent = await local.state('glsSent:');
+    run.fractions = await local.state('frac:');
     run.dirty = await local.state('trdirty:');
     run.seenAt = await local.state('trseen:');
     run.firstRun = (await local.state('trinit')).isEmpty;
@@ -393,6 +705,9 @@ class SyncEngine {
         report.errors.add('book ${book.fileName}: $e');
       }
     }
+
+    // A device that keeps only some books deletes by being asked to.
+    if (onDemand) return;
 
     // Gone from here: deleted there - unless many went at once (a book
     // folder that moved or could not be read empties the library without
@@ -450,7 +765,8 @@ class SyncEngine {
     }
     final downloads = [
       for (final b in there.values)
-        if (!b.deleted &&
+        if (!onDemand &&
+            !b.deleted &&
             b.hasFile &&
             !here.containsKey(b.md5) &&
             // Held back above (many missing at once): not fetched again.
@@ -472,7 +788,7 @@ class SyncEngine {
         }
         used += bytes.length;
         await remote.uploadBook(md5, 'epub', bytes);
-        await remote.putBook(RemoteBook(
+        final row = RemoteBook(
           md5: md5,
           bookId: book.id,
           fileName: book.fileName,
@@ -480,7 +796,12 @@ class SyncEngine {
           author: book.author,
           sizeBytes: bytes.length,
           hasFile: true,
-        ));
+          publisher: book.publisher,
+          description: book.description ?? '',
+          addedAt: DateTime.now().toUtc(),
+        );
+        await remote.putBook(row);
+        there[md5] = row;
         await local.setState('seen:$md5', '1');
         report.uploaded++;
       } catch (e) {
@@ -522,6 +843,95 @@ class SyncEngine {
     }
   }
 
+  /// What another device's library shows of each book here: its details
+  /// (rows put by a version that sent none) and a small cover.
+  Future<void> _covers(Map<String, LocalBook> here,
+      Map<String, RemoteBook> there, _Run run) async {
+    for (final MapEntry(key: md5, value: book) in here.entries) {
+      var row = there[md5];
+      if (row == null || row.deleted || !row.hasFile) continue;
+      try {
+        if (row.description == null) {
+          row = row.copyWith(
+              publisher: book.publisher, description: book.description ?? '');
+          await remote.putBook(row);
+          there[md5] = row;
+        }
+        if (!row.hasCover) {
+          final jpeg = await local.coverThumbnail(book);
+          if (jpeg == null) continue;
+          await remote.uploadCover(md5, jpeg);
+          there[md5] = row.copyWith(hasCover: true);
+          run.report.coversSent++;
+        }
+      } catch (e) {
+        run.report.errors.add('cover ${book.fileName}: $e');
+      }
+    }
+  }
+
+  /// The shared settings: the newer side wins, by the clock of the device
+  /// that changed it; one set before sync existed goes up only where the
+  /// remote has none.
+  Future<void> _settings(SyncReport report) async {
+    final List<String> names;
+    try {
+      names = await local.syncedSettings();
+    } catch (e) {
+      report.errors.add('settings: $e');
+      return;
+    }
+    if (names.isEmpty) return;
+    try {
+      final theirs = await remote.settings();
+      final stamps = await local.state('set:');
+      final sent = await local.state('setSent:');
+      for (final name in names) {
+        final remoteSetting = theirs[name];
+        final remoteAt = remoteSetting?.updatedAt;
+        final localMs = int.tryParse(stamps['set:$name'] ?? '');
+        final sentMs = int.tryParse(sent['setSent:$name'] ?? '');
+        Future<void> take() async {
+          await local.applySetting(name, remoteSetting!.value);
+          final ms = '${remoteAt!.millisecondsSinceEpoch}';
+          await local.setState('set:$name', ms);
+          await local.setState('setSent:$name', ms);
+          report.settingsReceived++;
+        }
+
+        Future<void> send(DateTime at, {bool evenEmpty = false}) async {
+          final value = await local.setting(name);
+          if (value.isEmpty && !evenEmpty) return;
+          await remote.putSetting(name, value, at, device: local.device);
+          final ms = '${at.millisecondsSinceEpoch}';
+          await local.setState('set:$name', ms);
+          await local.setState('setSent:$name', ms);
+          report.settingsSent++;
+        }
+
+        if (localMs == null) {
+          if (remoteSetting != null) {
+            await take();
+          } else {
+            await send(unknownAge);
+          }
+          continue;
+        }
+        final localAt =
+            DateTime.fromMillisecondsSinceEpoch(localMs, isUtc: true);
+        final unsent = sentMs == null || localMs > sentMs;
+        if (unsent && (remoteAt == null || localAt.isAfter(remoteAt))) {
+          // A key taken away here is taken away everywhere.
+          await send(localAt, evenEmpty: true);
+        } else if (remoteAt != null && remoteAt.isAfter(localAt)) {
+          await take();
+        }
+      }
+    } catch (e) {
+      report.errors.add('settings: $e');
+    }
+  }
+
   Future<void> _pool<T>(
       List<T> items, Future<void> Function(T item) task) async {
     var next = 0;
@@ -545,24 +955,41 @@ class SyncEngine {
           int.tryParse(run.positionSent['posSent:${book.fileName}'] ?? '');
       final theirs = run.progress[md5];
       final remoteAt = theirs?.updatedAt;
+      double? fraction() {
+        final f = double.tryParse(run.fractions['frac:${book.fileName}'] ?? '');
+        return f == null || f.isNaN ? null : f.clamp(0, 1).toDouble();
+      }
+
+      Future<void> take() async {
+        await local.applyPosition(
+            book.fileName, theirs!.position, theirs.completed, remoteAt!);
+        final f = theirs.fraction;
+        await local.setState('frac:${book.fileName}', f == null ? null : '$f');
+        if (f == null) {
+          run.fractions.remove('frac:${book.fileName}');
+        } else {
+          run.fractions['frac:${book.fileName}'] = '$f';
+        }
+        _stampPosition(book.fileName, remoteAt, run);
+        report.positionsReceived++;
+      }
+
       if (localMs == null) {
         if (theirs != null) {
-          await local.applyPosition(
-              book.fileName, theirs.position, theirs.completed, remoteAt!);
-          _stampPosition(book.fileName, remoteAt, run);
-          report.positionsReceived++;
+          await take();
           return;
         }
         // Saved before sync existed: up, as older than anything else.
         final row = await local.position(book.fileName);
         if (row == null || (row.position.isEmpty && !row.completed)) return;
-        await remote.putProgress(
-            RemoteProgress(
-                md5: md5,
-                position: row.position,
-                completed: row.completed,
-                updatedAt: unknownAge),
-            device: local.device);
+        final mine = RemoteProgress(
+            md5: md5,
+            position: row.position,
+            completed: row.completed,
+            updatedAt: unknownAge,
+            fraction: fraction());
+        await remote.putProgress(mine, device: local.device);
+        run.progress[md5] = mine;
         await _markPositionSent(book.fileName, unknownAge, run);
         report.positionsSent++;
         return;
@@ -572,22 +999,20 @@ class SyncEngine {
       if (unsent && (remoteAt == null || localAt.isAfter(remoteAt))) {
         final row = await local.position(book.fileName);
         if (row == null) return;
-        await remote.putProgress(
-            RemoteProgress(
-              md5: md5,
-              position: row.position,
-              completed: row.completed,
-              updatedAt: localAt,
-            ),
-            device: local.device);
+        final mine = RemoteProgress(
+          md5: md5,
+          position: row.position,
+          completed: row.completed,
+          updatedAt: localAt,
+          fraction: fraction(),
+        );
+        await remote.putProgress(mine, device: local.device);
+        run.progress[md5] = mine;
         await local.setState('posSent:${book.fileName}', '$localMs');
         run.positionSent['posSent:${book.fileName}'] = '$localMs';
         report.positionsSent++;
       } else if (remoteAt != null && remoteAt.isAfter(localAt)) {
-        await local.applyPosition(
-            book.fileName, theirs!.position, theirs.completed, remoteAt);
-        _stampPosition(book.fileName, remoteAt, run);
-        report.positionsReceived++;
+        await take();
       }
     } catch (e) {
       report.errors.add('position ${book.fileName}: $e');

@@ -1529,7 +1529,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get geminiKeyHint =>
-      'Gratis en Google AI Studio (aistudio.google.com/apikey). Solo se guarda en este dispositivo, nunca en copias de seguridad.';
+      'Gratis en Google AI Studio (aistudio.google.com/apikey). Nunca en copias de seguridad; con la sincronización iniciada se comparte con tus otros dispositivos (Ajustes → Sincronización).';
 
   @override
   String geminiKeySaved(String hint) {
@@ -2067,4 +2067,149 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get translationSavedOnly =>
       'Se muestran las traducciones guardadas hasta ahora. Para traducir el resto, configura un motor de traducción.';
+
+  @override
+  String get webFilterAll => 'Todos';
+
+  @override
+  String get webFilterReading => 'Leyendo';
+
+  @override
+  String get webFilterDownloaded => 'En este navegador';
+
+  @override
+  String get webFilterFinished => 'Terminados';
+
+  @override
+  String get webSearchHint => 'Buscar título o autor';
+
+  @override
+  String get webSort => 'Ordenar';
+
+  @override
+  String get webSortRecent => 'Leídos recientemente';
+
+  @override
+  String get webSortTitle => 'Título';
+
+  @override
+  String get webSortAuthor => 'Autor';
+
+  @override
+  String get webSortAdded => 'Añadidos recientemente';
+
+  @override
+  String get webContinue => 'Seguir leyendo';
+
+  @override
+  String get webRead => 'Leer';
+
+  @override
+  String webBookCount(int count) {
+    return '$count libros';
+  }
+
+  @override
+  String get webNoMatches => 'Ningún libro coincide.';
+
+  @override
+  String get webDropHere => 'Suelta archivos EPUB para añadirlos';
+
+  @override
+  String get webOnAccount => 'En tu cuenta';
+
+  @override
+  String get webNotStarted => 'Sin empezar';
+
+  @override
+  String webPercentRead(int percent) {
+    return '$percent % leído';
+  }
+
+  @override
+  String webTranslated(int count, String language) {
+    return '$count párrafos traducidos ($language)';
+  }
+
+  @override
+  String get webNoDescription => 'Sin descripción.';
+
+  @override
+  String get webRemoveCopy => 'Quitar de este navegador';
+
+  @override
+  String get webRemoveCopyDone =>
+      'Quitado de este navegador. Sigue en tu cuenta.';
+
+  @override
+  String get webRemoveCopyNotYet =>
+      'Aún no está en tu cuenta: sincroniza primero.';
+
+  @override
+  String get webDeleteEverywhere => 'Eliminar de la biblioteca';
+
+  @override
+  String webDeleteEverywhereConfirm(String title) {
+    return '¿Eliminar «$title» de la biblioteca? Se quita de todos los dispositivos.';
+  }
+
+  @override
+  String get webLoadingBook => 'Cargando…';
+
+  @override
+  String get webDownloadingBook => 'Descargando…';
+
+  @override
+  String get webOpeningBook => 'Abriendo…';
+
+  @override
+  String get webLoadFailed => 'No se pudo cargar este libro.';
+
+  @override
+  String get webRetry => 'Reintentar';
+
+  @override
+  String get webClose => 'Cerrar';
+
+  @override
+  String get webSignInHint =>
+      'Inicia sesión para ver aquí la biblioteca de tu teléfono.';
+
+  @override
+  String webSyncedAt(String time) {
+    return 'Sincronizado $time';
+  }
+
+  @override
+  String get webStorage => 'Almacenamiento en este navegador';
+
+  @override
+  String webStorageUsed(String size, int count) {
+    return '$size en uso · $count libros aquí';
+  }
+
+  @override
+  String get webStorageFree => 'Quitar los libros descargados';
+
+  @override
+  String get webStorageFreeHint =>
+      'Los libros siguen en tu cuenta y se descargan de nuevo al abrirlos.';
+
+  @override
+  String webStorageFreed(int count) {
+    return '$count quitados de este navegador';
+  }
+
+  @override
+  String get webSectionTranslation => 'Traducción';
+
+  @override
+  String get webMore => 'Más';
+
+  @override
+  String get syncGeminiKey => 'Compartir la clave de Gemini';
+
+  @override
+  String get syncGeminiKeyHint =>
+      'Tus otros dispositivos usan la misma clave. Desactivado: solo en este dispositivo y se borra del proyecto.';
 }

@@ -1464,7 +1464,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get geminiKeyHint =>
-      'Google AI Studio(aistudio.google.com/apikey)에서 무료로 발급. 이 기기에만 저장되고 백업에는 들어가지 않습니다.';
+      'Google AI Studio(aistudio.google.com/apikey)에서 무료로 발급. 백업에는 들어가지 않고, 동기화에 로그인하면 내 다른 기기와 공유됩니다(설정 → 동기화에서 끌 수 있음).';
 
   @override
   String geminiKeySaved(String hint) {
@@ -1996,4 +1996,145 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get translationSavedOnly =>
       '지금까지 저장된 번역을 보여 줍니다. 나머지를 번역하려면 번역 엔진을 설정하세요.';
+
+  @override
+  String get webFilterAll => '전체';
+
+  @override
+  String get webFilterReading => '읽는 중';
+
+  @override
+  String get webFilterDownloaded => '이 브라우저에 있음';
+
+  @override
+  String get webFilterFinished => '다 읽음';
+
+  @override
+  String get webSearchHint => '제목, 저자 검색';
+
+  @override
+  String get webSort => '정렬';
+
+  @override
+  String get webSortRecent => '최근 읽은 순';
+
+  @override
+  String get webSortTitle => '제목순';
+
+  @override
+  String get webSortAuthor => '저자순';
+
+  @override
+  String get webSortAdded => '최근 추가순';
+
+  @override
+  String get webContinue => '이어 읽기';
+
+  @override
+  String get webRead => '책 읽기';
+
+  @override
+  String webBookCount(int count) {
+    return '$count권';
+  }
+
+  @override
+  String get webNoMatches => '찾는 책이 없습니다.';
+
+  @override
+  String get webDropHere => 'EPUB 파일을 놓으면 추가됩니다';
+
+  @override
+  String get webOnAccount => '계정에 보관됨';
+
+  @override
+  String get webNotStarted => '아직 읽지 않음';
+
+  @override
+  String webPercentRead(int percent) {
+    return '$percent% 읽음';
+  }
+
+  @override
+  String webTranslated(int count, String language) {
+    return '번역 $count문단 저장됨 ($language)';
+  }
+
+  @override
+  String get webNoDescription => '책 소개가 없습니다.';
+
+  @override
+  String get webRemoveCopy => '이 브라우저에서 파일 지우기';
+
+  @override
+  String get webRemoveCopyDone => '이 브라우저에서 지웠습니다. 계정에는 남아 있습니다.';
+
+  @override
+  String get webRemoveCopyNotYet => '아직 계정에 올라가지 않았습니다. 먼저 동기화하세요.';
+
+  @override
+  String get webDeleteEverywhere => '서재에서 삭제';
+
+  @override
+  String webDeleteEverywhereConfirm(String title) {
+    return '“$title”을(를) 서재에서 삭제할까요? 모든 기기에서 지워집니다.';
+  }
+
+  @override
+  String get webLoadingBook => '불러오는 중…';
+
+  @override
+  String get webDownloadingBook => '책 받는 중…';
+
+  @override
+  String get webOpeningBook => '여는 중…';
+
+  @override
+  String get webLoadFailed => '책을 불러오지 못했습니다.';
+
+  @override
+  String get webRetry => '다시 시도';
+
+  @override
+  String get webClose => '닫기';
+
+  @override
+  String get webSignInHint => '로그인하면 폰의 서재가 여기에 보입니다.';
+
+  @override
+  String webSyncedAt(String time) {
+    return '$time 동기화됨';
+  }
+
+  @override
+  String get webStorage => '이 브라우저 저장 공간';
+
+  @override
+  String webStorageUsed(String size, int count) {
+    return '$size 사용 중 · 받은 책 $count권';
+  }
+
+  @override
+  String get webStorageFree => '받은 책 파일 모두 지우기';
+
+  @override
+  String get webStorageFreeHint => '책은 계정에 남아 있고, 열 때 다시 받습니다.';
+
+  @override
+  String webStorageFreed(int count) {
+    return '$count권을 이 브라우저에서 지웠습니다';
+  }
+
+  @override
+  String get webSectionTranslation => '번역';
+
+  @override
+  String get webMore => '더 보기';
+
+  @override
+  String get syncGeminiKey => 'Gemini 키 동기화';
+
+  @override
+  String get syncGeminiKeyHint =>
+      '내 다른 기기에서도 같은 키를 씁니다. 끄면 이 기기에만 두고 프로젝트에 올린 키는 지웁니다.';
 }

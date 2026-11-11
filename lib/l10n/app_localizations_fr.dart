@@ -1539,7 +1539,7 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get geminiKeyHint =>
-      'Gratuite sur Google AI Studio (aistudio.google.com/apikey). Gardée sur cet appareil seulement, jamais dans les sauvegardes.';
+      'Gratuite sur Google AI Studio (aistudio.google.com/apikey). Jamais dans les sauvegardes ; avec la synchronisation connectée, elle est partagée avec vos autres appareils (Réglages → Synchronisation).';
 
   @override
   String geminiKeySaved(String hint) {
@@ -2078,4 +2078,149 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get translationSavedOnly =>
       'Les traductions enregistrées jusqu’ici sont affichées. Pour traduire le reste, configurez un moteur de traduction.';
+
+  @override
+  String get webFilterAll => 'Tous les livres';
+
+  @override
+  String get webFilterReading => 'En cours';
+
+  @override
+  String get webFilterDownloaded => 'Dans ce navigateur';
+
+  @override
+  String get webFilterFinished => 'Terminés';
+
+  @override
+  String get webSearchHint => 'Rechercher un titre ou un auteur';
+
+  @override
+  String get webSort => 'Trier';
+
+  @override
+  String get webSortRecent => 'Lus récemment';
+
+  @override
+  String get webSortTitle => 'Titre';
+
+  @override
+  String get webSortAuthor => 'Auteur';
+
+  @override
+  String get webSortAdded => 'Ajoutés récemment';
+
+  @override
+  String get webContinue => 'Reprendre la lecture';
+
+  @override
+  String get webRead => 'Lire';
+
+  @override
+  String webBookCount(int count) {
+    return '$count livres';
+  }
+
+  @override
+  String get webNoMatches => 'Aucun livre ne correspond.';
+
+  @override
+  String get webDropHere => 'Déposez des fichiers EPUB pour les ajouter';
+
+  @override
+  String get webOnAccount => 'Dans votre compte';
+
+  @override
+  String get webNotStarted => 'Pas commencé';
+
+  @override
+  String webPercentRead(int percent) {
+    return '$percent % lu';
+  }
+
+  @override
+  String webTranslated(int count, String language) {
+    return '$count paragraphes traduits ($language)';
+  }
+
+  @override
+  String get webNoDescription => 'Aucune description.';
+
+  @override
+  String get webRemoveCopy => 'Retirer de ce navigateur';
+
+  @override
+  String get webRemoveCopyDone =>
+      'Retiré de ce navigateur. Il reste dans votre compte.';
+
+  @override
+  String get webRemoveCopyNotYet =>
+      'Pas encore dans votre compte : synchronisez d\'abord.';
+
+  @override
+  String get webDeleteEverywhere => 'Supprimer de la bibliothèque';
+
+  @override
+  String webDeleteEverywhereConfirm(String title) {
+    return 'Supprimer « $title » de la bibliothèque ? Il sera retiré de tous les appareils.';
+  }
+
+  @override
+  String get webLoadingBook => 'Chargement…';
+
+  @override
+  String get webDownloadingBook => 'Téléchargement…';
+
+  @override
+  String get webOpeningBook => 'Ouverture…';
+
+  @override
+  String get webLoadFailed => 'Impossible de charger ce livre.';
+
+  @override
+  String get webRetry => 'Réessayer';
+
+  @override
+  String get webClose => 'Fermer';
+
+  @override
+  String get webSignInHint =>
+      'Connectez-vous pour voir ici la bibliothèque de votre téléphone.';
+
+  @override
+  String webSyncedAt(String time) {
+    return 'Synchronisé $time';
+  }
+
+  @override
+  String get webStorage => 'Stockage dans ce navigateur';
+
+  @override
+  String webStorageUsed(String size, int count) {
+    return '$size utilisés · $count livres ici';
+  }
+
+  @override
+  String get webStorageFree => 'Retirer les livres téléchargés';
+
+  @override
+  String get webStorageFreeHint =>
+      'Les livres restent dans votre compte et se retéléchargent à l\'ouverture.';
+
+  @override
+  String webStorageFreed(int count) {
+    return '$count retirés de ce navigateur';
+  }
+
+  @override
+  String get webSectionTranslation => 'Traduction';
+
+  @override
+  String get webMore => 'Plus';
+
+  @override
+  String get syncGeminiKey => 'Partager la clé Gemini';
+
+  @override
+  String get syncGeminiKeyHint =>
+      'Vos autres appareils utilisent la même clé. Désactivé : conservée sur cet appareil et retirée du projet.';
 }

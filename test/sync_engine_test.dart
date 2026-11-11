@@ -18,6 +18,8 @@ class _Remote implements SyncRemote {
   final translations = <String, Map<String, String>>{};
   final translationTimes = <String, DateTime>{};
   final glossaryRows = <String, (String, DateTime)>{};
+  final covers = <String, Uint8List>{};
+  final settingRows = <String, RemoteSetting>{};
   final calls = <String>[];
   var clock = DateTime.utc(2026, 11, 9, 12);
 
@@ -49,16 +51,46 @@ class _Remote implements SyncRemote {
   }
 
   @override
-  Future<Uint8List> downloadBook(String md5, String format) async {
+  Future<Uint8List> downloadBook(String md5, String format,
+      {void Function(int received, int? total)? onProgress}) async {
     calls.add('download $md5');
-    return files['$md5.$format']!;
+    final bytes = files['$md5.$format']!;
+    onProgress?.call(bytes.length, bytes.length);
+    return bytes;
   }
 
   @override
   Future<void> removeBookFile(String md5, String format) async {
     calls.add('removeFile $md5');
     files.remove('$md5.$format');
+    covers.remove(md5);
   }
+
+  @override
+  Future<void> uploadCover(String md5, Uint8List jpeg) async {
+    calls.add('cover $md5');
+    covers[md5] = jpeg;
+    bookRows[md5] = bookRows[md5]!.copyWith(hasCover: true);
+  }
+
+  @override
+  Future<Uint8List?> downloadCover(String md5) async => covers[md5];
+
+  @override
+  Future<Map<String, RemoteSetting>> settings() async => Map.of(settingRows);
+
+  @override
+  Future<void> putSetting(String name, String value, DateTime at,
+      {required String device}) async {
+    calls.add('putSetting $name $value');
+    final old = settingRows[name];
+    if (old == null || old.updatedAt.isBefore(at)) {
+      settingRows[name] = RemoteSetting(value, at);
+    }
+  }
+
+  @override
+  Future<void> removeSetting(String name) async => settingRows.remove(name);
 
   @override
   Future<List<RemoteProgress>> progress() async => progressRows.values.toList();
@@ -153,6 +185,9 @@ class _Local implements SyncLocal {
   final sets = <String, Map<String, String>>{};
   final saved = <String>[];
   final glossaries = <String, String>{};
+  final covers = <String, Uint8List>{};
+  final settingValues = <String, String>{};
+  var shared = <String>[];
 
   void addLocal(String md5, String fileName, List<int> bytes) {
     held[md5] = (
@@ -251,6 +286,20 @@ class _Local implements SyncLocal {
     kv['gls:$fileName'] = '${at.millisecondsSinceEpoch}';
     kv['glsSent:$fileName'] = '${at.millisecondsSinceEpoch}';
   }
+
+  @override
+  Future<Uint8List?> coverThumbnail(LocalBook book) async =>
+      covers[book.fileName];
+
+  @override
+  Future<List<String>> syncedSettings() async => shared;
+
+  @override
+  Future<String> setting(String name) async => settingValues[name] ?? '';
+
+  @override
+  Future<void> applySetting(String name, String value) async =>
+      settingValues[name] = value;
 }
 
 const a = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -644,5 +693,400 @@ void main() {
           .run();
       expect(seen.where((p) => p.transfers), isEmpty);
     });
+  });
+
+  group('books on demand (the web)', () {
+    RemoteLibrary? listed;
+    SyncEngine web() => SyncEngine(
+        local: local,
+        remote: remote,
+        mergeChunk: 2,
+        onDemand: true,
+        onRemote: (library) => listed = library);
+    void there(String md5, String file, {List<int> bytes = const [9, 9]}) {
+      remote.bookRows[md5] = RemoteBook(
+          md5: md5,
+          bookId: md5,
+          fileName: file,
+          title: file,
+          hasFile: true,
+          description: '',
+          sizeBytes: bytes.length);
+      remote.files['$md5.epub'] = Uint8List.fromList(bytes);
+    }
+
+    setUp(() => listed = null);
+
+    test('a run fetches no file; the library is listed from the rows',
+        () async {
+      there(b, 'b.epub');
+      remote.progressRows[b] = RemoteProgress(
+          md5: b,
+          position: 'foliate:x',
+          completed: false,
+          updatedAt: DateTime.utc(2026, 11, 9, 10),
+          fraction: 0.4);
+      remote.translations['$b|ko|shared'] = {'h1': 'x', 'h2': 'y'};
+      remote.translationTimes['$b|ko|shared'] = DateTime.utc(2026, 11, 9, 10);
+
+      final report = await web().run();
+
+      expect(report.downloaded, 0);
+      expect(local.held, isEmpty);
+      expect(remote.calls.where((c) => c.startsWith('download')), isEmpty);
+      expect(listed!.books.map((x) => x.md5), [b]);
+      expect(listed!.progress[b]!.fraction, 0.4);
+      expect(listed!.translated[b], {'ko': 2});
+    });
+
+    test('deleted or fileless rows are not listed', () async {
+      there(a, 'a.epub');
+      remote.bookRows[b] = const RemoteBook(
+          md5: b, bookId: b, fileName: 'b.epub', title: 'B', deleted: true);
+      await web().run();
+      expect(listed!.books.map((x) => x.md5), [a]);
+    });
+
+    test('a book added here still goes up, and is listed', () async {
+      local.addLocal(a, 'a.epub', [1, 2]);
+      final report = await web().run();
+      expect(report.uploaded, 1);
+      expect(remote.files['$a.epub'], [1, 2]);
+      expect(listed!.books.single.md5, a);
+    });
+
+    test('a file that is not here deletes nothing there', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      await web().run();
+      local.held.clear();
+
+      final report = await web().run();
+
+      expect(report.removedThere, 0);
+      expect(remote.bookRows[a]!.deleted, isFalse);
+      expect(remote.files.containsKey('$a.epub'), isTrue);
+    });
+
+    test('deleted on another device: removed here too', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      await web().run();
+      await remote.markDeleted(a);
+      final report = await web().run();
+      expect(report.removedHere, 1);
+      expect(local.held, isEmpty);
+    });
+
+    test('opening a book fetches it with what was read and translated',
+        () async {
+      there(b, 'b.epub', bytes: [7, 7, 7]);
+      remote.progressRows[b] = RemoteProgress(
+          md5: b,
+          position: 'foliate:there',
+          completed: false,
+          updatedAt: DateTime.utc(2026, 11, 9, 10),
+          fraction: 0.25);
+      remote.translations['$b|ko|shared'] = {'h1': 'x'};
+      remote.translationTimes['$b|ko|shared'] = DateTime.utc(2026, 11, 9, 10);
+      remote.glossaryRows[b] = ('names', DateTime.utc(2026, 11, 9, 10));
+      final heard = <String>[];
+
+      final book = await web().fetchBook(remote.bookRows[b]!,
+          onProgress: (got, total) => heard.add('$got/$total'));
+
+      expect(book!.fileName, 'b.epub');
+      expect(local.held[b]!.$2, [7, 7, 7]);
+      expect(heard, ['3/3']);
+      expect(local.positions['b.epub']!.position, 'foliate:there');
+      expect(local.kv['frac:b.epub'], '0.25');
+      expect(local.sets['/tr/b.epub.ko.shared'], {'h1': 'x'});
+      expect(local.glossaries['b.epub'], 'names');
+      expect(local.kv['seen:$b'], '1');
+    });
+
+    test('a book already here is not fetched again', () async {
+      there(b, 'b.epub');
+      await web().fetchBook(remote.bookRows[b]!);
+      remote.calls.clear();
+      final again = await web().fetchBook(remote.bookRows[b]!);
+      expect(again!.fileName, 'b.epub');
+      expect(remote.calls.where((c) => c.startsWith('download')), isEmpty);
+    });
+
+    test('this copy can go once the remote has the file and the reading',
+        () async {
+      local.addLocal(a, 'a.epub', [1]);
+      await web().run();
+      local.read('a.epub', 'foliate:here', DateTime.utc(2026, 11, 9, 11));
+      local.sets['/tr/a.epub.ko.shared'] = {'h1': 'x'};
+      local.kv['trdirty:/tr/a.epub.ko.shared'] = '1';
+
+      expect(await web().dropLocalCopy(a), isTrue);
+
+      expect(local.held, isEmpty);
+      expect(remote.progressRows[a]!.position, 'foliate:here');
+      expect(remote.translations['$a|ko|shared'], {'h1': 'x'});
+      expect(remote.bookRows[a]!.deleted, isFalse);
+      expect(remote.files.containsKey('$a.epub'), isTrue);
+      // Not seen any more: a later run neither deletes nor fetches it.
+      final report = await web().run();
+      expect(report.removedThere + report.downloaded, 0);
+    });
+
+    test('this copy stays when the remote has no file of it', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      expect(await web().dropLocalCopy(a), isFalse);
+      expect(local.held.containsKey(a), isTrue);
+    });
+
+    test('deleting a book: gone here, marked there, its file removed',
+        () async {
+      there(a, 'a.epub');
+      await web().fetchBook(remote.bookRows[a]!);
+      remote.covers[a] = Uint8List.fromList([1]);
+
+      await web().deleteBook(a);
+
+      expect(local.held, isEmpty);
+      expect(remote.bookRows[a]!.deleted, isTrue);
+      expect(remote.files, isEmpty);
+      expect(remote.covers, isEmpty);
+      expect(local.kv.containsKey('seen:$a'), isFalse);
+    });
+
+    test('deleting a book this device never fetched', () async {
+      there(a, 'a.epub');
+      await web().deleteBook(a);
+      expect(remote.bookRows[a]!.deleted, isTrue);
+    });
+  });
+
+  group('covers and details', () {
+    test('a book goes up with its details, then its small cover - once',
+        () async {
+      local.held[a] = (
+        const LocalBook(
+            id: a,
+            fileName: 'a.epub',
+            title: 'A',
+            format: 'epub',
+            publisher: 'P',
+            description: 'About A'),
+        Uint8List.fromList([1]),
+      );
+      local.covers['a.epub'] = Uint8List.fromList([5, 5]);
+
+      final report = await engine().run();
+
+      expect(report.coversSent, 1);
+      expect(remote.covers[a], [5, 5]);
+      expect(remote.bookRows[a]!.hasCover, isTrue);
+      expect(remote.bookRows[a]!.publisher, 'P');
+      expect(remote.bookRows[a]!.description, 'About A');
+      remote.calls.clear();
+      await engine().run();
+      expect(remote.calls, isEmpty);
+    });
+
+    test('a row put without details gets them from a device with the book',
+        () async {
+      local.held[a] = (
+        const LocalBook(
+            id: a,
+            fileName: 'a.epub',
+            title: 'A',
+            format: 'epub',
+            description: 'About A'),
+        Uint8List.fromList([1]),
+      );
+      local.kv['seen:$a'] = '1';
+      remote.bookRows[a] = const RemoteBook(
+          md5: a, bookId: a, fileName: 'a.epub', title: 'A', hasFile: true);
+      remote.files['$a.epub'] = Uint8List.fromList([1]);
+
+      await engine().run();
+
+      expect(remote.bookRows[a]!.description, 'About A');
+      expect(remote.calls.where((c) => c.startsWith('upload')), isEmpty);
+    });
+
+    test('a book without a cover is left without one', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      final report = await engine().run();
+      expect(report.coversSent, 0);
+      expect(remote.bookRows[a]!.hasCover, isFalse);
+    });
+  });
+
+  group('shared settings (the Gemini key)', () {
+    const name = 'gemini_api_key';
+    final early = DateTime.utc(2026, 11, 9, 10);
+    final late = DateTime.utc(2026, 11, 9, 11);
+
+    test('set here: goes up; another device takes it', () async {
+      local
+        ..shared = [name]
+        ..settingValues[name] = 'key-1'
+        ..kv['set:$name'] = '${late.millisecondsSinceEpoch}';
+
+      final report = await engine().run();
+
+      expect(report.settingsSent, 1);
+      expect(remote.settingRows[name]!.value, 'key-1');
+      // Sent once.
+      remote.calls.clear();
+      await engine().run();
+      expect(remote.calls, isEmpty);
+
+      final other = _Local()..shared = [name];
+      final taken =
+          await SyncEngine(local: other, remote: remote).runSettings();
+      expect(taken.settingsReceived, 1);
+      expect(other.settingValues[name], 'key-1');
+      // Taken, not a change to send back.
+      remote.calls.clear();
+      await SyncEngine(local: other, remote: remote).runSettings();
+      expect(remote.calls, isEmpty);
+    });
+
+    test('the newer one wins', () async {
+      remote.settingRows[name] = RemoteSetting('theirs', late);
+      local
+        ..shared = [name]
+        ..settingValues[name] = 'mine'
+        ..kv['set:$name'] = '${early.millisecondsSinceEpoch}';
+      await engine().runSettings();
+      expect(local.settingValues[name], 'theirs');
+
+      remote.settingRows[name] = RemoteSetting('theirs', early);
+      final later = _Local()
+        ..shared = [name]
+        ..settingValues[name] = 'mine'
+        ..kv['set:$name'] = '${late.millisecondsSinceEpoch}';
+      await SyncEngine(local: later, remote: remote).runSettings();
+      expect(remote.settingRows[name]!.value, 'mine');
+    });
+
+    test('removed here: removed for the other devices', () async {
+      remote.settingRows[name] = RemoteSetting('key-1', early);
+      local
+        ..shared = [name]
+        ..kv['set:$name'] = '${late.millisecondsSinceEpoch}';
+      await engine().runSettings();
+      expect(remote.settingRows[name]!.value, '');
+
+      final other = _Local()
+        ..shared = [name]
+        ..settingValues[name] = 'key-1'
+        ..kv['set:$name'] = '${early.millisecondsSinceEpoch}'
+        ..kv['setSent:$name'] = '${early.millisecondsSinceEpoch}';
+      await SyncEngine(local: other, remote: remote).runSettings();
+      expect(other.settingValues[name], '');
+    });
+
+    test('set before sync existed: up when the remote has none, else theirs',
+        () async {
+      local
+        ..shared = [name]
+        ..settingValues[name] = 'old-key';
+      await engine().runSettings();
+      expect(remote.settingRows[name]!.value, 'old-key');
+      expect(remote.settingRows[name]!.updatedAt, unknownAge);
+
+      final other = _Local()
+        ..shared = [name]
+        ..settingValues[name] = 'another';
+      await SyncEngine(local: other, remote: remote).runSettings();
+      expect(other.settingValues[name], 'old-key');
+    });
+
+    test('nothing set anywhere: nothing sent', () async {
+      local.shared = [name];
+      final report = await engine().runSettings();
+      expect(report.settingsSent, 0);
+      expect(remote.settingRows, isEmpty);
+    });
+
+    test('not shared from this device: neither sent nor taken', () async {
+      remote.settingRows[name] = RemoteSetting('theirs', late);
+      local.settingValues[name] = 'mine';
+      final report = await engine().run();
+      expect(report.settingsSent + report.settingsReceived, 0);
+      expect(local.settingValues[name], 'mine');
+      expect(remote.settingRows[name]!.value, 'theirs');
+    });
+  });
+
+  group('how far a book was read', () {
+    final late = DateTime.utc(2026, 11, 9, 11);
+
+    test('goes up with the position', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.read('a.epub', 'foliate:here', late);
+      local.kv['frac:a.epub'] = '0.6250';
+      await engine().run(quick: true);
+      expect(remote.progressRows[a]!.fraction, 0.625);
+    });
+
+    test('comes down with it; unknown there clears the one here', () async {
+      local.addLocal(a, 'a.epub', [1]);
+      local.kv['frac:a.epub'] = '0.1';
+      remote.progressRows[a] = RemoteProgress(
+          md5: a,
+          position: 'foliate:there',
+          completed: false,
+          updatedAt: late,
+          fraction: 0.8);
+      await engine().run(quick: true);
+      expect(local.kv['frac:a.epub'], '0.8');
+
+      remote.progressRows[a] = RemoteProgress(
+          md5: a,
+          position: 'foliate:old-app',
+          completed: false,
+          updatedAt: late.add(const Duration(hours: 1)));
+      await engine().run(quick: true);
+      expect(local.kv.containsKey('frac:a.epub'), isFalse);
+    });
+  });
+
+  test('the listed library survives being saved and read back', () {
+    final library = RemoteLibrary(
+      books: [
+        RemoteBook(
+            md5: a,
+            bookId: 'local_$a',
+            fileName: 'a.epub',
+            title: 'A',
+            author: 'Someone',
+            sizeBytes: 12,
+            hasFile: true,
+            publisher: 'P',
+            description: 'About',
+            hasCover: true,
+            addedAt: DateTime.utc(2026, 11, 1)),
+      ],
+      progress: {
+        a: RemoteProgress(
+            md5: a,
+            position: 'foliate:x',
+            completed: true,
+            updatedAt: DateTime.utc(2026, 11, 9),
+            fraction: 0.5),
+      },
+      translated: {
+        a: {'ko': 3},
+      },
+    );
+    final back = RemoteLibrary.fromJson(library.toJson());
+    final book = back.books.single;
+    expect([book.md5, book.bookId, book.title, book.author, book.sizeBytes],
+        [a, 'local_$a', 'A', 'Someone', 12]);
+    expect([book.publisher, book.description, book.hasCover, book.hasFile],
+        ['P', 'About', true, true]);
+    expect(book.addedAt, DateTime.utc(2026, 11, 1));
+    expect(back.progress[a]!.fraction, 0.5);
+    expect(back.progress[a]!.completed, isTrue);
+    expect(back.translated[a], {'ko': 3});
+    expect(RemoteLibrary.fromJson('junk').books, isEmpty);
   });
 }

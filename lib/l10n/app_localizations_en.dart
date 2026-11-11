@@ -1511,7 +1511,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get geminiKeyHint =>
-      'Free from Google AI Studio (aistudio.google.com/apikey). Kept on this device only, never in backups.';
+      'Free from Google AI Studio (aistudio.google.com/apikey). Never in backups; with sync signed in it is shared with your other devices (Settings → Sync).';
 
   @override
   String geminiKeySaved(String hint) {
@@ -2049,4 +2049,147 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get translationSavedOnly =>
       'Showing the translations saved so far. To translate the rest, set up a translation engine.';
+
+  @override
+  String get webFilterAll => 'All books';
+
+  @override
+  String get webFilterReading => 'Reading';
+
+  @override
+  String get webFilterDownloaded => 'On this browser';
+
+  @override
+  String get webFilterFinished => 'Finished';
+
+  @override
+  String get webSearchHint => 'Search title or author';
+
+  @override
+  String get webSort => 'Sort';
+
+  @override
+  String get webSortRecent => 'Recently read';
+
+  @override
+  String get webSortTitle => 'Title';
+
+  @override
+  String get webSortAuthor => 'Author';
+
+  @override
+  String get webSortAdded => 'Recently added';
+
+  @override
+  String get webContinue => 'Continue reading';
+
+  @override
+  String get webRead => 'Read';
+
+  @override
+  String webBookCount(int count) {
+    return '$count books';
+  }
+
+  @override
+  String get webNoMatches => 'No books match.';
+
+  @override
+  String get webDropHere => 'Drop EPUB files to add them';
+
+  @override
+  String get webOnAccount => 'In your account';
+
+  @override
+  String get webNotStarted => 'Not started';
+
+  @override
+  String webPercentRead(int percent) {
+    return '$percent% read';
+  }
+
+  @override
+  String webTranslated(int count, String language) {
+    return '$count paragraphs translated ($language)';
+  }
+
+  @override
+  String get webNoDescription => 'No description.';
+
+  @override
+  String get webRemoveCopy => 'Remove from this browser';
+
+  @override
+  String get webRemoveCopyDone =>
+      'Removed from this browser. It stays in your account.';
+
+  @override
+  String get webRemoveCopyNotYet => 'Not in your account yet - sync first.';
+
+  @override
+  String get webDeleteEverywhere => 'Delete from library';
+
+  @override
+  String webDeleteEverywhereConfirm(String title) {
+    return 'Delete “$title” from your library? It is removed from every device.';
+  }
+
+  @override
+  String get webLoadingBook => 'Loading…';
+
+  @override
+  String get webDownloadingBook => 'Downloading…';
+
+  @override
+  String get webOpeningBook => 'Opening…';
+
+  @override
+  String get webLoadFailed => 'Could not load this book.';
+
+  @override
+  String get webRetry => 'Try again';
+
+  @override
+  String get webClose => 'Close';
+
+  @override
+  String get webSignInHint => 'Sign in to see your phone\'s library here.';
+
+  @override
+  String webSyncedAt(String time) {
+    return 'Synced $time';
+  }
+
+  @override
+  String get webStorage => 'Storage on this browser';
+
+  @override
+  String webStorageUsed(String size, int count) {
+    return '$size used · $count books kept here';
+  }
+
+  @override
+  String get webStorageFree => 'Remove downloaded books';
+
+  @override
+  String get webStorageFreeHint =>
+      'Books stay in your account and download again when opened.';
+
+  @override
+  String webStorageFreed(int count) {
+    return '$count removed from this browser';
+  }
+
+  @override
+  String get webSectionTranslation => 'Translation';
+
+  @override
+  String get webMore => 'More';
+
+  @override
+  String get syncGeminiKey => 'Share the Gemini key';
+
+  @override
+  String get syncGeminiKeyHint =>
+      'Your other devices use the same key. Off: kept on this device and removed from your project.';
 }

@@ -99,6 +99,14 @@ class _SyncSectionState extends State<SyncSection> {
                 value: _sync.auto,
                 onChanged: _sync.setAuto,
               ),
+              SwitchListTile(
+                key: const ValueKey('syncGeminiKey'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.syncGeminiKey),
+                subtitle: Text(l10n.syncGeminiKeyHint, style: small),
+                value: _sync.keySync,
+                onChanged: _sync.setKeySync,
+              ),
               if (report != null && _sync.lastRun != null)
                 Text(
                   l10n.syncLast(

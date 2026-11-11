@@ -73,6 +73,9 @@ class MyLibraryDb {
   static Database? _database;
   MyLibraryDb._internal();
 
+  /// Several callers may ask at once before it is open (the web's start):
+  /// each opens the same file and sqflite hands every one of them the one
+  /// database (it opens a path once, under a lock).
   Future<Database> get database async {
     if (_database != null) {
       return _database!;
@@ -95,8 +98,9 @@ class MyLibraryDb {
     } else {
       databasePath = await getDatabasesPath();
     }
-    final path =
-        databasePath.isEmpty ? 'mylibrary.db' : join(databasePath, 'mylibrary.db');
+    final path = databasePath.isEmpty
+        ? 'mylibrary.db'
+        : join(databasePath, 'mylibrary.db');
 
     return await openDatabase(
       path,
@@ -308,7 +312,11 @@ class MyLibraryDb {
     final dbInstance = await instance.database;
     await dbInstance.insert(
       'bookposition',
-      {'fileName': fileName, 'position': position, 'completed': completed ? 1 : 0},
+      {
+        'fileName': fileName,
+        'position': position,
+        'completed': completed ? 1 : 0
+      },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
     await setSyncState('pos:$fileName', '${at.millisecondsSinceEpoch}');
@@ -342,8 +350,8 @@ class MyLibraryDb {
   /// Every value whose name starts with [prefix], by name.
   Future<Map<String, String>> getSyncStates(String prefix) async {
     final dbInstance = await instance.database;
-    final rows = await dbInstance.query('syncstate',
-        where: 'name LIKE ?', whereArgs: ['$prefix%']);
+    final rows = await dbInstance
+        .query('syncstate', where: 'name LIKE ?', whereArgs: ['$prefix%']);
     return {
       for (final r in rows)
         if ('${r['name']}'.startsWith(prefix)) '${r['name']}': '${r['value']}',

@@ -1530,7 +1530,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get geminiKeyHint =>
-      'Kostenlos bei Google AI Studio (aistudio.google.com/apikey). Nur auf diesem Gerät gespeichert, nie in Sicherungen.';
+      'Kostenlos bei Google AI Studio (aistudio.google.com/apikey). Nie in Backups; mit angemeldeter Synchronisierung wird er mit deinen anderen Geräten geteilt (Einstellungen → Synchronisierung).';
 
   @override
   String geminiKeySaved(String hint) {
@@ -2071,4 +2071,149 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get translationSavedOnly =>
       'Die bisher gespeicherten Übersetzungen werden gezeigt. Um den Rest zu übersetzen, richte eine Übersetzungs-Engine ein.';
+
+  @override
+  String get webFilterAll => 'Alle Bücher';
+
+  @override
+  String get webFilterReading => 'Am Lesen';
+
+  @override
+  String get webFilterDownloaded => 'In diesem Browser';
+
+  @override
+  String get webFilterFinished => 'Gelesen';
+
+  @override
+  String get webSearchHint => 'Titel oder Autor suchen';
+
+  @override
+  String get webSort => 'Sortieren';
+
+  @override
+  String get webSortRecent => 'Zuletzt gelesen';
+
+  @override
+  String get webSortTitle => 'Titel';
+
+  @override
+  String get webSortAuthor => 'Autor';
+
+  @override
+  String get webSortAdded => 'Zuletzt hinzugefügt';
+
+  @override
+  String get webContinue => 'Weiterlesen';
+
+  @override
+  String get webRead => 'Lesen';
+
+  @override
+  String webBookCount(int count) {
+    return '$count Bücher';
+  }
+
+  @override
+  String get webNoMatches => 'Keine passenden Bücher.';
+
+  @override
+  String get webDropHere => 'EPUB-Dateien hier ablegen';
+
+  @override
+  String get webOnAccount => 'In deinem Konto';
+
+  @override
+  String get webNotStarted => 'Noch nicht begonnen';
+
+  @override
+  String webPercentRead(int percent) {
+    return '$percent % gelesen';
+  }
+
+  @override
+  String webTranslated(int count, String language) {
+    return '$count Absätze übersetzt ($language)';
+  }
+
+  @override
+  String get webNoDescription => 'Keine Beschreibung.';
+
+  @override
+  String get webRemoveCopy => 'Aus diesem Browser entfernen';
+
+  @override
+  String get webRemoveCopyDone =>
+      'Aus diesem Browser entfernt. Im Konto bleibt es erhalten.';
+
+  @override
+  String get webRemoveCopyNotYet =>
+      'Noch nicht im Konto - zuerst synchronisieren.';
+
+  @override
+  String get webDeleteEverywhere => 'Aus der Bibliothek löschen';
+
+  @override
+  String webDeleteEverywhereConfirm(String title) {
+    return '„$title“ aus der Bibliothek löschen? Es wird von allen Geräten entfernt.';
+  }
+
+  @override
+  String get webLoadingBook => 'Wird geladen…';
+
+  @override
+  String get webDownloadingBook => 'Wird heruntergeladen…';
+
+  @override
+  String get webOpeningBook => 'Wird geöffnet…';
+
+  @override
+  String get webLoadFailed => 'Das Buch konnte nicht geladen werden.';
+
+  @override
+  String get webRetry => 'Erneut versuchen';
+
+  @override
+  String get webClose => 'Schließen';
+
+  @override
+  String get webSignInHint =>
+      'Melde dich an, um die Bibliothek deines Handys hier zu sehen.';
+
+  @override
+  String webSyncedAt(String time) {
+    return 'Synchronisiert $time';
+  }
+
+  @override
+  String get webStorage => 'Speicher in diesem Browser';
+
+  @override
+  String webStorageUsed(String size, int count) {
+    return '$size belegt · $count Bücher hier';
+  }
+
+  @override
+  String get webStorageFree => 'Heruntergeladene Bücher entfernen';
+
+  @override
+  String get webStorageFreeHint =>
+      'Die Bücher bleiben im Konto und werden beim Öffnen erneut geladen.';
+
+  @override
+  String webStorageFreed(int count) {
+    return '$count aus diesem Browser entfernt';
+  }
+
+  @override
+  String get webSectionTranslation => 'Übersetzung';
+
+  @override
+  String get webMore => 'Mehr';
+
+  @override
+  String get syncGeminiKey => 'Gemini-Schlüssel teilen';
+
+  @override
+  String get syncGeminiKeyHint =>
+      'Deine anderen Geräte nutzen denselben Schlüssel. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht.';
 }

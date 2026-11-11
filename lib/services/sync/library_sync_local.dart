@@ -10,6 +10,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 // Project imports:
+import 'package:openlib/services/cover_thumbs.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/files.dart' show deleteFile;
 import 'package:openlib/services/heavy_work.dart';
@@ -17,9 +18,17 @@ import 'package:openlib/services/local_book_import.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
+import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_engine.dart';
+
+/// Preference: the Gemini key is shared with the owner's other devices
+/// (1, the default) or kept on this one (0).
+const syncGeminiKeyPref = 'syncGeminiKey';
+
+/// The shared setting that carries the Gemini key.
+const geminiKeySetting = 'gemini_api_key';
 
 class LibrarySyncLocal implements SyncLocal {
   LibrarySyncLocal({MyLibraryDb? database})
@@ -43,6 +52,8 @@ class LibrarySyncLocal implements SyncLocal {
             title: b.title,
             author: b.author,
             format: (b.format ?? '').toLowerCase(),
+            publisher: b.publisher,
+            description: b.description,
           ),
       ];
 
@@ -90,6 +101,15 @@ class LibrarySyncLocal implements SyncLocal {
 
   @override
   Future<void> removeBook(LocalBook book) async {
+    final row = await _db.getId(book.id);
+    final thumb = row?.thumbnail ?? '';
+    if (PlatformUtils.isWeb &&
+        isLocalImagePath(thumb) &&
+        !CoverThumbs.isThumb(thumb)) {
+      // A full cover goes with the file; the small one stays for the
+      // library (the book may still be on the remote).
+      await _files.delete(localImageFilePath(thumb)).catchError((_) {});
+    }
     await deleteFile(p.join(await _storage(), book.fileName));
     await TranslationCache.deleteForBook(book.fileName).catchError((_) {});
     await GlossaryService.instance.remove(book.fileName);
@@ -162,6 +182,43 @@ class LibrarySyncLocal implements SyncLocal {
     final ms = '${at.millisecondsSinceEpoch}';
     await _db.setSyncState('gls:$fileName', ms);
     await _db.setSyncState('glsSent:$fileName', ms);
+  }
+
+  @override
+  Future<Uint8List?> coverThumbnail(LocalBook book) async {
+    // The web keeps each small cover (its library draws them).
+    final md5 = PlatformUtils.isWeb ? await md5Of(book) : null;
+    if (md5 != null) {
+      final kept = await CoverThumbs.read(md5);
+      if (kept != null) return kept;
+    }
+    final thumb = (await _db.getId(book.id))?.thumbnail ?? '';
+    if (!isLocalImagePath(thumb)) return null;
+    final bytes = await _files.readBytes(localImageFilePath(thumb));
+    if (bytes == null) return null;
+    final jpeg = await CoverThumbs.jpeg(bytes);
+    if (jpeg != null && md5 != null) await CoverThumbs.write(md5, jpeg);
+    return jpeg;
+  }
+
+  @override
+  Future<List<String>> syncedSettings() async =>
+      await _db.getPreference(syncGeminiKeyPref).catchError((_) => null) == 0
+          ? const []
+          : const [geminiKeySetting];
+
+  @override
+  Future<String> setting(String name) async {
+    if (name != geminiKeySetting) return '';
+    await GeminiSettings.instance.load();
+    return GeminiSettings.instance.apiKey;
+  }
+
+  @override
+  Future<void> applySetting(String name, String value) async {
+    if (name == geminiKeySetting) {
+      await GeminiSettings.instance.applySynced(value);
+    }
   }
 }
 

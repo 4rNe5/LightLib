@@ -16,6 +16,7 @@ import 'package:path_provider/path_provider.dart';
 
 // Project imports:
 import 'package:openlib/services/book_covers.dart';
+import 'package:openlib/services/cover_thumbs.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/files.dart' show generateBookFileName;
 import 'package:openlib/services/heavy_work.dart';
@@ -263,7 +264,10 @@ Future<LocalImportResult> importBookBytes(
     final storage = (await db.getPreference('bookStorageDirectory')).toString();
     var target = fileName ??
         generateBookFileName(
-            title: bookTitle, author: author ?? meta.author, format: ext, md5: md5Hex);
+            title: bookTitle,
+            author: author ?? meta.author,
+            format: ext,
+            md5: md5Hex);
     if (await files.exists(p.join(storage, target))) {
       // Same name, different content: keep both.
       target = '${p.basenameWithoutExtension(target)}_'
@@ -274,7 +278,15 @@ Future<LocalImportResult> importBookBytes(
 
     var thumbnail = '';
     final cover = meta.cover;
-    if (cover != null) {
+    if (cover != null && kIsWeb) {
+      // The web draws small covers only (and other devices' libraries
+      // get the same one).
+      final small = await CoverThumbs.jpeg(cover.bytes);
+      if (small != null) {
+        await CoverThumbs.write(md5Hex, small);
+        thumbnail = await CoverThumbs.path(md5Hex);
+      }
+    } else if (cover != null) {
       thumbnail = p.join(await files.supportPath(), 'covers',
           BookCovers.fileNameFor(bookId, cover.extension));
       await files.writeBytes(thumbnail, cover.bytes);
@@ -299,8 +311,7 @@ Future<LocalImportResult> importBookBytes(
     return LocalImportResult(name, LocalImportOutcome.imported,
         title: bookTitle);
   } catch (e) {
-    AppLogger().warning('Book import failed',
-        tag: 'LocalBookImport', error: e);
+    AppLogger().warning('Book import failed', tag: 'LocalBookImport', error: e);
     return LocalImportResult(name, LocalImportOutcome.failed,
         error: e.toString());
   }

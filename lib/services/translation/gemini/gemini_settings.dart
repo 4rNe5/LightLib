@@ -160,7 +160,9 @@ class GeminiSettings extends ChangeNotifier {
   static final GeminiSettings instance = GeminiSettings._();
 
   /// Where the key is kept: a file of its own in the app's private
-  /// folder, so library backups (the database) never carry it.
+  /// folder, so library backups (the database) never carry it. With sync
+  /// signed in it is also shared with the owner's other devices (the
+  /// settings table only the owner reads), unless that is turned off.
   @visibleForTesting
   Future<String> Function() keyPath = () async =>
       p.join(await AppFiles.instance.supportPath(), 'gemini_api_key');
@@ -222,7 +224,8 @@ class GeminiSettings extends ChangeNotifier {
     _usage =
         GeminiUsage.fromJson(await pref(geminiUsagePref), quotaDay(clock()));
     try {
-      _key = (await AppFiles.instance.readString(await keyPath()))?.trim() ?? '';
+      _key =
+          (await AppFiles.instance.readString(await keyPath()))?.trim() ?? '';
     } catch (_) {}
     notifyListeners();
   }
@@ -249,7 +252,23 @@ class GeminiSettings extends ChangeNotifier {
     await _save(translationEnginePref, on ? 'gemini' : 'device');
   }
 
+  /// The key was typed or removed here (sync passes it on to the owner's
+  /// other devices).
+  static void Function()? onKeyChanged;
+
   Future<void> setKey(String key) async {
+    await _keepKey(key);
+    onKeyChanged?.call();
+  }
+
+  /// The key another of the owner's devices has (or '' - it was removed
+  /// there).
+  Future<void> applySynced(String key) async {
+    await load();
+    if (key.trim() != _key) await _keepKey(key);
+  }
+
+  Future<void> _keepKey(String key) async {
     _key = key.trim();
     notifyListeners();
     try {

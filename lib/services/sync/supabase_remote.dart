@@ -1,11 +1,13 @@
 // SyncRemote on the owner's Supabase project (supabase/migrations/): the
-// books, progress and translations tables, the merge RPCs and the
-// private "books" bucket (books/<user id>/<md5>.epub).
+// books, progress, translations, glossaries and settings tables, the
+// merge RPCs and the private "books" bucket (books/<user id>/<md5>.epub,
+// each with a small cover, <md5>.cover.jpg).
 
 // Dart imports:
 import 'dart:typed_data';
 
 // Package imports:
+import 'package:dio/dio.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Project imports:
@@ -24,13 +26,15 @@ class SupabaseRemote implements SyncRemote {
   }
 
   String _object(String md5, String format) => '$_uid/$md5.$format';
+  String _cover(String md5) => '$_uid/$md5.cover.jpg';
 
   static DateTime _time(Object? v) => DateTime.parse('$v').toUtc();
 
   @override
   Future<List<RemoteBook>> books() async {
     final rows = await _client.from('books').select(
-        'md5, book_id, file_name, title, author, format, size_bytes, has_file, deleted_at');
+        'md5, book_id, file_name, title, author, format, size_bytes, has_file, '
+        'deleted_at, publisher, description, cover_at, added_at');
     return [
       for (final r in rows)
         RemoteBook(
@@ -43,6 +47,10 @@ class SupabaseRemote implements SyncRemote {
           sizeBytes: (r['size_bytes'] as num?)?.toInt(),
           hasFile: r['has_file'] == true,
           deleted: r['deleted_at'] != null,
+          publisher: r['publisher'] as String?,
+          description: r['description'] as String?,
+          hasCover: r['cover_at'] != null,
+          addedAt: DateTime.tryParse('${r['added_at'] ?? ''}')?.toUtc(),
         ),
     ];
   }
@@ -58,6 +66,9 @@ class SupabaseRemote implements SyncRemote {
       'format': book.format,
       'size_bytes': book.sizeBytes,
       'has_file': book.hasFile,
+      // Left as they are when this side does not know them.
+      if (book.publisher != null) 'publisher': book.publisher,
+      if (book.description != null) 'description': book.description,
       'deleted_at': null,
       'updated_at': DateTime.now().toUtc().toIso8601String(),
     }, onConflict: 'user_id,md5');
@@ -83,19 +94,64 @@ class SupabaseRemote implements SyncRemote {
   }
 
   @override
-  Future<Uint8List> downloadBook(String md5, String format) =>
-      _client.storage.from(bucket).download(_object(md5, format));
+  Future<Uint8List> downloadBook(String md5, String format,
+      {void Function(int received, int? total)? onProgress}) async {
+    final files = _client.storage.from(bucket);
+    if (onProgress != null) {
+      // The storage client answers only when the whole file is here; the
+      // same request through Dio says how far it is.
+      try {
+        final response = await Dio().get<List<int>>(
+          '${files.url}/object/$bucket/${_object(md5, format)}',
+          options:
+              Options(responseType: ResponseType.bytes, headers: files.headers),
+          onReceiveProgress: (received, total) =>
+              onProgress(received, total > 0 ? total : null),
+        );
+        final data = response.data;
+        if (data != null && data.isNotEmpty) {
+          return data is Uint8List ? data : Uint8List.fromList(data);
+        }
+      } on DioException catch (_) {
+        // Asked again the plain way (a token renewed meanwhile).
+      }
+    }
+    return files.download(_object(md5, format));
+  }
 
   @override
   Future<void> removeBookFile(String md5, String format) async {
-    await _client.storage.from(bucket).remove([_object(md5, format)]);
+    await _client.storage
+        .from(bucket)
+        .remove([_object(md5, format), _cover(md5)]);
+  }
+
+  @override
+  Future<void> uploadCover(String md5, Uint8List jpeg) async {
+    await _client.storage.from(bucket).uploadBinary(
+          _cover(md5),
+          jpeg,
+          fileOptions:
+              const FileOptions(upsert: true, contentType: 'image/jpeg'),
+        );
+    await _client.from('books').update(
+        {'cover_at': DateTime.now().toUtc().toIso8601String()}).eq('md5', md5);
+  }
+
+  @override
+  Future<Uint8List?> downloadCover(String md5) async {
+    try {
+      return await _client.storage.from(bucket).download(_cover(md5));
+    } on StorageException catch (_) {
+      return null;
+    }
   }
 
   @override
   Future<List<RemoteProgress>> progress() async {
     final rows = await _client
         .from('progress')
-        .select('md5, position, completed, updated_at');
+        .select('md5, position, completed, updated_at, fraction');
     return [
       for (final r in rows)
         RemoteProgress(
@@ -103,6 +159,7 @@ class SupabaseRemote implements SyncRemote {
           position: (r['position'] as String?) ?? '',
           completed: r['completed'] == true,
           updatedAt: _time(r['updated_at']),
+          fraction: (r['fraction'] as num?)?.toDouble(),
         ),
     ];
   }
@@ -110,10 +167,13 @@ class SupabaseRemote implements SyncRemote {
   @override
   Future<void> putProgress(RemoteProgress progress,
       {required String device}) async {
-    await _client.rpc('put_progress', params: {
+    final fraction = progress.fraction;
+    await _client
+        .rpc(fraction == null ? 'put_progress' : 'put_reading', params: {
       'p_md5': progress.md5,
       'p_position': progress.position,
       'p_completed': progress.completed,
+      if (fraction != null) 'p_fraction': fraction,
       'p_device': device,
       'p_updated_at': progress.updatedAt.toUtc().toIso8601String(),
     });
@@ -199,5 +259,32 @@ class SupabaseRemote implements SyncRemote {
       'p_device': device,
       'p_updated_at': at.toUtc().toIso8601String(),
     });
+  }
+
+  @override
+  Future<Map<String, RemoteSetting>> settings() async {
+    final rows =
+        await _client.from('settings').select('name, value, updated_at');
+    return {
+      for (final r in rows)
+        r['name'] as String: RemoteSetting(
+            (r['value'] as String?) ?? '', _time(r['updated_at'])),
+    };
+  }
+
+  @override
+  Future<void> putSetting(String name, String value, DateTime at,
+      {required String device}) async {
+    await _client.rpc('put_setting', params: {
+      'p_name': name,
+      'p_value': value,
+      'p_device': device,
+      'p_updated_at': at.toUtc().toIso8601String(),
+    });
+  }
+
+  @override
+  Future<void> removeSetting(String name) async {
+    await _client.from('settings').delete().eq('name', name);
   }
 }

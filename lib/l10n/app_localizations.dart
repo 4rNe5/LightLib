@@ -2797,7 +2797,7 @@ abstract class AppLocalizations {
   /// geminiKeyHint
   ///
   /// In en, this message translates to:
-  /// **'Free from Google AI Studio (aistudio.google.com/apikey). Kept on this device only, never in backups.'**
+  /// **'Free from Google AI Studio (aistudio.google.com/apikey). Never in backups; with sync signed in it is shared with your other devices (Settings → Sync).'**
   String get geminiKeyHint;
 
   /// geminiKeySaved
@@ -3677,6 +3677,258 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Showing the translations saved so far. To translate the rest, set up a translation engine.'**
   String get translationSavedOnly;
+
+  /// webFilterAll
+  ///
+  /// In en, this message translates to:
+  /// **'All books'**
+  String get webFilterAll;
+
+  /// webFilterReading
+  ///
+  /// In en, this message translates to:
+  /// **'Reading'**
+  String get webFilterReading;
+
+  /// webFilterDownloaded
+  ///
+  /// In en, this message translates to:
+  /// **'On this browser'**
+  String get webFilterDownloaded;
+
+  /// webFilterFinished
+  ///
+  /// In en, this message translates to:
+  /// **'Finished'**
+  String get webFilterFinished;
+
+  /// webSearchHint
+  ///
+  /// In en, this message translates to:
+  /// **'Search title or author'**
+  String get webSearchHint;
+
+  /// webSort
+  ///
+  /// In en, this message translates to:
+  /// **'Sort'**
+  String get webSort;
+
+  /// webSortRecent
+  ///
+  /// In en, this message translates to:
+  /// **'Recently read'**
+  String get webSortRecent;
+
+  /// webSortTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Title'**
+  String get webSortTitle;
+
+  /// webSortAuthor
+  ///
+  /// In en, this message translates to:
+  /// **'Author'**
+  String get webSortAuthor;
+
+  /// webSortAdded
+  ///
+  /// In en, this message translates to:
+  /// **'Recently added'**
+  String get webSortAdded;
+
+  /// webContinue
+  ///
+  /// In en, this message translates to:
+  /// **'Continue reading'**
+  String get webContinue;
+
+  /// webRead
+  ///
+  /// In en, this message translates to:
+  /// **'Read'**
+  String get webRead;
+
+  /// webBookCount
+  ///
+  /// In en, this message translates to:
+  /// **'{count} books'**
+  String webBookCount(int count);
+
+  /// webNoMatches
+  ///
+  /// In en, this message translates to:
+  /// **'No books match.'**
+  String get webNoMatches;
+
+  /// webDropHere
+  ///
+  /// In en, this message translates to:
+  /// **'Drop EPUB files to add them'**
+  String get webDropHere;
+
+  /// webOnAccount
+  ///
+  /// In en, this message translates to:
+  /// **'In your account'**
+  String get webOnAccount;
+
+  /// webNotStarted
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get webNotStarted;
+
+  /// webPercentRead
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}% read'**
+  String webPercentRead(int percent);
+
+  /// webTranslated
+  ///
+  /// In en, this message translates to:
+  /// **'{count} paragraphs translated ({language})'**
+  String webTranslated(int count, String language);
+
+  /// webNoDescription
+  ///
+  /// In en, this message translates to:
+  /// **'No description.'**
+  String get webNoDescription;
+
+  /// webRemoveCopy
+  ///
+  /// In en, this message translates to:
+  /// **'Remove from this browser'**
+  String get webRemoveCopy;
+
+  /// webRemoveCopyDone
+  ///
+  /// In en, this message translates to:
+  /// **'Removed from this browser. It stays in your account.'**
+  String get webRemoveCopyDone;
+
+  /// webRemoveCopyNotYet
+  ///
+  /// In en, this message translates to:
+  /// **'Not in your account yet - sync first.'**
+  String get webRemoveCopyNotYet;
+
+  /// webDeleteEverywhere
+  ///
+  /// In en, this message translates to:
+  /// **'Delete from library'**
+  String get webDeleteEverywhere;
+
+  /// webDeleteEverywhereConfirm
+  ///
+  /// In en, this message translates to:
+  /// **'Delete “{title}” from your library? It is removed from every device.'**
+  String webDeleteEverywhereConfirm(String title);
+
+  /// webLoadingBook
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get webLoadingBook;
+
+  /// webDownloadingBook
+  ///
+  /// In en, this message translates to:
+  /// **'Downloading…'**
+  String get webDownloadingBook;
+
+  /// webOpeningBook
+  ///
+  /// In en, this message translates to:
+  /// **'Opening…'**
+  String get webOpeningBook;
+
+  /// webLoadFailed
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load this book.'**
+  String get webLoadFailed;
+
+  /// webRetry
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get webRetry;
+
+  /// webClose
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get webClose;
+
+  /// webSignInHint
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to see your phone\'s library here.'**
+  String get webSignInHint;
+
+  /// webSyncedAt
+  ///
+  /// In en, this message translates to:
+  /// **'Synced {time}'**
+  String webSyncedAt(String time);
+
+  /// webStorage
+  ///
+  /// In en, this message translates to:
+  /// **'Storage on this browser'**
+  String get webStorage;
+
+  /// webStorageUsed
+  ///
+  /// In en, this message translates to:
+  /// **'{size} used · {count} books kept here'**
+  String webStorageUsed(String size, int count);
+
+  /// webStorageFree
+  ///
+  /// In en, this message translates to:
+  /// **'Remove downloaded books'**
+  String get webStorageFree;
+
+  /// webStorageFreeHint
+  ///
+  /// In en, this message translates to:
+  /// **'Books stay in your account and download again when opened.'**
+  String get webStorageFreeHint;
+
+  /// webStorageFreed
+  ///
+  /// In en, this message translates to:
+  /// **'{count} removed from this browser'**
+  String webStorageFreed(int count);
+
+  /// webSectionTranslation
+  ///
+  /// In en, this message translates to:
+  /// **'Translation'**
+  String get webSectionTranslation;
+
+  /// webMore
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get webMore;
+
+  /// syncGeminiKey
+  ///
+  /// In en, this message translates to:
+  /// **'Share the Gemini key'**
+  String get syncGeminiKey;
+
+  /// syncGeminiKeyHint
+  ///
+  /// In en, this message translates to:
+  /// **'Your other devices use the same key. Off: kept on this device and removed from your project.'**
+  String get syncGeminiKeyHint;
 }
 
 class _AppLocalizationsDelegate

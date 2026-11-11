@@ -19,9 +19,11 @@ import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/sync/library_sync_local.dart';
+import 'package:openlib/services/sync/remote_library.dart';
 import 'package:openlib/services/sync/supabase_remote.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/sync/sync_notifier.dart';
+import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 
@@ -76,6 +78,7 @@ class SyncService extends ChangeNotifier {
   final AppLogger _logger = AppLogger();
   bool _ready = false;
   bool _auto = true;
+  bool _keySync = true;
   bool _running = false;
   bool _again = false;
   bool _againFull = false;
@@ -105,6 +108,9 @@ class SyncService extends ChangeNotifier {
   bool get ready => _ready;
   bool get running => _running;
   bool get auto => _auto;
+
+  /// The Gemini key is shared with the owner's other devices.
+  bool get keySync => _keySync;
 
   /// Where the run under way is; null when none runs.
   SyncProgress? get progress => _running ? _progress : null;
@@ -137,9 +143,14 @@ class SyncService extends ChangeNotifier {
             .getPreference(syncAutoPref)
             .catchError((_) => null) !=
         0;
+    _keySync = await MyLibraryDb.instance
+            .getPreference(syncGeminiKeyPref)
+            .catchError((_) => null) !=
+        0;
     MyLibraryDb.onPositionSaved = _onPositionSaved;
     TranslationCache.onChanged = _onTranslationsSaved;
     GlossaryService.onSaved = _onGlossarySaved;
+    GeminiSettings.onKeyChanged = _onKeyChanged;
     _auth = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
       notifyListeners();
       if (state.event == AuthChangeEvent.signedIn) {
@@ -166,8 +177,83 @@ class SyncService extends ChangeNotifier {
   Future<void> signOut() async {
     if (!_ready) return;
     await Supabase.instance.client.auth.signOut();
+    await RemoteLibraryStore.instance.clear();
     notifyListeners();
   }
+
+  /// Shares the Gemini key with the owner's other devices, or keeps it
+  /// here: turned off, the copy the project holds is removed.
+  Future<void> setKeySync(bool on) async {
+    _keySync = on;
+    notifyListeners();
+    final db = MyLibraryDb.instance;
+    await db.savePreference(syncGeminiKeyPref, on ? 1 : 0).catchError((_) {});
+    if (!signedIn) return;
+    try {
+      if (on) {
+        await syncSettings();
+      } else {
+        await SupabaseRemote(Supabase.instance.client)
+            .removeSetting(geminiKeySetting);
+        await db.setSyncState('set:$geminiKeySetting', null);
+        await db.setSyncState('setSent:$geminiKeySetting', null);
+      }
+    } catch (e) {
+      _logger.warning('Key sharing not changed', tag: 'Sync', error: e);
+    }
+  }
+
+  SyncEngine _engine({void Function(SyncProgress progress)? onProgress}) =>
+      SyncEngine(
+        local: LibrarySyncLocal(),
+        remote: SupabaseRemote(Supabase.instance.client),
+        // The web keeps only the books opened there.
+        onDemand: kIsWeb,
+        onRemote: kIsWeb ? RemoteLibraryStore.instance.update : null,
+        onProgress: onProgress,
+        onLocalChange: () => onLocalChanges?.call(),
+      );
+
+  /// Only the shared settings (the Gemini key), both ways.
+  Future<void> syncSettings() async {
+    if (!signedIn) return;
+    try {
+      final report = await _engine().runSettings();
+      if (report.errors.isNotEmpty) {
+        _logger.warning('Settings not synced',
+            tag: 'Sync', metadata: {'error': report.errors.first});
+      }
+    } catch (e) {
+      _logger.warning('Settings not synced', tag: 'Sync', error: e);
+    }
+  }
+
+  /// Brings one book of the account's library here (the web, when it is
+  /// opened), with what was read and translated; [onProgress] hears the
+  /// file arrive. Throws when it cannot be fetched.
+  Future<LocalBook?> fetchBook(RemoteBook book,
+          {void Function(int received, int? total)? onProgress}) =>
+      _engine().fetchBook(book, onProgress: onProgress);
+
+  /// The small cover the account keeps of the book [md5], or null.
+  Future<Uint8List?> cover(String md5) async {
+    if (!signedIn) return null;
+    try {
+      return await SupabaseRemote(Supabase.instance.client).downloadCover(md5);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Deletes a book from the library, on every device.
+  Future<void> deleteBook(String md5) async {
+    await _engine().deleteBook(md5);
+    if (_auto) unawaited(syncNow());
+  }
+
+  /// Removes this browser's copy of a book the account keeps. False when
+  /// it is not safely there yet.
+  Future<bool> dropLocalCopy(String md5) => _engine().dropLocalCopy(md5);
 
   Future<void> setAuto(bool on) async {
     _auto = on;
@@ -202,9 +288,7 @@ class SyncService extends ChangeNotifier {
     var notified = false;
     SyncReport? report;
     try {
-      report = await SyncEngine(
-        local: LibrarySyncLocal(),
-        remote: SupabaseRemote(Supabase.instance.client),
+      report = await _engine(
         onProgress: (progress) {
           _progress = progress;
           notifyListeners();
@@ -218,7 +302,6 @@ class SyncService extends ChangeNotifier {
             ));
           }
         },
-        onLocalChange: () => onLocalChanges?.call(),
       ).run(quick: quick);
       lastReport = report;
       lastRun = DateTime.now();
@@ -267,10 +350,7 @@ class SyncService extends ChangeNotifier {
   Future<void> syncBook(String fileName) async {
     if (!signedIn) return;
     try {
-      final report = await SyncEngine(
-        local: LibrarySyncLocal(),
-        remote: SupabaseRemote(Supabase.instance.client),
-      ).runBook(fileName);
+      final report = await _engine().runBook(fileName);
       if (report == null) return;
       _logger.info('Synced the book',
           tag: 'Sync', metadata: {'book': fileName, 'report': '$report'});
@@ -319,6 +399,17 @@ class SyncService extends ChangeNotifier {
         .setSyncState('trdirty:${p.normalize(path)}',
             '${DateTime.now().microsecondsSinceEpoch}')
         .catchError((_) {}));
+  }
+
+  /// The key was typed or removed here: stamped, and sent on.
+  void _onKeyChanged() {
+    unawaited(() async {
+      await MyLibraryDb.instance
+          .setSyncState('set:$geminiKeySetting',
+              '${DateTime.now().millisecondsSinceEpoch}')
+          .catchError((_) {});
+      if (_keySync) await syncSettings();
+    }());
   }
 
   void _onGlossarySaved(String bookFile) {
