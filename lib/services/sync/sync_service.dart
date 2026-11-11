@@ -17,6 +17,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/epub_remote_cover.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/sync/library_sync_local.dart';
 import 'package:openlib/services/sync/remote_library.dart';
@@ -242,6 +243,43 @@ class SyncService extends ChangeNotifier {
       return await SupabaseRemote(Supabase.instance.client).downloadCover(md5);
     } catch (_) {
       return null;
+    }
+  }
+
+  /// A book's cover and details read out of its file on the account -
+  /// only the parts of the file that hold them - for a library that has
+  /// neither the file nor a small cover of it yet. Null when it cannot
+  /// be read that way.
+  Future<RemoteEpubCard?> cardFromFile(RemoteBook book) async {
+    final size = book.sizeBytes;
+    if (!signedIn || size == null || size <= 0) return null;
+    try {
+      final remote = SupabaseRemote(Supabase.instance.client);
+      return await readRemoteEpubCard(
+          size,
+          (start, end) =>
+              remote.readBookRange(book.md5, book.format, start, end));
+    } catch (e) {
+      _logger.warning('Cover not read from the file',
+          tag: 'Sync', metadata: {'book': book.fileName}, error: e);
+      return null;
+    }
+  }
+
+  /// Keeps what [cardFromFile] found for the owner's other devices: the
+  /// small cover, and the details where the row had none.
+  Future<void> putCard(RemoteBook book, Uint8List? jpeg,
+      {String? publisher, String? description}) async {
+    if (!signedIn) return;
+    try {
+      final remote = SupabaseRemote(Supabase.instance.client);
+      if (jpeg != null) await remote.uploadCover(book.md5, jpeg);
+      if (book.description == null) {
+        await remote.putDetails(book.md5,
+            publisher: publisher, description: description ?? '');
+      }
+    } catch (e) {
+      _logger.warning('Cover not kept', tag: 'Sync', error: e);
     }
   }
 

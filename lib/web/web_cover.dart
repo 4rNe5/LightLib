@@ -1,7 +1,9 @@
 // A book's cover in the web library: the small one kept in this browser,
-// made from the book's own when it was added here, or fetched from the
-// account. Drawn at the size it is shown (a full cover decoded for every
-// tile is tens of megabytes each).
+// made from the book's own when it was added here, fetched from the
+// account, or - when no device has put one there yet - read out of the
+// book's file on the account without fetching the book. Drawn at the size
+// it is shown (a full cover decoded for every tile is tens of megabytes
+// each).
 
 // Dart imports:
 import 'dart:async';
@@ -13,9 +15,11 @@ import 'package:flutter/material.dart';
 
 // Project imports:
 import 'package:openlib/services/cover_thumbs.dart';
+import 'package:openlib/services/epub_remote_cover.dart';
 import 'package:openlib/services/local_book_import.dart'
     show isLocalImagePath, localImageFilePath;
 import 'package:openlib/services/storage/app_files.dart';
+import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/sync/sync_service.dart';
 import 'package:openlib/web/web_library.dart';
 
@@ -33,6 +37,13 @@ class WebCovers {
   static Future<Uint8List?> Function(String md5)? fetchOverride;
   @visibleForTesting
   static Future<Uint8List?> Function(WebBook book)? readOverride;
+
+  /// Tests answer for the cover inside a book's file (full size), and
+  /// hear what is kept for the other devices.
+  @visibleForTesting
+  static Future<RemoteEpubCard?> Function(RemoteBook book)? fileOverride;
+  @visibleForTesting
+  static Future<void> Function(RemoteBook book, Uint8List? jpeg)? keepOverride;
 
   static String _key(WebBook book) =>
       '${book.key}|${book.remote?.hasCover == true}|${book.local?.thumbnail ?? ''}';
@@ -76,17 +87,42 @@ class WebCovers {
           return small;
         }
       }
-      if (md5 != null && book.remote?.hasCover == true) {
-        final got = await _fetch(md5);
-        if (got != null) await CoverThumbs.write(md5, got);
-        return got;
+      final remote = book.remote;
+      if (md5 != null && remote != null && remote.hasCover) {
+        final got = await _gated(
+            () => (fetchOverride ?? SyncService.instance.cover)(md5));
+        if (got != null) {
+          await CoverThumbs.write(md5, got);
+          return got;
+        }
+      }
+      // No device has put a small cover yet: the picture is read out of
+      // the book's file on the account (that part of the file only), and
+      // kept for the other devices.
+      if (md5 != null && remote != null && remote.hasFile) {
+        return await _gated(() => _fromFile(remote));
       }
     } catch (_) {}
     return null;
   }
 
+  static Future<Uint8List?> _fromFile(RemoteBook remote) async {
+    final card =
+        await (fileOverride ?? SyncService.instance.cardFromFile)(remote);
+    if (card == null) return null;
+    final cover = card.cover;
+    final small = cover == null ? null : await CoverThumbs.jpeg(cover.bytes);
+    if (small != null) await CoverThumbs.write(remote.md5, small);
+    final keep = keepOverride;
+    unawaited(keep != null
+        ? keep(remote, small)
+        : SyncService.instance.putCard(remote, small,
+            publisher: card.publisher, description: card.description));
+    return small;
+  }
+
   /// A few at a time: a long library does not ask for every cover at once.
-  static Future<Uint8List?> _fetch(String md5) async {
+  static Future<T> _gated<T>(Future<T> Function() work) async {
     while (_fetching >= 4) {
       final turn = Completer<void>();
       _waiting.add(turn);
@@ -94,7 +130,7 @@ class WebCovers {
     }
     _fetching++;
     try {
-      return await (fetchOverride ?? SyncService.instance.cover)(md5);
+      return await work();
     } finally {
       _fetching--;
       if (_waiting.isNotEmpty) _waiting.removeAt(0).complete();

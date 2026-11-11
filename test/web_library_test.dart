@@ -11,11 +11,14 @@ import 'package:flutter/material.dart';
 // Package imports:
 import 'package:flutter_test/flutter_test.dart';
 import 'package:idb_shim/idb_client_memory.dart';
+import 'package:image/image.dart' as img;
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/book_covers.dart' show CoverImage;
 import 'package:openlib/services/cover_thumbs.dart';
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/epub_remote_cover.dart';
 import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/storage/idb_app_files.dart';
 import 'package:openlib/services/sync/remote_library.dart';
@@ -110,6 +113,8 @@ void main() {
     AppFiles.instance = files;
     WebCovers.fetchOverride = null;
     WebCovers.readOverride = null;
+    WebCovers.fileOverride = null;
+    WebCovers.keepOverride = null;
   });
   // Widgets are drawn without the browser's store behind them.
   void noStore() => setUp(() => WebCovers.readOverride = (_) async => null);
@@ -277,10 +282,44 @@ void main() {
       expect(asked, 1);
     });
 
-    test('a book the account has no cover of is not asked for', () async {
+    test(
+        'no small cover on the account yet: read out of the book\'s file, '
+        'kept here and for the other devices', () async {
       WebCovers.fetchOverride = (md5) async => fail('asked for $md5');
+      final picture = img.Image(width: 900, height: 1200);
+      img.fill(picture, color: img.ColorRgb8(10, 120, 200));
+      final full = Uint8List.fromList(img.encodeJpg(picture));
+      var read = 0;
+      WebCovers.fileOverride = (book) async {
+        read++;
+        return RemoteEpubCard(cover: CoverImage(full, 'jpg'));
+      };
+      final kept = <String, Uint8List?>{};
+      WebCovers.keepOverride = (book, jpeg) async => kept[book.md5] = jpeg;
+      final book = merged(remote: RemoteLibrary(books: [there(a, 'A')])).single;
+
+      final small = (await WebCovers.of(book))!;
+
+      expect(img.decodeJpg(small)!.width, coverThumbWidth);
+      expect(await CoverThumbs.read(a), small);
+      expect(kept[a], small);
+      // The next visit has it in the browser: the file is not read again.
+      WebCovers.forget();
+      expect(await WebCovers.of(book), small);
+      expect(read, 1);
+    });
+
+    test('a file without a picture: no cover, and not asked twice', () async {
+      var read = 0;
+      WebCovers.fileOverride = (book) async {
+        read++;
+        return const RemoteEpubCard(description: 'words only');
+      };
+      WebCovers.keepOverride = (book, jpeg) async {};
       final book = merged(remote: RemoteLibrary(books: [there(a, 'A')])).single;
       expect(await WebCovers.of(book), isNull);
+      expect(await WebCovers.of(book), isNull);
+      expect(read, 1);
     });
 
     test('many covers are fetched a few at a time', () async {

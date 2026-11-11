@@ -58,6 +58,34 @@ String? _imageType(Uint8List b) {
 CoverImage? epubCover(Uint8List epub) {
   final book = EpubPackage.open(epub);
   if (book == null) return null;
+  for (final path in epubCoverCandidates(book)) {
+    final bytes = book.read(path);
+    if (bytes == null || bytes.isEmpty) continue;
+    final cover = coverFromBytes(bytes);
+    if (cover != null) return cover;
+  }
+  return null;
+}
+
+/// The pages whose first picture may be the cover: the guide's cover
+/// page, then the first page of the spine.
+List<String> epubCoverPages(EpubPackage book) {
+  final pages = <String>[];
+  for (final m in RegExp(r'<(?:\w+:)?reference\b[^>]*>').allMatches(book.opf)) {
+    final a = tagAttributes(m.group(0)!);
+    if ((a['type'] ?? '').toLowerCase().contains('cover') &&
+        a['href'] != null) {
+      pages.add(EpubPackage.resolve(book.opfDir, a['href']!));
+    }
+  }
+  if (book.spine.isNotEmpty) pages.add(book.spine.first);
+  return pages;
+}
+
+/// Where in the zip the cover may be, the likeliest first. A page of
+/// [epubCoverPages] that [book] does not hold is passed over (a book read
+/// in parts holds only what was fetched).
+List<String> epubCoverCandidates(EpubPackage book) {
   final opf = book.opf;
   final opfDir = book.opfDir;
   const resolve = EpubPackage.resolve;
@@ -84,20 +112,11 @@ CoverImage? epubCover(Uint8List epub) {
   }
   // The guide's cover page, then the first page of the spine: their
   // first picture.
-  final pages = <String>[];
-  for (final m in RegExp(r'<(?:\w+:)?reference\b[^>]*>').allMatches(opf)) {
-    final a = attributes(m.group(0)!);
-    if ((a['type'] ?? '').toLowerCase().contains('cover') &&
-        a['href'] != null) {
-      pages.add(resolve(opfDir, a['href']!));
-    }
-  }
-  if (book.spine.isNotEmpty) pages.add(book.spine.first);
-  for (final page in pages) {
+  for (final page in epubCoverPages(book)) {
     final html = book.text(page);
     if (html == null) continue;
     final ref = RegExp(
-            r'''<(?:\w+:)?(?:img|image)\b[^>]*?(?:xlink:href|href|src)\s*=\s*["']([^"']+)["']''',
+            r"""<(?:\w+:)?(?:img|image)\b[^>]*?(?:xlink:href|href|src)\s*=\s*["']([^"']+)["']""",
             caseSensitive: false)
         .firstMatch(html);
     if (ref != null) {
@@ -111,15 +130,13 @@ CoverImage? epubCover(Uint8List epub) {
       candidates.add(resolve(opfDir, i['href'] ?? ''));
     }
   }
+  return candidates;
+}
 
-  for (final path in candidates) {
-    final bytes = book.read(path);
-    if (bytes == null || bytes.isEmpty) continue;
-    final type = _imageType(bytes);
-    if (type == null) continue;
-    return _fit(bytes, type);
-  }
-  return null;
+/// [bytes] as a cover, or null when they are not a picture.
+CoverImage? coverFromBytes(Uint8List bytes) {
+  final type = _imageType(bytes);
+  return type == null ? null : _fit(bytes, type);
 }
 
 /// [bytes] as they are when they are a JPEG or PNG of a sensible size;

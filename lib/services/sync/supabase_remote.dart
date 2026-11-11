@@ -119,6 +119,36 @@ class SupabaseRemote implements SyncRemote {
     return files.download(_object(md5, format));
   }
 
+  /// The bytes of a book's file from [start] up to, not including, [end]
+  /// (its cover is read this way, without the rest of the book).
+  Future<Uint8List> readBookRange(
+      String md5, String format, int start, int end) async {
+    final files = _client.storage.from(bucket);
+    final response = await Dio().get<List<int>>(
+      '${files.url}/object/$bucket/${_object(md5, format)}',
+      options: Options(
+        responseType: ResponseType.bytes,
+        headers: {...files.headers, 'Range': 'bytes=$start-${end - 1}'},
+      ),
+    );
+    final data = response.data ?? const <int>[];
+    // A server that sends the whole file anyway is not what was asked.
+    if (response.statusCode != 206) {
+      throw StateError('no range: ${response.statusCode}');
+    }
+    return data is Uint8List ? data : Uint8List.fromList(data);
+  }
+
+  /// What the package says of a book, where the row has nothing yet.
+  Future<void> putDetails(String md5,
+      {String? publisher, required String description}) async {
+    await _client
+        .from('books')
+        .update({'publisher': publisher, 'description': description})
+        .eq('md5', md5)
+        .isFilter('description', null);
+  }
+
   @override
   Future<void> removeBookFile(String md5, String format) async {
     await _client.storage
