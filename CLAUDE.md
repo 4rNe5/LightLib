@@ -52,8 +52,19 @@ debug key (only CI signs releases).
 - Web app = `lib/main_web.dart` (library, the same reader, Gemini only):
   Vercel project `lightlib` builds it on every push that touches the app
   (`vercel.json`, `tool/vercel_build.sh`; CSP in `vercel.json` - test a
-  new outside host against it). Not built: search/downloads, the device
-  model, widgets, updates.
+  new outside host against it; no inline script, so `web/splash.js`). Not
+  built: search/downloads, the device model, widgets, updates.
+- The web lists the library from the account's rows (`RemoteLibraryStore`,
+  `lib/web/web_library.dart`: title, author, a small cover
+  `<md5>.cover.jpg`) and fetches a book's file only when it is opened
+  (`SyncEngine(onDemand: true)`, `fetchBook`; `WebBookOpenPage`). A file
+  missing in the browser deletes nothing; deleting is `deleteBook`,
+  freeing space `dropLocalCopy`. The first frame waits for nothing
+  (`main_web.dart`); `web/index.html` shows the app's name until then.
+  A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
+- Web checks: `tool/web_check/` (its README) - the built app in headless
+  Chrome with real clicks and touches, against a stand-in for the sync
+  project (no live account).
 - Platform checks go through `PlatformUtils` (`Platform` throws on the
   web); files the app keeps through `AppFiles` (dart:io / IndexedDB);
   isolates through `runHeavy`.
@@ -64,9 +75,14 @@ debug key (only CI signs releases).
   then positions/translations/glossaries of books here, then files - a
   downloaded book brings its own before the library hears of it. Quick
   runs (while reading) skip files; opening a book runs `runBook` first.
-  Progress/result notifications: `sync_notifier*.dart`. Only emails in
-  `public.owners` can read or write (RLS). Engine rules and tests:
-  `sync_engine.dart`, `test/sync_engine_test.dart`.
+  Each device that has a book puts its details and a small cover
+  (`CoverThumbs`) once. How far a book was read travels as
+  `progress.fraction` (`frac:<file>` here; `put_reading`; the old
+  `put_progress` clears it). Shared settings (`settings` table,
+  `put_setting`, newest wins): the Gemini key, unless `syncGeminiKey`
+  is 0. Progress/result notifications: `sync_notifier*.dart`. Only
+  emails in `public.owners` can read or write (RLS). Engine rules and
+  tests: `sync_engine.dart`, `test/sync_engine_test.dart`.
 
 ## Map
 | Area | Where |
@@ -75,7 +91,7 @@ debug key (only CI signs releases).
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
-| Web app | `lib/main_web.dart`, `lib/web/` (library, settings) |
+| Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
 | Sync | `lib/services/sync/` (`sync_engine`, `supabase_remote`, `library_sync_local`, `sync_service`); settings `lib/ui/components/sync_section.dart` |
 | Files the app keeps (web: IndexedDB) | `lib/services/storage/` (`AppFiles`) |
 | Older reader | `lib/ui/epub_viewer.dart` |
@@ -114,6 +130,17 @@ debug key (only CI signs releases).
   `pointer-events` is off while another route (sheet, dialog) is on top
   (`reader_host_web.dart`). Browser tests tap real coordinates: clicks on
   semantics nodes passed while real taps did not.
+- Web reader: nothing may keep animating over the iframe (a spinner, a
+  running progress bar) - each frame of it is drawn on the thread the
+  page works on; a running bar made a 3 s opening take 12 s.
+- Web bundle: `GoogleFonts.getFont(name)` pulls the table of every font
+  (3.4 MB of JS) - it sits behind `google_font_family_io/web.dart`.
+  Full-size covers decoded per tile cost ~30 MB each; the web draws
+  `CoverThumbs` only, at the size shown (`cacheWidth`).
+- `MyLibraryDb.database` is asked by several callers at once when the web
+  starts; that is safe because sqflite opens a path once under a lock. Do
+  not keep the opening future instead: one made inside a `testWidgets`
+  never completes and every later test waits on it.
 - Tests: no network, no platform channels — inject `Dio` adapters, use
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.
@@ -123,10 +150,11 @@ debug key (only CI signs releases).
    allows (MLX or llama-server, OpenAI-compatible), reachable only by the
    owner (Tailscale preferred, or a tunnel with an API key); an app engine
    "내 서버" (URL + key) reusing `CloudTranslator`'s structure.
-2. Web + sync (built, see "Web and sync"): next - books fetched on open
-   instead of all at once, whole-book translation on the web, the reader's
-   fonts and word tools on the web. No public relay for shadow-library
-   search/downloads.
+2. Web + sync (built, see "Web and sync"): next - whole-book translation
+   on the web, the reader's fonts and word tools on the web, a smaller
+   start (llamadart is still in the web bundle, ~0.4 MB; a WebAssembly
+   build compiles but saved only ~10% of the download). No public relay
+   for shadow-library search/downloads.
 3. Smaller: `[n]`→`n.` numbering, token-budget batches, translator-note
    stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
    two-page spread on unfolded screens.
