@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Vercel's build of the web app (lib/main_web.dart), with the Flutter
-# version the Android release CI uses. Output: build/web (vercel.json).
+# The hosts' build of the web app (lib/main_web.dart; Vercel, and GitHub
+# Pages in .github/workflows/web-pages.yml), with the Flutter version the
+# Android release CI uses. Output: build/web (vercel.json).
 set -euo pipefail
 
 FLUTTER_VERSION="$(grep -m1 'FLUTTER_VERSION:' .github/workflows/android-release.yml \
@@ -16,4 +17,7 @@ export PATH="$FLUTTER_DIR/bin:$PATH"
 flutter config --no-analytics --enable-web >/dev/null
 flutter --version
 flutter pub get
-flutter build web --release -t lib/main_web.dart --no-wasm-dry-run
+# BASE_HREF: the path the app is served under where that is not the
+# host's root (GitHub Pages: /LightLib/).
+flutter build web --release -t lib/main_web.dart --no-wasm-dry-run \
+  ${BASE_HREF:+--base-href "$BASE_HREF"}

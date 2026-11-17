@@ -44,6 +44,23 @@ key and a session's token, in the project's own words (400 "Bucket not
 found"): the app once read covers with such requests, and a stand-in that
 answered anyone let it pass. `OPEN=1` brings the old answering back.
 
+An old browser (the owner once read in Chrome 112, where no book opened):
+
+```bash
+npx @puppeteer/browsers install chrome@113 --path /tmp/oldchrome   # the oldest "Chrome for Testing"
+npm install --no-save puppeteer-core@20.2.1                        # a driver of its age (the current one cannot open a page in it)
+CHROME=/tmp/oldchrome/chrome/linux-113.*/chrome-linux64/chrome node library.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/shots desktop
+```
+
+Headless Chrome 113 keeps the database's shared worker after its tab is
+gone, and a later visit in the same browser run waits on it for ever
+(`translate.mjs` reloads, so it stops there). A restarted browser, two
+tabs at once and the owner's own Chrome 112 did not show this.
+
+A host that serves the app under a path and sends no headers (GitHub
+Pages): build with `--base-href /LightLib/`, run `tool/pages_csp.py`, and
+`node serve.mjs ../../build/web 8095 none /LightLib/`.
+
 `account.mjs` wants an EPUB that is not in the stand-in's library (make a
 second library with another count and take a file from its `files/`), and
 `desktop_reading.mjs` a horizontal one.

@@ -65,6 +65,12 @@ debug key (only CI signs releases).
   book) and kept for the others. The first frame waits for nothing
   (`main_web.dart`); `web/index.html` shows the app's name until then.
   A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
+- A second host, for networks that block Vercel: GitHub Pages,
+  `.github/workflows/web-pages.yml` (the same build under `/LightLib/`,
+  `BASE_HREF`; no headers there, so `tool/pages_csp.py` puts the policy
+  in the page). `[skip ci]` skips it: run the workflow by hand then. The
+  sign-in returns to `SyncConfig.webRedirect` (the app's own address); a
+  new host's address must be in the project's Auth redirect URLs.
 - Web checks: `tool/web_check/` (its README) - the built app in headless
   Chrome with real clicks and touches, against a stand-in for the sync
   project (no live account).
@@ -157,6 +163,12 @@ debug key (only CI signs releases).
   while the owner's library read no cover out of a file; it now refuses
   a request that does not say who asks. When the web misbehaves on the
   real account, read the project's `edge_logs` first.
+- Reader page on older browsers: esbuild's `target` rewrites syntax only,
+  a missing function stays missing. foliate-js calls `Object.groupBy`
+  (Chrome 117) for every EPUB, so no book opened in Chrome 112 or a
+  WebView that old; `reader_web/src/polyfills.js` fills in what it uses.
+  After taking a newer foliate-js, look for newer functions again and
+  open a book in an old Chrome (`tool/web_check` README).
 - `MyLibraryDb.database` is asked by several callers at once when the web
   starts; that is safe because sqflite opens a path once under a lock. Do
   not keep the opening future instead: one made inside a `testWidgets`

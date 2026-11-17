@@ -5,8 +5,11 @@ import zlib from 'node:zlib'
 import crypto from 'node:crypto'
 import { readFileSync, existsSync, statSync } from 'node:fs'
 import { join, extname } from 'node:path'
-const [root, port, vercelJson] = process.argv.slice(2)
-const conf = JSON.parse(readFileSync(vercelJson, 'utf8'))
+// argv: root port vercel.json|none [prefix] - "none" and a prefix
+// (/LightLib/) stand for a host that sends no headers of ours and serves
+// the app under a path (GitHub Pages).
+const [root, port, vercelJson, prefix = '/'] = process.argv.slice(2)
+const conf = vercelJson === 'none' ? { headers: [] } : JSON.parse(readFileSync(vercelJson, 'utf8'))
 const rules = conf.headers.map(h => ({ re: new RegExp('^' + h.source + '$'), headers: Object.fromEntries(h.headers.map(x => [x.key, x.value])) }))
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm',
   '.json': 'application/json', '.png': 'image/png', '.otf': 'font/otf', '.ttf': 'font/ttf', '.css': 'text/css', '.tsv': 'text/tab-separated-values', '.svg': 'image/svg+xml', '.symbols': 'text/plain', '.bin': 'application/octet-stream' }
@@ -17,6 +20,8 @@ http.createServer((req, res) => {
   const headers = {}
   for (const r of rules) if (r.re.test(p)) Object.assign(headers, r.headers)
   if (!('Cache-Control' in headers)) headers['Cache-Control'] = 'public, max-age=0, must-revalidate'
+  if (!p.startsWith(prefix)) { res.writeHead(404, headers); return res.end('404') }
+  p = '/' + p.slice(prefix.length)
   if (p.endsWith('/')) p += 'index.html'
   const f = join(root, p)
   if (!existsSync(f) || !statSync(f).isFile()) { res.writeHead(404, headers); return res.end('404') }

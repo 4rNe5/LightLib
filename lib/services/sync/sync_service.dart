@@ -38,6 +38,18 @@ class SyncConfig {
   /// Where the browser returns after Google sign-in on the phone
   /// (AndroidManifest.xml).
   static const androidRedirect = 'dev.arne5.lightlib://login-callback';
+
+  /// Where the browser returns after Google sign-in on the web: the app's
+  /// own address, which on a host that serves it under a path (GitHub
+  /// Pages: /LightLib/) is not the host's first page. At a host's root it
+  /// is the origin as before (the project lists it that way).
+  static String webRedirect(Uri page) {
+    var path = page.path;
+    if (!path.endsWith('/')) {
+      path = path.substring(0, path.lastIndexOf('/') + 1);
+    }
+    return path.isEmpty || path == '/' ? page.origin : '${page.origin}$path';
+  }
 }
 
 /// Preference: sync on its own (1, the default) or only by hand (0).
@@ -169,7 +181,9 @@ class SyncService extends ChangeNotifier {
     if (!_ready) return;
     await Supabase.instance.client.auth.signInWithOAuth(
       OAuthProvider.google,
-      redirectTo: kIsWeb ? Uri.base.origin : SyncConfig.androidRedirect,
+      redirectTo: kIsWeb
+          ? SyncConfig.webRedirect(Uri.base)
+          : SyncConfig.androidRedirect,
       authScreenLaunchMode:
           kIsWeb ? LaunchMode.platformDefault : LaunchMode.externalApplication,
     );

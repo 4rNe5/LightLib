@@ -1,0 +1,55 @@
+# The web app on GitHub Pages (https://4rne5.github.io/LightLib/), beside
+# Vercel: the same build under the repository's path. A push whose message
+# has [skip ci] does not start this - run it by hand then (Actions → this
+# workflow → Run workflow).
+name: Web (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "lib/**"
+      - "web/**"
+      - "assets/**"
+      - "reader_web/**"
+      - "pubspec.yaml"
+      - "pubspec.lock"
+      - "vercel.json"
+      - "tool/vercel_build.sh"
+      - "tool/pages_csp.py"
+      - ".github/workflows/web-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        env:
+          BASE_HREF: /${{ github.event.repository.name }}/
+        run: bash tool/vercel_build.sh
+      - name: The policy Vercel sends as a header, in the page
+        run: python3 tool/pages_csp.py vercel.json build/web/index.html
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/web
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
