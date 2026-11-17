@@ -320,6 +320,24 @@ void main() {
       expect(await WebCovers.of(book), isNull);
       expect(await WebCovers.of(book), isNull);
       expect(read, 1);
+      // Nor at the next visit.
+      WebCovers.forget();
+      expect(await WebCovers.of(book), isNull);
+      expect(read, 1);
+    });
+
+    test('a file that could not be read is asked again at the next visit',
+        () async {
+      var read = 0;
+      WebCovers.fileOverride = (book) async {
+        read++;
+        return null;
+      };
+      final book = merged(remote: RemoteLibrary(books: [there(a, 'A')])).single;
+      expect(await WebCovers.of(book), isNull);
+      WebCovers.forget();
+      expect(await WebCovers.of(book), isNull);
+      expect(read, 2);
     });
 
     test('many covers are fetched a few at a time', () async {

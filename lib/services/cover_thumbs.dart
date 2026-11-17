@@ -41,6 +41,19 @@ class CoverThumbs {
   static Future<void> write(String md5, Uint8List jpeg) async =>
       AppFiles.instance.writeBytes(await path(md5), jpeg);
 
-  static Future<void> remove(String md5) async =>
-      AppFiles.instance.delete(await path(md5));
+  static Future<void> remove(String md5) async {
+    await AppFiles.instance.delete(await path(md5));
+    await AppFiles.instance.delete(await _nonePath(md5));
+  }
+
+  static Future<String> _nonePath(String md5) async => p.join(
+      await AppFiles.instance.supportPath(), 'covers', 'thumbs', '$md5.none');
+
+  /// Whether the file of the book [md5] was read and found to hold no
+  /// cover (it is not read for one again).
+  static Future<bool> knownNone(String md5) async =>
+      AppFiles.instance.exists(await _nonePath(md5));
+
+  static Future<void> markNone(String md5) async =>
+      AppFiles.instance.writeBytes(await _nonePath(md5), Uint8List(1));
 }

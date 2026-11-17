@@ -99,7 +99,10 @@ class WebCovers {
       // No device has put a small cover yet: the picture is read out of
       // the book's file on the account (that part of the file only), and
       // kept for the other devices.
-      if (md5 != null && remote != null && remote.hasFile) {
+      if (md5 != null &&
+          remote != null &&
+          remote.hasFile &&
+          !await CoverThumbs.knownNone(md5)) {
         return await _gated(() => _fromFile(remote));
       }
     } catch (_) {}
@@ -112,7 +115,11 @@ class WebCovers {
     if (card == null) return null;
     final cover = card.cover;
     final small = cover == null ? null : await CoverThumbs.jpeg(cover.bytes);
-    if (small != null) await CoverThumbs.write(remote.md5, small);
+    // A file that was read and holds no cover is not read again at every
+    // visit (a device that finds one puts it on the account).
+    await (small != null
+        ? CoverThumbs.write(remote.md5, small)
+        : CoverThumbs.markNone(remote.md5));
     final keep = keepOverride;
     unawaited(keep != null
         ? keep(remote, small)
