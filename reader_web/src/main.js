@@ -14,6 +14,7 @@
 // The CSS overrides follow readest's (apps/readest-app/src/utils/style.ts,
 // AGPL-3.0, like this app).
 
+import './polyfills.js'
 import 'construct-style-sheets-polyfill'
 import { makeBook } from '../foliate-js/view.js'
 import { readerStyles } from './styles.js'
