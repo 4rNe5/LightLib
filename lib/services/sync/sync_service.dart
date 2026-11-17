@@ -194,7 +194,7 @@ class SyncService extends ChangeNotifier {
       if (on) {
         await syncSettings();
       } else {
-        await SupabaseRemote(Supabase.instance.client)
+        await _remote()
             .removeSetting(geminiKeySetting);
         await db.setSyncState('set:$geminiKeySetting', null);
         await db.setSyncState('setSent:$geminiKeySetting', null);
@@ -204,10 +204,13 @@ class SyncService extends ChangeNotifier {
     }
   }
 
+  SupabaseRemote _remote() => SupabaseRemote(Supabase.instance.client,
+      apiKey: SyncConfig.publishableKey);
+
   SyncEngine _engine({void Function(SyncProgress progress)? onProgress}) =>
       SyncEngine(
         local: LibrarySyncLocal(),
-        remote: SupabaseRemote(Supabase.instance.client),
+        remote: _remote(),
         // The web keeps only the books opened there.
         onDemand: kIsWeb,
         onRemote: kIsWeb ? RemoteLibraryStore.instance.update : null,
@@ -240,7 +243,7 @@ class SyncService extends ChangeNotifier {
   Future<Uint8List?> cover(String md5) async {
     if (!signedIn) return null;
     try {
-      return await SupabaseRemote(Supabase.instance.client).downloadCover(md5);
+      return await _remote().downloadCover(md5);
     } catch (_) {
       return null;
     }
@@ -254,7 +257,7 @@ class SyncService extends ChangeNotifier {
     final size = book.sizeBytes;
     if (!signedIn || size == null || size <= 0) return null;
     try {
-      final remote = SupabaseRemote(Supabase.instance.client);
+      final remote = _remote();
       return await readRemoteEpubCard(
           size,
           (start, end) =>
@@ -272,7 +275,7 @@ class SyncService extends ChangeNotifier {
       {String? publisher, String? description}) async {
     if (!signedIn) return;
     try {
-      final remote = SupabaseRemote(Supabase.instance.client);
+      final remote = _remote();
       if (jpeg != null) await remote.uploadCover(book.md5, jpeg);
       if (book.description == null) {
         await remote.putDetails(book.md5,

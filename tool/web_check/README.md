@@ -39,6 +39,11 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 | `visit.mjs` | A signed-in visit to the 24-book account: what is fetched before the library is ready, what the tab holds |
 | `reading_memory.mjs` | The tab while a book is read |
 
+The stand-in refuses a storage or table request without the project's
+key and a session's token, in the project's own words (400 "Bucket not
+found"): the app once read covers with such requests, and a stand-in that
+answered anyone let it pass. `OPEN=1` brings the old answering back.
+
 `account.mjs` wants an EPUB that is not in the stand-in's library (make a
 second library with another count and take a file from its `files/`), and
 `desktop_reading.mjs` a horizontal one.

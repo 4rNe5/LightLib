@@ -69,6 +69,19 @@ http.createServer((req, res) => {
       if (path.endsWith('/user')) return send(res, 200, user)
       return send(res, 200, { access_token: 'x', token_type: 'bearer', expires_in: 36000, refresh_token: 'r', user })
     }
+    // As the project does: a request that does not say who asks is not
+    // answered (the storage's words for it are "Bucket not found"). The
+    // library once read covers with such requests and this stand-in,
+    // answering anyone, let it pass.
+    if (/^\/(storage|rest)\/v1\//.test(path) && process.env.OPEN !== '1') {
+      const key = req.headers.apikey, bearer = /^Bearer (.+)$/.exec(req.headers.authorization ?? '')?.[1]
+      if (!key || !bearer || bearer === key) {
+        db.refused = (db.refused ?? 0) + 1
+        return path.startsWith('/storage/')
+          ? send(res, 400, { statusCode: '404', error: 'Bucket not found', message: 'Bucket not found', code: 'NoSuchBucket' })
+          : send(res, 401, { message: 'No API key found in request' })
+      }
+    }
     let m
     if ((m = /^\/rest\/v1\/rpc\/(\w+)$/.exec(path))) {
       const fn = rpc[m[1]]; if (!fn) return send(res, 404, { message: 'no such function' })

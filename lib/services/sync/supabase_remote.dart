@@ -14,10 +14,24 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
 
 class SupabaseRemote implements SyncRemote {
-  SupabaseRemote(this._client);
+  SupabaseRemote(this._client, {required this.apiKey, Dio? dio})
+      : _dio = dio ?? Dio();
 
   final SupabaseClient _client;
+
+  /// The project's publishable key.
+  final String apiKey;
+  final Dio _dio;
   static const bucket = 'books';
+
+  /// What says who asks, for the requests made here and not by the
+  /// client (which adds these itself, and not to the headers it shows:
+  /// without them the storage answers 400 "Bucket not found").
+  Future<Map<String, String>> _signed(Map<String, String> headers) async {
+    final token = (await _client.auth.getSession())?.accessToken;
+    if (token == null) throw StateError('Not signed in');
+    return {...headers, 'apikey': apiKey, 'Authorization': 'Bearer $token'};
+  }
 
   String get _uid {
     final id = _client.auth.currentUser?.id;
@@ -101,10 +115,11 @@ class SupabaseRemote implements SyncRemote {
       // The storage client answers only when the whole file is here; the
       // same request through Dio says how far it is.
       try {
-        final response = await Dio().get<List<int>>(
+        final response = await _dio.get<List<int>>(
           '${files.url}/object/$bucket/${_object(md5, format)}',
-          options:
-              Options(responseType: ResponseType.bytes, headers: files.headers),
+          options: Options(
+              responseType: ResponseType.bytes,
+              headers: await _signed(files.headers)),
           onReceiveProgress: (received, total) =>
               onProgress(received, total > 0 ? total : null),
         );
@@ -112,8 +127,8 @@ class SupabaseRemote implements SyncRemote {
         if (data != null && data.isNotEmpty) {
           return data is Uint8List ? data : Uint8List.fromList(data);
         }
-      } on DioException catch (_) {
-        // Asked again the plain way (a token renewed meanwhile).
+      } catch (_) {
+        // Asked again the plain way (no progress, the same file).
       }
     }
     return files.download(_object(md5, format));
@@ -124,11 +139,14 @@ class SupabaseRemote implements SyncRemote {
   Future<Uint8List> readBookRange(
       String md5, String format, int start, int end) async {
     final files = _client.storage.from(bucket);
-    final response = await Dio().get<List<int>>(
+    final response = await _dio.get<List<int>>(
       '${files.url}/object/$bucket/${_object(md5, format)}',
       options: Options(
         responseType: ResponseType.bytes,
-        headers: {...files.headers, 'Range': 'bytes=$start-${end - 1}'},
+        headers: {
+          ...await _signed(files.headers),
+          'Range': 'bytes=$start-${end - 1}',
+        },
       ),
     );
     final data = response.data ?? const <int>[];
