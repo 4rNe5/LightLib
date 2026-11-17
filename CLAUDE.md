@@ -79,7 +79,9 @@ debug key (only CI signs releases).
   downloaded book brings its own before the library hears of it. Quick
   runs (while reading) skip files; opening a book runs `runBook` first.
   Each device that has a book puts its details and a small cover
-  (`CoverThumbs`) once. How far a book was read travels as
+  (`CoverThumbs`) once - the cover saved with the book, or the book's own
+  out of its file when that is a web address (a book downloaded in the
+  app). How far a book was read travels as
   `progress.fraction` (`frac:<file>` here; `put_reading`; the old
   `put_progress` clears it). Shared settings (`settings` table,
   `put_setting`, newest wins): the Gemini key, unless `syncGeminiKey`
@@ -147,6 +149,14 @@ debug key (only CI signs releases).
   (3.4 MB of JS) - it sits behind `google_font_family_io/web.dart`.
   Full-size covers decoded per tile cost ~30 MB each; the web draws
   `CoverThumbs` only, at the size shown (`cacheWidth`).
+- Supabase: the client adds the key and the session's token inside its
+  own HTTP client, not to `storage.headers`. A request made beside it
+  (Dio: a part of a file, a book with its progress) must add them
+  (`SupabaseRemote._signed`), or storage answers 400 "Bucket not found".
+  The stand-in in `tool/web_check` answered anyone, so the checks passed
+  while the owner's library read no cover out of a file; it now refuses
+  a request that does not say who asks. When the web misbehaves on the
+  real account, read the project's `edge_logs` first.
 - `MyLibraryDb.database` is asked by several callers at once when the web
   starts; that is safe because sqflite opens a path once under a lock. Do
   not keep the opening future instead: one made inside a `testWidgets`

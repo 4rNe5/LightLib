@@ -10,6 +10,7 @@ import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
 
 // Project imports:
+import 'package:openlib/services/book_covers.dart';
 import 'package:openlib/services/cover_thumbs.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/files.dart' show deleteFile;
@@ -193,13 +194,34 @@ class LibrarySyncLocal implements SyncLocal {
       if (kept != null) return kept;
     }
     final thumb = (await _db.getId(book.id))?.thumbnail ?? '';
-    if (!isLocalImagePath(thumb)) return null;
-    final bytes = await _files.readBytes(localImageFilePath(thumb));
-    if (bytes == null) return null;
-    final jpeg = await CoverThumbs.jpeg(bytes);
+    final bytes = isLocalImagePath(thumb)
+        ? await _files.readBytes(localImageFilePath(thumb))
+        : null;
+    // A book downloaded in the app has a web address for a cover (the
+    // catalog's), and nothing was sent for it: its own cover, out of its
+    // file.
+    final full = bytes ?? await _ownCover(book);
+    if (full == null) return null;
+    final jpeg = await CoverThumbs.jpeg(full);
     if (jpeg != null && md5 != null) await CoverThumbs.write(md5, jpeg);
     return jpeg;
   }
+
+  /// The cover inside the book's file; a file found to have none is not
+  /// opened for it again.
+  Future<Uint8List?> _ownCover(LocalBook book) async {
+    if (book.format != 'epub') return null;
+    final mark = 'nocover:${book.fileName}';
+    if (await _db.getSyncState(mark) != null) return null;
+    final epub = await readBook(book);
+    if (epub == null) return null;
+    final cover = await _coverIn(epub);
+    if (cover == null) await _db.setSyncState(mark, '1');
+    return cover?.bytes;
+  }
+
+  static Future<CoverImage?> _coverIn(Uint8List epub) =>
+      runHeavy(() => epubCover(epub));
 
   @override
   Future<List<String>> syncedSettings() async =>
