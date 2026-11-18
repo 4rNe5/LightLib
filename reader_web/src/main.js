@@ -1,7 +1,8 @@
 // LightLib's reader page. foliate-js (readest's fork) lays the book out -
 // reflowable EPUBs in pages or one scroll, vertical Japanese with ruby,
 // fixed-layout and SVG pages, the book's own CSS - and this file connects
-// it to the Flutter app over flutter_inappwebview's JavaScript handlers:
+// it to the Flutter app over flutter_inappwebview's JavaScript handlers
+// (the web app: postMessage to the page around this one's iframe):
 //
 //   app -> page: window.reader.open(), .next(), .goTo(), .setSettings(),
 //                .setTranslations(), .showOriginal(), .setStudy(),
@@ -13,6 +14,7 @@
 // The CSS overrides follow readest's (apps/readest-app/src/utils/style.ts,
 // AGPL-3.0, like this app).
 
+import './polyfills.js'
 import 'construct-style-sheets-polyfill'
 import { makeBook } from '../foliate-js/view.js'
 import { readerStyles } from './styles.js'
@@ -29,9 +31,13 @@ import {
 
 let bridgeReady = false
 const pending = []
+// The web app shows this page in an iframe of its own origin and listens
+// for messages on its window; the phone app injects flutter_inappwebview.
+const embedded = window.parent !== window
 const deliver = msg => {
     try {
-        window.flutter_inappwebview.callHandler('reader', msg)
+        if (window.flutter_inappwebview?.callHandler) window.flutter_inappwebview.callHandler('reader', msg)
+        else if (embedded) window.parent.postMessage({ lightlibReader: msg }, location.origin)
     } catch (e) {
         console.log('[reader] message lost', e)
     }
@@ -43,7 +49,7 @@ const onBridge = () => {
     pending.splice(0).forEach(deliver)
 }
 window.addEventListener('flutterInAppWebViewPlatformReady', onBridge)
-if (window.flutter_inappwebview?.callHandler) onBridge()
+if (window.flutter_inappwebview?.callHandler || embedded) onBridge()
 
 window.addEventListener('error', e => post({ type: 'log', level: 'error', message: String(e.message) }))
 window.addEventListener('unhandledrejection', e =>
@@ -226,6 +232,7 @@ function onDocLoad({ doc, index }) {
     themeDocument(doc, state.settings ?? {})
     fixImages(doc)
     listenForTaps(doc)
+    listenForKeys(doc)
     listenForSelection(doc, index)
     const items = collectParagraphs(doc)
     state.sections.set(index, items)
@@ -254,6 +261,57 @@ function fixImages(doc) {
         }
     }
 }
+
+/** A keyboard and a mouse wheel (the web on a desktop): the arrows, Page
+ *  Up/Down and Space turn pages, and so does the wheel where pages are
+ *  turned rather than scrolled. The app handles the same keys when they
+ *  reach it instead of this page. */
+function turnByKey(e) {
+    if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return
+    const target = e.target
+    if (target?.isContentEditable || /^(input|textarea|select)$/i.test(target?.tagName ?? '')) return
+    const view = state.view
+    if (!view) return
+    const scrolled = state.settings?.flow === 'scrolled'
+    switch (e.key) {
+        case 'ArrowLeft': view.goLeft(); break
+        case 'ArrowRight': view.goRight(); break
+        case 'PageDown': view.next(); break
+        case 'PageUp': view.prev(); break
+        case ' ': e.shiftKey ? view.prev() : view.next(); break
+        // Scrolling text keeps the browser's own line-by-line arrows.
+        case 'ArrowDown': if (scrolled) return; view.next(); break
+        case 'ArrowUp': if (scrolled) return; view.prev(); break
+        default: return
+    }
+    e.preventDefault()
+    post({ type: 'turn' })
+    if (pendingPaint.size) flushPaint()
+}
+
+let wheelLockedUntil = 0
+function turnByWheel(e) {
+    if (e.ctrlKey || state.settings?.flow === 'scrolled' || !state.view) return
+    const delta = Math.abs(e.deltaY) >= Math.abs(e.deltaX) ? e.deltaY : e.deltaX
+    e.preventDefault()
+    if (Math.abs(delta) < 8) return
+    const now = Date.now()
+    if (now < wheelLockedUntil) return
+    // A wheel's notch turns one page; a touchpad's glide (many small
+    // steps) turns one too.
+    wheelLockedUntil = now + (Math.abs(delta) >= 60 ? 260 : 620)
+    post({ type: 'turn' })
+    if (pendingPaint.size) flushPaint()
+    delta > 0 ? state.view.next() : state.view.prev()
+}
+
+function listenForKeys(target) {
+    if (target.__llKeys) return
+    target.__llKeys = true
+    target.addEventListener('keydown', turnByKey)
+    target.addEventListener('wheel', turnByWheel, { passive: false })
+}
+listenForKeys(document)
 
 /** Taps: the outer thirds turn pages, the middle shows or hides the app's
  *  bars. A tap that ends a selection or follows a link is not a turn. */

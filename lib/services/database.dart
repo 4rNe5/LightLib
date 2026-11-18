@@ -1,6 +1,9 @@
 // Dart imports:
 import 'dart:io';
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 // Package imports:
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
@@ -70,6 +73,9 @@ class MyLibraryDb {
   static Database? _database;
   MyLibraryDb._internal();
 
+  /// Several callers may ask at once before it is open (the web's start):
+  /// each opens the same file and sqflite hands every one of them the one
+  /// database (it opens a path once, under a lock).
   Future<Database> get database async {
     if (_database != null) {
       return _database!;
@@ -80,7 +86,10 @@ class MyLibraryDb {
 
   Future<Database> _initDatabase() async {
     String databasePath;
-    if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
+    if (kIsWeb) {
+      // sqlite (WebAssembly) in IndexedDB, under this name.
+      databasePath = '';
+    } else if (Platform.isWindows || Platform.isLinux || Platform.isMacOS) {
       final directory = await getApplicationSupportDirectory();
       databasePath = directory.path;
       try {
@@ -89,7 +98,9 @@ class MyLibraryDb {
     } else {
       databasePath = await getDatabasesPath();
     }
-    final path = join(databasePath, 'mylibrary.db');
+    final path = databasePath.isEmpty
+        ? 'mylibrary.db'
+        : join(databasePath, 'mylibrary.db');
 
     return await openDatabase(
       path,
@@ -188,7 +199,14 @@ class MyLibraryDb {
     'CREATE TABLE IF NOT EXISTS searchhistory (query TEXT PRIMARY KEY,searchedAt INTEGER)',
     'CREATE TABLE IF NOT EXISTS readingdays (day TEXT PRIMARY KEY,hits INTEGER DEFAULT 0)',
     'CREATE TABLE IF NOT EXISTS completions (fileName TEXT PRIMARY KEY,completedAt INTEGER)',
+    // What sync knows: when a position changed here, which books it saw,
+    // the files' MD5s ([SyncState]).
+    'CREATE TABLE IF NOT EXISTS syncstate (name TEXT PRIMARY KEY,value TEXT)',
   ];
+
+  /// Called after a reading position or completion is saved here (sync
+  /// sends it on).
+  static void Function(String fileName)? onPositionSaved;
 
   /// Most recent searches kept; older ones drop off.
   static const searchHistoryLimit = 50;
@@ -276,8 +294,80 @@ class MyLibraryDb {
       {'fileName': fileName, 'position': position},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await _positionChanged(fileName);
     // Saving a position means the book was read today.
     await recordReadingDay().catchError((_) {});
+  }
+
+  Future<void> _positionChanged(String fileName) async {
+    await setSyncState(
+        'pos:$fileName', '${DateTime.now().millisecondsSinceEpoch}');
+    onPositionSaved?.call(fileName);
+  }
+
+  /// A position read on another device: saved without counting as a
+  /// change made here.
+  Future<void> applySyncedPosition(
+      String fileName, String position, bool completed, DateTime at) async {
+    final dbInstance = await instance.database;
+    await dbInstance.insert(
+      'bookposition',
+      {
+        'fileName': fileName,
+        'position': position,
+        'completed': completed ? 1 : 0
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+    await setSyncState('pos:$fileName', '${at.millisecondsSinceEpoch}');
+    await setSyncState('posSent:$fileName', '${at.millisecondsSinceEpoch}');
+  }
+
+  /// The saved position row of [fileName]: position and completed flag.
+  Future<({String position, bool completed})?> getBookRow(
+      String fileName) async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance
+        .query('bookposition', where: 'fileName = ?', whereArgs: [fileName]);
+    if (rows.isEmpty) return null;
+    return (
+      position: '${rows.first['position'] ?? ''}',
+      completed: rows.first['completed'] == 1,
+    );
+  }
+
+  // ------------------------------------------------------------------
+  // Sync state: small named values ([SyncState]).
+  // ------------------------------------------------------------------
+
+  Future<String?> getSyncState(String name) async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance
+        .query('syncstate', where: 'name = ?', whereArgs: [name]);
+    return rows.isEmpty ? null : rows.first['value'] as String?;
+  }
+
+  /// Every value whose name starts with [prefix], by name.
+  Future<Map<String, String>> getSyncStates(String prefix) async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance
+        .query('syncstate', where: 'name LIKE ?', whereArgs: ['$prefix%']);
+    return {
+      for (final r in rows)
+        if ('${r['name']}'.startsWith(prefix)) '${r['name']}': '${r['value']}',
+    };
+  }
+
+  /// Sets (or with null, removes) a sync value.
+  Future<void> setSyncState(String name, String? value) async {
+    final dbInstance = await instance.database;
+    if (value == null) {
+      await dbInstance
+          .delete('syncstate', where: 'name = ?', whereArgs: [name]);
+    } else {
+      await dbInstance.insert('syncstate', {'name': name, 'value': value},
+          conflictAlgorithm: ConflictAlgorithm.replace);
+    }
   }
 
   // ------------------------------------------------------------------
@@ -475,6 +565,7 @@ class MyLibraryDb {
       {'fileName': fileName, 'position': '', 'completed': completed ? 1 : 0},
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    await _positionChanged(fileName);
     if (completed) {
       await dbInstance.insert(
         'completions',

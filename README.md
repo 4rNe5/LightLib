@@ -4,7 +4,7 @@
 
 # LightLib
 
-**An e-book library and reader for Android, made for Japanese light novels: <br/> the book's own layout, translation as you read, and a library that remembers where you are.**
+**An e-book library and reader for Android and the web, made for Japanese light novels: <br/> the book's own layout, translation as you read, and a library that remembers where you are.**
 
 **English** | [한국어](README.ko.md)
 
@@ -52,13 +52,20 @@ Add your own key from [Google AI Studio](https://aistudio.google.com/apikey) (th
 - **Discover** — what sells on BOOK☆WALKER now (light novels, web novels in print, manga, and their genres), and popular English titles.
 - **Home-screen widgets** — *Continue reading* and *Reading record*, laid out for every size from 1×1 up, folded or unfolded.
 
+### On the web, in sync
+- **The same reader in the browser** — the library, the reader (vertical writing, ruby, themes) and Gemini translation, as a web app (`lib/main_web.dart`). Add EPUB files from the computer (the button, or drop them on the window); they stay in the browser's own storage.
+- **Made for a desktop window, too** — a side bar (all, reading, on this browser, finished), search (`/`), sorting, the last book to pick up again, a right-click menu on every book, settings in a dialog; in the reader a readable column when scrolling and two pages side by side when turning, with the arrow keys, Page Up/Down, Space and the mouse wheel. A phone's browser gets the same library under an app bar.
+- **The whole library at once, files when you read** — signed in, the web lists every book of the account from its title, author and cover, without downloading any (a book that has no small cover yet has just its cover read out of the file). A book's card (cover, details, how far you are, what is translated) has the button that opens it; only then is that one file fetched, with its progress shown. A book's copy can be removed from the browser while it stays in the account.
+- **Phone and web in sync** — sign in with Google (*Settings → Sync*) and your books (EPUB files), reading positions, translations and glossaries follow you: open a book on the phone, carry on in the browser on the same page, with everything either side has translated and the same names. Positions and glossaries keep the newest, translations merge, and a book deleted on one side goes on the other. A book that arrives brings its translations with it; an open book fetches the other side's first, and saved translations show even where no engine is set up. The Gemini API key is shared too (the newest wins; *Settings → Sync* turns that off and removes the copy the project holds). Progress and results show as a notification on the phone.
+- **Your own project** — sync runs on a [Supabase](https://supabase.com) project that only the accounts it lists can read or write. To run your own, apply `supabase/migrations/` to a project of yours and point `SyncConfig` (`lib/services/sync/sync_service.dart`) at it.
+
 ### And
 - **Updates from this repository** — the app checks the latest release, downloads it over Wi-Fi (verified against its SHA-256), shows what changed, and installs with one tap.
 - **Six languages** — English, 한국어, 日本語, Deutsch, Español, Français.
 
 ## Your data 🔒
 
-Your library, reading positions, glossaries and translations stay on your phone (and in your backups). Translating on the phone keeps everything there too. The study features ask the same engine, so with Gemini the word or sentence you look up goes along the same way. The Japanese word tools (about 18 MB) come once from a public package mirror (jsDelivr, or unpkg) the first time you turn on furigana or word taps. When you choose Gemini, the paragraphs being translated go to Google with your own key, the same way any app using Gemini works; on Google's free tier they may be used to improve Google's services, and on a paid key they are not. The key itself is kept on the device only and is never part of a backup.
+Your library, reading positions, glossaries and translations stay on your phone (and in your backups) — or, on the web, in the browser. If you sign in to sync, your books, reading positions, translations and glossaries are also kept in the sync project, readable only by its listed accounts; so is the Gemini key, unless you turn its sharing off in *Settings → Sync*. Translating on the phone keeps everything there too. The study features ask the same engine, so with Gemini the word or sentence you look up goes along the same way. The Japanese word tools (about 18 MB) come once from a public package mirror (jsDelivr, or unpkg) the first time you turn on furigana or word taps. When you choose Gemini, the paragraphs being translated go to Google with your own key, the same way any app using Gemini works; on Google's free tier they may be used to improve Google's services, and on a paid key they are not. The key itself is kept on the device only and is never part of a backup.
 
 ## Screenshots 🖼️
 
@@ -74,6 +81,7 @@ Download `LightLib-<version>-build.<n>-arm64.apk` from the [latest release](http
 - **Android, arm64** (64-bit phones from the last several years).
 - Every release is signed with the same key, so a new build installs over the old one and keeps your library. After the first install, updates come through the app.
 - To translate on the phone, download a model in *Settings → On-device translation* (Gemma 4 E2B or E4B). To translate with Gemini, add a key in the same place.
+- To sync with the web, sign in under *Settings → Sync*.
 
 ## Development 🛠️
 
@@ -87,6 +95,8 @@ flutter run
 ```
 
 - The reader's web part lives in `reader_web/` and is bundled into `assets/reader/` (see `reader_web/README.md`).
+- The web app: `flutter build web -t lib/main_web.dart`. Vercel builds and serves it on every push to `main` that changes the app (`vercel.json`, `tool/vercel_build.sh`).
+- Sync's database, bucket and access rules are in `supabase/migrations/`.
 - Every push to `main` that changes more than Markdown runs `.github/workflows/android-release.yml`: tests, a signed arm64 build, and a release with the next version number (1.7.3, 1.7.4, …). A push to `beta` does the same as a pre-release of the version to come, `1.7.4-beta (build n)`.
 - [SETUP.md](SETUP.md) walks through a first build; [CONTRIBUTING.md](CONTRIBUTING.md) has the guidelines.
 
@@ -94,6 +104,7 @@ flutter run
 
 - Built on [Openlib](https://github.com/dstark5/Openlib) by dstark5 and its fork [OpenlibExtended](https://github.com/warreth/OpenlibExtended) by warreth.
 - [foliate-js](https://github.com/johnfactotum/foliate-js) (MIT) and [Readest](https://github.com/readest/readest) (AGPL-3.0) for the reader.
+- [Supabase](https://supabase.com) for sync, and [sqflite_common_ffi_web](https://pub.dev/packages/sqflite_common_ffi_web) (SQLite in WebAssembly) and [idb_shim](https://pub.dev/packages/idb_shim) for the web's storage.
 - [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), [llamadart](https://pub.dev/packages/llamadart), the [Gemma](https://ai.google.dev/gemma) models and the [Gemini API](https://ai.google.dev/gemini-api) for translation.
 - [Glossarion](https://github.com/Shirochi-stack/Glossarion) (AGPL-3.0) for the approach of the glossary and quality checks.
 - For study: [kuromoji.js](https://github.com/takuyaa/kuromoji.js) (Apache-2.0) with mecab-ipadic (NAIST), [KANJIDIC2](http://www.edrdg.org/wiki/index.php/KANJIDIC_Project) (CC BY-SA 4.0, EDRDG) for the Korean readings of kanji, and [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT) for JLPT levels.

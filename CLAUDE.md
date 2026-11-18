@@ -23,6 +23,7 @@ export ANDROID_HOME=/opt/android-sdk          # cloud sessions
 /opt/flutter/bin/flutter test --no-pub        # ~530 tests, ~2.5 min
 /opt/flutter/bin/flutter gen-l10n             # after editing lib/l10n/*.arb
 /opt/flutter/bin/flutter build apk --release --split-per-abi --target-platform android-arm64   # ~7 min
+/opt/flutter/bin/flutter build web --release -t lib/main_web.dart   # the web app, ~2 min
 ```
 Without `android/key.properties` a local release build is signed with the
 debug key (only CI signs releases).
@@ -47,13 +48,82 @@ debug key (only CI signs releases).
   live only in GitHub Secrets and with the owner.
 - `gh` works through REST only (no GraphQL, no Actions secrets).
 
+## Web and sync
+- Web app = `lib/main_web.dart` (library, the same reader, Gemini only):
+  Vercel project `lightlib` builds it on every push that touches the app
+  (`vercel.json`, `tool/vercel_build.sh`; CSP in `vercel.json` - test a
+  new outside host against it; no inline script, so `web/splash.js`). Not
+  built: search/downloads, the device model, widgets, updates.
+- The web lists the library from the account's rows (`RemoteLibraryStore`,
+  `lib/web/web_library.dart`: title, author, a small cover
+  `<md5>.cover.jpg`) and fetches a book's file only when it is opened
+  (`SyncEngine(onDemand: true)`, `fetchBook`; `WebBookOpenPage`). A file
+  missing in the browser deletes nothing; deleting is `deleteBook`,
+  freeing space `dropLocalCopy`. A book no device has put a small cover
+  of gets its cover read out of its file on the account by byte ranges
+  (`epub_remote_cover.dart`, `SyncService.cardFromFile`; never the whole
+  book) and kept for the others. The first frame waits for nothing
+  (`main_web.dart`); `web/index.html` shows the app's name until then.
+  A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
+- Cloudflare, for a network that does not reach `*.supabase.co` (nor
+  Vercel): the Workers project `lightlib`
+  (https://lightlib.4rnne5.workers.dev), root `cloudflare`, build
+  `bash ../tool/cloudflare_build.sh`, deploy `npx wrangler deploy`
+  (`cloudflare/wrangler.jsonc`: the files of `dist`, and `worker.js` for
+  what is not a file - without that config wrangler deploys the files
+  alone and `/sb` answers 404). The app is built with `SYNC_RELAY=/sb`
+  (`SyncConfig.viaRelay`): it asks the project through the site's own
+  `/sb/*`, passed on by `cloudflare/relay.js` (that project only,
+  auth/rest/storage, the site's own pages; `npm test` there). Files are
+  served without the Worker; the Worker's free plan is 100,000 requests
+  a day. `functions/` and `_routes.json` are the same relay for a Pages
+  project, should one be made. Signing in there is Google's button on the page
+  (`lib/web/google_id_sign_in*.dart`, `signInWithIdToken`): the usual way
+  sends the browser to the project's address. The site's address must be
+  among the Google client's authorised JavaScript origins. Headers:
+  `tool/cloudflare_headers.py` writes `_headers` from `vercel.json`.
+  Cloudflare skips a build whose commit message has `[skip ci]`.
+- A second host, for networks that block Vercel: GitHub Pages,
+  `.github/workflows/web-pages.yml` (the same build under `/LightLib/`,
+  `BASE_HREF`; no headers there, so `tool/pages_csp.py` puts the policy
+  in the page). `[skip ci]` skips it: run the workflow by hand then. The
+  sign-in returns to `SyncConfig.webRedirect` (the app's own address); a
+  new host's address must be in the project's Auth redirect URLs.
+- Web checks: `tool/web_check/` (its README) - the built app in headless
+  Chrome with real clicks and touches, against a stand-in for the sync
+  project (no live account).
+- Platform checks go through `PlatformUtils` (`Platform` throws on the
+  web); files the app keeps through `AppFiles` (dart:io / IndexedDB);
+  isolates through `runHeavy`.
+- Sync = owner's Supabase project `lightlib` (ggagbhdqdrmomrednwfx,
+  schema in `supabase/migrations/`): books by file MD5 (EPUB files in the
+  private `books` bucket), positions and glossaries (newest wins; saved
+  before sync = `unknownAge`), translations (union). Order: deletions,
+  then positions/translations/glossaries of books here, then files - a
+  downloaded book brings its own before the library hears of it. Quick
+  runs (while reading) skip files; opening a book runs `runBook` first.
+  Each device that has a book puts its details and a small cover
+  (`CoverThumbs`) once - the cover saved with the book, or the book's own
+  out of its file when that is a web address (a book downloaded in the
+  app). How far a book was read travels as
+  `progress.fraction` (`frac:<file>` here; `put_reading`; the old
+  `put_progress` clears it). Shared settings (`settings` table,
+  `put_setting`, newest wins): the Gemini key, unless `syncGeminiKey`
+  is 0. Progress/result notifications: `sync_notifier*.dart`. Only
+  emails in `public.owners` can read or write (RLS). Engine rules and
+  tests: `sync_engine.dart`, `test/sync_engine_test.dart`.
+
 ## Map
 | Area | Where |
 |---|---|
 | App start, tabs, home widgets update | `lib/main.dart` |
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
-| Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`) |
+| Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
+| Relay to the sync project (Cloudflare) | `cloudflare/` (`relay.js`, `worker.js` + `wrangler.jsonc`, `functions/sb/[[path]].js` for Pages, `test/`), `tool/cloudflare_build.sh`, `tool/cloudflare_headers.py` |
+| Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
+| Sync | `lib/services/sync/` (`sync_engine`, `supabase_remote`, `library_sync_local`, `sync_service`); settings `lib/ui/components/sync_section.dart` |
+| Files the app keeps (web: IndexedDB) | `lib/services/storage/` (`AppFiles`) |
 | Older reader | `lib/ui/epub_viewer.dart` |
 | Engine choice (device / Gemini) | `lib/services/translation/translation_engine.dart` |
 | Device translation | `translator.dart` (`LocalLlmTranslator`, scheduler, `SharedTranslationEngine`), `third_party/llamadart` (see `PATCHES.md`) |
@@ -87,6 +157,44 @@ debug key (only CI signs releases).
   `cfi-skip` (furigana `<ruby>`), which foliate's CFI code ignores.
 - Search candidates come only from the libraries: BOOK☆WALKER lists books
   the libraries do not have, so it only fills the search field.
+- Web reader: the iframe takes every tap inside its box, Flutter widgets
+  drawn over it included. Bars and buttons over the page go in
+  `PointerInterceptor` (`_onPage` in `book_reader_page.dart`); the iframe's
+  `pointer-events` is off while another route (sheet, dialog) is on top
+  (`reader_host_web.dart`). Browser tests tap real coordinates: clicks on
+  semantics nodes passed while real taps did not.
+- Web reader: nothing may keep animating over the iframe (a spinner, a
+  running progress bar) - each frame of it is drawn on the thread the
+  page works on; a running bar made a 3 s opening take 12 s.
+- Web frames are dear: each is drawn, then copied to the page, at the
+  full pixel size (in headless Chrome `createImageBitmap` is 60% of a
+  scroll). So `web/splash.js` caps the app's device pixel ratio at 2,
+  nothing on the web animates without end (sync shows a still icon and a
+  bar only when it knows how far), tiles have no blurred shadow at rest,
+  the reader asks for a frame on `relocate` only when the footer changes,
+  and a bar that slid away has no `PointerInterceptor`.
+- Web bundle: `GoogleFonts.getFont(name)` pulls the table of every font
+  (3.4 MB of JS) - it sits behind `google_font_family_io/web.dart`.
+  Full-size covers decoded per tile cost ~30 MB each; the web draws
+  `CoverThumbs` only, at the size shown (`cacheWidth`).
+- Supabase: the client adds the key and the session's token inside its
+  own HTTP client, not to `storage.headers`. A request made beside it
+  (Dio: a part of a file, a book with its progress) must add them
+  (`SupabaseRemote._signed`), or storage answers 400 "Bucket not found".
+  The stand-in in `tool/web_check` answered anyone, so the checks passed
+  while the owner's library read no cover out of a file; it now refuses
+  a request that does not say who asks. When the web misbehaves on the
+  real account, read the project's `edge_logs` first.
+- Reader page on older browsers: esbuild's `target` rewrites syntax only,
+  a missing function stays missing. foliate-js calls `Object.groupBy`
+  (Chrome 117) for every EPUB, so no book opened in Chrome 112 or a
+  WebView that old; `reader_web/src/polyfills.js` fills in what it uses.
+  After taking a newer foliate-js, look for newer functions again and
+  open a book in an old Chrome (`tool/web_check` README).
+- `MyLibraryDb.database` is asked by several callers at once when the web
+  starts; that is safe because sqflite opens a path once under a lock. Do
+  not keep the opening future instead: one made inside a `testWidgets`
+  never completes and every later test waits on it.
 - Tests: no network, no platform channels — inject `Dio` adapters, use
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.
@@ -96,10 +204,11 @@ debug key (only CI signs releases).
    allows (MLX or llama-server, OpenAI-compatible), reachable only by the
    owner (Tailscale preferred, or a tunnel with an API key); an app engine
    "내 서버" (URL + key) reusing `CloudTranslator`'s structure.
-2. Flutter Web (static hosting, IndexedDB, Gemini with the user's own key):
-   no public relay for shadow-library search/downloads; books reach the web
-   through the owner's own Google Drive app folder sync, upload, or
-   public-domain sources.
+2. Web + sync (built, see "Web and sync"): next - whole-book translation
+   on the web, the reader's fonts and word tools on the web, a smaller
+   start (llamadart is still in the web bundle, ~0.4 MB; a WebAssembly
+   build compiles but saved only ~10% of the download). No public relay
+   for shadow-library search/downloads.
 3. Smaller: `[n]`→`n.` numbering, token-budget batches, translator-note
    stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
    two-page spread on unfolded screens.

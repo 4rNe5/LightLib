@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/backup_service.dart';
+import 'package:openlib/ui/components/sync_section.dart';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -691,6 +692,14 @@ class SettingsPage extends ConsumerWidget {
                     subtitle: l10n.enterKeyForFasterDownloads,
                     icon: Icons.key_outlined,
                     onTap: () => _showDonationKeyDialog(context, ref, dataBase),
+                  ),
+                ],
+              ),
+              const _SettingsGroup(
+                children: [
+                  Padding(
+                    padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
+                    child: SyncSection(),
                   ),
                 ],
               ),

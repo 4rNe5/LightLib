@@ -4,7 +4,7 @@
 
 # LightLib
 
-**일본 라이트노벨을 위한 안드로이드 전자책 서재·리더 <br/> 책 본래의 조판 그대로, 읽으면서 번역하고, 어디까지 읽었는지 기억합니다.**
+**일본 라이트노벨을 위한 안드로이드·웹 전자책 서재·리더 <br/> 책 본래의 조판 그대로, 읽으면서 번역하고, 어디까지 읽었는지 기억합니다.**
 
 [English](README.md) | **한국어**
 
@@ -52,13 +52,20 @@
 - **둘러보기** — 지금 BOOK☆WALKER에서 잘 팔리는 라노벨·웹소설 출간작·만화와 장르별 목록, 영미권 인기작.
 - **홈 화면 위젯** — *이어 읽기*와 *독서 기록*, 1×1부터 큰 크기까지, 접어도 펼쳐도 크기에 맞게.
 
+### 웹에서도, 동기화로
+- **브라우저에서 같은 리더** — 서재, 리더(세로쓰기·루비·테마), Gemini 번역을 웹 앱(`lib/main_web.dart`)으로. 컴퓨터의 EPUB 파일을 추가하면(버튼, 또는 창에 끌어다 놓기) 브라우저 저장소에 보관됩니다.
+- **데스크톱 창에 맞춘 화면** — 사이드바(전체·읽는 중·이 브라우저에 있음·다 읽음), 검색(`/`), 정렬, 이어 읽기 카드, 책마다 우클릭 메뉴, 대화상자로 뜨는 설정. 리더는 스크롤할 때 읽기 좋은 폭의 단, 페이지로 넘길 때 두 쪽 펼침이고, 방향키·Page Up/Down·Space·마우스 휠로 넘깁니다. 폰 브라우저에서는 같은 서재가 앱 바 아래에 나옵니다.
+- **서재는 한 번에, 파일은 읽을 때** — 로그인하면 계정의 모든 책이 제목·저자·표지로 바로 보이고, 책 파일은 받지 않습니다(작은 표지가 아직 없는 책은 파일에서 표지 부분만 읽어 옵니다). 책을 누르면 뜨는 카드(표지, 세부 정보, 읽은 정도, 번역 현황)의 읽기 버튼을 눌러야 그 책 한 권만 받고, 받는 동안 진행 상황이 보입니다. 받은 파일은 계정에 남겨 둔 채 브라우저에서만 지울 수 있습니다.
+- **폰과 웹 동기화** — Google로 로그인하면(*설정 → 동기화*) 책(EPUB 파일), 읽던 위치, 번역, 용어집이 따라옵니다. 폰에서 읽던 책을 브라우저에서 같은 페이지부터, 양쪽에서 번역한 내용과 같은 이름 그대로 이어 읽습니다. 위치와 용어집은 최신 것이 남고, 번역은 합쳐지며, 한쪽에서 지운 책은 다른 쪽에서도 지워집니다. 내려받은 책은 번역을 함께 가져오고, 책을 열면 다른 쪽 번역부터 받아 오며, 번역 엔진이 없는 곳에서도 저장된 번역은 보입니다. Gemini API 키도 함께 동기화됩니다(최신 것이 남고, *설정 → 동기화*에서 끄면 프로젝트에 올린 키를 지웁니다). 진행 상황과 결과는 폰 알림으로 표시됩니다.
+- **내 프로젝트에서** — 동기화는 등록된 계정만 읽고 쓸 수 있는 [Supabase](https://supabase.com) 프로젝트에서 돌아갑니다. 직접 쓰려면 내 프로젝트에 `supabase/migrations/`를 적용하고 `SyncConfig`(`lib/services/sync/sync_service.dart`)를 그 프로젝트로 바꾸세요.
+
 ### 그리고
 - **이 저장소에서 바로 업데이트** — 앱이 최신 릴리즈를 확인해 Wi-Fi로 받고(SHA-256 검증), 바뀐 점을 보여준 뒤 한 번에 설치합니다.
 - **6개 언어** — English, 한국어, 日本語, Deutsch, Español, Français.
 
 ## 내 데이터 🔒
 
-서재, 읽던 위치, 용어집, 번역은 휴대폰(과 백업)에 남습니다. 휴대폰 안에서 번역하면 모든 게 그대로 기기 안에 머뭅니다. 학습 기능도 같은 엔진에 묻기 때문에, Gemini라면 찾아본 단어나 문장도 같은 방식으로 전달됩니다. 일본어 단어 도구(약 18MB)는 후리가나나 단어 탭을 처음 켤 때 공개 패키지 미러(jsDelivr 또는 unpkg)에서 한 번 받습니다. Gemini를 고르면 번역 중인 문단이 본인 키로 Google에 전달되는데, Gemini를 쓰는 앱이라면 모두 같은 방식입니다. Google 무료 등급에서는 서비스 개선에 쓰일 수 있고, 유료 키에서는 쓰이지 않습니다. 키는 이 기기에만 보관되고 백업에는 들어가지 않습니다.
+서재, 읽던 위치, 용어집, 번역은 휴대폰(과 백업)에 남습니다. 웹에서는 브라우저에 남습니다. 동기화에 로그인하면 책, 읽던 위치, 번역, 용어집이 동기화 프로젝트에도 보관되고, 등록된 계정만 읽을 수 있습니다. Gemini 키도 같은 곳에 보관되며, *설정 → 동기화*에서 끌 수 있습니다. 휴대폰 안에서 번역하면 모든 게 그대로 기기 안에 머뭅니다. 학습 기능도 같은 엔진에 묻기 때문에, Gemini라면 찾아본 단어나 문장도 같은 방식으로 전달됩니다. 일본어 단어 도구(약 18MB)는 후리가나나 단어 탭을 처음 켤 때 공개 패키지 미러(jsDelivr 또는 unpkg)에서 한 번 받습니다. Gemini를 고르면 번역 중인 문단이 본인 키로 Google에 전달되는데, Gemini를 쓰는 앱이라면 모두 같은 방식입니다. Google 무료 등급에서는 서비스 개선에 쓰일 수 있고, 유료 키에서는 쓰이지 않습니다. 키는 이 기기에만 보관되고 백업에는 들어가지 않습니다.
 
 ## 스크린샷 🖼️
 
@@ -74,6 +81,7 @@
 - **안드로이드, arm64** (최근 몇 년 사이의 64비트 휴대폰).
 - 모든 릴리즈가 같은 키로 서명되어 새 빌드가 기존 앱 위에 설치되고 서재가 유지됩니다. 처음 설치한 뒤에는 앱에서 업데이트됩니다.
 - 휴대폰에서 번역하려면 *설정 → 기기 내 번역*에서 모델(Gemma 4 E2B 또는 E4B)을 받으세요. Gemini로 번역하려면 같은 곳에서 키를 넣으면 됩니다.
+- 웹과 동기화하려면 *설정 → 동기화*에서 로그인하세요.
 
 ## 개발 🛠️
 
@@ -87,6 +95,8 @@ flutter run
 ```
 
 - 리더의 웹 부분은 `reader_web/`에 있고 `assets/reader/`로 빌드됩니다(`reader_web/README.md` 참고).
+- 웹 앱: `flutter build web -t lib/main_web.dart`. 앱이 바뀐 커밋을 `main`에 푸시하면 Vercel이 빌드해 배포합니다(`vercel.json`, `tool/vercel_build.sh`).
+- 동기화의 데이터베이스·버킷·접근 규칙은 `supabase/migrations/`에 있습니다.
 - `main`에 마크다운 외 변경을 푸시하면 `.github/workflows/android-release.yml`이 테스트·서명된 arm64 빌드·다음 버전 번호(1.7.3, 1.7.4 …)의 릴리즈를 만듭니다. `beta`에 푸시하면 같은 과정을 거쳐 다음 버전의 프리릴리즈 `1.7.4-beta (build n)`가 나옵니다.
 - 첫 빌드는 [SETUP.md](SETUP.md), 기여 안내는 [CONTRIBUTING.md](CONTRIBUTING.md)를 보세요.
 
@@ -94,6 +104,7 @@ flutter run
 
 - [Openlib](https://github.com/dstark5/Openlib)(dstark5)과 그 포크 [OpenlibExtended](https://github.com/warreth/OpenlibExtended)(warreth)를 바탕으로 만들었습니다.
 - 리더: [foliate-js](https://github.com/johnfactotum/foliate-js) (MIT), [Readest](https://github.com/readest/readest) (AGPL-3.0).
+- 동기화: [Supabase](https://supabase.com). 웹 저장소: [sqflite_common_ffi_web](https://pub.dev/packages/sqflite_common_ffi_web)(WebAssembly SQLite), [idb_shim](https://pub.dev/packages/idb_shim).
 - 번역: [LiteRT-LM](https://github.com/google-ai-edge/LiteRT-LM), [llamadart](https://pub.dev/packages/llamadart), [Gemma](https://ai.google.dev/gemma) 모델, [Gemini API](https://ai.google.dev/gemini-api).
 - 용어집과 품질 검사의 접근 방식: [Glossarion](https://github.com/Shirochi-stack/Glossarion) (AGPL-3.0).
 - 학습: [kuromoji.js](https://github.com/takuyaa/kuromoji.js) (Apache-2.0)와 mecab-ipadic(NAIST), 한자의 한국어 음은 [KANJIDIC2](http://www.edrdg.org/wiki/index.php/KANJIDIC_Project) (CC BY-SA 4.0, EDRDG), JLPT 단계는 [open-anki-jlpt-decks](https://github.com/jamsinclair/open-anki-jlpt-decks) (MIT).

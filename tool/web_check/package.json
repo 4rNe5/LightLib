@@ -1,0 +1,9 @@
+{
+  "name": "lightlib-web-check",
+  "private": true,
+  "type": "module",
+  "description": "Checks of the built web app in headless Chrome, against a stand-in for the sync project.",
+  "dependencies": {
+    "puppeteer-core": "^24.0.0"
+  }
+}

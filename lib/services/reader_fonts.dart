@@ -10,12 +10,13 @@ import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
 
 // Package imports:
-import 'package:google_fonts/google_fonts.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/google_font_family_io.dart'
+    if (dart.library.js_interop) 'package:openlib/services/google_font_family_web.dart';
 
 enum FontScript { korean, japanese, latin }
 
@@ -119,12 +120,15 @@ class ReaderFonts extends ChangeNotifier {
         _choices[script] = FontChoice(saved);
       }
     }
-    try {
-      final dir = await _fontDir();
-      await for (final entity in dir.list()) {
-        if (entity is File) await _register(entity);
-      }
-    } catch (_) {}
+    // Imported fonts are files on the device; the web has none yet.
+    if (!kIsWeb) {
+      try {
+        final dir = await _fontDir();
+        await for (final entity in dir.list()) {
+          if (entity is File) await _register(entity);
+        }
+      } catch (_) {}
+    }
     notifyListeners();
   }
 
@@ -167,11 +171,7 @@ class ReaderFonts extends ChangeNotifier {
   String? familyOf(FontChoice choice) {
     if (choice.isSystem) return null;
     if (choice.isFile) return choice.family;
-    try {
-      return GoogleFonts.getFont(choice.family).fontFamily;
-    } catch (_) {
-      return null;
-    }
+    return googleFontFamily(choice.family);
   }
 
   /// The font files behind [choice] for the book renderer (a web page,
@@ -179,6 +179,7 @@ class ReaderFonts extends ChangeNotifier {
   /// or the Google Font files cached on the device (regular first). Empty
   /// for the system font or a Google Font not downloaded yet.
   Future<List<File>> filesOf(FontChoice choice) async {
+    if (kIsWeb) return const [];
     try {
       if (choice.isFile) {
         final dir = await _fontDir();

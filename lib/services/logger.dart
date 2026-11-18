@@ -248,9 +248,13 @@ class AppLogger {
     buffer.writeln('System Information');
     buffer.writeln(
         '─────────────────────────────────────────────────────────────────');
-    buffer.writeln(
-        'Platform: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}');
-    buffer.writeln('Dart version: ${Platform.version}');
+    if (kIsWeb) {
+      buffer.writeln('Platform: web');
+    } else {
+      buffer.writeln(
+          'Platform: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}');
+      buffer.writeln('Dart version: ${Platform.version}');
+    }
     buffer.writeln('');
     buffer.writeln(
         '─────────────────────────────────────────────────────────────────');

@@ -37,6 +37,7 @@ import 'package:openlib/ui/mybook_page.dart' show BookPage;
 import 'package:openlib/services/home_widgets.dart';
 import 'package:openlib/services/hidden_covers.dart';
 import 'package:openlib/services/reading_recap.dart';
+import 'package:openlib/services/sync/sync_service.dart';
 
 import 'package:openlib/services/files.dart'
     show moveFilesToAndroidInternalStorage;
@@ -47,6 +48,7 @@ import 'package:openlib/state/state.dart'
     show
         ThemeModeNotifier,
         libraryBooksProvider,
+        myLibraryProvider,
         selectedIndexProvider,
         themeModeProvider,
         fontSizeScaleProvider,
@@ -355,6 +357,14 @@ class _MainScreenState extends ConsumerState<MainScreen>
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refreshMirrorsOnStartup();
     });
+    // Sync with the owner's project (books, positions, translations);
+    // what it brings shows in the library.
+    SyncService.instance.onLocalChanges = () {
+      if (!mounted) return;
+      ref.invalidate(myLibraryProvider);
+      ref.invalidate(libraryBooksProvider);
+    };
+    unawaited(SyncService.instance.init());
   }
 
   @override
@@ -365,6 +375,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // failed download continues from its partial file instead of dying.
     if (state == AppLifecycleState.resumed) {
       DownloadManager().resumeInterruptedDownloads();
+      SyncService.instance.resumed();
     }
   }
 

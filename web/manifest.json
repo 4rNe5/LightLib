@@ -1,12 +1,12 @@
 {
-    "name": "OpenLibExtended",
-    "short_name": "OpenLibExtended",
+    "name": "LightLib",
+    "short_name": "LightLib",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "An open source app to download and read books.",
-    "orientation": "portrait-primary",
+    "background_color": "#F663A0",
+    "theme_color": "#F663A0",
+    "description": "Read your EPUBs and translate them with Gemini, in sync with the phone app.",
+    "orientation": "any",
     "prefer_related_applications": false,
     "icons": [
         {

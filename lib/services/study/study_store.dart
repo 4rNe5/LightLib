@@ -18,6 +18,7 @@ import 'package:path/path.dart' as p;
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/storage/app_files.dart';
 
 /// How a card was answered.
 enum ReviewGrade { again, hard, good, easy }
@@ -273,17 +274,16 @@ class StudyStore extends ChangeNotifier {
   final Map<String, StudyDay> _days = {};
   Future<void>? _loading;
   Timer? _saveTimer;
-  Directory? _dir;
 
-  Future<Directory> _directory() async {
-    if (_dir != null) return _dir!;
-    final dir = directory != null
-        ? await directory!()
-        : Directory(p.join(
-            '${await MyLibraryDb.instance.getPreference('bookStorageDirectory')}',
-            '.study'));
-    if (!await dir.exists()) await dir.create(recursive: true);
-    return _dir = dir;
+  String? _dirPath;
+
+  /// The folder: next to the books (AppFiles paths, so also on the web).
+  Future<String> _directory() async {
+    if (_dirPath != null) return _dirPath!;
+    if (directory != null) return _dirPath = (await directory!()).path;
+    return _dirPath = p.join(
+        '${await MyLibraryDb.instance.getPreference('bookStorageDirectory')}',
+        '.study');
   }
 
   Future<void> load() => _loading ??= _load();
@@ -292,10 +292,10 @@ class StudyStore extends ChangeNotifier {
     try {
       final dir = await _directory();
       Future<dynamic> read(String name) async {
-        final f = File(p.join(dir.path, name));
-        if (!await f.exists()) return null;
+        final text = await AppFiles.instance.readString(p.join(dir, name));
+        if (text == null) return null;
         try {
-          return jsonDecode(await f.readAsString());
+          return jsonDecode(text);
         } catch (_) {
           return null;
         }
@@ -477,12 +477,8 @@ class StudyStore extends ChangeNotifier {
     _saveTimer?.cancel();
     try {
       final dir = await _directory();
-      Future<void> write(String name, Object data) async {
-        final f = File(p.join(dir.path, name));
-        final temp = File('${f.path}.tmp');
-        await temp.writeAsString(jsonEncode(data), flush: true);
-        await temp.rename(f.path);
-      }
+      Future<void> write(String name, Object data) =>
+          AppFiles.instance.writeString(p.join(dir, name), jsonEncode(data));
 
       await write('words.json', [for (final c in cards) c.toJson()]);
       await write('answers.json', _answers);
@@ -499,7 +495,7 @@ class StudyStore extends ChangeNotifier {
     _answers.clear();
     _days.clear();
     _loading = null;
-    _dir = null;
+    _dirPath = null;
     _saveTimer?.cancel();
   }
 }

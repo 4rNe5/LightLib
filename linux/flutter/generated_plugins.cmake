@@ -3,6 +3,7 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  app_links_linux
   desktop_webview_window
   open_file_linux
   sqlite3_flutter_libs

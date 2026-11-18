@@ -1142,6 +1142,8 @@ class SharedTranslationEngine {
   /// The translator for the active model, created (not yet loaded) on
   /// first use. Null when no model is installed.
   Future<LocalLlmTranslator?> acquire() async {
+    // The web build has no model on the device: Gemini only.
+    if (kIsWeb) return null;
     final model = await TranslationModelStore.instance.activeModel();
     if (model == null) return null;
     _idleTimer?.cancel();

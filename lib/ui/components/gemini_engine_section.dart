@@ -3,6 +3,7 @@
 // today's use against the limits the API reported.
 
 // Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 // Package imports:
@@ -108,6 +109,8 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // The web has no model of its own to choose instead.
+            if (!kIsWeb) ...[
             Text(l10n.translationEngine, style: theme.textTheme.titleSmall),
             const SizedBox(height: 6),
             SegmentedButton<bool>(
@@ -129,6 +132,7 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
                 widget.onEngineChanged();
               },
             ),
+            ],
             if (gemini) ...[
               const SizedBox(height: 6),
               Text(l10n.translationEngineGeminiHint, style: small),
@@ -182,6 +186,7 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
                     ),
                   ],
                 ),
+              if (!kIsWeb)
               SwitchListTile(
                 key: const ValueKey('geminiDeviceFallback'),
                 contentPadding: EdgeInsets.zero,
