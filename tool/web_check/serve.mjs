@@ -8,7 +8,14 @@ import { join, extname } from 'node:path'
 // argv: root port vercel.json|none [prefix] - "none" and a prefix
 // (/LightLib/) stand for a host that sends no headers of ours and serves
 // the app under a path (GitHub Pages).
-const [root, port, vercelJson, prefix = '/'] = process.argv.slice(2)
+// A fifth, relay=<project's address>, makes this the site that passes the
+// sync project's requests on (Cloudflare Pages): /sb/* is answered by the
+// same code that runs there (cloudflare/relay.js).
+const [root, port, vercelJson, prefix = '/', relayArg = ''] = process.argv.slice(2)
+const upstream = relayArg.startsWith('relay=') ? relayArg.slice(6) : null
+const { relay } = upstream ? await import('../../cloudflare/relay.js') : {}
+const { Readable } = await import('node:stream')
+let relayed = 0
 const conf = vercelJson === 'none' ? { headers: [] } : JSON.parse(readFileSync(vercelJson, 'utf8'))
 const rules = conf.headers.map(h => ({ re: new RegExp('^' + h.source + '$'), headers: Object.fromEntries(h.headers.map(x => [x.key, x.value])) }))
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.mjs': 'text/javascript', '.wasm': 'application/wasm',
@@ -17,6 +24,20 @@ const squeeze = new Set(['.html', '.js', '.mjs', '.wasm', '.json', '.css', '.tsv
 const cache = new Map()
 http.createServer((req, res) => {
   let p = decodeURIComponent(new URL(req.url, 'http://x').pathname)
+  if (p === '/__relayed') { res.writeHead(200, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ relayed })) }
+  if (upstream && p.startsWith('/sb/')) {
+    relayed++
+    const bodiless = req.method === 'GET' || req.method === 'HEAD'
+    const headers = new Headers(); for (const [k, v] of Object.entries(req.headers)) if (k !== 'connection' && k !== 'transfer-encoding') headers.set(k, [].concat(v).join(', '))
+    relay(new Request(`http://${req.headers.host}${req.url}`, { method: req.method, headers, body: bodiless ? undefined : Readable.toWeb(req), ...(bodiless ? {} : { duplex: 'half' }) }), { upstream })
+      .then(answer => {
+        const out = {}; answer.headers.forEach((v, k) => { if (k !== 'content-encoding' && k !== 'transfer-encoding' && k !== 'connection') out[k] = v })
+        res.writeHead(answer.status, out)
+        if (answer.body) Readable.fromWeb(answer.body).pipe(res); else res.end()
+      })
+      .catch(e => { res.writeHead(502); res.end(String(e)) })
+    return
+  }
   const headers = {}
   for (const r of rules) if (r.re.test(p)) Object.assign(headers, r.headers)
   if (!('Cache-Control' in headers)) headers['Cache-Control'] = 'public, max-age=0, must-revalidate'

@@ -33,6 +33,7 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 | `reader_taps.mjs` | A phone: the reader's bars, a sheet over the page and a message's button take real taps |
 | `desktop_reading.mjs` | A horizontal book in a wide window: the column's width when scrolling, two pages when turning, keys and wheel |
 | `drop.mjs` | An EPUB dropped on the window is added |
+| `relayed.mjs` | The relayed site, the project unreachable by its own address: Google's button signs in, the library lists, a book comes and opens, all through `/sb` |
 | `covers.mjs` | An account without small covers: every book's real cover shows without one book fetched (read out of each file by byte ranges), and is kept for the other devices |
 | `busy.mjs`, `start_busy.mjs` | As a phone with a CPU four times slower: frames drawn and time the page's thread is busy while idle, scrolling the library, in the reader, and in the first 15 s |
 | `load.mjs` | First load as a phone on 4G or a desktop: first paint, first frame, bytes, memory (`node load.mjs <url> mobile`) |
@@ -43,6 +44,26 @@ The stand-in refuses a storage or table request without the project's
 key and a session's token, in the project's own words (400 "Bucket not
 found"): the app once read covers with such requests, and a stand-in that
 answered anyone let it pass. `OPEN=1` brings the old answering back.
+
+The site that passes the sync project's requests on (Cloudflare Pages):
+
+```bash
+FLUTTER_HOME=/opt/flutter bash ../cloudflare_build.sh      # ../../cloudflare/dist, as Cloudflare builds it
+node mock_project.mjs /tmp/lib24 8099 &
+# Cloudflare's own runtime on that output (npm install wrangler somewhere):
+(cd ../../cloudflare && wrangler pages dev dist --ip 127.0.0.1 --port 8097 --binding SUPABASE_URL=http://127.0.0.1:8099) &
+node relayed.mjs http://127.0.0.1:8097/ http://127.0.0.1:8099 /tmp/shots
+# or without wrangler, the same relay code under this folder's server:
+node serve.mjs ../../cloudflare/dist 8096 ../../vercel.json / relay=http://127.0.0.1:8099 &
+```
+
+`relayed.mjs` runs the browser with the project's own name leading
+nowhere (as on the network the site is for): signing in with Google's
+button (stood in for by `session.mjs` - a real Google sign-in is not
+something a test here can do), the library, a book fetched with its
+progress, the reader - with no request to the project's own address.
+Without `--binding`, wrangler's relay asks the real project: enough to
+see that it answers through it (`/sb/auth/v1/health` with the key).
 
 An old browser (the owner once read in Chrome 112, where no book opened):
 

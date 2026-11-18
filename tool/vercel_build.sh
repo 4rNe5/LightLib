@@ -19,5 +19,8 @@ flutter --version
 flutter pub get
 # BASE_HREF: the path the app is served under where that is not the
 # host's root (GitHub Pages: /LightLib/).
+# SYNC_RELAY: the path on the site that passes the sync project's requests
+# on (Cloudflare Pages: /sb, tool/cloudflare_build.sh).
 flutter build web --release -t lib/main_web.dart --no-wasm-dry-run \
-  ${BASE_HREF:+--base-href "$BASE_HREF"}
+  ${BASE_HREF:+--base-href "$BASE_HREF"} \
+  ${SYNC_RELAY:+--dart-define=SYNC_RELAY="$SYNC_RELAY"}

@@ -9,13 +9,31 @@ export const session = () => {
   return { access_token: `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: uid, email: user.email, role: 'authenticated', aud: 'authenticated', exp })}.sig`,
     token_type: 'bearer', expires_in: 36000, expires_at: exp, refresh_token: 'refresh', user }
 }
+/** What the page asked of the outside: the project by its own address, Google's script. */
+export const asked = { project: 0, google: 0 }
 /** Signs [page] in before the app starts and sends the project's requests to the stand-in at [mock]. */
 export async function signedIn(page, mock, { signIn = true } = {}) {
   if (signIn) await page.evaluateOnNewDocument((key, value) => { try { localStorage.setItem(key, value) } catch {} }, `sb-${ref}-auth-token`, JSON.stringify(session()))
   await page.setRequestInterception(true)
   page.on('request', req => {
     const url = req.url()
-    if (url.startsWith(`https://${ref}.supabase.co/`)) return req.continue({ url: mock + url.slice(`https://${ref}.supabase.co`.length) })
+    if (url.startsWith(`https://${ref}.supabase.co/`)) { asked.project++; return req.continue({ url: mock + url.slice(`https://${ref}.supabase.co`.length) }) }
+    // Google's sign-in script, stood in for: its button hands the page a
+    // token at once (who signs in is Google's business, not the app's).
+    if (url.startsWith('https://accounts.google.com/gsi/client')) {
+      asked.google++
+      return req.respond({ status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body: `
+        window.google = { accounts: { id: {
+          initialize(config) { window.__gsi = config },
+          renderButton(parent, options) {
+            const b = document.createElement('button'); b.id = 'gsi-stand-in'; b.type = 'button'
+            b.textContent = 'Continue with Google'; b.style.cssText = 'width:' + (options.width || 240) + 'px;height:44px'
+            b.onclick = () => window.__gsi.callback({ credential: 'google.' + btoa(JSON.stringify({ aud: window.__gsi.client_id, nonce: window.__gsi.nonce, email: 'owner@example.test' })) + '.sig' })
+            parent.appendChild(b)
+          },
+          cancel() {}, disableAutoSelect() {},
+        } } }` })
+    }
     // Gemini answered here (the real API is never called): "OK" to a test,
     // each numbered paragraph back as "[KO] ...".
     if (url.startsWith('https://generativelanguage.googleapis.com/')) {

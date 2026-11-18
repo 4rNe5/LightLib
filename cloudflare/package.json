@@ -1,0 +1,9 @@
+{
+  "name": "lightlib-cloudflare",
+  "private": true,
+  "type": "module",
+  "description": "LightLib's web app on Cloudflare Pages, with the relay to the sync project (functions/sb).",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  }
+}

@@ -57,3 +57,6 @@ test/android-test.sh
 
 # Crash dumps from flutter_tester runs
 /core.*
+
+# Cloudflare Pages build output
+/cloudflare/dist/

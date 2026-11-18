@@ -5,6 +5,7 @@
 // download's progress can be seen.
 import http from 'node:http'
 import { readFileSync, existsSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 const [dir, port] = process.argv.slice(2)
 export const uid = '00000000-0000-4000-8000-000000000001'
 const seed = JSON.parse(readFileSync(`${dir}/library.json`, 'utf8'))
@@ -67,6 +68,17 @@ http.createServer((req, res) => {
     if (path.startsWith('/auth/v1/')) {
       if (path.endsWith('/logout')) return send(res, 204)
       if (path.endsWith('/user')) return send(res, 200, user)
+      // Google's token taken for a session (the web's button): the nonce
+      // is the one the token was asked with, unhashed.
+      if (path.endsWith('/token') && url.searchParams.get('grant_type') === 'id_token') {
+        const body = json(); let claims = {}
+        try { claims = JSON.parse(Buffer.from(String(body.id_token).split('.')[1], 'base64').toString()) } catch {}
+        const hashed = body.nonce ? createHash('sha256').update(body.nonce).digest('hex') : null
+        db.idTokens = [...(db.idTokens ?? []), { provider: body.provider, aud: claims.aud, nonceMatches: !!hashed && hashed === claims.nonce }]
+        if (body.provider !== 'google' || !hashed || hashed !== claims.nonce) return send(res, 400, { error: 'invalid_request', error_description: 'Passed nonce and nonce in id_token should either both exist or not.' })
+        const b64 = o => Buffer.from(JSON.stringify(o)).toString('base64url'); const exp = Math.floor(Date.now() / 1000) + 36000
+        return send(res, 200, { access_token: `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub: user.id, email: user.email, role: 'authenticated', aud: 'authenticated', exp })}.sig`, token_type: 'bearer', expires_in: 36000, expires_at: exp, refresh_token: 'r', user })
+      }
       return send(res, 200, { access_token: 'x', token_type: 'bearer', expires_in: 36000, refresh_token: 'r', user })
     }
     // As the project does: a request that does not say who asks is not
