@@ -60,3 +60,6 @@ test/android-test.sh
 
 # Cloudflare Pages build output
 /cloudflare/dist/
+
+# Cloudflare local runtime state (wrangler pages dev)
+.wrangler/
