@@ -828,6 +828,17 @@ class _Account extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(l10n.webSignInHint, style: muted.copyWith(height: 1.4)),
+          // Why the last try did not sign in (Google's token refused, its
+          // script not loaded).
+          if (sync.lastError != null) ...[
+            const SizedBox(height: 6),
+            Text(l10n.syncFailed(sync.lastError!),
+                key: const ValueKey('webSignInError'),
+                maxLines: 4,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 11.5, height: 1.35, color: scheme.error)),
+          ],
           const SizedBox(height: 10),
           ElevatedButton.icon(
             key: const ValueKey('webSignIn'),

@@ -27,11 +27,29 @@ import 'package:openlib/services/sync/sync_notifier.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
+import 'package:openlib/web/google_id_sign_in.dart';
 
 /// The owner's project (the publishable key is meant for apps; the tables
 /// only answer the owner - supabase/migrations/).
 class SyncConfig {
-  static const url = 'https://ggagbhdqdrmomrednwfx.supabase.co';
+  /// The project's own address.
+  static const projectUrl = 'https://ggagbhdqdrmomrednwfx.supabase.co';
+
+  /// Set when the web app is built for a site that passes the project's
+  /// requests on (`--dart-define=SYNC_RELAY=/sb`, tool/cloudflare_build.sh):
+  /// the path on that site. A network that does not reach the project
+  /// reaches the site.
+  static const relayPath = String.fromEnvironment('SYNC_RELAY');
+  static bool get viaRelay => kIsWeb && relayPath.isNotEmpty;
+
+  /// Where the project is asked: itself, or the site's relay to it.
+  static String get url =>
+      viaRelay ? '${Uri.base.origin}$relayPath' : projectUrl;
+
+  /// The Google client the project's Google sign-in is set up with (the
+  /// web's button asks Google for a token for it).
+  static const googleWebClientId =
+      '1011269619781-gdg2gqm7f4a04qgn0a6a58mke5pjtrkn.apps.googleusercontent.com';
   static const publishableKey =
       'sb_publishable_7KVy0_UhuKc4YscNOk9XuA_UvUELu2P';
 
@@ -179,6 +197,24 @@ class SyncService extends ChangeNotifier {
     notifier.askPermission();
     if (!_ready) await init();
     if (!_ready) return;
+    if (SyncConfig.viaRelay) {
+      // The usual way sends the browser to the project's address and
+      // back; through a relay Google's token is taken on this page.
+      try {
+        final token = await GoogleIdSignIn.ask(SyncConfig.googleWebClientId);
+        if (token == null) return;
+        await Supabase.instance.client.auth.signInWithIdToken(
+            provider: OAuthProvider.google,
+            idToken: token.idToken,
+            nonce: token.nonce);
+        lastError = null;
+      } catch (e) {
+        lastError = '$e';
+        _logger.warning('Not signed in', tag: 'Sync', error: e);
+      }
+      notifyListeners();
+      return;
+    }
     await Supabase.instance.client.auth.signInWithOAuth(
       OAuthProvider.google,
       redirectTo: kIsWeb

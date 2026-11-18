@@ -47,14 +47,21 @@ class _SyncSectionState extends State<SyncSection> {
             const SizedBox(height: 10),
             if (!_sync.ready && _sync.lastError != null)
               Text(l10n.syncUnavailable, style: small)
-            else if (user == null)
+            else if (user == null) ...[
               ElevatedButton.icon(
                 key: const ValueKey('syncSignIn'),
                 onPressed: _sync.ready ? _sync.signIn : null,
                 icon: const Icon(Icons.login),
                 label: Text(l10n.syncSignIn),
-              )
-            else ...[
+              ),
+              // Why the last try did not sign in.
+              if (_sync.lastError != null) ...[
+                const SizedBox(height: 6),
+                Text(l10n.syncFailed(_sync.lastError!),
+                    style:
+                        small.copyWith(color: theme.colorScheme.error)),
+              ],
+            ] else ...[
               Text(l10n.syncSignedInAs(user.email ?? user.id)),
               const SizedBox(height: 8),
               Wrap(
