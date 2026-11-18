@@ -5,6 +5,8 @@ import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:openlib/services/zlibrary_account.dart';
+import 'package:openlib/ui/components/zlibrary_account_sheet.dart';
 import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/backup_service.dart';
 import 'package:openlib/ui/components/sync_section.dart';
@@ -692,6 +694,23 @@ class SettingsPage extends ConsumerWidget {
                     subtitle: l10n.enterKeyForFasterDownloads,
                     icon: Icons.key_outlined,
                     onTap: () => _showDonationKeyDialog(context, ref, dataBase),
+                  ),
+                  // The reader's own Z-Library account, for its
+                  // download limit instead of the anonymous one.
+                  ListenableBuilder(
+                    listenable: ZlibraryAccount.instance,
+                    builder: (context, _) {
+                      final session = ZlibraryAccount.instance.session;
+                      return _SettingsTile(
+                        key: const ValueKey('zlibAccountTile'),
+                        title: l10n.zlibAccountTitle,
+                        subtitle: session == null
+                            ? l10n.zlibAccountSubtitle
+                            : l10n.zlibAccountSignedIn(session.label),
+                        icon: Icons.account_circle_outlined,
+                        onTap: () => showZlibraryAccountSheet(context),
+                      );
+                    },
                   ),
                 ],
               ),

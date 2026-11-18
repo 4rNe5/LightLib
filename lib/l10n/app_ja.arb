@@ -681,5 +681,20 @@
   "noResultsHint": "日本語の原題や短い検索語、または上で別のソースを試してください。",
   "seriesVolumes": "{count}巻",
   "seriesOthers": "ほか{count}",
-  "volumeNumber": "{number}巻"
+  "volumeNumber": "{number}巻",
+  "zlibAccountTitle": "Z-Libraryアカウント",
+  "zlibAccountSubtitle": "ログインすると自分のアカウントの上限でダウンロードします",
+  "zlibAccountSignedIn": "ログイン中: {name}",
+  "zlibAccountWhy": "アカウントなしではZ-Libraryはネットワークごとに1日数冊までです。ログインすると自分のアカウントとして取得し、その上限が適用されます。パスワードは保存せず、Z-Libraryが発行したセッションだけをこの端末に保管します。",
+  "zlibEmail": "メール",
+  "zlibPassword": "パスワード",
+  "zlibSignIn": "ログイン",
+  "zlibSigningIn": "ログイン中…",
+  "zlibSignInBrowser": "ブラウザでログイン",
+  "zlibSignOut": "ログアウト",
+  "zlibSignInFailed": "ログインできませんでした。接続を確認するか、ブラウザでログインしてください。",
+  "zlibLimits": "今日 {today} / {limit} 冊",
+  "zlibLimitsUnknown": "今日のダウンロード数を取得できませんでした",
+  "zlibSessionExpired": "セッションが無効になりました。ログアウトして再度ログインしてください。",
+  "zlibBrowserHint": "このページでログインすると自動で閉じます。"
 }

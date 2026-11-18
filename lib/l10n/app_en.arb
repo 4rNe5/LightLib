@@ -3281,5 +3281,78 @@
         "type": "String"
       }
     }
+  },
+  "zlibAccountTitle": "Z-Library account",
+  "@zlibAccountTitle": {
+    "description": "zlibAccountTitle"
+  },
+  "zlibAccountSubtitle": "Sign in to download with your account's limit",
+  "@zlibAccountSubtitle": {
+    "description": "zlibAccountSubtitle"
+  },
+  "zlibAccountSignedIn": "Signed in: {name}",
+  "@zlibAccountSignedIn": {
+    "description": "zlibAccountSignedIn",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "zlibAccountWhy": "Without an account Z-Library allows a few downloads a day per network. Signed in, books are asked for as your account, with its own limit. Your password is not kept: only the session Z-Library gives, on this device.",
+  "@zlibAccountWhy": {
+    "description": "zlibAccountWhy"
+  },
+  "zlibEmail": "Email",
+  "@zlibEmail": {
+    "description": "zlibEmail"
+  },
+  "zlibPassword": "Password",
+  "@zlibPassword": {
+    "description": "zlibPassword"
+  },
+  "zlibSignIn": "Sign in",
+  "@zlibSignIn": {
+    "description": "zlibSignIn"
+  },
+  "zlibSigningIn": "Signing in…",
+  "@zlibSigningIn": {
+    "description": "zlibSigningIn"
+  },
+  "zlibSignInBrowser": "Sign in in the browser instead",
+  "@zlibSignInBrowser": {
+    "description": "zlibSignInBrowser"
+  },
+  "zlibSignOut": "Sign out",
+  "@zlibSignOut": {
+    "description": "zlibSignOut"
+  },
+  "zlibSignInFailed": "Could not sign in. Check the connection, or sign in in the browser.",
+  "@zlibSignInFailed": {
+    "description": "zlibSignInFailed"
+  },
+  "zlibLimits": "{today} of {limit} downloads used today",
+  "@zlibLimits": {
+    "description": "zlibLimits",
+    "placeholders": {
+      "today": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "zlibLimitsUnknown": "Today's downloads could not be read",
+  "@zlibLimitsUnknown": {
+    "description": "zlibLimitsUnknown"
+  },
+  "zlibSessionExpired": "Z-Library no longer accepts this session. Sign out and in again.",
+  "@zlibSessionExpired": {
+    "description": "zlibSessionExpired"
+  },
+  "zlibBrowserHint": "Sign in on this page; it closes once you are in.",
+  "@zlibBrowserHint": {
+    "description": "zlibBrowserHint"
   }
 }

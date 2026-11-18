@@ -21,6 +21,9 @@ Galaxy phones check apps installed from outside the stores against the store's r
 ## Where do the books come from?
 You can add EPUBs you already have (*My Library → Import EPUB / PDF*), or search the online catalogues the app looks through and download from there. Home shows what is popular on BOOK☆WALKER and among English titles, and a tap searches for that series.
 
+## A download says the daily limit was reached.
+Z-Library allows a few downloads a day per network without an account. *Settings → Z-Library account* signs you in to your own account, and books are then asked for with its limit; the sheet shows how many you have used today. Your password is not kept — only the session Z-Library gives, on this device, outside backups and sync.
+
 ## Is downloading books legal?
 It depends on the book and on where you live. Books under copyright are their owners' property; check your local laws, and use the app for personal reading. See the [Disclaimer](README.md#disclaimer-%EF%B8%8F).
 

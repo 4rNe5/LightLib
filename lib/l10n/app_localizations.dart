@@ -4205,6 +4205,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Volume {number}'**
   String volumeNumber(String number);
+
+  /// zlibAccountTitle
+  ///
+  /// In en, this message translates to:
+  /// **'Z-Library account'**
+  String get zlibAccountTitle;
+
+  /// zlibAccountSubtitle
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to download with your account\'s limit'**
+  String get zlibAccountSubtitle;
+
+  /// zlibAccountSignedIn
+  ///
+  /// In en, this message translates to:
+  /// **'Signed in: {name}'**
+  String zlibAccountSignedIn(String name);
+
+  /// zlibAccountWhy
+  ///
+  /// In en, this message translates to:
+  /// **'Without an account Z-Library allows a few downloads a day per network. Signed in, books are asked for as your account, with its own limit. Your password is not kept: only the session Z-Library gives, on this device.'**
+  String get zlibAccountWhy;
+
+  /// zlibEmail
+  ///
+  /// In en, this message translates to:
+  /// **'Email'**
+  String get zlibEmail;
+
+  /// zlibPassword
+  ///
+  /// In en, this message translates to:
+  /// **'Password'**
+  String get zlibPassword;
+
+  /// zlibSignIn
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in'**
+  String get zlibSignIn;
+
+  /// zlibSigningIn
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in…'**
+  String get zlibSigningIn;
+
+  /// zlibSignInBrowser
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in in the browser instead'**
+  String get zlibSignInBrowser;
+
+  /// zlibSignOut
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out'**
+  String get zlibSignOut;
+
+  /// zlibSignInFailed
+  ///
+  /// In en, this message translates to:
+  /// **'Could not sign in. Check the connection, or sign in in the browser.'**
+  String get zlibSignInFailed;
+
+  /// zlibLimits
+  ///
+  /// In en, this message translates to:
+  /// **'{today} of {limit} downloads used today'**
+  String zlibLimits(int today, int limit);
+
+  /// zlibLimitsUnknown
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s downloads could not be read'**
+  String get zlibLimitsUnknown;
+
+  /// zlibSessionExpired
+  ///
+  /// In en, this message translates to:
+  /// **'Z-Library no longer accepts this session. Sign out and in again.'**
+  String get zlibSessionExpired;
+
+  /// zlibBrowserHint
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in on this page; it closes once you are in.'**
+  String get zlibBrowserHint;
 }
 
 class _AppLocalizationsDelegate

@@ -2364,4 +2364,59 @@ class AppLocalizationsDe extends AppLocalizations {
   String volumeNumber(String number) {
     return 'Band $number';
   }
+
+  @override
+  String get zlibAccountTitle => 'Z-Library-Konto';
+
+  @override
+  String get zlibAccountSubtitle =>
+      'Anmelden, um mit dem Limit deines Kontos zu laden';
+
+  @override
+  String zlibAccountSignedIn(String name) {
+    return 'Angemeldet: $name';
+  }
+
+  @override
+  String get zlibAccountWhy =>
+      'Ohne Konto erlaubt Z-Library nur wenige Downloads pro Tag und Netzwerk. Angemeldet werden Bücher als dein Konto geladen, mit dessen Limit. Dein Passwort wird nicht gespeichert: nur die Sitzung von Z-Library, auf diesem Gerät.';
+
+  @override
+  String get zlibEmail => 'E-Mail';
+
+  @override
+  String get zlibPassword => 'Passwort';
+
+  @override
+  String get zlibSignIn => 'Anmelden';
+
+  @override
+  String get zlibSigningIn => 'Anmeldung…';
+
+  @override
+  String get zlibSignInBrowser => 'Stattdessen im Browser anmelden';
+
+  @override
+  String get zlibSignOut => 'Abmelden';
+
+  @override
+  String get zlibSignInFailed =>
+      'Anmeldung fehlgeschlagen. Prüfe die Verbindung oder melde dich im Browser an.';
+
+  @override
+  String zlibLimits(int today, int limit) {
+    return 'Heute $today von $limit Downloads genutzt';
+  }
+
+  @override
+  String get zlibLimitsUnknown =>
+      'Heutige Downloads konnten nicht gelesen werden';
+
+  @override
+  String get zlibSessionExpired =>
+      'Z-Library akzeptiert diese Sitzung nicht mehr. Melde dich ab und wieder an.';
+
+  @override
+  String get zlibBrowserHint =>
+      'Melde dich auf dieser Seite an; sie schließt sich danach.';
 }

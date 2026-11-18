@@ -681,5 +681,20 @@
   "noResultsHint": "일본어 원제나 더 짧은 검색어, 또는 위에서 다른 출처를 골라 보세요.",
   "seriesVolumes": "{count}권",
   "seriesOthers": "기타 {count}",
-  "volumeNumber": "{number}권"
+  "volumeNumber": "{number}권",
+  "zlibAccountTitle": "Z-Library 계정",
+  "zlibAccountSubtitle": "로그인하면 내 계정의 한도로 받습니다",
+  "zlibAccountSignedIn": "로그인됨: {name}",
+  "zlibAccountWhy": "계정 없이는 Z-Library가 네트워크당 하루 몇 권만 허용합니다. 로그인하면 내 계정으로 받아서 계정의 한도가 적용됩니다. 비밀번호는 저장하지 않고, Z-Library가 준 로그인 세션만 이 기기에 보관합니다.",
+  "zlibEmail": "이메일",
+  "zlibPassword": "비밀번호",
+  "zlibSignIn": "로그인",
+  "zlibSigningIn": "로그인 중…",
+  "zlibSignInBrowser": "브라우저로 로그인",
+  "zlibSignOut": "로그아웃",
+  "zlibSignInFailed": "로그인하지 못했습니다. 연결을 확인하거나 브라우저로 로그인해 보세요.",
+  "zlibLimits": "오늘 {today} / {limit}권 받음",
+  "zlibLimitsUnknown": "오늘 받은 수를 읽지 못했습니다",
+  "zlibSessionExpired": "세션이 만료되었습니다. 로그아웃한 뒤 다시 로그인하세요.",
+  "zlibBrowserHint": "이 페이지에서 로그인하면 자동으로 닫힙니다."
 }

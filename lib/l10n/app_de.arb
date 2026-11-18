@@ -687,5 +687,20 @@
   "noResultsHint": "Versuche den japanischen Titel, weniger Wörter oder oben eine andere Quelle.",
   "seriesVolumes": "{count} Bände",
   "seriesOthers": "+{count} weitere",
-  "volumeNumber": "Band {number}"
+  "volumeNumber": "Band {number}",
+  "zlibAccountTitle": "Z-Library-Konto",
+  "zlibAccountSubtitle": "Anmelden, um mit dem Limit deines Kontos zu laden",
+  "zlibAccountSignedIn": "Angemeldet: {name}",
+  "zlibAccountWhy": "Ohne Konto erlaubt Z-Library nur wenige Downloads pro Tag und Netzwerk. Angemeldet werden Bücher als dein Konto geladen, mit dessen Limit. Dein Passwort wird nicht gespeichert: nur die Sitzung von Z-Library, auf diesem Gerät.",
+  "zlibEmail": "E-Mail",
+  "zlibPassword": "Passwort",
+  "zlibSignIn": "Anmelden",
+  "zlibSigningIn": "Anmeldung…",
+  "zlibSignInBrowser": "Stattdessen im Browser anmelden",
+  "zlibSignOut": "Abmelden",
+  "zlibSignInFailed": "Anmeldung fehlgeschlagen. Prüfe die Verbindung oder melde dich im Browser an.",
+  "zlibLimits": "Heute {today} von {limit} Downloads genutzt",
+  "zlibLimitsUnknown": "Heutige Downloads konnten nicht gelesen werden",
+  "zlibSessionExpired": "Z-Library akzeptiert diese Sitzung nicht mehr. Melde dich ab und wieder an.",
+  "zlibBrowserHint": "Melde dich auf dieser Seite an; sie schließt sich danach."
 }

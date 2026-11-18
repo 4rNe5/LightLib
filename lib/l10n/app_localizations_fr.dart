@@ -2371,4 +2371,59 @@ class AppLocalizationsFr extends AppLocalizations {
   String volumeNumber(String number) {
     return 'Tome $number';
   }
+
+  @override
+  String get zlibAccountTitle => 'Compte Z-Library';
+
+  @override
+  String get zlibAccountSubtitle =>
+      'Connectez-vous pour télécharger avec la limite de votre compte';
+
+  @override
+  String zlibAccountSignedIn(String name) {
+    return 'Connecté : $name';
+  }
+
+  @override
+  String get zlibAccountWhy =>
+      'Sans compte, Z-Library autorise quelques téléchargements par jour et par réseau. Connecté, les livres sont demandés avec votre compte et sa propre limite. Le mot de passe n\'est pas conservé : seulement la session donnée par Z-Library, sur cet appareil.';
+
+  @override
+  String get zlibEmail => 'E-mail';
+
+  @override
+  String get zlibPassword => 'Mot de passe';
+
+  @override
+  String get zlibSignIn => 'Se connecter';
+
+  @override
+  String get zlibSigningIn => 'Connexion…';
+
+  @override
+  String get zlibSignInBrowser => 'Se connecter dans le navigateur';
+
+  @override
+  String get zlibSignOut => 'Se déconnecter';
+
+  @override
+  String get zlibSignInFailed =>
+      'Connexion impossible. Vérifiez la connexion ou connectez-vous dans le navigateur.';
+
+  @override
+  String zlibLimits(int today, int limit) {
+    return '$today téléchargements sur $limit aujourd\'hui';
+  }
+
+  @override
+  String get zlibLimitsUnknown =>
+      'Impossible de lire les téléchargements du jour';
+
+  @override
+  String get zlibSessionExpired =>
+      'Z-Library n\'accepte plus cette session. Déconnectez-vous puis reconnectez-vous.';
+
+  @override
+  String get zlibBrowserHint =>
+      'Connectez-vous sur cette page ; elle se ferme ensuite.';
 }

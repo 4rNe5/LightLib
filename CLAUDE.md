@@ -137,6 +137,7 @@ debug key (only CI signs releases).
 | Translated EPUB export | `translated_epub.dart` |
 | Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
 | Hidden covers | `lib/services/hidden_covers.dart` |
+| Z-Library account (its download limit) | `lib/services/zlibrary_account.dart` (session = two cookies, in `zlibrary_session` in the private folder; not in backups or sync), `ZlibraryProvider.signIn` / `accountLimits` (`/eapi/user/login`, `/eapi/user/profile`) and `_AsAccount` (book pages, `/dl/`, `/eapi` only) in `search_manager.dart`; UI `components/zlibrary_account_sheet.dart`, browser sign-in `zlibrary_login_page.dart` |
 | Search | `lib/ui/search_page.dart` (field, suggestions: BOOK☆WALKER `suggest`, Google `hl=ja`, history; Korean → Japanese title via `original_title.dart`), filters in `components/search_filter_sheet.dart` (default Japanese + EPUB); results `results_page.dart` grouped by `search_results.dart` (series/volume from titles, best file per volume — only what the libraries returned); catalogs in `search_manager.dart` |
 | Study (no bundled dictionary) | `lib/services/study/` — `study_assistant` (word/sentence questions to the engine, cached), `study_store` (word book, SM-2 review, days, Anki TSV in `<books>/.study/`), `japanese_tools` (kuromoji dict, 18 MB, downloaded + SHA-256), `study_data` (`assets/study/` from `tool/build_study_data.py`), `book_difficulty`; UI `lib/ui/components/study_sheets.dart`, `lib/ui/study_page.dart`; page side `reader_web/src/study.js` (`npm test`) |
 
@@ -195,6 +196,11 @@ debug key (only CI signs releases).
   starts; that is safe because sqflite opens a path once under a lock. Do
   not keep the opening future instead: one made inside a `testWidgets`
   never completes and every later test waits on it.
+- Z-Library sign-in and profile go through a client without the request
+  log (`_accountDio`): the log keeps request and response bodies, and the
+  owner sends logs along with reports. Log outcomes there, never values.
+- A test file with `testWidgets` answers every real HTTP request with 400:
+  tests against a local server live in a file without widget tests.
 - Tests: no network, no platform channels — inject `Dio` adapters, use
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.

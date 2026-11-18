@@ -16,6 +16,7 @@ import 'package:desktop_webview_window/desktop_webview_window.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/l10n/locale_resolution.dart';
+import 'package:openlib/services/zlibrary_account.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/translation/book_translation_service.dart';
@@ -216,6 +217,7 @@ void main(List<String> args) async {
   unawaited(TranslationModelStore.instance.sweepCaches());
   unawaited(BookTranslationService.instance.start());
   unawaited(HiddenCovers.instance.load());
+  unawaited(ZlibraryAccount.instance.load());
 
   runApp(
     ProviderScope(

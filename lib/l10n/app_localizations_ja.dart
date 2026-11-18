@@ -2279,4 +2279,54 @@ class AppLocalizationsJa extends AppLocalizations {
   String volumeNumber(String number) {
     return '$number巻';
   }
+
+  @override
+  String get zlibAccountTitle => 'Z-Libraryアカウント';
+
+  @override
+  String get zlibAccountSubtitle => 'ログインすると自分のアカウントの上限でダウンロードします';
+
+  @override
+  String zlibAccountSignedIn(String name) {
+    return 'ログイン中: $name';
+  }
+
+  @override
+  String get zlibAccountWhy =>
+      'アカウントなしではZ-Libraryはネットワークごとに1日数冊までです。ログインすると自分のアカウントとして取得し、その上限が適用されます。パスワードは保存せず、Z-Libraryが発行したセッションだけをこの端末に保管します。';
+
+  @override
+  String get zlibEmail => 'メール';
+
+  @override
+  String get zlibPassword => 'パスワード';
+
+  @override
+  String get zlibSignIn => 'ログイン';
+
+  @override
+  String get zlibSigningIn => 'ログイン中…';
+
+  @override
+  String get zlibSignInBrowser => 'ブラウザでログイン';
+
+  @override
+  String get zlibSignOut => 'ログアウト';
+
+  @override
+  String get zlibSignInFailed => 'ログインできませんでした。接続を確認するか、ブラウザでログインしてください。';
+
+  @override
+  String zlibLimits(int today, int limit) {
+    return '今日 $today / $limit 冊';
+  }
+
+  @override
+  String get zlibLimitsUnknown => '今日のダウンロード数を取得できませんでした';
+
+  @override
+  String get zlibSessionExpired => 'セッションが無効になりました。ログアウトして再度ログインしてください。';
+
+  @override
+  String get zlibBrowserHint => 'このページでログインすると自動で閉じます。';
 }

@@ -2340,4 +2340,58 @@ class AppLocalizationsEn extends AppLocalizations {
   String volumeNumber(String number) {
     return 'Volume $number';
   }
+
+  @override
+  String get zlibAccountTitle => 'Z-Library account';
+
+  @override
+  String get zlibAccountSubtitle =>
+      'Sign in to download with your account\'s limit';
+
+  @override
+  String zlibAccountSignedIn(String name) {
+    return 'Signed in: $name';
+  }
+
+  @override
+  String get zlibAccountWhy =>
+      'Without an account Z-Library allows a few downloads a day per network. Signed in, books are asked for as your account, with its own limit. Your password is not kept: only the session Z-Library gives, on this device.';
+
+  @override
+  String get zlibEmail => 'Email';
+
+  @override
+  String get zlibPassword => 'Password';
+
+  @override
+  String get zlibSignIn => 'Sign in';
+
+  @override
+  String get zlibSigningIn => 'Signing in…';
+
+  @override
+  String get zlibSignInBrowser => 'Sign in in the browser instead';
+
+  @override
+  String get zlibSignOut => 'Sign out';
+
+  @override
+  String get zlibSignInFailed =>
+      'Could not sign in. Check the connection, or sign in in the browser.';
+
+  @override
+  String zlibLimits(int today, int limit) {
+    return '$today of $limit downloads used today';
+  }
+
+  @override
+  String get zlibLimitsUnknown => 'Today\'s downloads could not be read';
+
+  @override
+  String get zlibSessionExpired =>
+      'Z-Library no longer accepts this session. Sign out and in again.';
+
+  @override
+  String get zlibBrowserHint =>
+      'Sign in on this page; it closes once you are in.';
 }

@@ -687,5 +687,20 @@
   "noResultsHint": "Essayez le titre japonais, moins de mots ou une autre source ci-dessus.",
   "seriesVolumes": "{count} tomes",
   "seriesOthers": "+{count} autres",
-  "volumeNumber": "Tome {number}"
+  "volumeNumber": "Tome {number}",
+  "zlibAccountTitle": "Compte Z-Library",
+  "zlibAccountSubtitle": "Connectez-vous pour télécharger avec la limite de votre compte",
+  "zlibAccountSignedIn": "Connecté : {name}",
+  "zlibAccountWhy": "Sans compte, Z-Library autorise quelques téléchargements par jour et par réseau. Connecté, les livres sont demandés avec votre compte et sa propre limite. Le mot de passe n'est pas conservé : seulement la session donnée par Z-Library, sur cet appareil.",
+  "zlibEmail": "E-mail",
+  "zlibPassword": "Mot de passe",
+  "zlibSignIn": "Se connecter",
+  "zlibSigningIn": "Connexion…",
+  "zlibSignInBrowser": "Se connecter dans le navigateur",
+  "zlibSignOut": "Se déconnecter",
+  "zlibSignInFailed": "Connexion impossible. Vérifiez la connexion ou connectez-vous dans le navigateur.",
+  "zlibLimits": "{today} téléchargements sur {limit} aujourd'hui",
+  "zlibLimitsUnknown": "Impossible de lire les téléchargements du jour",
+  "zlibSessionExpired": "Z-Library n'accepte plus cette session. Déconnectez-vous puis reconnectez-vous.",
+  "zlibBrowserHint": "Connectez-vous sur cette page ; elle se ferme ensuite."
 }

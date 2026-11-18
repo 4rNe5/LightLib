@@ -687,5 +687,20 @@
   "noResultsHint": "Prueba con el título japonés, menos palabras u otra fuente arriba.",
   "seriesVolumes": "{count} volúmenes",
   "seriesOthers": "+{count} más",
-  "volumeNumber": "Volumen {number}"
+  "volumeNumber": "Volumen {number}",
+  "zlibAccountTitle": "Cuenta de Z-Library",
+  "zlibAccountSubtitle": "Inicia sesión para descargar con el límite de tu cuenta",
+  "zlibAccountSignedIn": "Sesión iniciada: {name}",
+  "zlibAccountWhy": "Sin cuenta, Z-Library permite pocas descargas al día por red. Con la sesión iniciada, los libros se piden como tu cuenta, con su propio límite. La contraseña no se guarda: solo la sesión que da Z-Library, en este dispositivo.",
+  "zlibEmail": "Correo",
+  "zlibPassword": "Contraseña",
+  "zlibSignIn": "Iniciar sesión",
+  "zlibSigningIn": "Iniciando sesión…",
+  "zlibSignInBrowser": "Iniciar sesión en el navegador",
+  "zlibSignOut": "Cerrar sesión",
+  "zlibSignInFailed": "No se pudo iniciar sesión. Comprueba la conexión o inicia sesión en el navegador.",
+  "zlibLimits": "Hoy {today} de {limit} descargas usadas",
+  "zlibLimitsUnknown": "No se pudieron leer las descargas de hoy",
+  "zlibSessionExpired": "Z-Library ya no acepta esta sesión. Cierra sesión y vuelve a entrar.",
+  "zlibBrowserHint": "Inicia sesión en esta página; se cierra al entrar."
 }

@@ -2283,4 +2283,54 @@ class AppLocalizationsKo extends AppLocalizations {
   String volumeNumber(String number) {
     return '$number권';
   }
+
+  @override
+  String get zlibAccountTitle => 'Z-Library 계정';
+
+  @override
+  String get zlibAccountSubtitle => '로그인하면 내 계정의 한도로 받습니다';
+
+  @override
+  String zlibAccountSignedIn(String name) {
+    return '로그인됨: $name';
+  }
+
+  @override
+  String get zlibAccountWhy =>
+      '계정 없이는 Z-Library가 네트워크당 하루 몇 권만 허용합니다. 로그인하면 내 계정으로 받아서 계정의 한도가 적용됩니다. 비밀번호는 저장하지 않고, Z-Library가 준 로그인 세션만 이 기기에 보관합니다.';
+
+  @override
+  String get zlibEmail => '이메일';
+
+  @override
+  String get zlibPassword => '비밀번호';
+
+  @override
+  String get zlibSignIn => '로그인';
+
+  @override
+  String get zlibSigningIn => '로그인 중…';
+
+  @override
+  String get zlibSignInBrowser => '브라우저로 로그인';
+
+  @override
+  String get zlibSignOut => '로그아웃';
+
+  @override
+  String get zlibSignInFailed => '로그인하지 못했습니다. 연결을 확인하거나 브라우저로 로그인해 보세요.';
+
+  @override
+  String zlibLimits(int today, int limit) {
+    return '오늘 $today / $limit권 받음';
+  }
+
+  @override
+  String get zlibLimitsUnknown => '오늘 받은 수를 읽지 못했습니다';
+
+  @override
+  String get zlibSessionExpired => '세션이 만료되었습니다. 로그아웃한 뒤 다시 로그인하세요.';
+
+  @override
+  String get zlibBrowserHint => '이 페이지에서 로그인하면 자동으로 닫힙니다.';
 }

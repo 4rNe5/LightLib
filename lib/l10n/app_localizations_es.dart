@@ -2360,4 +2360,58 @@ class AppLocalizationsEs extends AppLocalizations {
   String volumeNumber(String number) {
     return 'Volumen $number';
   }
+
+  @override
+  String get zlibAccountTitle => 'Cuenta de Z-Library';
+
+  @override
+  String get zlibAccountSubtitle =>
+      'Inicia sesión para descargar con el límite de tu cuenta';
+
+  @override
+  String zlibAccountSignedIn(String name) {
+    return 'Sesión iniciada: $name';
+  }
+
+  @override
+  String get zlibAccountWhy =>
+      'Sin cuenta, Z-Library permite pocas descargas al día por red. Con la sesión iniciada, los libros se piden como tu cuenta, con su propio límite. La contraseña no se guarda: solo la sesión que da Z-Library, en este dispositivo.';
+
+  @override
+  String get zlibEmail => 'Correo';
+
+  @override
+  String get zlibPassword => 'Contraseña';
+
+  @override
+  String get zlibSignIn => 'Iniciar sesión';
+
+  @override
+  String get zlibSigningIn => 'Iniciando sesión…';
+
+  @override
+  String get zlibSignInBrowser => 'Iniciar sesión en el navegador';
+
+  @override
+  String get zlibSignOut => 'Cerrar sesión';
+
+  @override
+  String get zlibSignInFailed =>
+      'No se pudo iniciar sesión. Comprueba la conexión o inicia sesión en el navegador.';
+
+  @override
+  String zlibLimits(int today, int limit) {
+    return 'Hoy $today de $limit descargas usadas';
+  }
+
+  @override
+  String get zlibLimitsUnknown => 'No se pudieron leer las descargas de hoy';
+
+  @override
+  String get zlibSessionExpired =>
+      'Z-Library ya no acepta esta sesión. Cierra sesión y vuelve a entrar.';
+
+  @override
+  String get zlibBrowserHint =>
+      'Inicia sesión en esta página; se cierra al entrar.';
 }
