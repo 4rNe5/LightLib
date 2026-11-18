@@ -50,8 +50,9 @@ The site that passes the sync project's requests on (Cloudflare Pages):
 ```bash
 FLUTTER_HOME=/opt/flutter bash ../cloudflare_build.sh      # ../../cloudflare/dist, as Cloudflare builds it
 node mock_project.mjs /tmp/lib24 8099 &
-# Cloudflare's own runtime on that output (npm install wrangler somewhere):
-(cd ../../cloudflare && wrangler pages dev dist --ip 127.0.0.1 --port 8097 --binding SUPABASE_URL=http://127.0.0.1:8099) &
+# Cloudflare's own runtime on that output (npm install wrangler somewhere),
+# as the Workers project runs it (as a Pages project: wrangler pages dev dist ... --binding SUPABASE_URL=...):
+(cd ../../cloudflare && wrangler dev --ip 127.0.0.1 --port 8097 --var SUPABASE_URL:http://127.0.0.1:8099) &
 node relayed.mjs http://127.0.0.1:8097/ http://127.0.0.1:8099 /tmp/shots
 # or without wrangler, the same relay code under this folder's server:
 node serve.mjs ../../cloudflare/dist 8096 ../../vercel.json / relay=http://127.0.0.1:8099 &
@@ -62,7 +63,7 @@ nowhere (as on the network the site is for): signing in with Google's
 button (stood in for by `session.mjs` - a real Google sign-in is not
 something a test here can do), the library, a book fetched with its
 progress, the reader - with no request to the project's own address.
-Without `--binding`, wrangler's relay asks the real project: enough to
+Without `--var`, wrangler's relay asks the real project: enough to
 see that it answers through it (`/sb/auth/v1/health` with the key).
 
 An old browser (the owner once read in Chrome 112, where no book opened):

@@ -65,15 +65,19 @@ debug key (only CI signs releases).
   book) and kept for the others. The first frame waits for nothing
   (`main_web.dart`); `web/index.html` shows the app's name until then.
   A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
-- Cloudflare Pages, for a network that does not reach `*.supabase.co`
-  (nor Vercel): project root `cloudflare`, build
-  `bash ../tool/cloudflare_build.sh`, output `dist`. The app is built
-  with `SYNC_RELAY=/sb` (`SyncConfig.viaRelay`): it asks the project
-  through the site's own `/sb/*`, which `cloudflare/functions/sb` passes
-  on (`cloudflare/relay.js`: that project only, auth/rest/storage, the
-  site's own pages; `npm test` there). `_routes.json` keeps every other
-  request a plain file (not counted; functions: 100,000 requests a day
-  on the free plan). Signing in there is Google's button on the page
+- Cloudflare, for a network that does not reach `*.supabase.co` (nor
+  Vercel): the Workers project `lightlib`
+  (https://lightlib.4rnne5.workers.dev), root `cloudflare`, build
+  `bash ../tool/cloudflare_build.sh`, deploy `npx wrangler deploy`
+  (`cloudflare/wrangler.jsonc`: the files of `dist`, and `worker.js` for
+  what is not a file - without that config wrangler deploys the files
+  alone and `/sb` answers 404). The app is built with `SYNC_RELAY=/sb`
+  (`SyncConfig.viaRelay`): it asks the project through the site's own
+  `/sb/*`, passed on by `cloudflare/relay.js` (that project only,
+  auth/rest/storage, the site's own pages; `npm test` there). Files are
+  served without the Worker; the Worker's free plan is 100,000 requests
+  a day. `functions/` and `_routes.json` are the same relay for a Pages
+  project, should one be made. Signing in there is Google's button on the page
   (`lib/web/google_id_sign_in*.dart`, `signInWithIdToken`): the usual way
   sends the browser to the project's address. The site's address must be
   among the Google client's authorised JavaScript origins. Headers:
@@ -116,7 +120,7 @@ debug key (only CI signs releases).
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
-| Relay to the sync project (Cloudflare Pages) | `cloudflare/` (`relay.js`, `functions/sb/[[path]].js`, `test/`), `tool/cloudflare_build.sh`, `tool/cloudflare_headers.py` |
+| Relay to the sync project (Cloudflare) | `cloudflare/` (`relay.js`, `worker.js` + `wrangler.jsonc`, `functions/sb/[[path]].js` for Pages, `test/`), `tool/cloudflare_build.sh`, `tool/cloudflare_headers.py` |
 | Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
 | Sync | `lib/services/sync/` (`sync_engine`, `supabase_remote`, `library_sync_local`, `sync_service`); settings `lib/ui/components/sync_section.dart` |
 | Files the app keeps (web: IndexedDB) | `lib/services/storage/` (`AppFiles`) |

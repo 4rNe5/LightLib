@@ -1,0 +1,17 @@
+// The web app on Cloudflare Workers (the project "lightlib", connected to
+// this repository: root directory "cloudflare", build command
+// "bash ../tool/cloudflare_build.sh", deploy command "npx wrangler deploy").
+// The site's files are dist; worker.js answers the rest (/sb/*, the relay
+// to the sync project). Without this file wrangler deploys the files
+// alone, and /sb answers 404.
+{
+  "name": "lightlib",
+  "main": "worker.js",
+  "compatibility_date": "2026-11-17",
+  "assets": {
+    "directory": "dist",
+    "binding": "ASSETS"
+  },
+  "workers_dev": true,
+  "preview_urls": false
+}
