@@ -19,6 +19,7 @@ import 'package:openlib/services/diamwall_solver.dart';
 import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/webview_challenge_solver.dart';
+import 'package:openlib/services/zlibrary_account.dart';
 
 /// One searchable catalog the app can query.
 enum SearchProviderId { annasArchive, libgen, zlibrary, welib }
@@ -432,12 +433,49 @@ class ZlibraryBookInfoData extends BookInfoData {
   });
 }
 
+/// Asks for book pages, download links and the account's own pages as
+/// the signed-in account (its two cookies beside whatever the request
+/// already carries, a solved challenge's for one). Searches stay as they
+/// were, and so does signing in itself.
+class _AsAccount extends Interceptor {
+  _AsAccount(this._account);
+  final ZlibraryAccount _account;
+
+  static bool wants(String path) =>
+      (path.startsWith('/book/') ||
+          path.startsWith('/dl/') ||
+          path.startsWith('/eapi/')) &&
+      !path.startsWith('/eapi/user/login');
+
+  @override
+  Future<void> onRequest(
+      RequestOptions options, RequestInterceptorHandler handler) async {
+    if (wants(options.uri.path)) {
+      await _account.load();
+      final session = _account.session;
+      if (session != null) {
+        String? name;
+        for (final k in options.headers.keys) {
+          if (k.toLowerCase() == 'cookie') name = k;
+        }
+        final cookies = parseCookieHeader(
+            name == null ? null : '${options.headers[name]}')
+          ..addAll(session.cookies);
+        if (name != null) options.headers.remove(name);
+        options.headers['Cookie'] = cookieHeader(cookies);
+      }
+    }
+    handler.next(options);
+  }
+}
+
 /// Z-Library: mirrors sit behind a DiamWall proof-of-work gate, so the
 /// provider solves the 503 challenge headlessly (no webview) before
 /// parsing results. It still yields an empty result when every mirror
 /// fails instead of failing the whole search.
 class ZlibraryProvider implements SearchProvider {
-  ZlibraryProvider({Dio? dio, List<String>? mirrors})
+  ZlibraryProvider(
+      {Dio? dio, List<String>? mirrors, ZlibraryAccount? account})
       : _dio = dio ??
             createDioWithLogging(
                 options: BaseOptions(
@@ -445,10 +483,25 @@ class ZlibraryProvider implements SearchProvider {
               receiveTimeout: const Duration(seconds: 30),
               headers: _browserHeaders,
             )),
+        // Signing in and the profile carry the password and the session:
+        // never through the client that writes requests to the log.
+        _accountDio = dio ??
+            Dio(BaseOptions(
+              connectTimeout: const Duration(seconds: 15),
+              receiveTimeout: const Duration(seconds: 30),
+              headers: _browserHeaders,
+            )),
         _mirrors = mirrors,
-        _solver = DiamWallSolver();
+        _account = account ?? ZlibraryAccount.instance,
+        _solver = DiamWallSolver() {
+    final asAccount = _AsAccount(_account);
+    _dio.interceptors.add(asAccount);
+    if (!identical(_accountDio, _dio)) _accountDio.interceptors.add(asAccount);
+  }
 
   final AppLogger _logger = AppLogger();
+  final ZlibraryAccount _account;
+  final Dio _accountDio;
 
   /// The Z-Library mirrors to try, best first, from open-slum.org.
   ///
@@ -716,6 +769,128 @@ class ZlibraryProvider implements SearchProvider {
     return response;
   }
 
+  // ------------------------------------------------------------------
+  // The reader's account
+  // ------------------------------------------------------------------
+
+  /// The mirrors in use, best first (where to sign in in a browser).
+  Future<List<String>> mirrors() async => _mirrors ?? await _resolveMirrors();
+
+  /// One request to a mirror's `/eapi`, past its DiamWall when it has
+  /// one. The answer's JSON, or null when the mirror gave none.
+  Future<Map<String, dynamic>?> _eapi(String mirror, String path,
+      {Map<String, String>? form}) async {
+    final url = '$mirror$path';
+    Future<Response> send([Map<String, String> cookies = const {}]) =>
+        _accountDio.request(url,
+            data: form,
+            options: Options(
+              method: form == null ? 'GET' : 'POST',
+              contentType:
+                  form == null ? null : Headers.formUrlEncodedContentType,
+              responseType: ResponseType.plain,
+              validateStatus: (_) => true,
+              headers: {
+                'Accept': 'application/json',
+                if (cookies.isNotEmpty) 'Cookie': cookieHeader(cookies),
+              },
+            ));
+    var response = await send();
+    if (_solver.looksLikeChallenge(
+        response.statusCode ?? 0, response.data.toString())) {
+      final cookies = await _solver.solve(response.data.toString());
+      if (cookies == null) return null;
+      response = await send(cookies);
+    }
+    try {
+      final data = jsonDecode(response.data.toString());
+      return data is Map ? Map<String, dynamic>.from(data) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Signs in with [email] and [password] and keeps the session (not
+  /// the password). [error] is the mirror's own words when it refused
+  /// (a wrong password); both null when no mirror answered.
+  Future<({ZlibrarySession? session, String? error})> signIn(
+      String email, String password) async {
+    final mirrors = _mirrors ?? await _resolveMirrors();
+    for (final mirror in mirrors) {
+      try {
+        final data = await _eapi(mirror, '/eapi/user/login',
+            form: {'email': email.trim(), 'password': password});
+        if (data == null) {
+          _logger.warning('Z-Library sign-in: no answer',
+              tag: 'ZlibraryProvider', metadata: {'mirror': mirror});
+          continue;
+        }
+        final session = ZlibrarySession.fromApi(data);
+        if (session != null) {
+          final named = session.email.isEmpty
+              ? ZlibrarySession(
+                  userId: session.userId,
+                  userKey: session.userKey,
+                  email: email.trim(),
+                  name: session.name)
+              : session;
+          await _account.signIn(named);
+          _logger.info('Z-Library signed in',
+              tag: 'ZlibraryProvider', metadata: {'mirror': mirror});
+          return (session: named, error: null);
+        }
+        final error = '${data['error'] ?? data['message'] ?? ''}'.trim();
+        _logger.warning('Z-Library sign-in refused',
+            tag: 'ZlibraryProvider',
+            metadata: {'mirror': mirror, 'keys': data.keys.toList()});
+        // A refusal is the account's answer, the same on every mirror.
+        return (session: null, error: error.isEmpty ? null : error);
+      } catch (e) {
+        _logger.warning('Z-Library sign-in failed, trying next mirror',
+            tag: 'ZlibraryProvider',
+            metadata: {'mirror': mirror, 'error': e.runtimeType.toString()});
+      }
+    }
+    return (session: null, error: null);
+  }
+
+  /// The account's downloads today and its daily limit. [signedOut]:
+  /// the mirror no longer knows the session (signed out elsewhere, the
+  /// password changed). Both empty when no mirror answered.
+  Future<({ZlibraryLimits? limits, bool signedOut})> accountLimits() async {
+    await _account.load();
+    final session = _account.session;
+    if (session == null) return (limits: null, signedOut: false);
+    final mirrors = _mirrors ?? await _resolveMirrors();
+    for (final mirror in mirrors) {
+      try {
+        final data = await _eapi(mirror, '/eapi/user/profile');
+        if (data == null) continue;
+        final limits = ZlibraryLimits.fromApi(data);
+        if (limits != null) {
+          // The profile names the account a browser sign-in could not.
+          final named = ZlibrarySession.fromApi(data, fallback: session);
+          if (named != null &&
+              (named.email != session.email || named.name != session.name)) {
+            await _account.signIn(named);
+          }
+          return (limits: limits, signedOut: false);
+        }
+        _logger.warning('Z-Library profile without limits',
+            tag: 'ZlibraryProvider',
+            metadata: {'mirror': mirror, 'keys': data.keys.toList()});
+        if ('${data['success']}' == '0') {
+          return (limits: null, signedOut: true);
+        }
+      } catch (e) {
+        _logger.warning('Z-Library profile failed, trying next mirror',
+            tag: 'ZlibraryProvider',
+            metadata: {'mirror': mirror, 'error': e.runtimeType.toString()});
+      }
+    }
+    return (limits: null, signedOut: false);
+  }
+
   /// Convenience for the download button: re-fetches the book page
   /// (fresh /dl/ ids), then resolves the first id that answers with
   /// a real CDN redirect. One DiamWall solve for the page plus one
@@ -893,8 +1068,12 @@ class ZlibraryProvider implements SearchProvider {
 
     if (text.contains('downloads from your ip') ||
         text.contains('daily limit reached')) {
-      return 'Daily download limit reached for this network. '
-          'Sign in to Z-Library in the app browser, or try again tomorrow.';
+      return _account.signedIn
+          ? 'Daily download limit of your Z-Library account reached. '
+              'Try again tomorrow.'
+          : 'Daily download limit reached for this network. '
+              'Sign in to your Z-Library account in Settings, '
+              'or try again tomorrow.';
     }
     // Deliberately specific: every z-lib page carries a "Login" nav link,
     // so a bare 'login' match would mislabel any unrecognized page.
