@@ -2394,4 +2394,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get zlibBrowserHint =>
       'Sign in on this page; it closes once you are in.';
+
+  @override
+  String syncUnreadable(int count, String names) {
+    return '$count books could not be opened and were left out of sync: $names. Their files were not made by this app (another app or an earlier install put them there). Download them again, or add them with Import EPUB / PDF.';
+  }
+
+  @override
+  String get syncHeldDelete => 'Delete on the account too';
+
+  @override
+  String get syncHeldFetch => 'Bring them back here';
+
+  @override
+  String syncHeldDeleteConfirm(int count) {
+    return '$count books will be deleted from the account and from your other devices. This cannot be undone.';
+  }
 }

@@ -102,6 +102,16 @@ String syncSummaryText(AppLocalizations l10n, SyncReport report) =>
           )
         : l10n.syncUpToDate;
 
+/// The books a run could not open, named (the first few), or null.
+String? syncUnreadableText(AppLocalizations l10n, SyncReport report) {
+  final names = report.unreadable;
+  if (names.isEmpty) return null;
+  const shown = 3;
+  final list =
+      names.take(shown).join(', ') + (names.length > shown ? ', …' : '');
+  return l10n.syncUnreadable(names.length, list);
+}
+
 class SyncService extends ChangeNotifier {
   SyncService._();
   static final SyncService instance = SyncService._();
@@ -244,8 +254,7 @@ class SyncService extends ChangeNotifier {
       if (on) {
         await syncSettings();
       } else {
-        await _remote()
-            .removeSetting(geminiKeySetting);
+        await _remote().removeSetting(geminiKeySetting);
         await db.setSyncState('set:$geminiKeySetting', null);
         await db.setSyncState('setSent:$geminiKeySetting', null);
       }
@@ -360,11 +369,22 @@ class SyncService extends ChangeNotifier {
     return syncNow(manual: true);
   }
 
+  /// The reader's answer about the books a run held back: deleted on the
+  /// account too, or fetched back here. Null while another run is under
+  /// way (nothing was answered: ask again).
+  Future<SyncReport?> answerHeld(HeldDeletes held) {
+    if (_running) return Future.value();
+    return syncNow(manual: true, held: held);
+  }
+
   /// Runs now (or right after the run under way). [quick] leaves book
   /// files alone (the run while reading). A full run that moves books or
   /// translations shows its progress as a notification and says how it
   /// ended; [manual] says so even when nothing moved.
-  Future<SyncReport?> syncNow({bool quick = false, bool manual = false}) async {
+  Future<SyncReport?> syncNow(
+      {bool quick = false,
+      bool manual = false,
+      HeldDeletes held = HeldDeletes.hold}) async {
     if (!signedIn) return null;
     if (_running) {
       _again = true;
@@ -393,7 +413,7 @@ class SyncService extends ChangeNotifier {
             ));
           }
         },
-      ).run(quick: quick);
+      ).run(quick: quick, held: held);
       lastReport = report;
       lastRun = DateTime.now();
       lastError = report.errors.isEmpty ? null : report.errors.first;

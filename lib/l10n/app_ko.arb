@@ -696,5 +696,9 @@
   "zlibLimits": "오늘 {today} / {limit}권 받음",
   "zlibLimitsUnknown": "오늘 받은 수를 읽지 못했습니다",
   "zlibSessionExpired": "세션이 만료되었습니다. 로그아웃한 뒤 다시 로그인하세요.",
-  "zlibBrowserHint": "이 페이지에서 로그인하면 자동으로 닫힙니다."
+  "zlibBrowserHint": "이 페이지에서 로그인하면 자동으로 닫힙니다.",
+  "syncUnreadable": "{count}권은 파일을 열 수 없어 동기화에서 빠졌습니다: {names}. 이 앱이 만든 파일이 아니어서입니다(다른 앱이나 이전 설치본이 넣은 파일). 다시 받거나, 서재의 EPUB / PDF 가져오기로 넣으세요.",
+  "syncHeldDelete": "계정에서도 지우기",
+  "syncHeldFetch": "이 기기로 다시 받기",
+  "syncHeldDeleteConfirm": "{count}권을 계정과 다른 기기에서도 지웁니다. 되돌릴 수 없습니다."
 }

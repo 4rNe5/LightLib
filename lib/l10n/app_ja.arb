@@ -696,5 +696,9 @@
   "zlibLimits": "今日 {today} / {limit} 冊",
   "zlibLimitsUnknown": "今日のダウンロード数を取得できませんでした",
   "zlibSessionExpired": "セッションが無効になりました。ログアウトして再度ログインしてください。",
-  "zlibBrowserHint": "このページでログインすると自動で閉じます。"
+  "zlibBrowserHint": "このページでログインすると自動で閉じます。",
+  "syncUnreadable": "{count} 冊はファイルを開けないため同期から外しました: {names}。このアプリが作ったファイルではありません(他のアプリや以前のインストールが置いたもの)。もう一度ダウンロードするか、ライブラリの「EPUB / PDF を読み込む」で入れ直してください。",
+  "syncHeldDelete": "アカウントからも削除",
+  "syncHeldFetch": "この端末に戻す",
+  "syncHeldDeleteConfirm": "{count} 冊をアカウントと他の端末からも削除します。元に戻せません。"
 }

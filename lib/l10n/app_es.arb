@@ -702,5 +702,9 @@
   "zlibLimits": "Hoy {today} de {limit} descargas usadas",
   "zlibLimitsUnknown": "No se pudieron leer las descargas de hoy",
   "zlibSessionExpired": "Z-Library ya no acepta esta sesión. Cierra sesión y vuelve a entrar.",
-  "zlibBrowserHint": "Inicia sesión en esta página; se cierra al entrar."
+  "zlibBrowserHint": "Inicia sesión en esta página; se cierra al entrar.",
+  "syncUnreadable": "{count} libros no se pudieron abrir y quedaron fuera de la sincronización: {names}. Sus archivos no los creó esta app (los puso otra app o una instalación anterior). Descárgalos de nuevo o añádelos con Importar EPUB / PDF.",
+  "syncHeldDelete": "Eliminar también de la cuenta",
+  "syncHeldFetch": "Traerlos de vuelta aquí",
+  "syncHeldDeleteConfirm": "{count} libros se eliminarán de la cuenta y de tus otros dispositivos. No se puede deshacer."
 }

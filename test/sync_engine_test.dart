@@ -3,6 +3,7 @@
 // what a run reports while it goes.
 
 // Dart imports:
+import 'dart:io';
 import 'dart:typed_data';
 
 // Package imports:
@@ -207,9 +208,19 @@ class _Local implements SyncLocal {
   @override
   Future<List<LocalBook>> books() async => [for (final b in held.values) b.$1];
 
+  /// Files this device may not open (another app's, in a shared folder).
+  final denied = <String>{};
+
   @override
-  Future<String?> md5Of(LocalBook book) async =>
-      held.entries.firstWhere((e) => e.value.$1.fileName == book.fileName).key;
+  Future<String?> md5Of(LocalBook book) async {
+    if (denied.contains(book.fileName)) {
+      throw FileSystemException('Cannot open file', book.fileName,
+          const OSError('Permission denied', 13));
+    }
+    return held.entries
+        .firstWhere((e) => e.value.$1.fileName == book.fileName)
+        .key;
+  }
 
   @override
   Future<Uint8List?> readBook(LocalBook book) async =>
@@ -378,6 +389,47 @@ void main() {
       expect(report.downloaded, 0);
     });
 
+    test('held back: named, then deleted there when the reader says so',
+        () async {
+      const md5s = ['1', '2', '3', '4', '5'];
+      for (final d in md5s) {
+        local.addLocal(d * 32, '$d.epub', [1]);
+      }
+      await engine().run();
+      local.held.clear();
+
+      final held = await engine().run();
+      expect(held.heldTitles, [for (final d in md5s) '$d.epub']);
+
+      final report = await engine().run(held: HeldDeletes.deleteThere);
+
+      expect(report.deletesHeld, 0);
+      expect(report.removedThere, 5);
+      expect(remote.bookRows.values.every((b) => b.deleted), isTrue);
+      expect(remote.files, isEmpty);
+      expect(local.kv.keys.where((k) => k.startsWith('seen:')), isEmpty);
+      // Nothing left to ask about.
+      expect((await engine().run()).deletesHeld, 0);
+    });
+
+    test('held back: fetched again when they were not meant to go', () async {
+      const md5s = ['1', '2', '3', '4', '5'];
+      for (final d in md5s) {
+        local.addLocal(d * 32, '$d.epub', [1]);
+      }
+      await engine().run();
+      local.held.clear();
+      expect((await engine().run()).deletesHeld, 5);
+
+      final report = await engine().run(held: HeldDeletes.fetchBack);
+
+      expect(report.deletesHeld, 0);
+      expect(report.removedThere, 0);
+      expect(report.downloaded, 5);
+      expect(local.held.keys.toSet(), {for (final d in md5s) d * 32});
+      expect(remote.bookRows.values.where((b) => b.deleted), isEmpty);
+    });
+
     test('deleted elsewhere: removed here', () async {
       local.addLocal(a, 'a.epub', [1]);
       await engine().run();
@@ -408,6 +460,59 @@ void main() {
       expect(report.uploaded, 0);
       expect(report.skippedForSpace, 1);
       expect(remote.files, isEmpty);
+    });
+  });
+
+  group('a book whose file cannot be opened', () {
+    test('is left out and named; the others sync', () async {
+      local.addLocal(a, '1.EPUB', [1]);
+      local.addLocal(b, 'b.epub', [2, 2]);
+      local.denied.add('1.EPUB');
+      local.read('b.epub', 'cfi-b', DateTime.utc(2026, 11, 18, 9));
+
+      final report = await engine().run();
+
+      expect(report.unreadable, ['1.EPUB']);
+      expect(report.errors, isEmpty);
+      expect(report.uploaded, 1);
+      expect(report.positionsSent, 1);
+      expect(remote.files.keys, ['$b.epub']);
+      expect(remote.bookRows.containsKey(a), isFalse);
+      expect('$report', contains('unreadable 1'));
+    });
+
+    test('a quick run goes on too', () async {
+      local.addLocal(a, '1.EPUB', [1]);
+      local.addLocal(b, 'b.epub', [2]);
+      local.denied.add('1.EPUB');
+      local.read('b.epub', 'cfi-b', DateTime.utc(2026, 11, 18, 9));
+
+      final report = await engine().run(quick: true);
+
+      expect(report.unreadable, ['1.EPUB']);
+      expect(report.positionsSent, 1);
+    });
+
+    test('nothing is deleted elsewhere for it', () async {
+      // It synced once (its MD5 known then), and its file is another
+      // app's now: the copy on the account stays.
+      local.addLocal(a, '1.EPUB', [1]);
+      local.addLocal(b, 'b.epub', [2]);
+      await engine().run();
+      local.denied.add('1.EPUB');
+
+      final report = await engine().run();
+
+      expect(report.unreadable, ['1.EPUB']);
+      expect(report.removedThere, 0);
+      expect(remote.bookRows[a]!.deleted, isFalse);
+      expect(remote.files.containsKey('$a.epub'), isTrue);
+    });
+
+    test('opening it syncs nothing and does not throw', () async {
+      local.addLocal(a, '1.EPUB', [1]);
+      local.denied.add('1.EPUB');
+      expect(await engine().runBook('1.EPUB'), isNull);
     });
   });
 

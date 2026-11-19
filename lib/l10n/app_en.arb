@@ -3354,5 +3354,34 @@
   "zlibBrowserHint": "Sign in on this page; it closes once you are in.",
   "@zlibBrowserHint": {
     "description": "zlibBrowserHint"
+  },
+  "syncUnreadable": "{count} books could not be opened and were left out of sync: {names}. Their files were not made by this app (another app or an earlier install put them there). Download them again, or add them with Import EPUB / PDF.",
+  "@syncUnreadable": {
+    "description": "Settings: books whose file this app may not open were left out of sync",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "names": {
+        "type": "String"
+      }
+    }
+  },
+  "syncHeldDelete": "Delete on the account too",
+  "@syncHeldDelete": {
+    "description": "Settings: delete the held-back books on the account too"
+  },
+  "syncHeldFetch": "Bring them back here",
+  "@syncHeldFetch": {
+    "description": "Settings: fetch the held-back books to this device again"
+  },
+  "syncHeldDeleteConfirm": "{count} books will be deleted from the account and from your other devices. This cannot be undone.",
+  "@syncHeldDeleteConfirm": {
+    "description": "Settings: confirm deleting the held-back books everywhere",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

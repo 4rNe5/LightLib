@@ -702,5 +702,9 @@
   "zlibLimits": "{today} téléchargements sur {limit} aujourd'hui",
   "zlibLimitsUnknown": "Impossible de lire les téléchargements du jour",
   "zlibSessionExpired": "Z-Library n'accepte plus cette session. Déconnectez-vous puis reconnectez-vous.",
-  "zlibBrowserHint": "Connectez-vous sur cette page ; elle se ferme ensuite."
+  "zlibBrowserHint": "Connectez-vous sur cette page ; elle se ferme ensuite.",
+  "syncUnreadable": "{count} livres n’ont pas pu être ouverts et n’ont pas été synchronisés : {names}. Leurs fichiers n’ont pas été créés par cette app (une autre app ou une installation précédente les a placés là). Téléchargez-les de nouveau ou ajoutez-les avec Importer EPUB / PDF.",
+  "syncHeldDelete": "Supprimer aussi du compte",
+  "syncHeldFetch": "Les récupérer ici",
+  "syncHeldDeleteConfirm": "{count} livres seront supprimés du compte et de vos autres appareils. Cette action est irréversible."
 }

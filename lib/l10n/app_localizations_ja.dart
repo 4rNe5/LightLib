@@ -2329,4 +2329,20 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get zlibBrowserHint => 'このページでログインすると自動で閉じます。';
+
+  @override
+  String syncUnreadable(int count, String names) {
+    return '$count 冊はファイルを開けないため同期から外しました: $names。このアプリが作ったファイルではありません(他のアプリや以前のインストールが置いたもの)。もう一度ダウンロードするか、ライブラリの「EPUB / PDF を読み込む」で入れ直してください。';
+  }
+
+  @override
+  String get syncHeldDelete => 'アカウントからも削除';
+
+  @override
+  String get syncHeldFetch => 'この端末に戻す';
+
+  @override
+  String syncHeldDeleteConfirm(int count) {
+    return '$count 冊をアカウントと他の端末からも削除します。元に戻せません。';
+  }
 }

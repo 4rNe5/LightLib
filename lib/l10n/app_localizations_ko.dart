@@ -2333,4 +2333,20 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get zlibBrowserHint => '이 페이지에서 로그인하면 자동으로 닫힙니다.';
+
+  @override
+  String syncUnreadable(int count, String names) {
+    return '$count권은 파일을 열 수 없어 동기화에서 빠졌습니다: $names. 이 앱이 만든 파일이 아니어서입니다(다른 앱이나 이전 설치본이 넣은 파일). 다시 받거나, 서재의 EPUB / PDF 가져오기로 넣으세요.';
+  }
+
+  @override
+  String get syncHeldDelete => '계정에서도 지우기';
+
+  @override
+  String get syncHeldFetch => '이 기기로 다시 받기';
+
+  @override
+  String syncHeldDeleteConfirm(int count) {
+    return '$count권을 계정과 다른 기기에서도 지웁니다. 되돌릴 수 없습니다.';
+  }
 }

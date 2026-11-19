@@ -40,6 +40,19 @@ void main() {
     expect(syncSummaryText(ko, SyncReport()), '모두 최신 상태입니다.');
   });
 
+  test('books that could not be opened: how many, and the first few', () {
+    expect(syncUnreadableText(ko, SyncReport()), isNull);
+    final one = SyncReport()..unreadable.add('1.EPUB');
+    expect(syncUnreadableText(ko, one), startsWith('1권은 파일을 열 수 없어'));
+    expect(syncUnreadableText(ko, one), contains(': 1.EPUB.'));
+    final many = SyncReport()
+      ..unreadable.addAll(['1.EPUB', '2.EPUB', '3.EPUB', '4.EPUB']);
+    expect(syncUnreadableText(en, many),
+        startsWith('4 books could not be opened'));
+    expect(
+        syncUnreadableText(en, many), contains('1.EPUB, 2.EPUB, 3.EPUB, ….'));
+  });
+
   test('transfers: only stages that move something', () {
     expect(const SyncProgress(SyncStage.checking).transfers, isFalse);
     expect(const SyncProgress(SyncStage.translations).transfers, isFalse);

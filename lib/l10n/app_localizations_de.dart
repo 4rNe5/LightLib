@@ -2419,4 +2419,20 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get zlibBrowserHint =>
       'Melde dich auf dieser Seite an; sie schließt sich danach.';
+
+  @override
+  String syncUnreadable(int count, String names) {
+    return '$count Bücher ließen sich nicht öffnen und wurden nicht synchronisiert: $names. Die Dateien stammen nicht von dieser App (von einer anderen App oder einer früheren Installation). Lade sie erneut herunter oder füge sie mit „EPUB / PDF importieren“ hinzu.';
+  }
+
+  @override
+  String get syncHeldDelete => 'Auch im Konto löschen';
+
+  @override
+  String get syncHeldFetch => 'Hierher zurückholen';
+
+  @override
+  String syncHeldDeleteConfirm(int count) {
+    return '$count Bücher werden im Konto und auf deinen anderen Geräten gelöscht. Das lässt sich nicht rückgängig machen.';
+  }
 }

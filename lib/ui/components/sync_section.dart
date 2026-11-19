@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/sync/sync_service.dart';
 
 class SyncSection extends StatefulWidget {
@@ -22,9 +23,37 @@ class SyncSection extends StatefulWidget {
 class _SyncSectionState extends State<SyncSection> {
   SyncService get _sync => widget.service ?? SyncService.instance;
 
+  /// How many of the held-back books are named.
+  static const _heldShown = 12;
+
   String _time(DateTime t) {
     String two(int v) => v.toString().padLeft(2, '0');
     return '${t.month}/${t.day} ${two(t.hour)}:${two(t.minute)}';
+  }
+
+  /// The books a run held back are deleted everywhere only after the
+  /// reader says so again: it cannot be undone.
+  Future<void> _deleteHeld(int count) async {
+    final l10n = AppLocalizations.of(context);
+    final sure = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.syncHeldDelete),
+        content: Text(l10n.syncHeldDeleteConfirm(count)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            key: const ValueKey('syncHeldDeleteSure'),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (sure == true) await _sync.answerHeld(HeldDeletes.deleteThere);
   }
 
   @override
@@ -58,8 +87,7 @@ class _SyncSectionState extends State<SyncSection> {
               if (_sync.lastError != null) ...[
                 const SizedBox(height: 6),
                 Text(l10n.syncFailed(_sync.lastError!),
-                    style:
-                        small.copyWith(color: theme.colorScheme.error)),
+                    style: small.copyWith(color: theme.colorScheme.error)),
               ],
             ] else ...[
               Text(l10n.syncSignedInAs(user.email ?? user.id)),
@@ -122,8 +150,41 @@ class _SyncSectionState extends State<SyncSection> {
                 ),
               if (report != null && report.skippedForSpace > 0)
                 Text(l10n.syncNoSpace(report.skippedForSpace), style: small),
-              if (report != null && report.deletesHeld > 0)
+              if (report != null && report.deletesHeld > 0) ...[
                 Text(l10n.syncDeletesHeld(report.deletesHeld),
+                    style: small.copyWith(color: theme.colorScheme.error)),
+                // Which ones, so that the answer below is an informed one.
+                for (final title in report.heldTitles.take(_heldShown))
+                  Text('· $title',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: small),
+                if (report.heldTitles.length > _heldShown)
+                  Text('· …', style: small),
+                Wrap(
+                  spacing: 8,
+                  children: [
+                    TextButton(
+                      key: const ValueKey('syncHeldFetch'),
+                      onPressed: _sync.running
+                          ? null
+                          : () => _sync.answerHeld(HeldDeletes.fetchBack),
+                      child: Text(l10n.syncHeldFetch),
+                    ),
+                    TextButton(
+                      key: const ValueKey('syncHeldDelete'),
+                      onPressed: _sync.running
+                          ? null
+                          : () => _deleteHeld(report.deletesHeld),
+                      child: Text(l10n.syncHeldDelete,
+                          style: TextStyle(color: theme.colorScheme.error)),
+                    ),
+                  ],
+                ),
+              ],
+              if (report != null && report.unreadable.isNotEmpty)
+                Text(syncUnreadableText(l10n, report)!,
+                    key: const ValueKey('syncUnreadable'),
                     style: small.copyWith(color: theme.colorScheme.error)),
               if (_sync.lastError != null)
                 Text(l10n.syncFailed(_sync.lastError!),

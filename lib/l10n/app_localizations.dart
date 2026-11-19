@@ -4295,6 +4295,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign in on this page; it closes once you are in.'**
   String get zlibBrowserHint;
+
+  /// Settings: books whose file this app may not open were left out of sync
+  ///
+  /// In en, this message translates to:
+  /// **'{count} books could not be opened and were left out of sync: {names}. Their files were not made by this app (another app or an earlier install put them there). Download them again, or add them with Import EPUB / PDF.'**
+  String syncUnreadable(int count, String names);
+
+  /// Settings: delete the held-back books on the account too
+  ///
+  /// In en, this message translates to:
+  /// **'Delete on the account too'**
+  String get syncHeldDelete;
+
+  /// Settings: fetch the held-back books to this device again
+  ///
+  /// In en, this message translates to:
+  /// **'Bring them back here'**
+  String get syncHeldFetch;
+
+  /// Settings: confirm deleting the held-back books everywhere
+  ///
+  /// In en, this message translates to:
+  /// **'{count} books will be deleted from the account and from your other devices. This cannot be undone.'**
+  String syncHeldDeleteConfirm(int count);
 }
 
 class _AppLocalizationsDelegate

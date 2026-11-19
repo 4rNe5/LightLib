@@ -2426,4 +2426,20 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get zlibBrowserHint =>
       'Connectez-vous sur cette page ; elle se ferme ensuite.';
+
+  @override
+  String syncUnreadable(int count, String names) {
+    return '$count livres n’ont pas pu être ouverts et n’ont pas été synchronisés : $names. Leurs fichiers n’ont pas été créés par cette app (une autre app ou une installation précédente les a placés là). Téléchargez-les de nouveau ou ajoutez-les avec Importer EPUB / PDF.';
+  }
+
+  @override
+  String get syncHeldDelete => 'Supprimer aussi du compte';
+
+  @override
+  String get syncHeldFetch => 'Les récupérer ici';
+
+  @override
+  String syncHeldDeleteConfirm(int count) {
+    return '$count livres seront supprimés du compte et de vos autres appareils. Cette action est irréversible.';
+  }
 }

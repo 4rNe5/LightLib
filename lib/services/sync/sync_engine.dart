@@ -399,6 +399,20 @@ class SyncProgress {
   bool get transfers => stage != SyncStage.checking && total > 0;
 }
 
+/// What a run does with books that went missing here many at once (a
+/// run by itself holds them: a folder that moved empties the library
+/// without anyone deleting a book).
+enum HeldDeletes {
+  /// Nothing: they stay on the account, and are not fetched again.
+  hold,
+
+  /// They were deleted here on purpose: deleted on the account too.
+  deleteThere,
+
+  /// They were not meant to go: fetched from the account again.
+  fetchBack,
+}
+
 class SyncReport {
   int uploaded = 0;
   int downloaded = 0;
@@ -408,6 +422,10 @@ class SyncReport {
 
   /// Books missing here that were not deleted elsewhere (too many at once).
   int deletesHeld = 0;
+
+  /// Their titles (a file name where a book has none), for the reader to
+  /// say what is to be done with them ([HeldDeletes]).
+  final List<String> heldTitles = [];
   int positionsSent = 0;
   int positionsReceived = 0;
   int translationsSent = 0;
@@ -418,6 +436,12 @@ class SyncReport {
   int settingsSent = 0;
   int settingsReceived = 0;
   final List<String> errors = [];
+
+  /// Books here whose file could not be opened (their file names): left
+  /// out of the run, which goes on with the others. On Android a file in
+  /// a shared folder that another app - or an earlier install of this
+  /// one - put there is such a file.
+  final List<String> unreadable = [];
 
   bool get changedHere =>
       downloaded > 0 ||
@@ -441,6 +465,7 @@ class SyncReport {
       'translations $translationsSent/$translationsReceived, '
       'glossaries $glossariesSent/$glossariesReceived, covers $coversSent, '
       'settings $settingsSent/$settingsReceived'
+      '${unreadable.isEmpty ? '' : ', unreadable ${unreadable.length}'}'
       '${errors.isEmpty ? '' : ', errors ${errors.length}'}';
 }
 
@@ -511,17 +536,24 @@ class SyncEngine {
 
   /// Runs everything; [quick] leaves book files alone (positions,
   /// translations and glossaries only - the run while reading).
-  Future<SyncReport> run({bool quick = false}) async {
+  /// [held] is the reader's answer about books a run held back
+  /// ([SyncReport.deletesHeld]).
+  Future<SyncReport> run(
+      {bool quick = false, HeldDeletes held = HeldDeletes.hold}) async {
     final report = SyncReport();
     onProgress?.call(const SyncProgress(SyncStage.checking));
-    final here = await _localBooks();
+    final unreadable = <LocalBook>[];
+    final here = await _localBooks(unreadable);
+    report.unreadable.addAll(unreadable.map((b) => b.fileName));
     final there =
         quick ? null : {for (final b in await remote.books()) b.md5: b};
     final seen = (await local.state('seen:'))
         .keys
         .map((k) => k.substring('seen:'.length))
         .toSet();
-    if (there != null) await _deletions(here, there, seen, report);
+    if (there != null) {
+      await _deletions(here, there, seen, report, unreadable, held);
+    }
 
     final run = await _load(report);
     if (there != null) _tell(there, run);
@@ -637,7 +669,13 @@ class SyncEngine {
       if (b.fileName == fileName) book = b;
     }
     if (book == null) return null;
-    final md5 = await local.md5Of(book);
+    final String? md5;
+    try {
+      md5 = await local.md5Of(book);
+    } catch (_) {
+      // Its file cannot be opened: nothing of it to sync.
+      return null;
+    }
     if (md5 == null) return null;
     final run = await _load(report);
     await _position(md5, book, run);
@@ -672,22 +710,30 @@ class SyncEngine {
     return run;
   }
 
-  /// This device's EPUBs by MD5.
-  Future<Map<String, LocalBook>> _localBooks() async {
+  /// This device's EPUBs by MD5. A book whose file cannot be opened is
+  /// left out (and put in [unreadable]): one such book must not stop the
+  /// others from syncing.
+  Future<Map<String, LocalBook>> _localBooks(
+      [List<LocalBook>? unreadable]) async {
     final out = <String, LocalBook>{};
     for (final book in await local.books()) {
       if (book.format.toLowerCase() != 'epub') continue;
-      final md5 = await local.md5Of(book);
+      final String? md5;
+      try {
+        md5 = await local.md5Of(book);
+      } catch (_) {
+        unreadable?.add(book);
+        continue;
+      }
       if (md5 != null) out[md5] = book;
     }
     return out;
   }
 
-  Future<void> _deletions(
-      Map<String, LocalBook> here,
-      Map<String, RemoteBook> there,
-      Set<String> seen,
-      SyncReport report) async {
+  Future<void> _deletions(Map<String, LocalBook> here,
+      Map<String, RemoteBook> there, Set<String> seen, SyncReport report,
+      [List<LocalBook> unreadable = const [],
+      HeldDeletes held = HeldDeletes.hold]) async {
     // Deleted elsewhere: removed here.
     for (final MapEntry(key: md5, value: book) in here.entries.toList()) {
       final remoteBook = there[md5];
@@ -712,17 +758,36 @@ class SyncEngine {
     // Gone from here: deleted there - unless many went at once (a book
     // folder that moved or could not be read empties the library without
     // anyone deleting a book): then nothing is deleted.
+    // A book that is here but cannot be opened is not gone: its MD5 is
+    // not known, so it is told by its id or file name.
+    final unreadableIds = {for (final b in unreadable) b.id};
+    final unreadableFiles = {for (final b in unreadable) b.fileName};
     final gone = [
       for (final b in there.values)
         if (!b.deleted &&
             b.hasFile &&
             !here.containsKey(b.md5) &&
-            seen.contains(b.md5))
+            seen.contains(b.md5) &&
+            !unreadableIds.contains(b.bookId) &&
+            !unreadableFiles.contains(b.fileName))
           b,
     ];
-    if (gone.length > massDeleteFloor &&
+    if (held == HeldDeletes.fetchBack) {
+      // Forgotten: the transfers that follow bring them like any book
+      // this device never had.
+      for (final remoteBook in gone) {
+        seen.remove(remoteBook.md5);
+        await local.setState('seen:${remoteBook.md5}', null);
+      }
+      return;
+    }
+    if (held == HeldDeletes.hold &&
+        gone.length > massDeleteFloor &&
         gone.length > seen.length * massDeleteShare) {
       report.deletesHeld = gone.length;
+      report.heldTitles.addAll([
+        for (final b in gone) b.title.trim().isEmpty ? b.fileName : b.title,
+      ]);
       return;
     }
     for (final remoteBook in gone) {
