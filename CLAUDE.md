@@ -199,6 +199,27 @@ debug key (only CI signs releases).
 - Z-Library sign-in and profile go through a client without the request
   log (`_accountDio`): the log keeps request and response bodies, and the
   owner sends logs along with reports. Log outcomes there, never values.
+- Book files in the shared folder (`Download/book`): a file this app did
+  not make (a file manager's, an earlier install's) can be seen - it
+  exists, it has a length - but not opened, written or deleted. A
+  download resumes from the bytes on disk, so it once "resumed" from such
+  a file, got 416 and called the book complete in a second; sync then
+  failed on the file. `_fileNameFor` in `download_manager.dart` picks
+  another name (`distinctBookFileName`), a 416 is believed only when the
+  sizes agree, and sync leaves an unreadable book out
+  (`SyncReport.unreadable`) instead of failing.
+- Book file names keep ASCII only: volume 1 of every Japanese series was
+  `1.EPUB`. A title that lost characters gets the book's id in its name
+  (`generateBookFileName`). Positions and translations are kept by file
+  name: two books must never share one.
+- Z-Library's id is not an MD5: nothing to hold a file's checksum against
+  (`_isMd5`).
+- Z-Library's book page, signed in, shows the account's picture first,
+  from the host the covers come from: the cover is read from the book's
+  own box (`parseBookPage`), never "the first image".
+- Books that went missing here many at once are held back, not deleted on
+  the account (`deletesHeld`); the reader answers in Settings
+  (`HeldDeletes`: delete there too, or fetch back).
 - A test file with `testWidgets` answers every real HTTP request with 400:
   tests against a local server live in a file without widget tests.
 - Tests: no network, no platform channels — inject `Dio` adapters, use

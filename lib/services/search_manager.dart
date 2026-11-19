@@ -458,9 +458,9 @@ class _AsAccount extends Interceptor {
         for (final k in options.headers.keys) {
           if (k.toLowerCase() == 'cookie') name = k;
         }
-        final cookies = parseCookieHeader(
-            name == null ? null : '${options.headers[name]}')
-          ..addAll(session.cookies);
+        final cookies =
+            parseCookieHeader(name == null ? null : '${options.headers[name]}')
+              ..addAll(session.cookies);
         if (name != null) options.headers.remove(name);
         options.headers['Cookie'] = cookieHeader(cookies);
       }
@@ -474,8 +474,7 @@ class _AsAccount extends Interceptor {
 /// parsing results. It still yields an empty result when every mirror
 /// fails instead of failing the whole search.
 class ZlibraryProvider implements SearchProvider {
-  ZlibraryProvider(
-      {Dio? dio, List<String>? mirrors, ZlibraryAccount? account})
+  ZlibraryProvider({Dio? dio, List<String>? mirrors, ZlibraryAccount? account})
       : _dio = dio ??
             createDioWithLogging(
                 options: BaseOptions(
@@ -1099,9 +1098,18 @@ class ZlibraryProvider implements SearchProvider {
     final author =
         document.querySelector('.authors a')?.text.trim() ?? 'Unknown';
 
-    final cover =
-        document.querySelector('img[src*="covers"]')?.attributes['src'] ??
-            document.querySelector('img')?.attributes['src'];
+    // The book's own picture, from the book's own box. Any image of the
+    // page will not do: signed in, the page's header shows the account's
+    // picture first, from the same image host as the covers.
+    String? picture(String selector) {
+      final img = document.querySelector(selector);
+      final src = (img?.attributes['src'] ?? '').trim();
+      return src.isNotEmpty ? src : img?.attributes['data-src']?.trim();
+    }
+
+    final cover = picture('.details-book-cover-container img') ??
+        picture('.details-book z-cover img') ??
+        picture('z-cover img');
 
     String? format;
     String? size;
@@ -1144,10 +1152,10 @@ class ZlibraryProvider implements SearchProvider {
         ? ''
         : (html_parser
                     .parseFragment(descriptionElement.innerHtml
+                        .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false),
+                            '\u0001')
                         .replaceAll(
-                            RegExp(r'<br\s*/?>', caseSensitive: false), '\u0001')
-                        .replaceAll(RegExp(r'</p\s*>', caseSensitive: false),
-                            '\u0002'))
+                            RegExp(r'</p\s*>', caseSensitive: false), '\u0002'))
                     .text ??
                 '')
             .replaceAll(RegExp(r'[ \t\r\n]+'), ' ')

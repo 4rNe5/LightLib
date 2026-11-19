@@ -249,6 +249,56 @@ void main() {
         'A first paragraph.\n\nAnother important paragraph.');
   });
 
+  group('Z-Library book page: the cover', () {
+    const host = 'https://s3proxy-alp2-covers.cdn-zlib.sk';
+    const cover = '$host/covers300/collections/userbooks/abc.jpg';
+
+    test('signed in: the account\'s picture in the header is not the cover',
+        () {
+      // The owner's phone: a book opened from the search showed the
+      // account's own picture. It comes first in the page, from the host
+      // the covers come from.
+      final data = ZlibraryProvider().parseBookPage(
+          '<header><a href="/profile"><img class="avatar" '
+              'src="$host/userpics/me.jpg"></a></header>'
+              '<div class="details-book"><div class="details-book-cover-container">'
+              '<z-cover id="1"><img src="$cover"></z-cover></div>'
+              '<h1 itemprop="name">A book</h1></div>',
+          'https://z-lib.gl',
+          'https://z-lib.gl/book/opaque123/title.html');
+      expect(data!.thumbnail, cover);
+    });
+
+    test('a lazy cover (data-src) is read too', () {
+      final data = ZlibraryProvider().parseBookPage(
+          '<div class="details-book-cover-container">'
+              '<z-cover id="1"><img data-src="$cover"></z-cover></div>'
+              '<h1 itemprop="name">A book</h1>',
+          'https://z-lib.gl',
+          'https://z-lib.gl/book/opaque123/title.html');
+      expect(data!.thumbnail, cover);
+    });
+
+    test('no cover in the book\'s box: none, not another picture', () {
+      final data = ZlibraryProvider().parseBookPage(
+          '<img src="$host/userpics/me.jpg"><img src="/img/logo.svg">'
+              '<h1 itemprop="name">A book</h1>',
+          'https://z-lib.gl',
+          'https://z-lib.gl/book/opaque123/title.html');
+      expect(data!.thumbnail, isNull);
+    });
+
+    test('the captured page: its own cover, not a recommended book\'s', () {
+      final html = File('test/fixtures/zlib_book_page.html').readAsStringSync();
+      final data = ZlibraryProvider().parseBookPage(
+          html, 'https://z-lib.gd', 'https://z-lib.gd/book/5833054/title.html');
+      expect(
+          data!.thumbnail,
+          '$host/covers300/collections/genesis/'
+          '986d8f49f675eddca3b315556af86694ddd3e65a4ee4850f5648a0f7d0a44784.jpg');
+    });
+  });
+
   group('ZlibraryProvider.parseResults', () {
     test('parses z-bookcard elements from the captured live page', () {
       final provider = ZlibraryProvider();
