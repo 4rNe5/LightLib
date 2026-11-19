@@ -2,6 +2,9 @@
 import 'dart:async';
 import 'dart:io';
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show visibleForTesting;
+
 // Package imports:
 import 'package:dio/dio.dart';
 import 'package:crypto/crypto.dart';
@@ -9,7 +12,8 @@ import 'package:crypto/crypto.dart';
 // Project imports:
 import 'package:openlib/services/database.dart' show MyLibraryDb, MyBook;
 import 'package:openlib/services/download_notification.dart';
-import 'package:openlib/services/files.dart' show generateBookFileName;
+import 'package:openlib/services/files.dart'
+    show distinctBookFileName, generateBookFileName;
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/mirror_fetcher.dart';
 
@@ -31,11 +35,15 @@ enum DownloadStatus {
 String mirrorSourceLabel(String url) {
   final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
   if (host.isEmpty) return url;
-  if (host.contains('libgen') || host.contains('lgli') || host.contains('libgen')) {
+  if (host.contains('libgen') ||
+      host.contains('lgli') ||
+      host.contains('libgen')) {
     return 'LibGen';
   }
-  if (host.contains('z-lib') || host.contains('zlibrary') ||
-      host.contains('1lib') || host.contains('artificial')) {
+  if (host.contains('z-lib') ||
+      host.contains('zlibrary') ||
+      host.contains('1lib') ||
+      host.contains('artificial')) {
     return 'Z-Library';
   }
   if (host.contains('ipfs')) return 'IPFS';
@@ -169,6 +177,75 @@ class DownloadManager {
     return '$bookStorageDirectory/$fileName';
   }
 
+  /// The file each task's book is saved as, chosen once so that pausing,
+  /// resuming and retrying all mean the same file.
+  final Map<String, String> _fileNames = {};
+
+  /// The file [task]'s book is saved as. A file of that name that is not
+  /// this book's must never be continued (a download resumes from the
+  /// bytes on disk): the book then gets a name with its id in it.
+  ///  - the library has this book already: its own file, so what was read
+  ///    and translated stays with it;
+  ///  - another book of the library has the name;
+  ///  - a file of that name is there and this app may not write to it
+  ///    (another app's, or an earlier install's, in a shared folder).
+  Future<String> _fileNameFor(DownloadTask task) async {
+    final chosen = _fileNames[task.id];
+    if (chosen != null) return chosen;
+    var name = generateBookFileName(
+      title: task.title,
+      author: task.author,
+      info: task.info,
+      format: task.format,
+      md5: task.md5,
+    );
+    try {
+      var takenByAnother = false;
+      for (final book in await _database.getAll()) {
+        if (book.id == task.md5) {
+          name = book.getFileName();
+        } else if (book.getFileName() == name) {
+          takenByAnother = true;
+        }
+      }
+      for (final other in _activeDownloads.values) {
+        if (other.id != task.id && _fileNames[other.id] == name) {
+          takenByAnother = true;
+        }
+      }
+      if (takenByAnother || !await _canContinue(await _getFilePath(name))) {
+        final distinct = distinctBookFileName(name, task.md5);
+        _logger.info('File name taken, using another',
+            tag: 'DownloadManager',
+            metadata: {'name': name, 'instead': distinct});
+        name = distinct;
+      }
+    } catch (e) {
+      _logger.warning('Could not check the file name',
+          tag: 'DownloadManager', error: e);
+    }
+    return _fileNames[task.id] = name;
+  }
+
+  /// Stands in for the check below (tests: a file of another app's
+  /// cannot be made on a test machine).
+  @visibleForTesting
+  Future<bool> Function(String path)? debugCanContinue;
+
+  /// Whether the file at [path] is absent, or one this app can add to.
+  Future<bool> _canContinue(String path) async {
+    if (debugCanContinue != null) return debugCanContinue!(path);
+    final file = File(path);
+    try {
+      if (!await file.exists()) return true;
+      final opened = await file.open(mode: FileMode.append);
+      await opened.close();
+      return true;
+    } on FileSystemException {
+      return false;
+    }
+  }
+
   /// Ensures the book storage directory exists (users can delete it or point
   /// the preference at a removable drive). Returns the directory path.
   Future<String> _ensureStorageDirectory() async {
@@ -196,8 +273,8 @@ class DownloadManager {
       // Only check the URL's host: a signed CDN link may include a
       // blocked domain in its filename or query string.
       final host = Uri.tryParse(element)?.host.toLowerCase() ?? '';
-      if (deadHosts.any(
-          (deadHost) => host == deadHost || host.endsWith('.$deadHost'))) {
+      if (deadHosts
+          .any((deadHost) => host == deadHost || host.endsWith('.$deadHost'))) {
         continue;
       }
       if (element.contains('ipfs')) {
@@ -218,11 +295,37 @@ class DownloadManager {
       final file = File(filePath);
       final stream = file.openRead();
       final hash = await md5.bind(stream).first;
-      if (md5Hash == hash.toString()) {
+      if (md5Hash.toLowerCase() == hash.toString()) {
         return true;
       }
       return false;
     } catch (_) {
+      return false;
+    }
+  }
+
+  /// The whole length in a `Content-Range` such as `bytes */1234`.
+  static int? _sizeOfRange(String? contentRange) {
+    final match = RegExp(r'/(\d+)\s*$').firstMatch(contentRange ?? '');
+    return match == null ? null : int.tryParse(match.group(1)!);
+  }
+
+  /// Whether [md5Hash] is an MD5 (Anna's Archive, Library Genesis) and
+  /// not a catalogue's own id (Z-Library): only then is there a checksum
+  /// to hold the file against.
+  static bool _isMd5(String md5Hash) =>
+      RegExp(r'^[0-9a-fA-F]{32}$').hasMatch(md5Hash);
+
+  /// Whether the file at [path] can be opened and holds something.
+  Future<bool> _holdsSomething(String path) async {
+    try {
+      final opened = await File(path).open();
+      try {
+        return await opened.length() > 0;
+      } finally {
+        await opened.close();
+      }
+    } on FileSystemException {
       return false;
     }
   }
@@ -366,13 +469,7 @@ class DownloadManager {
 
       // 1. Delete the existing file to force a restart
       try {
-        String bookFileName = generateBookFileName(
-          title: task.title,
-          author: task.author,
-          info: task.info,
-          format: task.format,
-          md5: task.md5,
-        );
+        String bookFileName = await _fileNameFor(task);
         String filePath = await _getFilePath(bookFileName);
         final file = File(filePath);
         if (await file.exists()) {
@@ -509,13 +606,7 @@ class DownloadManager {
       return;
     }
 
-    String bookFileName = generateBookFileName(
-      title: task.title,
-      author: task.author,
-      info: task.info,
-      format: task.format,
-      md5: task.md5,
-    );
+    String bookFileName = await _fileNameFor(task);
     String path = await _getFilePath(bookFileName);
     List<String> orderedMirrors = _reorderMirrors(task.mirrors);
 
@@ -605,13 +696,7 @@ class DownloadManager {
 
       // Proceed to download loop
 
-      String bookFileName = generateBookFileName(
-        title: updatedTask.title,
-        author: updatedTask.author,
-        info: updatedTask.info,
-        format: updatedTask.format,
-        md5: updatedTask.md5,
-      );
+      String bookFileName = await _fileNameFor(updatedTask);
       String path = await _getFilePath(bookFileName);
       List<String> orderedMirrors = _reorderMirrors(fetchedMirrors);
 
@@ -828,6 +913,22 @@ class DownloadManager {
         );
       } on DioException catch (e) {
         if (e.response?.statusCode == 416) {
+          // "bytes */<size>": how long the file is there. A file of
+          // another length here is not this book (another's, or a broken
+          // one), and must not be called complete: from zero.
+          final size = _sizeOfRange(e.response?.headers.value('content-range'));
+          if (size != null && size != received) {
+            _logger.warning(
+                'Received 416 for a file of another size: starting over',
+                tag: 'DownloadManager',
+                metadata: {'here': received, 'there': size});
+            await file.writeAsBytes([], flush: true);
+            return await _downloadFileWithResume(
+                url: url,
+                savePath: savePath,
+                taskId: taskId,
+                cancelToken: cancelToken);
+          }
           _logger.warning(
               'Received 416 (Range Not Satisfiable). Assuming download is complete.',
               tag: 'DownloadManager');
@@ -942,9 +1043,21 @@ class DownloadManager {
       progress: 100,
     );
 
+    // A file that cannot be opened, or an empty one, is not a book to put
+    // in the library (the owner's log: "completed" in one second, nothing
+    // received, on a file the app could not open).
+    if (!await _holdsSomething(filePath)) {
+      _logger.error('Nothing was saved',
+          tag: 'DownloadManager', metadata: {'file': fileName});
+      _fileNames.remove(task.id);
+      await _handleDownloadFailure(task.id, 'Nothing was received');
+      return;
+    }
+
     bool checkSumValid;
     try {
-      checkSumValid =
+      // A catalogue's own id is not a checksum: nothing to compare.
+      checkSumValid = !_isMd5(task.md5) ||
           await _verifyFileCheckSum(md5Hash: task.md5, fileName: fileName);
     } catch (e, st) {
       _logger.error('Checksum verification failed',
@@ -1024,6 +1137,7 @@ class DownloadManager {
   void removeDownload(String taskId) {
     _notificationService.cancelNotification(taskId.hashCode);
     _activeDownloads.remove(taskId);
+    _fileNames.remove(taskId);
     _notifyListeners();
   }
 

@@ -108,9 +108,34 @@ String generateBookFileName({
   // Fallback to md5 if title is empty
   if (baseName.isEmpty) {
     baseName = md5.substring(0, 8);
+  } else if (_nonAscii.hasMatch(title)) {
+    // What is left of a title that lost characters no longer names the
+    // book: volume 1 of every Japanese series would be "1". The book's
+    // id keeps them apart.
+    final tag = bookFileTag(md5);
+    if (tag.isNotEmpty) baseName = '${baseName}_$tag';
   }
 
   return "$baseName.$format";
+}
+
+final RegExp _nonAscii = RegExp(r'[^\x00-\x7F]');
+
+/// The first characters of a book's id that can go in a file name.
+String bookFileTag(String id) {
+  final safe = id.replaceAll(RegExp(r'[^A-Za-z0-9]'), '');
+  return safe.length > 8 ? safe.substring(0, 8) : safe;
+}
+
+/// [fileName] with the book's id in it, for a name another book has.
+String distinctBookFileName(String fileName, String id) {
+  final tag = bookFileTag(id);
+  if (tag.isEmpty) return fileName;
+  final dot = fileName.lastIndexOf('.');
+  final base = dot <= 0 ? fileName : fileName.substring(0, dot);
+  final ext = dot <= 0 ? '' : fileName.substring(dot);
+  if (base == tag || base.endsWith('_$tag')) return fileName;
+  return '${base}_$tag$ext';
 }
 
 /// Whether the app can write in [path]: without all-files access (which

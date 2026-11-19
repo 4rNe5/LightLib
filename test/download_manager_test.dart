@@ -17,7 +17,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 // Project imports:
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/download_manager.dart';
-import 'package:openlib/services/files.dart' show generateBookFileName;
+import 'package:openlib/services/files.dart'
+    show distinctBookFileName, generateBookFileName;
 
 /// Minimal local file server with real Range support, like the real mirrors.
 /// [chunkDelay] forces multi-chunk delivery so downloads can be paused
@@ -32,6 +33,10 @@ class _RangeServer {
   /// simulate an overloaded mirror.
   int failNextGets = 0;
   int failedGets = 0;
+
+  /// Whether a 416 says how long the file is (`Content-Range: bytes */N`),
+  /// as the real mirrors do.
+  bool sizeIn416 = true;
 
   _RangeServer(this._server, this.bytes,
       {this.supportsRange = true, this.chunkDelay});
@@ -93,6 +98,10 @@ class _RangeServer {
       if (start >= bytes.length) {
         // 416: what a completed-file resume attempt receives
         request.response.statusCode = 416;
+        if (sizeIn416) {
+          request.response.headers
+              .set(HttpHeaders.contentRangeHeader, 'bytes */${bytes.length}');
+        }
         request.response.close();
         return;
       }
@@ -742,17 +751,222 @@ void main() {
       await alive.close();
       manager.removeDownload(task.id);
     }, timeout: const Timeout(Duration(seconds: 60)));
+
+    Future<void> download(DownloadTask task) async {
+      final done = Completer<void>();
+      final sub = manager.downloadsStream.listen((downloads) {
+        final status = downloads[task.id]?.status;
+        if ((status == DownloadStatus.completed ||
+                status == DownloadStatus.failed) &&
+            !done.isCompleted) {
+          done.complete();
+        }
+      });
+      await manager.addDownload(task);
+      await done.future.timeout(const Duration(seconds: 30));
+      await sub.cancel();
+      expect(
+          manager.activeDownloads[task.id]?.status, DownloadStatus.completed);
+    }
+
+    test('two books of one name: each its own file, neither continued',
+        () async {
+      final first = Uint8List.fromList(List.generate(40 * 1024, (i) => i % 7));
+      final second =
+          Uint8List.fromList(List.generate(25 * 1024, (i) => 100 + i % 5));
+      server = await _RangeServer.start(bytes: first);
+      server._server.listen(server.handle);
+      final other = await _RangeServer.start(bytes: second);
+      other._server.listen(other.handle);
+
+      final taskA = DownloadTask(
+        id: 'aaaa1111samename',
+        md5: 'aaaa1111samename',
+        title: 'Same Name 1',
+        mirrors: [server.url.toString()],
+        format: 'epub',
+        link: server.url.toString(),
+      );
+      final taskB = DownloadTask(
+        id: 'bbbb2222samename',
+        md5: 'bbbb2222samename',
+        title: 'Same Name 1',
+        mirrors: [other.url.toString()],
+        format: 'epub',
+        link: other.url.toString(),
+      );
+      await download(taskA);
+      await download(taskB);
+
+      expect(File('$saveDir/SameName1.epub').readAsBytesSync(), first);
+      expect(
+          File('$saveDir/SameName1_bbbb2222.epub').readAsBytesSync(), second);
+      final db = MyLibraryDb.instance;
+      expect((await db.getId(taskA.id))!.getFileName(), 'SameName1.epub');
+      expect(
+          (await db.getId(taskB.id))!.getFileName(), 'SameName1_bbbb2222.epub');
+
+      await other.close();
+      manager.removeDownload(taskA.id);
+      manager.removeDownload(taskB.id);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('a file of that name this app may not write to is left alone',
+        () async {
+      // The owner's log: "1.EPUB" of an earlier install was there, the
+      // download "resumed" from its length, got 416 and called the book
+      // done - a library row on a file the app cannot open.
+      final bytes = Uint8List.fromList(List.generate(30 * 1024, (i) => i % 9));
+      server = await _RangeServer.start(bytes: bytes);
+      server._server.listen(server.handle);
+      final stale = File('$saveDir/StaleFile.epub')
+        ..writeAsBytesSync(List.filled(64 * 1024, 1));
+      manager.debugCanContinue = (path) async => path != stale.path;
+      addTearDown(() => manager.debugCanContinue = null);
+
+      final task = DownloadTask(
+        id: 'cccc3333stale',
+        md5: 'cccc3333stale',
+        title: 'Stale File',
+        mirrors: [server.url.toString()],
+        format: 'epub',
+        link: server.url.toString(),
+      );
+      await download(task);
+
+      expect(stale.lengthSync(), 64 * 1024, reason: 'not touched');
+      expect(File('$saveDir/StaleFile_cccc3333.epub').readAsBytesSync(), bytes);
+      expect((await MyLibraryDb.instance.getId(task.id))!.getFileName(),
+          'StaleFile_cccc3333.epub');
+
+      manager.removeDownload(task.id);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('a leftover of another length is not called complete (416)', () async {
+      // No library row has the name, so the leftover is taken for this
+      // book's own partial file - until the mirror says how long the
+      // book is.
+      final bytes = Uint8List.fromList(List.generate(30 * 1024, (i) => i % 13));
+      server = await _RangeServer.start(bytes: bytes);
+      server._server.listen(server.handle);
+      File('$saveDir/LeftoverBook.epub')
+          .writeAsBytesSync(List.filled(90 * 1024, 7));
+
+      final task = DownloadTask(
+        id: 'eeee5555leftover',
+        md5: 'eeee5555leftover',
+        title: 'Leftover Book',
+        mirrors: [server.url.toString()],
+        format: 'epub',
+        link: server.url.toString(),
+      );
+      await download(task);
+
+      expect(File('$saveDir/LeftoverBook.epub').readAsBytesSync(), bytes);
+      manager.removeDownload(task.id);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('nothing received: failed, and not in the library', () async {
+      server = await _RangeServer.start(bytes: Uint8List(0));
+      server._server.listen(server.handle);
+
+      final task = DownloadTask(
+        id: 'ffff6666empty',
+        md5: 'ffff6666empty',
+        title: 'Empty Book',
+        mirrors: [server.url.toString()],
+        format: 'epub',
+        link: server.url.toString(),
+      );
+      final done = Completer<void>();
+      final sub = manager.downloadsStream.listen((downloads) {
+        final status = downloads[task.id]?.status;
+        if ((status == DownloadStatus.completed ||
+                status == DownloadStatus.failed) &&
+            !done.isCompleted) {
+          done.complete();
+        }
+      });
+      await manager.addDownload(task);
+      await done.future.timeout(const Duration(seconds: 30));
+      await sub.cancel();
+
+      expect(manager.activeDownloads[task.id]?.status, DownloadStatus.failed);
+      expect(await MyLibraryDb.instance.getId(task.id), isNull);
+      manager.removeDownload(task.id);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+
+    test('a book the library has is downloaded again into its own file',
+        () async {
+      final bytes = Uint8List.fromList(List.generate(20 * 1024, (i) => i % 11));
+      server = await _RangeServer.start(bytes: bytes);
+      server._server.listen(server.handle);
+      await MyLibraryDb.instance.insert(MyBook(
+        id: 'dddd4444again',
+        title: 'Again Book',
+        author: null,
+        thumbnail: null,
+        link: '',
+        publisher: null,
+        info: null,
+        format: 'epub',
+        description: null,
+        fileName: 'kept-name.epub',
+      ));
+
+      final task = DownloadTask(
+        id: 'dddd4444again',
+        md5: 'dddd4444again',
+        title: 'Again Book',
+        mirrors: [server.url.toString()],
+        format: 'epub',
+        link: server.url.toString(),
+      );
+      await download(task);
+
+      expect(File('$saveDir/kept-name.epub').readAsBytesSync(), bytes);
+      expect(File('$saveDir/AgainBook.epub').existsSync(), isFalse);
+
+      manager.removeDownload(task.id);
+    }, timeout: const Timeout(Duration(seconds: 60)));
+  });
+
+  group('book file names', () {
+    String name(String title, String id) =>
+        generateBookFileName(title: title, format: 'EPUB', md5: id);
+
+    test('volume 1 of two Japanese series are two files', () {
+      final a = name('甲シリーズ 1', 'E2V5PPKAwB');
+      final b = name('乙シリーズ 1', '9XxEL9e4AD');
+      expect(a, '1_E2V5PPKA.EPUB');
+      expect(b, '1_9XxEL9e4.EPUB');
+    });
+
+    test('a title that kept every character is named as before', () {
+      expect(name('Test Book', 'E2V5PPKAwB'), 'TestBook.EPUB');
+    });
+
+    test('a title with nothing left is the id, once', () {
+      expect(name('甲シリーズ', 'E2V5PPKAwB'), 'E2V5PPKA.EPUB');
+    });
+
+    test('a distinct name carries the id, once', () {
+      expect(distinctBookFileName('1.EPUB', 'E2V5PPKAwB'), '1_E2V5PPKA.EPUB');
+      expect(distinctBookFileName('1_E2V5PPKA.EPUB', 'E2V5PPKAwB'),
+          '1_E2V5PPKA.EPUB');
+      expect(
+          distinctBookFileName('E2V5PPKA.EPUB', 'E2V5PPKAwB'), 'E2V5PPKA.EPUB');
+      expect(distinctBookFileName('1.EPUB', 'zlib:0f3a9c'), '1_zlib0f3a.EPUB');
+    });
   });
 
   group('mirrorSourceLabel', () {
     test('names the big catalogs by host', () {
       expect(mirrorSourceLabel('https://libgen.li/get.php?md5=x'), 'LibGen');
       expect(mirrorSourceLabel('https://libgen.vg/ads.php?md5=x'), 'LibGen');
-      expect(
-          mirrorSourceLabel('https://z-lib.gd/dl/abc/def'), 'Z-Library');
+      expect(mirrorSourceLabel('https://z-lib.gd/dl/abc/def'), 'Z-Library');
       expect(mirrorSourceLabel('https://ipfs.io/ipfs/QmX'), 'IPFS');
-      expect(
-          mirrorSourceLabel('https://annas-archive.org/md5/x'),
+      expect(mirrorSourceLabel('https://annas-archive.org/md5/x'),
           "Anna's Archive");
     });
 
