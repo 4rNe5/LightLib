@@ -5,6 +5,9 @@
 // Dart imports:
 import 'dart:typed_data';
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 // Package imports:
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
@@ -19,6 +22,7 @@ import 'package:openlib/services/local_book_import.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
+import 'package:openlib/services/translation/claude/claude_settings.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
@@ -30,6 +34,13 @@ const syncGeminiKeyPref = 'syncGeminiKey';
 
 /// The shared setting that carries the Gemini key.
 const geminiKeySetting = 'gemini_api_key';
+
+/// Preference: the Claude key is shared with the owner's other devices
+/// (1, the default) or kept on this one (0).
+const syncClaudeKeyPref = 'syncClaudeKey';
+
+/// The shared setting that carries the Claude key and its workspace.
+const claudeKeySetting = 'claude_api_key';
 
 class LibrarySyncLocal implements SyncLocal {
   LibrarySyncLocal({MyLibraryDb? database})
@@ -224,22 +235,37 @@ class LibrarySyncLocal implements SyncLocal {
       runHeavy(() => epubCover(epub));
 
   @override
-  Future<List<String>> syncedSettings() async =>
-      await _db.getPreference(syncGeminiKeyPref).catchError((_) => null) == 0
-          ? const []
-          : const [geminiKeySetting];
+  Future<List<String>> syncedSettings() async {
+    Future<bool> on(String pref) async =>
+        await _db.getPreference(pref).catchError((_) => null) != 0;
+    return [
+      if (await on(syncGeminiKeyPref)) geminiKeySetting,
+      // The web does not translate with Claude, and a page is no place
+      // for a paid key.
+      if (!kIsWeb && await on(syncClaudeKeyPref)) claudeKeySetting,
+    ];
+  }
 
   @override
   Future<String> setting(String name) async {
-    if (name != geminiKeySetting) return '';
-    await GeminiSettings.instance.load();
-    return GeminiSettings.instance.apiKey;
+    switch (name) {
+      case geminiKeySetting:
+        await GeminiSettings.instance.load();
+        return GeminiSettings.instance.apiKey;
+      case claudeKeySetting:
+        await ClaudeSettings.instance.load();
+        return ClaudeSettings.instance.sharedValue;
+    }
+    return '';
   }
 
   @override
   Future<void> applySetting(String name, String value) async {
-    if (name == geminiKeySetting) {
-      await GeminiSettings.instance.applySynced(value);
+    switch (name) {
+      case geminiKeySetting:
+        await GeminiSettings.instance.applySynced(value);
+      case claudeKeySetting:
+        await ClaudeSettings.instance.applySynced(value);
     }
   }
 }

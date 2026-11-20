@@ -2371,7 +2371,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get claudeKeyHint =>
-      'Claude Console(platform.claude.com)에서 만듭니다. 이 기기에만 저장되며 백업·동기화에 들어가지 않습니다.';
+      'Claude Console(platform.claude.com)에서 만듭니다. 백업에는 들어가지 않고, 동기화에 로그인하면 내 다른 기기와 공유됩니다(설정 → 동기화에서 끌 수 있음).';
 
   @override
   String get claudeWorkspace => '워크스페이스 ID (선택)';
@@ -2470,4 +2470,11 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get seriesGlossaryShareHint =>
       '새 권의 용어집이 같은 시리즈 다른 권에서 정한 이름을 이어받고, 한 권에서 고친 이름·용어가 다른 권에도 자동으로 반영됩니다. 끄면 권마다 따로 둡니다.';
+
+  @override
+  String get syncClaudeKey => 'Claude 키 동기화';
+
+  @override
+  String get syncClaudeKeyHint =>
+      '내 다른 기기에서도 같은 키와 워크스페이스를 씁니다. 끄면 이 기기에만 두고 프로젝트에 올린 키는 지웁니다.';
 }

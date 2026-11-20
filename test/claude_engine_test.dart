@@ -353,6 +353,46 @@ void main() {
     });
   });
 
+  group('the key between devices', () {
+    test('typed here: announced, with its workspace; from another device: '
+        'kept and not announced; removed there: removed here', () async {
+      final files = AppFiles.instance;
+      final keyPath = settings.keyPath;
+      AppFiles.instance = IdbAppFiles(newIdbFactoryMemory());
+      settings.keyPath = () async => '/support/claude_api_key';
+      var announced = 0;
+      ClaudeSettings.onKeyChanged = () => announced++;
+      addTearDown(() {
+        AppFiles.instance = files;
+        settings.keyPath = keyPath;
+        ClaudeSettings.onKeyChanged = null;
+      });
+      settings.debugSet(key: '', workspace: '');
+      expect(settings.sharedValue, '');
+
+      await settings.setKey('sk-ant-here', workspace: 'wrkspc_1');
+      expect(announced, 1);
+      expect(jsonDecode(settings.sharedValue),
+          {'key': 'sk-ant-here', 'workspace': 'wrkspc_1'});
+
+      settings.recordLimit(
+          const GeminiError(GeminiErrorKind.quotaExhausted, 'no credit'));
+      await settings.applySynced(jsonEncode({'key': 'sk-ant-there'}));
+      expect(announced, 1);
+      expect(settings.apiKey, 'sk-ant-there');
+      expect(settings.workspace, '');
+      expect(settings.exhausted, isFalse, reason: 'another key, its own credit');
+      expect(await AppFiles.instance.readString('/support/claude_api_key'),
+          'sk-ant-there');
+
+      await settings.applySynced('');
+      expect(settings.hasKey, isFalse);
+      expect(await AppFiles.instance.exists('/support/claude_api_key'),
+          isFalse);
+      expect(announced, 1);
+    });
+  });
+
   group('one engine at a time', () {
     test('choosing Claude takes the choice from Gemini, and back', () async {
       final gemini = GeminiSettings.instance

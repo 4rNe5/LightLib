@@ -24,6 +24,7 @@ import 'package:openlib/services/sync/remote_library.dart';
 import 'package:openlib/services/sync/supabase_remote.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/sync/sync_notifier.dart';
+import 'package:openlib/services/translation/claude/claude_settings.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
@@ -120,6 +121,7 @@ class SyncService extends ChangeNotifier {
   bool _ready = false;
   bool _auto = true;
   bool _keySync = true;
+  bool _claudeKeySync = true;
   bool _running = false;
   bool _again = false;
   bool _againFull = false;
@@ -152,6 +154,7 @@ class SyncService extends ChangeNotifier {
 
   /// The Gemini key is shared with the owner's other devices.
   bool get keySync => _keySync;
+  bool get claudeKeySync => _claudeKeySync;
 
   /// Where the run under way is; null when none runs.
   SyncProgress? get progress => _running ? _progress : null;
@@ -192,6 +195,11 @@ class SyncService extends ChangeNotifier {
     TranslationCache.onChanged = _onTranslationsSaved;
     GlossaryService.onSaved = _onGlossarySaved;
     GeminiSettings.onKeyChanged = _onKeyChanged;
+    _claudeKeySync = await MyLibraryDb.instance
+            .getPreference(syncClaudeKeyPref)
+            .catchError((_) => null) !=
+        0;
+    ClaudeSettings.onKeyChanged = _onClaudeKeyChanged;
     _auth = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
       notifyListeners();
       if (state.event == AuthChangeEvent.signedIn) {
@@ -263,6 +271,26 @@ class SyncService extends ChangeNotifier {
     }
   }
 
+  /// The same for the Claude key (and the workspace it is used in).
+  Future<void> setClaudeKeySync(bool on) async {
+    _claudeKeySync = on;
+    notifyListeners();
+    final db = MyLibraryDb.instance;
+    await db.savePreference(syncClaudeKeyPref, on ? 1 : 0).catchError((_) {});
+    if (!signedIn) return;
+    try {
+      if (on) {
+        await syncSettings();
+      } else {
+        await _remote().removeSetting(claudeKeySetting);
+        await db.setSyncState('set:$claudeKeySetting', null);
+        await db.setSyncState('setSent:$claudeKeySetting', null);
+      }
+    } catch (e) {
+      _logger.warning('Key sharing not changed', tag: 'Sync', error: e);
+    }
+  }
+
   SupabaseRemote _remote() => SupabaseRemote(Supabase.instance.client,
       apiKey: SyncConfig.publishableKey);
 
@@ -277,7 +305,7 @@ class SyncService extends ChangeNotifier {
         onLocalChange: () => onLocalChanges?.call(),
       );
 
-  /// Only the shared settings (the Gemini key), both ways.
+  /// Only the shared settings (the engines' keys), both ways.
   Future<void> syncSettings() async {
     if (!signedIn) return;
     try {
@@ -520,6 +548,17 @@ class SyncService extends ChangeNotifier {
               '${DateTime.now().millisecondsSinceEpoch}')
           .catchError((_) {});
       if (_keySync) await syncSettings();
+    }());
+  }
+
+  /// The Claude key was typed or removed here: stamped, and sent on.
+  void _onClaudeKeyChanged() {
+    unawaited(() async {
+      await MyLibraryDb.instance
+          .setSyncState('set:$claudeKeySetting',
+              '${DateTime.now().millisecondsSinceEpoch}')
+          .catchError((_) {});
+      if (_claudeKeySync) await syncSettings();
     }());
   }
 

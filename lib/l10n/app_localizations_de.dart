@@ -2457,7 +2457,7 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get claudeKeyHint =>
-      'Wird in der Claude Console (platform.claude.com) erstellt. Bleibt nur auf diesem Gerät: nicht in Backups, nicht synchronisiert.';
+      'Wird in der Claude Console (platform.claude.com) erstellt. Nicht in Backups; bei angemeldeter Synchronisierung wird er mit deinen anderen Geräten geteilt (Einstellungen → Synchronisierung schaltet das ab).';
 
   @override
   String get claudeWorkspace => 'Workspace-ID (optional)';
@@ -2556,4 +2556,11 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get seriesGlossaryShareHint =>
       'Das Glossar eines neuen Bands übernimmt die Namen der anderen Bände der Reihe, und ein in einem Band korrigierter Name wird in den anderen korrigiert. Aus: Jeder Band behält sein eigenes.';
+
+  @override
+  String get syncClaudeKey => 'Claude-Schlüssel teilen';
+
+  @override
+  String get syncClaudeKeyHint =>
+      'Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht.';
 }

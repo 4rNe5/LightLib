@@ -2452,7 +2452,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get claudeKeyHint =>
-      'Se crea en la Claude Console (platform.claude.com). Se guarda solo en este dispositivo: ni en copias de seguridad ni en la sincronización.';
+      'Se crea en la Claude Console (platform.claude.com). No entra en las copias de seguridad; con la sincronización iniciada se comparte con tus otros dispositivos (Ajustes → Sincronización lo desactiva).';
 
   @override
   String get claudeWorkspace => 'ID del espacio de trabajo (opcional)';
@@ -2551,4 +2551,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get seriesGlossaryShareHint =>
       'El glosario de un volumen nuevo toma los nombres fijados en los demás volúmenes de la serie, y un nombre que corriges en uno se corrige en los otros. Desactivado: cada volumen conserva el suyo.';
+
+  @override
+  String get syncClaudeKey => 'Compartir la clave de Claude';
+
+  @override
+  String get syncClaudeKeyHint =>
+      'Tus otros dispositivos usan la misma clave y el mismo espacio de trabajo. Desactivado: solo en este dispositivo y se borra del proyecto.';
 }

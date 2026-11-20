@@ -712,7 +712,7 @@
   "syncHeldDeleteConfirm": "{count} libros se eliminarán de la cuenta y de tus otros dispositivos. No se puede deshacer.",
   "translationEngineClaude": "Claude",
   "translationEngineClaudeHint": "Claude de Anthropic traduce por internet con tu propia clave de API. Es de pago: lo que gasta un libro se descuenta del crédito de la cuenta.",
-  "claudeKeyHint": "Se crea en la Claude Console (platform.claude.com). Se guarda solo en este dispositivo: ni en copias de seguridad ni en la sincronización.",
+  "claudeKeyHint": "Se crea en la Claude Console (platform.claude.com). No entra en las copias de seguridad; con la sincronización iniciada se comparte con tus otros dispositivos (Ajustes → Sincronización lo desactiva).",
   "claudeWorkspace": "ID del espacio de trabajo (opcional)",
   "claudeWorkspaceHint": "Solo para una clave que no esté ligada a un espacio de trabajo (wrkspc_…). Si no, déjalo vacío.",
   "claudeModelInfo": "Por millón de tokens: ${input} de entrada / ${output} de salida",
@@ -736,5 +736,7 @@
   "seriesGrouped": "{count} libros agrupados como «{name}»",
   "seriesUngrouped": "{count} libros sacados de su serie",
   "seriesGlossaryShare": "Compartir glosarios dentro de una serie",
-  "seriesGlossaryShareHint": "El glosario de un volumen nuevo toma los nombres fijados en los demás volúmenes de la serie, y un nombre que corriges en uno se corrige en los otros. Desactivado: cada volumen conserva el suyo."
+  "seriesGlossaryShareHint": "El glosario de un volumen nuevo toma los nombres fijados en los demás volúmenes de la serie, y un nombre que corriges en uno se corrige en los otros. Desactivado: cada volumen conserva el suyo.",
+  "syncClaudeKey": "Compartir la clave de Claude",
+  "syncClaudeKeyHint": "Tus otros dispositivos usan la misma clave y el mismo espacio de trabajo. Desactivado: solo en este dispositivo y se borra del proyecto."
 }

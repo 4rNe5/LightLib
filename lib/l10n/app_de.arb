@@ -712,7 +712,7 @@
   "syncHeldDeleteConfirm": "{count} Bücher werden im Konto und auf deinen anderen Geräten gelöscht. Das lässt sich nicht rückgängig machen.",
   "translationEngineClaude": "Claude",
   "translationEngineClaudeHint": "Claude von Anthropic übersetzt über das Internet mit deinem eigenen API-Schlüssel. Kostenpflichtig: Der Verbrauch wird vom Guthaben des Kontos abgezogen.",
-  "claudeKeyHint": "Wird in der Claude Console (platform.claude.com) erstellt. Bleibt nur auf diesem Gerät: nicht in Backups, nicht synchronisiert.",
+  "claudeKeyHint": "Wird in der Claude Console (platform.claude.com) erstellt. Nicht in Backups; bei angemeldeter Synchronisierung wird er mit deinen anderen Geräten geteilt (Einstellungen → Synchronisierung schaltet das ab).",
   "claudeWorkspace": "Workspace-ID (optional)",
   "claudeWorkspaceHint": "Nur für einen Schlüssel, der an keinen Workspace gebunden ist (wrkspc_…). Sonst leer lassen.",
   "claudeModelInfo": "Pro Million Tokens: ${input} rein / ${output} raus",
@@ -736,5 +736,7 @@
   "seriesGrouped": "{count} Bücher als „{name}“ gruppiert",
   "seriesUngrouped": "{count} Bücher aus ihrer Reihe genommen",
   "seriesGlossaryShare": "Glossare innerhalb einer Reihe teilen",
-  "seriesGlossaryShareHint": "Das Glossar eines neuen Bands übernimmt die Namen der anderen Bände der Reihe, und ein in einem Band korrigierter Name wird in den anderen korrigiert. Aus: Jeder Band behält sein eigenes."
+  "seriesGlossaryShareHint": "Das Glossar eines neuen Bands übernimmt die Namen der anderen Bände der Reihe, und ein in einem Band korrigierter Name wird in den anderen korrigiert. Aus: Jeder Band behält sein eigenes.",
+  "syncClaudeKey": "Claude-Schlüssel teilen",
+  "syncClaudeKeyHint": "Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht."
 }

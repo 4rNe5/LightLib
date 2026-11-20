@@ -3415,7 +3415,7 @@
   "@translationEngineClaudeHint": {
     "description": "translationEngineClaudeHint"
   },
-  "claudeKeyHint": "Made in the Claude Console (platform.claude.com). Kept on this device only: not in backups, not synced.",
+  "claudeKeyHint": "Made in the Claude Console (platform.claude.com). Not in backups; signed in to sync, it is shared with your other devices (Settings → Sync turns that off).",
   "@claudeKeyHint": {
     "description": "claudeKeyHint"
   },
@@ -3571,5 +3571,13 @@
   "seriesGlossaryShareHint": "A new volume's glossary takes the names the series' other volumes settled, and a name you correct in one volume is corrected in the others. Off: each volume keeps its own.",
   "@seriesGlossaryShareHint": {
     "description": "seriesGlossaryShareHint"
+  },
+  "syncClaudeKey": "Share the Claude key",
+  "@syncClaudeKey": {
+    "description": "syncClaudeKey"
+  },
+  "syncClaudeKeyHint": "Your other devices use the same key and workspace. Off: kept on this device and removed from your project.",
+  "@syncClaudeKeyHint": {
+    "description": "syncClaudeKeyHint"
   }
 }

@@ -199,6 +199,11 @@ class ClaudeSettings extends ChangeNotifier implements CloudSettings {
       _usageBy[id] = _usageBy[id]!.copyWith(exhausted: false);
     }
     notifyListeners();
+    await _keepKey();
+    onKeyChanged?.call();
+  }
+
+  Future<void> _keepKey() async {
     try {
       final path = await keyPath();
       if (_key.isEmpty) {
@@ -207,6 +212,46 @@ class ClaudeSettings extends ChangeNotifier implements CloudSettings {
         await AppFiles.instance.writeString(path, _key);
       }
     } catch (_) {}
+  }
+
+  /// The key was typed or removed here (sync passes it on to the owner's
+  /// other devices).
+  static void Function()? onKeyChanged;
+
+  /// The key and its workspace as the devices share them: "" without a
+  /// key.
+  String get sharedValue => _key.isEmpty
+      ? ''
+      : jsonEncode({
+          'key': _key,
+          if (_workspace.isNotEmpty) 'workspace': _workspace,
+        });
+
+  /// A key set on another device ("" = removed there): kept without
+  /// being announced again.
+  Future<void> applySynced(String value) async {
+    await load();
+    var key = '', workspace = '';
+    if (value.trim().isNotEmpty) {
+      try {
+        final json = jsonDecode(value);
+        if (json is Map) {
+          key = '${json['key'] ?? ''}'.trim();
+          workspace = '${json['workspace'] ?? ''}'.trim();
+        }
+      } catch (_) {
+        key = value.trim();
+      }
+    }
+    if (key == _key && workspace == _workspace) return;
+    _key = key;
+    _workspace = workspace;
+    for (final id in _usageBy.keys.toList()) {
+      _usageBy[id] = _usageBy[id]!.copyWith(exhausted: false);
+    }
+    notifyListeners();
+    await _save(claudeWorkspacePref, _workspace);
+    await _keepKey();
   }
 
   Future<void> setModel(ClaudeModel model) async {

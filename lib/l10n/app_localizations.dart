@@ -4353,7 +4353,7 @@ abstract class AppLocalizations {
   /// claudeKeyHint
   ///
   /// In en, this message translates to:
-  /// **'Made in the Claude Console (platform.claude.com). Kept on this device only: not in backups, not synced.'**
+  /// **'Made in the Claude Console (platform.claude.com). Not in backups; signed in to sync, it is shared with your other devices (Settings → Sync turns that off).'**
   String get claudeKeyHint;
 
   /// claudeWorkspace
@@ -4499,6 +4499,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'A new volume\'s glossary takes the names the series\' other volumes settled, and a name you correct in one volume is corrected in the others. Off: each volume keeps its own.'**
   String get seriesGlossaryShareHint;
+
+  /// syncClaudeKey
+  ///
+  /// In en, this message translates to:
+  /// **'Share the Claude key'**
+  String get syncClaudeKey;
+
+  /// syncClaudeKeyHint
+  ///
+  /// In en, this message translates to:
+  /// **'Your other devices use the same key and workspace. Off: kept on this device and removed from your project.'**
+  String get syncClaudeKeyHint;
 }
 
 class _AppLocalizationsDelegate

@@ -2367,7 +2367,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get claudeKeyHint =>
-      'Claude Console (platform.claude.com) で作成します。この端末にだけ保存され、バックアップにも同期にも入りません。';
+      'Claude Console (platform.claude.com) で作成します。バックアップには入らず、同期にログインするとほかの端末と共有されます（設定 → 同期でオフにできます）。';
 
   @override
   String get claudeWorkspace => 'ワークスペース ID（任意）';
@@ -2466,4 +2466,11 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get seriesGlossaryShareHint =>
       '新しい巻の用語集が同じシリーズの他の巻で決めた名前を引き継ぎ、ある巻で直した名前・用語が他の巻にも自動で反映されます。オフにすると巻ごとに別々です。';
+
+  @override
+  String get syncClaudeKey => 'Claude キーを同期';
+
+  @override
+  String get syncClaudeKeyHint =>
+      'ほかの端末でも同じキーとワークスペースを使います。オフにするとこの端末だけに保存し、プロジェクトのキーは削除します。';
 }

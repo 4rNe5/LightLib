@@ -3,6 +3,7 @@
 // on the web.
 
 // Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 // Project imports:
@@ -142,6 +143,16 @@ class _SyncSectionState extends State<SyncSection> {
                 value: _sync.keySync,
                 onChanged: _sync.setKeySync,
               ),
+              // (Claude translates on devices only.)
+              if (!kIsWeb)
+                SwitchListTile(
+                  key: const ValueKey('syncClaudeKey'),
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(l10n.syncClaudeKey),
+                  subtitle: Text(l10n.syncClaudeKeyHint, style: small),
+                  value: _sync.claudeKeySync,
+                  onChanged: _sync.setClaudeKeySync,
+                ),
               if (report != null && _sync.lastRun != null)
                 Text(
                   l10n.syncLast(

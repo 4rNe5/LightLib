@@ -2432,7 +2432,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get claudeKeyHint =>
-      'Made in the Claude Console (platform.claude.com). Kept on this device only: not in backups, not synced.';
+      'Made in the Claude Console (platform.claude.com). Not in backups; signed in to sync, it is shared with your other devices (Settings → Sync turns that off).';
 
   @override
   String get claudeWorkspace => 'Workspace ID (optional)';
@@ -2531,4 +2531,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get seriesGlossaryShareHint =>
       'A new volume\'s glossary takes the names the series\' other volumes settled, and a name you correct in one volume is corrected in the others. Off: each volume keeps its own.';
+
+  @override
+  String get syncClaudeKey => 'Share the Claude key';
+
+  @override
+  String get syncClaudeKeyHint =>
+      'Your other devices use the same key and workspace. Off: kept on this device and removed from your project.';
 }
