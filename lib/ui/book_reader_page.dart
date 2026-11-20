@@ -187,6 +187,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   void initState() {
     super.initState();
     SyncService.instance.arrived.addListener(_onSyncArrived);
+    redoMarks.addListener(_onRedoMarked);
     SharedTranslationEngine.instance.enterReader();
     ReaderSettings.instance.addListener(_onSettingsChanged);
     ReaderFonts.instance.addListener(_onSettingsChanged);
@@ -218,6 +219,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     _saveNow();
     // What was read and translated goes to the other devices.
     SyncService.instance.arrived.removeListener(_onSyncArrived);
+    redoMarks.removeListener(_onRedoMarked);
     SyncService.instance.readerClosed();
     SharedTranslationEngine.instance.leaveReader();
     ReaderSettings.instance.removeListener(_onSettingsChanged);
@@ -696,6 +698,26 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   /// ones it has not shown.
   void _onSyncArrived() {
     if (mounted && _translateOn) _pushTranslations();
+  }
+
+  /// The reader set a name right in this book and its paragraphs are to
+  /// be made again: the page starts over - what still stands is sent
+  /// again, the rest shows as written until it is translated, what is on
+  /// screen first. (The page is sent each paragraph once: without this
+  /// the old words stayed, and the new ones never showed.)
+  void _onRedoMarked() {
+    if (!mounted || !_translateOn || redoMarks.bookFile != widget.fileName) {
+      return;
+    }
+    for (final s in _sent.values) {
+      s.clear();
+    }
+    unawaited(() async {
+      await _js("window.reader.clearTranslations();"
+          "window.reader.showTranslations(true, '$_targetCode')");
+      _pushTranslations();
+      await _js('window.reader.reportVisible()');
+    }());
   }
 
   void _onTranslationChanged() {

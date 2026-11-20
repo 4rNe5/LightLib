@@ -49,7 +49,8 @@ debug key (only CI signs releases).
 - `gh` works through REST only (no GraphQL, no Actions secrets).
 
 ## Web and sync
-- Web app = `lib/main_web.dart` (library, the same reader, Gemini only):
+- Web app = `lib/main_web.dart` (library, the same reader, Gemini or
+  Claude):
   Vercel project `lightlib` builds it on every push that touches the app
   (`vercel.json`, `tool/vercel_build.sh`; CSP in `vercel.json` - test a
   new outside host against it; no inline script, so `web/splash.js`). Not
@@ -113,8 +114,7 @@ debug key (only CI signs releases).
   `put_progress` clears it). Shared settings (`settings` table,
   `put_setting`, newest wins; a value up to 262,144 characters): the
   Gemini key, unless `syncGeminiKey` is 0; the Claude key with its
-  workspace, unless `syncClaudeKey` is 0 (devices only - the web
-  neither takes nor sends it); the series (`series_sync.dart`: each
+  workspace, unless `syncClaudeKey` is 0; the series (`series_sync.dart`: each
   book's MD5 under its series' name, under "" the books taken out).
   The series are a setting both sides add to: a device keeps the whole
   map (books that are not here too, `seriesShared`), writes into it
@@ -143,7 +143,7 @@ debug key (only CI signs releases).
 | Device translation | `translator.dart` (`LocalLlmTranslator`, scheduler, `SharedTranslationEngine`), `third_party/llamadart` (see `PATCHES.md`) |
 | Gemini | `lib/services/translation/gemini/` (`gemini_api`, `gemini_client`, `gemini_settings`: today's use kept per model, `usageOf`); settings UI `lib/ui/components/gemini_engine_section.dart` (the engine choice is there too) |
 | What every engine off the phone shares | `cloud_engine.dart` (`CloudClient`, `CloudSettings`: results and errors are Gemini's types), `gemini/cloud_translator.dart` (prompts, checks, corrections - `gatherCorrections` for a book on its own: held, sent 24 together, an answer with one out of place not used, `misplacedCorrections`) |
-| Claude (devices only; key in `claude_api_key`, shared with the owner's devices like Gemini's) | `lib/services/translation/claude/` (`claude_api`: models and prices, `claudeRequest`, `claudeSchema`, `claudeError`; `claude_client`; `claude_settings`: cost per model); settings UI `lib/ui/components/claude_engine_section.dart` |
+| Claude (devices and the web; key in `claude_api_key`, shared with the owner's devices like Gemini's) | `lib/services/translation/claude/` (`claude_api`: models and prices, `claudeRequest`, `claudeSchema`, `claudeError`; `claude_client`; `claude_settings`: cost per model); settings UI `lib/ui/components/claude_engine_section.dart` |
 | Prompts, styles | `translation_models.dart` (`batchPromptHead`, Korean light-novel style) |
 | Checks and fixes | `translation_qa.dart` (`checkTranslation`, `finishTranslation`; names written as the glossary has them: `enforceGlossary`), `translation_style.dart` (how narration ends, read off the last syllables: `tenseSlips`, `leansOnShe`, `readsStiff`), `paragraph_text.dart` (`cleanTranslation`, `polishTranslation`) |
 | Translations on real books, counted | `tool/translation_eval/` (its README): a book and its exported translation, the phone's steps against a `llama-server`, or `GlossaryService` and `CloudTranslator` against the API with a key |
@@ -216,6 +216,17 @@ debug key (only CI signs releases).
   entry as it was; the series' other volumes in `passOnToSeries`), and
   every paragraph with the word when the reader ticks that in the edit
   dialog (`glossaryRedoAll`).
+- A set of saved translations is kept by the language's code (`ko`):
+  `translation_repair.dart` opened it by the English name the prompts
+  use (`Korean`) - another, empty set, and nothing said so. So names set
+  right after a glossary changed were never written into what was
+  saved, and "every paragraph with this word" marked 0 for the owner an
+  hour after it shipped. The tests passed: they made their sets by the
+  same wrong name. `TranslationCache.open` asserts a code now; a test
+  makes its sets as the app does (`target.code`), not as the function
+  under test happens to. Marks alone do not change an open page either:
+  the reader sends the page each paragraph once (`_sent`), so it starts
+  its page over when it hears of them (`redoMarks`, `_onRedoMarked`).
 - A glyph set as a picture: the Japanese publishers' EPUBs write what
   the fonts lack as `<img class="gaiji" alt="…">`, and one book wrote
   every "!!?" so. The rule that leaves a block with a picture alone (an
@@ -283,7 +294,12 @@ debug key (only CI signs releases).
   carry no sizes (`claudeSchema`); a key not tied to a workspace needs
   `anthropic-workspace-id` (the error says so: `badKey`, shown as it
   is); "credit balance is too low" is the one error that ends the key
-  for the day. Claude counts about 1.5 times the tokens Gemini does for
+  for the day. From a page the API answers only a request that says it
+  comes from a browser (`anthropic-dangerous-direct-browser-access:
+  true`, sent on the web alone) and the site's policy must let it out
+  (`connect-src` in `vercel.json`, which the other hosts copy). Claude
+  was first built for devices only, the owner not asked: he found the
+  web without it. What the web leaves out is his to decide. Claude counts about 1.5 times the tokens Gemini does for
   the same Japanese and Korean: compare prices on measured tokens.
   Book 3, 240 paragraphs, the same glossary, judged blind by Gemini 3.8
   Flash and by Claude Fable 5.2 (paragraphs where one was ahead of the
@@ -434,7 +450,7 @@ debug key (only CI signs releases).
    honorifics
    (kanji pairs that always go together), on the phone a draft whose
    flagged paragraphs go to Gemini when online, a no-kanji grammar for
-   GGUF models. Claude: on the web (a key in a page), older models on
+   GGUF models. Claude: older models on
    the list. Series: making them on the web.
 4. Study, later: a bundled pre-translated dictionary (JMdict + Korean
    meanings) as an extension; the word sheet would show it before the

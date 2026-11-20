@@ -107,6 +107,10 @@ class TranslationCache {
     Directory? directory,
     List<String> mergeFrom = const [],
   }) async {
+    // (A set is kept by the language's code: opened by its name - 'Korean'
+    // for 'ko' - it is another, empty set, and nothing says so.)
+    assert(languages.contains(targetLanguage),
+        'a set is opened by its language code, not "$targetLanguage"');
     final base = await folderPath(directory: directory);
     final id = fileIdFor(bookFileName, targetLanguage, modelId);
     final path = p.join(base, '$id.json');

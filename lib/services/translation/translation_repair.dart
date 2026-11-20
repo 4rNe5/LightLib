@@ -6,6 +6,9 @@
 // Dart imports:
 import 'dart:io';
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show ChangeNotifier;
+
 // Project imports:
 import 'package:openlib/services/files.dart' show getFilePath;
 import 'package:openlib/services/heavy_work.dart';
@@ -17,6 +20,12 @@ import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/series_glossary.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_qa.dart';
+
+/// The set the Korean translations are kept in: by the language's code,
+/// as the reader and the library open it. Its English name opened a set
+/// nobody ever wrote - a name set right repaired nothing, and "every
+/// paragraph with this word" marked 0.
+const _korean = 'ko';
 
 /// [translations] (by [TranslationCache.keyFor] of their source) of
 /// [paragraphs], with [glossary]'s names as it writes them: only the
@@ -50,7 +59,7 @@ Future<int> repairTranslatedNames({
   for (final lightNovel in const [true, false]) {
     final cache = await TranslationCache.open(
       bookFileName: bookFile,
-      targetLanguage: 'Korean',
+      targetLanguage: _korean,
       modelId: TranslationCache.sharedModelId(lightNovel: lightNovel),
       directory: directory,
     );
@@ -66,6 +75,21 @@ Future<int> repairTranslatedNames({
 /// Called after saved translations were marked to be made again: the
 /// library's translator looks for work.
 void Function()? onTranslationsToRedo;
+
+/// Rings when saved translations of a book ([RedoMarks.bookFile]) were
+/// marked to be made again. A reader with that book open shows them as
+/// they were written, and would not show the new ones (it sends the page
+/// each paragraph once): it starts over with what is on screen.
+class RedoMarks extends ChangeNotifier {
+  String? bookFile;
+
+  void ring(String file) {
+    bookFile = file;
+    notifyListeners();
+  }
+}
+
+final redoMarks = RedoMarks();
 
 /// Marks the Korean translations saved of [bookFile]'s paragraphs that
 /// have [source] to be made again - all of them, or only the ones written
@@ -94,7 +118,7 @@ Future<int> redoTranslationsWith({
   for (final lightNovel in const [true, false]) {
     final cache = await TranslationCache.open(
       bookFileName: bookFile,
-      targetLanguage: 'Korean',
+      targetLanguage: _korean,
       modelId: TranslationCache.sharedModelId(lightNovel: lightNovel),
       directory: directory,
     );
@@ -109,6 +133,7 @@ Future<int> redoTranslationsWith({
     AppLogger().info('Translations to make again',
         tag: 'Glossary',
         metadata: {'book': bookFile, 'paragraphs': marked});
+    redoMarks.ring(bookFile);
     onTranslationsToRedo?.call();
   }
   return marked;
