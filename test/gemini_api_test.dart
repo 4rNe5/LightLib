@@ -254,4 +254,16 @@ void main() {
     expect(lite.cost(1000000, 1000000), closeTo(2.80, 1e-9));
     expect(geminiModelFor('nope').id, geminiModels.first.id);
   });
+
+  test('3.5 Flash: on the list, not the one a new reader starts with', () {
+    final flash = geminiModelFor('gemini-3.5-flash');
+    expect(flash.id, 'gemini-3.5-flash');
+    expect(flash.label, 'Gemini 3.5 Flash');
+    expect(geminiModels.first.id, 'gemini-3.5-flash-lite');
+    expect(geminiModels.map((m) => m.id).toSet().length, geminiModels.length);
+    // The free tier's own figure: a book does not fit in a day.
+    expect(flash.freeRpd, 20);
+    expect(flash.cost(1000000, 1000000), closeTo(10.50, 1e-9));
+    expect(flash.thinkingLevel(GeminiThinking.speed), 'minimal');
+  });
 }

@@ -57,6 +57,16 @@ const geminiModels = <GeminiModel>[
       outputPrice: 2.50,
       freeRpm: 15,
       freeRpd: 500),
+  // The free tier gives it 20 requests a day (the API's own figure,
+  // GenerateRequestsPerDayPerProjectPerModel-FreeTier): a book takes 45
+  // and more, so it is for a paid key or a few chapters a day.
+  GeminiModel(
+      id: 'gemini-3.5-flash',
+      label: 'Gemini 3.5 Flash',
+      inputPrice: 1.50,
+      outputPrice: 9.00,
+      freeRpm: 10,
+      freeRpd: 20),
   GeminiModel(
       id: 'gemini-3.1-flash-lite',
       label: 'Gemini 3.1 Flash-Lite',

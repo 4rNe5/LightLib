@@ -482,6 +482,8 @@
   "geminiBlockLow": "低以上",
   "geminiDeviceFallback": "Gemini が使えないときは端末で続ける",
   "geminiDeviceFallbackHint": "上限・フィルター・接続の問題のとき、その段落だけ端末のモデルで翻訳します。",
+  "geminiPolish": "直訳調の段落を整える",
+  "geminiPolishHint": "直訳調が強い段落だけ、もう一度Geminiに送って自然な文に直します。リクエストとトークンが少し増えます。",
   "geminiConcurrency": "同時リクエスト",
   "geminiPrivacyNote": "本文が Google に送信されます。無料枠では Google の製品改善に使われることがあり、有料枠では使われません。",
   "geminiThinking": "思考の量",

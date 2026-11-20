@@ -1590,6 +1590,13 @@ class AppLocalizationsKo extends AppLocalizations {
       '한도 초과·필터·연결 문제일 때 그 문단만 기기 모델이 번역합니다.';
 
   @override
+  String get geminiPolish => '번역투 문단 다듬기';
+
+  @override
+  String get geminiPolishHint =>
+      '직역투가 짙은 문단만 Gemini에 한 번 더 보내 자연스럽게 고칩니다. 요청과 토큰이 조금 더 듭니다.';
+
+  @override
   String get geminiConcurrency => '동시 요청';
 
   @override

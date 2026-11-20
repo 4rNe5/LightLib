@@ -2242,6 +2242,14 @@
   "@geminiDeviceFallbackHint": {
     "description": "geminiDeviceFallbackHint"
   },
+  "geminiPolish": "Smooth out stiff sentences",
+  "@geminiPolish": {
+    "description": "geminiPolish"
+  },
+  "geminiPolishHint": "Paragraphs that read word for word are sent to Gemini once more. More requests and tokens.",
+  "@geminiPolishHint": {
+    "description": "geminiPolishHint"
+  },
   "geminiConcurrency": "Requests at once",
   "@geminiConcurrency": {
     "description": "geminiConcurrency"

@@ -196,6 +196,15 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
                 value: _settings.deviceFallback,
                 onChanged: _settings.setDeviceFallback,
               ),
+              SwitchListTile(
+                key: const ValueKey('geminiPolish'),
+                contentPadding: EdgeInsets.zero,
+                title: Text(l10n.geminiPolish),
+                subtitle: Text(l10n.geminiPolishHint,
+                    style: const TextStyle(fontSize: 12)),
+                value: _settings.polish,
+                onChanged: _settings.setPolish,
+              ),
               Row(
                 children: [
                   Expanded(child: Text(l10n.geminiConcurrency)),

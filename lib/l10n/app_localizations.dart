@@ -2998,6 +2998,18 @@ abstract class AppLocalizations {
   /// **'Quota used up, a filter, no connection: those paragraphs only, with the model on the phone.'**
   String get geminiDeviceFallbackHint;
 
+  /// geminiPolish
+  ///
+  /// In en, this message translates to:
+  /// **'Smooth out stiff sentences'**
+  String get geminiPolish;
+
+  /// geminiPolishHint
+  ///
+  /// In en, this message translates to:
+  /// **'Paragraphs that read word for word are sent to Gemini once more. More requests and tokens.'**
+  String get geminiPolishHint;
+
   /// geminiConcurrency
   ///
   /// In en, this message translates to:

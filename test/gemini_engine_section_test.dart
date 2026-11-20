@@ -53,4 +53,21 @@ void main() {
     expect(find.text('속도 우선'), findsOneWidget);
     expect(find.text('퀄리티 우선'), findsOneWidget);
   });
+
+  testWidgets('stiff paragraphs sent once more: the reader\'s choice, off '
+      'until made', (tester) async {
+    final settings = GeminiSettings.instance;
+    settings.debugSet(useGemini: true, key: 'AIzaTESTKEY1234', polish: false);
+    addTearDown(() => settings.debugSet(polish: false));
+    await tester.pumpWidget(app());
+    final toggle = find.byKey(const ValueKey('geminiPolish'));
+    expect(toggle, findsOneWidget);
+    expect(find.text('번역투 문단 다듬기'), findsOneWidget);
+    expect(tester.widget<SwitchListTile>(toggle).value, isFalse);
+    await tester.ensureVisible(toggle);
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(settings.polish, isTrue);
+    expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
+  });
 }

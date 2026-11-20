@@ -1640,6 +1640,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'Quota used up, a filter, no connection: those paragraphs only, with the model on the phone.';
 
   @override
+  String get geminiPolish => 'Smooth out stiff sentences';
+
+  @override
+  String get geminiPolishHint =>
+      'Paragraphs that read word for word are sent to Gemini once more. More requests and tokens.';
+
+  @override
   String get geminiConcurrency => 'Requests at once';
 
   @override

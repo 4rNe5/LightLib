@@ -1658,6 +1658,13 @@ class AppLocalizationsEs extends AppLocalizations {
       'Cuota agotada, un filtro, sin conexión: solo esos párrafos, con el modelo del teléfono.';
 
   @override
+  String get geminiPolish => 'Pulir frases rígidas';
+
+  @override
+  String get geminiPolishHint =>
+      'Los párrafos que suenan traducidos palabra por palabra se envían otra vez a Gemini. Más solicitudes y tokens.';
+
+  @override
   String get geminiConcurrency => 'Solicitudes a la vez';
 
   @override

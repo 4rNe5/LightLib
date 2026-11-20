@@ -482,6 +482,8 @@
   "geminiBlockLow": "낮음 이상 차단",
   "geminiDeviceFallback": "안 될 때 기기 번역으로 이어가기",
   "geminiDeviceFallbackHint": "한도 초과·필터·연결 문제일 때 그 문단만 기기 모델이 번역합니다.",
+  "geminiPolish": "번역투 문단 다듬기",
+  "geminiPolishHint": "직역투가 짙은 문단만 Gemini에 한 번 더 보내 자연스럽게 고칩니다. 요청과 토큰이 조금 더 듭니다.",
   "geminiConcurrency": "동시 요청",
   "geminiPrivacyNote": "책 본문이 Google로 전송됩니다. 무료 등급에서는 Google 제품 개선에 쓰일 수 있고, 유료 등급에서는 쓰이지 않습니다.",
   "geminiThinking": "생각 비중",

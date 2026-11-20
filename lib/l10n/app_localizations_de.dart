@@ -1659,6 +1659,13 @@ class AppLocalizationsDe extends AppLocalizations {
       'Kontingent aufgebraucht, ein Filter, keine Verbindung: nur diese Absätze, mit dem Modell auf dem Telefon.';
 
   @override
+  String get geminiPolish => 'Steife Sätze glätten';
+
+  @override
+  String get geminiPolishHint =>
+      'Absätze, die Wort für Wort übersetzt klingen, gehen noch einmal an Gemini. Mehr Anfragen und Tokens.';
+
+  @override
   String get geminiConcurrency => 'Gleichzeitige Anfragen';
 
   @override

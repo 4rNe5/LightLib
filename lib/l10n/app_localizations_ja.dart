@@ -1588,6 +1588,13 @@ class AppLocalizationsJa extends AppLocalizations {
       '上限・フィルター・接続の問題のとき、その段落だけ端末のモデルで翻訳します。';
 
   @override
+  String get geminiPolish => '直訳調の段落を整える';
+
+  @override
+  String get geminiPolishHint =>
+      '直訳調が強い段落だけ、もう一度Geminiに送って自然な文に直します。リクエストとトークンが少し増えます。';
+
+  @override
   String get geminiConcurrency => '同時リクエスト';
 
   @override

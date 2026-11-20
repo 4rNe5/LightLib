@@ -488,6 +488,8 @@
   "geminiBlockLow": "Bajo y superior",
   "geminiDeviceFallback": "Seguir en el dispositivo si Gemini no puede",
   "geminiDeviceFallbackHint": "Cuota agotada, un filtro, sin conexión: solo esos párrafos, con el modelo del teléfono.",
+  "geminiPolish": "Pulir frases rígidas",
+  "geminiPolishHint": "Los párrafos que suenan traducidos palabra por palabra se envían otra vez a Gemini. Más solicitudes y tokens.",
   "geminiConcurrency": "Solicitudes a la vez",
   "geminiPrivacyNote": "El texto del libro se envía a Google. En el nivel gratuito Google puede usarlo para mejorar sus productos; en el de pago no.",
   "geminiThinking": "Razonamiento",
