@@ -79,6 +79,162 @@ void main() {
     expect(by['聖剣']!.kind, GlossaryKind.term);
   });
 
+  test(
+      'one person, one spelling: a full name and a pet form are written '
+      'with the name as the list has it', () {
+    final text = [
+      for (var i = 0; i < 3; i++) ...[
+        '高森結奈は笑った。高森が言い、結奈も頷く。',
+        '「結奈りん」と沙羅は呼んだ。「沙羅ちん」と結奈が返す。',
+        '風宮佑樹が来た。風宮は黙っていた。',
+        '天田照人は走る。天田が叫び、照人は止まった。',
+        '神坂しずくは神坂の家にいる。しずくは眠い。',
+      ],
+    ].join('\n');
+    final BookSurvey survey = (
+      candidates: const [
+        // The book spells these: ゆな alone, the whole of 天田照人.
+        GlossaryCandidate(source: '結奈', count: 9, example: '', reading: 'ゆな'),
+        GlossaryCandidate(source: '風宮', count: 6, example: '', reading: 'かざみや'),
+        GlossaryCandidate(
+            source: '天田照人', count: 3, example: '', reading: 'あまだてるひと'),
+        GlossaryCandidate(
+            source: 'しずく', count: 6, example: '', girlHonorifics: 3),
+      ],
+      places: const [],
+      narration: Narration.thirdPerson,
+      hero: null,
+      text: text,
+    );
+    final entries = parseBookAnalysis([
+      jsonEncode({
+        'entries': [
+          // Read ゆいな inside the longer entries, against the book.
+          {
+            'src': '高森結奈',
+            'reading': 'たかもりゆいな',
+            'kind': 'person',
+            'ko': '타카모리 유이나'
+          },
+          {'src': '高森', 'reading': 'たかもり', 'kind': 'person', 'ko': '타카모리'},
+          {'src': '結奈', 'reading': 'ゆな', 'kind': 'person', 'ko': '유나'},
+          {'src': '結奈りん', 'reading': 'ゆいなりん', 'kind': 'nickname', 'ko': '유이나린'},
+          {'src': '沙羅', 'reading': 'さら', 'kind': 'person', 'ko': '사라'},
+          {'src': '沙羅ちん', 'reading': 'さらちん', 'kind': 'nickname', 'ko': '사라 친'},
+          // The family name read another way in the full name.
+          {
+            'src': '風宮佑樹',
+            'reading': 'かぜみやゆうき',
+            'kind': 'person',
+            'ko': '카제미야 유키'
+          },
+          {'src': '風宮', 'reading': 'かざみや', 'kind': 'person', 'ko': '카자미야'},
+          // The book spells the full name; the given name alone was a guess.
+          {
+            'src': '天田照人',
+            'reading': 'あまだあきと',
+            'kind': 'person',
+            'ko': '아마다 아키토'
+          },
+          {'src': '天田', 'reading': 'あまだ', 'kind': 'person', 'ko': '아마다'},
+          {'src': '照人', 'reading': 'あきと', 'kind': 'person', 'ko': '아키토'},
+          // A family name and a name in hiragana: a full name, not a pet form.
+          {
+            'src': '神坂しずく',
+            'reading': 'かみさかしずく',
+            'kind': 'person',
+            'ko': '카미사카 시즈쿠'
+          },
+          {'src': '神坂', 'reading': 'かみさか', 'kind': 'person', 'ko': '카미사카'},
+          {'src': 'しずく', 'reading': 'しずく', 'kind': 'person', 'ko': '시즈쿠'},
+        ]
+      }),
+    ], survey);
+    final by = {
+      for (final e in mergeGlossary(BookGlossary.empty, entries).entries)
+        e.source: e.target,
+    };
+    expect(by['結奈'], '유나');
+    expect(by['高森結奈'], '타카모리 유나');
+    expect(by['結奈りん'], '유나린');
+    expect(by['沙羅ちん'], '사라친');
+    expect(by['風宮佑樹'], '카자미야 유키');
+    expect(by['天田照人'], '아마다 테루히토');
+    expect(by['照人'], '테루히토');
+    expect(by['神坂しずく'], '카미사카 시즈쿠');
+  });
+
+  test(
+      'a glossary made before that rule is set right by it, the reader\'s '
+      'own entries followed and never changed', () {
+    final text = [
+      for (var i = 0; i < 3; i++) '高森結奈は笑った。高森が言い、結奈も頷く。「結奈りん」と呼ばれた。',
+    ].join('\n');
+    final BookSurvey survey = (
+      candidates: const [
+        GlossaryCandidate(
+            source: '高森結奈', count: 3, example: '', familyLength: 2),
+        GlossaryCandidate(source: '高森', count: 6, example: ''),
+        GlossaryCandidate(source: '結奈', count: 9, example: ''),
+        GlossaryCandidate(source: '結奈りん', count: 3, example: ''),
+      ],
+      places: const [],
+      narration: Narration.thirdPerson,
+      hero: null,
+      text: text,
+    );
+    GlossaryEntry name(String source, String target,
+            {bool edited = false, String? family}) =>
+        GlossaryEntry(
+            source: source,
+            target: target,
+            kind: GlossaryKind.person,
+            edited: edited,
+            family: family);
+    final old = BookGlossary(entries: [
+      name('高森結奈', '타카모리 유이나', family: '高森'),
+      name('高森', '타카모리'),
+      // The reader's word.
+      name('結奈', '유나', edited: true),
+      name('結奈りん', '유이나린'),
+    ], complete: true, version: 2);
+    final now = upgradeGlossary(old, survey);
+    final by = {for (final e in now.entries) e.source: e};
+    expect(now.version, BookGlossary.currentVersion);
+    expect(by['高森結奈']!.target, '타카모리 유나');
+    expect(by['結奈りん']!.target, '유나린');
+    expect(by['結奈']!.target, '유나');
+    expect(by['結奈']!.edited, isTrue);
+
+    // A full name the engine cut itself, which the book never shortens:
+    // still two words after the glossary is gone through again.
+    final cut = upgradeGlossary(
+        BookGlossary(entries: [
+          name('岸本和葉', '키시모토 카즈하', family: ''),
+        ], complete: true, version: 2),
+        (
+          candidates: const [
+            GlossaryCandidate(source: '岸本和葉', count: 4, example: ''),
+          ],
+          places: const [],
+          narration: Narration.thirdPerson,
+          hero: null,
+          text: '岸本和葉が来た。',
+        ));
+    expect(cut.entries.single.target, '키시모토 카즈하');
+
+    // The reader set the full name too: it stands as set.
+    final kept = upgradeGlossary(
+        BookGlossary(entries: [
+          name('高森結奈', '다카모리 유이나', edited: true, family: '高森'),
+          name('高森', '타카모리'),
+          name('結奈', '유나'),
+        ], complete: true, version: 2),
+        survey);
+    expect(
+        kept.entries.firstWhere((e) => e.source == '高森結奈').target, '다카모리 유이나');
+  });
+
   test('names as an engine lists them, kept as names are kept here', () {
     final text = [
       for (var i = 0; i < 3; i++) ...[

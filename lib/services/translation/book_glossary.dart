@@ -174,9 +174,11 @@ class BookGlossary {
 
   /// How glossaries are made now. One made before (version 1) may hold a
   /// given name cut in two (준 타로), a school spelled by its reading
-  /// (에이가코코) and no name written in hiragana: [upgradeGlossary] sets
-  /// that right from the book, without the model.
-  static const currentVersion = 2;
+  /// (에이가코코) and no name written in hiragana; one of version 2 a
+  /// full name or a pet form spelled another way than the name it holds
+  /// (結奈 유나, 高森結奈 타카모리 유이나): [upgradeGlossary] sets that
+  /// right from the book, without the model.
+  static const currentVersion = 3;
 
   /// The version this glossary was made as.
   final int version;
@@ -977,7 +979,104 @@ List<GlossaryEntry> parseBookAnalysis(
     family ??= cut.contains(e.source) ? '' : null;
     if (family != null) out[e.source] = e.copyWith(family: () => family);
   }
+  _onePersonOneSpelling(out, candidates);
   return out.values.toList();
+}
+
+/// What a name is called for short or for fun: 結奈りん, 沙羅ちん.
+final _petSuffix = RegExp(r'(りん|ちん|っち|ぴょん|ぴ|ぽん|にゃん|たそ|やん|はん)$');
+
+/// One person, one spelling. An engine reads each entry on its own, and
+/// can read a name one way alone and another way inside a longer one
+/// (結奈 ゆな as the book spells it, 高森結奈 たかもりゆいな, 結奈りん
+/// ゆいなりん): two spellings of one girl in front of the translator,
+/// which then writes either. So a longer entry is written with the names
+/// of its parts where the list has them - a full name as its family and
+/// given names, a pet form as the name and its tail - unless the book
+/// itself spells the longer one, and then the part follows that. The
+/// reader's own entries are never changed, and are followed.
+void _onePersonOneSpelling(
+    Map<String, GlossaryEntry> out, Map<String, GlossaryCandidate> candidates) {
+  bool fromBook(String source) {
+    final c = candidates[source];
+    return c != null && _nameFromBook(c) != null;
+  }
+
+  GlossaryEntry? person(String source) {
+    final e = out[source];
+    return e != null && e.kind == GlossaryKind.person && e.target.isNotEmpty
+        ? e
+        : null;
+  }
+
+  for (final e in out.values.toList()) {
+    // (What the reader set stands, and is what the others follow.)
+    if (e.kind != GlossaryKind.person || e.edited || fromBook(e.source)) {
+      continue;
+    }
+    // 結奈りん: the name, and how its tail sounds. (神坂しずく is a full
+    // name: しずく is someone's name, not a tail.)
+    final pet = _petSuffix.firstMatch(e.source);
+    if (pet != null && pet.start > 0) {
+      final name = person(e.source.substring(0, pet.start));
+      if (name != null &&
+          !_hiraganaOnly.hasMatch(name.source) &&
+          person(pet.group(0)!) == null) {
+        out[e.source] = e.copyWith(
+            target:
+                name.target.replaceAll(' ', '') + kanaToHangul(pet.group(0)!),
+            family: () => null);
+        continue;
+      }
+    }
+    // A full name: the family name the book shows, or - for a name the
+    // engine cut itself - the longest listed name it starts with.
+    GlossaryEntry? first;
+    final family = e.family;
+    if (family != null &&
+        family.isNotEmpty &&
+        e.source.startsWith(family) &&
+        e.source.length > family.length) {
+      first = person(family);
+    } else if (family == '') {
+      for (var k = e.source.length - 1; k >= 2 && first == null; k--) {
+        first = person(e.source.substring(0, k));
+      }
+    }
+    if (first == null) continue;
+    final given = person(e.source.substring(first.source.length));
+    final parts = e.target.trim().split(RegExp(r'\s+'));
+    final tail = given != null
+        ? given.target.replaceAll(' ', '')
+        : parts.length == 2
+            ? parts[1]
+            : null;
+    // (Written in one word, and no entry for the rest: where the given
+    // name starts is not known.)
+    if (tail == null) continue;
+    final composed = '${first.target.replaceAll(' ', '')} $tail';
+    if (composed != e.target) out[e.source] = e.copyWith(target: composed);
+  }
+  // The other way: a full name the book spells tells how its given name
+  // is written, where the book does not spell that on its own.
+  for (final e in out.values.toList()) {
+    if (e.kind != GlossaryKind.person || !fromBook(e.source)) continue;
+    final family = e.family;
+    if (family == null || family.isEmpty || !e.source.startsWith(family)) {
+      continue;
+    }
+    final first = person(family);
+    final rest = e.source.substring(family.length);
+    final given = person(rest);
+    if (first == null || given == null || given.edited || fromBook(rest)) {
+      continue;
+    }
+    final bare = e.target.replaceAll(' ', '');
+    final head = first.target.replaceAll(' ', '');
+    if (bare.startsWith(head) && bare.length > head.length) {
+      out[rest] = given.copyWith(target: bare.substring(head.length));
+    }
+  }
 }
 
 /// Whether [korean] opens with the sound [spelled], give or take a
@@ -1336,7 +1435,9 @@ BookGlossary upgradeGlossary(BookGlossary old, BookSurvey survey) {
     final written = e.isName ? _nameFromBook(c) : null;
     entries[e.source] = e.copyWith(
       target: written ?? e.target,
-      family: () => _familyOf(c),
+      // (A full name the engine cut itself stays cut where the book
+      // shows no family name of its own.)
+      family: () => _familyOf(c) ?? (e.family == '' ? '' : null),
     );
   }
   for (final name in hiraganaNames(survey)) {
@@ -1345,6 +1446,7 @@ BookGlossary upgradeGlossary(BookGlossary old, BookSurvey survey) {
   for (final place in survey.places) {
     entries.putIfAbsent(place.source, () => place);
   }
+  _onePersonOneSpelling(entries, bySource);
   return old.copyWith(
     entries: tidyNames(entries.values.toList()),
     version: BookGlossary.currentVersion,
