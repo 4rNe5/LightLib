@@ -290,15 +290,29 @@ class GlossaryService extends ChangeNotifier {
     } catch (_) {}
   }
 
+  /// Called after the reader changed [entry] of [bookFile] (the series'
+  /// other volumes are told: `passOnToSeries`).
+  static Future<void> Function(String bookFile, GlossaryEntry entry)? onEdited;
+
   /// [entry] changed by the reader (replacing the one with its source).
   Future<void> updateEntry(String bookFile, GlossaryEntry entry) async {
     final glossary = await load(bookFile);
+    final edited = entry.copyWith(edited: true);
     final entries = [
       for (final e in glossary.entries)
         if (e.source != entry.source) e,
-      entry.copyWith(edited: true),
+      edited,
     ];
     await save(bookFile, glossary.copyWith(entries: entries));
+    // (Not waited for: the other volumes' translations are gone through
+    // too, and the reader's edit is done.)
+    final passOn = onEdited;
+    if (passOn != null) {
+      unawaited(passOn(bookFile, edited).catchError((Object e) {
+        _logger.warning('Glossary edit not passed on',
+            tag: 'Glossary', error: e);
+      }));
+    }
   }
 
   /// Removes [source]: kept as an empty, edited entry so making the

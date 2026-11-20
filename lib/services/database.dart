@@ -202,6 +202,9 @@ class MyLibraryDb {
     // What sync knows: when a position changed here, which books it saw,
     // the files' MD5s ([SyncState]).
     'CREATE TABLE IF NOT EXISTS syncstate (name TEXT PRIMARY KEY,value TEXT)',
+    // The series the reader put books in (a name; the volumes' order is
+    // read off their titles).
+    'CREATE TABLE IF NOT EXISTS bookseries (bookId TEXT PRIMARY KEY,series TEXT)',
   ];
 
   /// Called after a reading position or completion is saved here (sync
@@ -232,6 +235,11 @@ class MyLibraryDb {
     );
     await dbInstance.delete(
       'bookgenre',
+      where: 'bookId = ?',
+      whereArgs: [id],
+    );
+    await dbInstance.delete(
+      'bookseries',
       where: 'bookId = ?',
       whereArgs: [id],
     );
@@ -547,6 +555,37 @@ class MyLibraryDb {
     final rows = await dbInstance.query('bookgenre');
     return {
       for (final row in rows) row['bookId'].toString(): row['genre'].toString()
+    };
+  }
+
+  // ------------------------------------------------------------------
+  // Series: the reader's own grouping of books (one series per book);
+  // no row means the book is in none.
+  // ------------------------------------------------------------------
+
+  /// Puts [bookIds] in [series], or takes them out of theirs when
+  /// [series] is null or empty.
+  Future<void> setSeries(Iterable<String> bookIds, String? series) async {
+    final dbInstance = await instance.database;
+    final name = series?.trim() ?? '';
+    final batch = dbInstance.batch();
+    for (final id in bookIds) {
+      if (name.isEmpty) {
+        batch.delete('bookseries', where: 'bookId = ?', whereArgs: [id]);
+      } else {
+        batch.insert('bookseries', {'bookId': id, 'series': name},
+            conflictAlgorithm: ConflictAlgorithm.replace);
+      }
+    }
+    await batch.commit(noResult: true);
+  }
+
+  /// Map of bookId to the series the reader put it in.
+  Future<Map<String, String>> getSeriesForAll() async {
+    final dbInstance = await instance.database;
+    final rows = await dbInstance.query('bookseries');
+    return {
+      for (final row in rows) row['bookId'].toString(): row['series'].toString()
     };
   }
 

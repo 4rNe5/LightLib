@@ -63,10 +63,14 @@ Future<int> repairTranslatedNames({
 }
 
 /// Has a glossary that was set right set the book's translations right
-/// too, and a book's glossary take what its series' other volumes
-/// settled. Safe to call more than once.
+/// too, a book's glossary take what its series' other volumes settled,
+/// and what the reader sets in one volume go to the others. Safe to call
+/// more than once.
 void installTranslationRepair() {
   GlossaryService.seriesOf = seriesGlossaries;
+  GlossaryService.onEdited = (bookFile, entry) async {
+    await passOnToSeries(bookFile, entry);
+  };
   GlossaryService.onUpgraded = (bookFile, bookPath, glossary) {
     repairTranslatedNames(
             bookFile: bookFile, bookPath: bookPath, glossary: glossary)

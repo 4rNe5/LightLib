@@ -3509,5 +3509,67 @@
   "claudePrivacyNote": "The book's text is sent to Anthropic's API. What is used is charged to the account the key belongs to.",
   "@claudePrivacyNote": {
     "description": "claudePrivacyNote"
+  },
+  "librarySelected": "{count} selected",
+  "@librarySelected": {
+    "description": "librarySelected",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "librarySelectionTags": "Tags and genre",
+  "@librarySelectionTags": {
+    "description": "librarySelectionTags"
+  },
+  "seriesGroup": "Group as a series",
+  "@seriesGroup": {
+    "description": "seriesGroup"
+  },
+  "seriesUngroup": "Take out of the series",
+  "@seriesUngroup": {
+    "description": "seriesUngroup"
+  },
+  "seriesName": "Series name",
+  "@seriesName": {
+    "description": "seriesName"
+  },
+  "seriesNameHint": "Books given the name of a series that exists join that series. The volumes of a series share the names their glossaries settled.",
+  "@seriesNameHint": {
+    "description": "seriesNameHint"
+  },
+  "seriesSection": "Series",
+  "@seriesSection": {
+    "description": "seriesSection"
+  },
+  "seriesGrouped": "{count} books grouped as “{name}”",
+  "@seriesGrouped": {
+    "description": "seriesGrouped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "seriesUngrouped": "{count} books taken out of their series",
+  "@seriesUngrouped": {
+    "description": "seriesUngrouped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "seriesGlossaryShare": "Share glossaries within a series",
+  "@seriesGlossaryShare": {
+    "description": "seriesGlossaryShare"
+  },
+  "seriesGlossaryShareHint": "A new volume's glossary takes the names the series' other volumes settled, and a name you correct in one volume is corrected in the others. Off: each volume keeps its own.",
+  "@seriesGlossaryShareHint": {
+    "description": "seriesGlossaryShareHint"
   }
 }

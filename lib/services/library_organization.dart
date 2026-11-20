@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/search_results.dart' show volumeOf;
 
 /// How the library list is ordered. Each mode has a stable persisted key
 /// so the choice survives restarts.
@@ -93,17 +94,69 @@ class LibraryBook {
   final int? fileSizeBytes;
   final BookGenre? genre;
 
+  /// The series the reader put it in, if any.
+  final String? series;
+
   const LibraryBook({
     required this.book,
     this.tags = const {},
     this.status = ReadingStatus.unread,
     this.fileSizeBytes,
     this.genre,
+    this.series,
   });
 
   String get id => book.id;
   String get title => book.title;
   String get author => book.author ?? '';
+}
+
+/// A series the reader made, its volumes in reading order.
+@immutable
+class LibrarySeries {
+  const LibrarySeries(this.name, this.volumes);
+  final String name;
+  final List<LibraryBook> volumes;
+}
+
+/// The series among [books], in the order their first volumes come in
+/// [books]; each one's volumes by the number in their titles (a title
+/// that names none after those that do, by title).
+List<LibrarySeries> librarySeries(List<LibraryBook> books) {
+  final groups = <String, List<LibraryBook>>{};
+  for (final b in books) {
+    final name = b.series;
+    if (name != null && name.isNotEmpty) (groups[name] ??= []).add(b);
+  }
+  return [
+    for (final MapEntry(key: name, value: volumes) in groups.entries)
+      LibrarySeries(
+          name,
+          volumes
+            ..sort((x, y) {
+              final a = volumeOf(x.title).number, b = volumeOf(y.title).number;
+              if (a != null && b != null && a != b) return a.compareTo(b);
+              if ((a == null) != (b == null)) return a == null ? 1 : -1;
+              return x.title.compareTo(y.title);
+            })),
+  ];
+}
+
+/// A name to offer for a series made of books called [titles]: the
+/// series most of the titles name, as their titles write it.
+String suggestedSeriesName(Iterable<String> titles) {
+  final count = <String, int>{};
+  for (final t in titles) {
+    final series = volumeOf(t).series.trim();
+    if (series.isNotEmpty) count[series] = (count[series] ?? 0) + 1;
+  }
+  if (count.isEmpty) return '';
+  // (The first of the most frequent: the order the books were chosen in.)
+  var best = count.keys.first;
+  for (final MapEntry(key: series, value: n) in count.entries) {
+    if (n > count[best]!) best = series;
+  }
+  return best;
 }
 
 /// Sorts books by [mode]. Two books comparing equal fall back to the

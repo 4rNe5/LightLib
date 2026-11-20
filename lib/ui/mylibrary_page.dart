@@ -1,3 +1,6 @@
+// Dart imports:
+import 'dart:async';
+
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
@@ -11,6 +14,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:openlib/services/files.dart' show syncLibraryWithDisk;
 import 'package:openlib/services/local_book_import.dart';
 import 'package:openlib/services/translation/book_translation_service.dart';
+import 'package:openlib/services/translation/series_glossary.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
@@ -32,6 +36,9 @@ class MyLibraryPage extends ConsumerStatefulWidget {
 
 class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
   bool _isRefreshing = false;
+
+  /// The books being chosen (long press starts it), by id.
+  final Set<String> _selected = {};
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
   bool _hasTriggeredRefresh = false;
@@ -212,8 +219,8 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
             key: const ValueKey('libraryWordBook'),
             tooltip: l10n.studyWordBook,
             icon: const Icon(Icons.style_outlined),
-            onPressed: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const StudyPage())),
+            onPressed: () => Navigator.push(
+                context, MaterialPageRoute(builder: (_) => const StudyPage())),
           ),
           _buildImportButton(context),
           PopupMenuButton<LibrarySortMode>(
@@ -383,6 +390,205 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     });
   }
 
+  void _toggleSelected(LibraryBook book) {
+    // (A message still showing would lie over the bar of the chosen
+    // books.)
+    ScaffoldMessenger.maybeOf(context)?.hideCurrentSnackBar();
+    setState(() {
+      if (!_selected.remove(book.id)) _selected.add(book.id);
+    });
+  }
+
+  /// A tile of [book]: opened by a tap, chosen by a long press - and,
+  /// while books are being chosen, by a tap.
+  Widget _tile(LibraryBook book) => LibraryGridTile(
+        key: ValueKey('libraryBook-${book.id}'),
+        book: book,
+        selected: _selected.isEmpty ? null : _selected.contains(book.id),
+        onTap: () =>
+            _selected.isEmpty ? _openBook(book) : _toggleSelected(book),
+        onLongPress: () => _toggleSelected(book),
+      );
+
+  /// Puts the chosen books in a series the reader names (or in one that
+  /// exists, by its name).
+  Future<void> _groupSelected(List<LibraryBook> all) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = [
+      for (final b in all)
+        if (_selected.contains(b.id)) b,
+    ];
+    if (chosen.isEmpty) return;
+    final theirs = {for (final b in chosen) b.series}.whereType<String>();
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => _SeriesNameDialog(
+        // The series they are in already, or what their titles say.
+        initial: theirs.length == 1
+            ? theirs.first
+            : suggestedSeriesName(chosen.map((b) => b.title)),
+        existing: [for (final s in librarySeries(all)) s.name],
+      ),
+    );
+    if (name == null || name.trim().isEmpty || !mounted) return;
+    await dataBase.setSeries(chosen.map((b) => b.id), name.trim());
+    setState(_selected.clear);
+    ref.invalidate(libraryBooksProvider);
+    messenger.showSnackBar(SnackBar(
+        content: Text(l10n.seriesGrouped(chosen.length, name.trim()))));
+    // What the volumes' glossaries settled is now the series'.
+    unawaited(shareWithinSeries([for (final b in chosen) b.book.getFileName()])
+        .catchError((_) => 0));
+  }
+
+  Future<void> _ungroupSelected(List<LibraryBook> all) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = [
+      for (final b in all)
+        if (_selected.contains(b.id) && b.series != null) b.id,
+    ];
+    if (chosen.isEmpty) return;
+    await dataBase.setSeries(chosen, null);
+    if (!mounted) return;
+    setState(_selected.clear);
+    ref.invalidate(libraryBooksProvider);
+    messenger.showSnackBar(
+        SnackBar(content: Text(l10n.seriesUngrouped(chosen.length))));
+  }
+
+  /// What can be done with the chosen books, over the foot of the list.
+  Widget _buildSelectionBar(BuildContext context, List<LibraryBook> all) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final chosen = [
+      for (final b in all)
+        if (_selected.contains(b.id)) b,
+    ];
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+        child: Material(
+          key: const ValueKey('librarySelectionBar'),
+          elevation: 6,
+          color: scheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(18),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            child: Row(
+              children: [
+                IconButton(
+                  key: const ValueKey('librarySelectionClose'),
+                  tooltip: l10n.close,
+                  icon: const Icon(Icons.close),
+                  onPressed: () => setState(_selected.clear),
+                ),
+                Text(l10n.librarySelected(chosen.length),
+                    maxLines: 1,
+                    style: const TextStyle(fontWeight: FontWeight.w600)),
+                const SizedBox(width: 8),
+                // (The actions keep to the room there is: a long label
+                // is cut short, never the row.)
+                Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (chosen.length == 1)
+                        IconButton(
+                          key: const ValueKey('librarySelectionTags'),
+                          visualDensity: VisualDensity.compact,
+                          tooltip: l10n.librarySelectionTags,
+                          icon: const Icon(Icons.label_outline),
+                          onPressed: () {
+                            final book = chosen.single;
+                            setState(_selected.clear);
+                            _openTagEditor(book);
+                          },
+                        ),
+                      if (chosen.any((b) => b.series != null))
+                        IconButton(
+                          key: const ValueKey('seriesUngroup'),
+                          visualDensity: VisualDensity.compact,
+                          tooltip: l10n.seriesUngroup,
+                          icon: const Icon(Icons.layers_clear_outlined),
+                          onPressed: () => _ungroupSelected(all),
+                        ),
+                      Flexible(
+                        // (No icon: a button with one does not let its
+                        // label give way.)
+                        child: FilledButton.tonal(
+                          key: const ValueKey('seriesGroup'),
+                          onPressed: () => _groupSelected(all),
+                          child: Text(l10n.seriesGroup,
+                              maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 4),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// A series the reader made: its name, and its volumes in one row, in
+  /// order.
+  Widget _buildSeriesRow(BuildContext context, LibrarySeries series) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    const tileWidth = 92.0;
+    return Container(
+      key: ValueKey('librarySeries-${series.name}'),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 0, 6),
+      decoration: BoxDecoration(
+        color: scheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12, bottom: 10),
+            child: Row(
+              children: [
+                Icon(Icons.collections_bookmark_outlined,
+                    size: 16, color: scheme.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(series.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+                Text(l10n.seriesVolumes(series.volumes.length),
+                    style: TextStyle(
+                        fontSize: 12, color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+          SizedBox(
+            height: tileWidth * 1.5 + LibraryGridTile.captionHeight,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 12),
+              itemCount: series.volumes.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, i) =>
+                  SizedBox(width: tileWidth, child: _tile(series.volumes[i])),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Cover grid: as many columns as fit (at least three on phones), each
   /// tile a 2:3 cover plus its caption.
   Widget _buildGrid(List<LibraryBook> books) {
@@ -399,15 +605,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
           mainAxisExtent: tileWidth * 1.5 + LibraryGridTile.captionHeight,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, index) {
-            final book = books[index];
-            return LibraryGridTile(
-              key: ValueKey('libraryBook-${book.id}'),
-              book: book,
-              onTap: () => _openBook(book),
-              onLongPress: () => _openTagEditor(book),
-            );
-          },
+          (context, index) => _tile(books[index]),
           childCount: books.length,
         ),
       );
@@ -450,88 +648,124 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                 ref.watch(libraryStatusFilterProvider) != null ||
                 ref.watch(libraryGenreFilterProvider) != null ||
                 ref.watch(librarySearchQueryProvider).trim().isNotEmpty;
+        // The series the reader made, each in a row of its own; the grid
+        // under them has the books that are in none. While something is
+        // being looked for, every book that matches is in the grid.
+        final series = anyFilterActive
+            ? const <LibrarySeries>[]
+            : librarySeries(organized);
+        final loose = series.isEmpty
+            ? organized
+            : [
+                for (final b in organized)
+                  if (b.series == null || b.series!.isEmpty) b,
+              ];
+        _selected.removeWhere((id) => !data.any((b) => b.id == id));
         if (data.isNotEmpty) {
           final l10n = AppLocalizations.of(context);
-          return RefreshIndicator(
-            onRefresh: () => _refreshLibrary(),
-            child: CustomScrollView(
-              controller: _scrollController,
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: <Widget>[
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  sliver: SliverList(
-                    delegate: SliverChildListDelegate([
-                      const ActiveDownloadsWidget(),
-                      _buildHeader(context, data.length),
-                      _buildSearchField(context),
-                      const SizedBox(height: 8),
-                      if (data.length > 1 || anyFilterActive)
-                        _buildFilterChips(context, data),
-                      if (!anyFilterActive) ...[
-                        const SizedBox(height: 10),
-                        LibraryBentoPanel(
-                          key: const ValueKey('libraryBento'),
-                          books: data,
-                          onOpen: _openBook,
-                          onLongPress: _openTagEditor,
-                        ),
-                        const LibraryRecapSection(),
-                      ],
-                      _sectionTitle(
-                        context,
-                        l10n.libraryAllBooks,
-                        trailing: '${organized.length}',
+          return PopScope(
+            // Back leaves the choosing first.
+            canPop: _selected.isEmpty,
+            onPopInvokedWithResult: (didPop, _) {
+              if (!didPop) setState(_selected.clear);
+            },
+            child: Stack(children: [
+              RefreshIndicator(
+                onRefresh: () => _refreshLibrary(),
+                child: CustomScrollView(
+                  controller: _scrollController,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  slivers: <Widget>[
+                    SliverPadding(
+                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          const ActiveDownloadsWidget(),
+                          _buildHeader(context, data.length),
+                          _buildSearchField(context),
+                          const SizedBox(height: 8),
+                          if (data.length > 1 || anyFilterActive)
+                            _buildFilterChips(context, data),
+                          if (!anyFilterActive) ...[
+                            const SizedBox(height: 10),
+                            LibraryBentoPanel(
+                              key: const ValueKey('libraryBento'),
+                              books: data,
+                              onOpen: _openBook,
+                              onLongPress: _openTagEditor,
+                            ),
+                            const LibraryRecapSection(),
+                          ],
+                          if (series.isNotEmpty) ...[
+                            _sectionTitle(context, l10n.seriesSection,
+                                trailing: '${series.length}'),
+                            for (final s in series) _buildSeriesRow(context, s),
+                          ],
+                          if (loose.isNotEmpty || series.isEmpty)
+                            _sectionTitle(
+                              context,
+                              l10n.libraryAllBooks,
+                              trailing: '${loose.length}',
+                            ),
+                        ]),
                       ),
-                    ]),
-                  ),
+                    ),
+                    if (organized.isEmpty && anyFilterActive)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(32),
+                          child: Center(
+                            child: Text(
+                              l10n.libraryNoMatches,
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 13),
+                            ),
+                          ),
+                        ),
+                      )
+                    else
+                      SliverPadding(
+                        // (Room for the bar of the chosen books.)
+                        padding: EdgeInsets.fromLTRB(
+                            16, 0, 16, _selected.isEmpty ? 24 : 96),
+                        sliver: _buildGrid(loose),
+                      ),
+                    // Add scroll-to-refresh hint for desktop
+                    if (PlatformUtils.isDesktop)
+                      SliverToBoxAdapter(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Center(
+                            child: _isRefreshing
+                                ? SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .secondary,
+                                    ),
+                                  )
+                                : Text(
+                                    "Scroll down to sync library",
+                                    style: TextStyle(
+                                      color: Colors.grey[500],
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
-                if (organized.isEmpty && anyFilterActive)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Center(
-                        child: Text(
-                          l10n.libraryNoMatches,
-                          style:
-                              const TextStyle(color: Colors.grey, fontSize: 13),
-                        ),
-                      ),
-                    ),
-                  )
-                else
-                  SliverPadding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
-                    sliver: _buildGrid(organized),
-                  ),
-                // Add scroll-to-refresh hint for desktop
-                if (PlatformUtils.isDesktop)
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Center(
-                        child: _isRefreshing
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color:
-                                      Theme.of(context).colorScheme.secondary,
-                                ),
-                              )
-                            : Text(
-                                "Scroll down to sync library",
-                                style: TextStyle(
-                                  color: Colors.grey[500],
-                                  fontSize: 12,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+              ),
+              if (_selected.isNotEmpty)
+                Align(
+                  alignment: Alignment.bottomCenter,
+                  child: _buildSelectionBar(context, data),
+                ),
+            ]),
           );
         } else {
           return RefreshIndicator(
@@ -817,6 +1051,78 @@ class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
           ),
         );
       },
+    );
+  }
+}
+
+/// Asks what the series is called; an existing series' name can be
+/// picked, and the books then join it.
+class _SeriesNameDialog extends StatefulWidget {
+  const _SeriesNameDialog({required this.initial, required this.existing});
+  final String initial;
+  final List<String> existing;
+
+  @override
+  State<_SeriesNameDialog> createState() => _SeriesNameDialogState();
+}
+
+class _SeriesNameDialogState extends State<_SeriesNameDialog> {
+  late final _name = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _name.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return AlertDialog(
+      title: Text(l10n.seriesGroup),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            TextField(
+              key: const ValueKey('seriesName'),
+              controller: _name,
+              autofocus: true,
+              textInputAction: TextInputAction.done,
+              decoration: InputDecoration(labelText: l10n.seriesName),
+              onSubmitted: (v) => Navigator.pop(context, v),
+            ),
+            const SizedBox(height: 8),
+            Text(l10n.seriesNameHint,
+                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
+            if (widget.existing.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              Wrap(
+                spacing: 6,
+                runSpacing: 4,
+                children: [
+                  for (final name in widget.existing)
+                    ActionChip(
+                      key: ValueKey('seriesPick-$name'),
+                      label: Text(name, style: const TextStyle(fontSize: 12)),
+                      onPressed: () => setState(() => _name.text = name),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
+        FilledButton(
+            key: const ValueKey('seriesNameSave'),
+            onPressed: () => Navigator.pop(context, _name.text),
+            child: Text(l10n.save)),
+      ],
     );
   }
 }

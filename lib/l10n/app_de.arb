@@ -725,5 +725,16 @@
   "claudeTestBadKey": "Der Schlüssel funktioniert nicht: {error}",
   "claudePolishHint": "Nur wörtlich klingende Absätze gehen noch einmal an Claude und werden geglättet. Kostet ein paar Anfragen und Tokens mehr.",
   "claudeDeviceFallbackHint": "Bei Verbindungsproblemen, aufgebrauchtem Guthaben oder wenn Claude eine Anfrage ablehnt, übersetzt das Modell auf dem Gerät diese Absätze.",
-  "claudePrivacyNote": "Der Text des Buchs wird an die API von Anthropic gesendet. Der Verbrauch wird dem Konto berechnet, zu dem der Schlüssel gehört."
+  "claudePrivacyNote": "Der Text des Buchs wird an die API von Anthropic gesendet. Der Verbrauch wird dem Konto berechnet, zu dem der Schlüssel gehört.",
+  "librarySelected": "{count} ausgewählt",
+  "librarySelectionTags": "Tags und Genre",
+  "seriesGroup": "Als Reihe gruppieren",
+  "seriesUngroup": "Aus der Reihe nehmen",
+  "seriesName": "Name der Reihe",
+  "seriesNameHint": "Bücher mit dem Namen einer vorhandenen Reihe kommen zu dieser Reihe. Die Bände einer Reihe teilen die Namen, die ihre Glossare festgelegt haben.",
+  "seriesSection": "Reihen",
+  "seriesGrouped": "{count} Bücher als „{name}“ gruppiert",
+  "seriesUngrouped": "{count} Bücher aus ihrer Reihe genommen",
+  "seriesGlossaryShare": "Glossare innerhalb einer Reihe teilen",
+  "seriesGlossaryShareHint": "Das Glossar eines neuen Bands übernimmt die Namen der anderen Bände der Reihe, und ein in einem Band korrigierter Name wird in den anderen korrigiert. Aus: Jeder Band behält sein eigenes."
 }

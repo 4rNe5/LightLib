@@ -2490,4 +2490,45 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get claudePrivacyNote =>
       'The book\'s text is sent to Anthropic\'s API. What is used is charged to the account the key belongs to.';
+
+  @override
+  String librarySelected(int count) {
+    return '$count selected';
+  }
+
+  @override
+  String get librarySelectionTags => 'Tags and genre';
+
+  @override
+  String get seriesGroup => 'Group as a series';
+
+  @override
+  String get seriesUngroup => 'Take out of the series';
+
+  @override
+  String get seriesName => 'Series name';
+
+  @override
+  String get seriesNameHint =>
+      'Books given the name of a series that exists join that series. The volumes of a series share the names their glossaries settled.';
+
+  @override
+  String get seriesSection => 'Series';
+
+  @override
+  String seriesGrouped(int count, String name) {
+    return '$count books grouped as “$name”';
+  }
+
+  @override
+  String seriesUngrouped(int count) {
+    return '$count books taken out of their series';
+  }
+
+  @override
+  String get seriesGlossaryShare => 'Share glossaries within a series';
+
+  @override
+  String get seriesGlossaryShareHint =>
+      'A new volume\'s glossary takes the names the series\' other volumes settled, and a name you correct in one volume is corrected in the others. Off: each volume keeps its own.';
 }

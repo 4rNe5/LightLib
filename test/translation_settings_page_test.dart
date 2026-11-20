@@ -79,7 +79,8 @@ void main() {
       await db.savePreference(translationTargetLanguagePref, 'ko');
       await db.savePreference(TranslationPromptFormats.pref, '{}');
     });
-    tester.view.physicalSize = const Size(1080, 6000);
+    // (Tall enough for the whole page: it grows with its settings.)
+    tester.view.physicalSize = const Size(1080, 6900);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 

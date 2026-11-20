@@ -4433,6 +4433,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The book\'s text is sent to Anthropic\'s API. What is used is charged to the account the key belongs to.'**
   String get claudePrivacyNote;
+
+  /// librarySelected
+  ///
+  /// In en, this message translates to:
+  /// **'{count} selected'**
+  String librarySelected(int count);
+
+  /// librarySelectionTags
+  ///
+  /// In en, this message translates to:
+  /// **'Tags and genre'**
+  String get librarySelectionTags;
+
+  /// seriesGroup
+  ///
+  /// In en, this message translates to:
+  /// **'Group as a series'**
+  String get seriesGroup;
+
+  /// seriesUngroup
+  ///
+  /// In en, this message translates to:
+  /// **'Take out of the series'**
+  String get seriesUngroup;
+
+  /// seriesName
+  ///
+  /// In en, this message translates to:
+  /// **'Series name'**
+  String get seriesName;
+
+  /// seriesNameHint
+  ///
+  /// In en, this message translates to:
+  /// **'Books given the name of a series that exists join that series. The volumes of a series share the names their glossaries settled.'**
+  String get seriesNameHint;
+
+  /// seriesSection
+  ///
+  /// In en, this message translates to:
+  /// **'Series'**
+  String get seriesSection;
+
+  /// seriesGrouped
+  ///
+  /// In en, this message translates to:
+  /// **'{count} books grouped as “{name}”'**
+  String seriesGrouped(int count, String name);
+
+  /// seriesUngrouped
+  ///
+  /// In en, this message translates to:
+  /// **'{count} books taken out of their series'**
+  String seriesUngrouped(int count);
+
+  /// seriesGlossaryShare
+  ///
+  /// In en, this message translates to:
+  /// **'Share glossaries within a series'**
+  String get seriesGlossaryShare;
+
+  /// seriesGlossaryShareHint
+  ///
+  /// In en, this message translates to:
+  /// **'A new volume\'s glossary takes the names the series\' other volumes settled, and a name you correct in one volume is corrected in the others. Off: each volume keeps its own.'**
+  String get seriesGlossaryShareHint;
 }
 
 class _AppLocalizationsDelegate

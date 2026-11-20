@@ -554,6 +554,7 @@ final libraryBooksProvider = FutureProvider<List<LibraryBook>>((ref) async {
   final positions = await dataBase.getPositionsForAll();
   final completed = await dataBase.getCompletedForAll();
   final genres = await dataBase.getGenresForAll();
+  final series = await dataBase.getSeriesForAll();
   // Full-quality covers from the EPUB files, made in the background.
   unawaited(BookCovers.instance.ensure(books));
   return [
@@ -567,6 +568,7 @@ final libraryBooksProvider = FutureProvider<List<LibraryBook>>((ref) async {
         ),
         fileSizeBytes: await _fileSizeOf(book),
         genre: BookGenre.fromKey(genres[book.id]),
+        series: series[book.id],
       ),
   ];
 });

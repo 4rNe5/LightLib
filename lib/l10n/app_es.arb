@@ -725,5 +725,16 @@
   "claudeTestBadKey": "La clave no funciona: {error}",
   "claudePolishHint": "Solo los párrafos que suenan literales se envían otra vez a Claude para pulirlos. Cuesta algunas peticiones y tokens más.",
   "claudeDeviceFallbackHint": "Si falla la conexión, se agota el crédito o Claude rechaza una petición, el modelo del dispositivo traduce esos párrafos.",
-  "claudePrivacyNote": "El texto del libro se envía a la API de Anthropic. Lo que se usa se cobra a la cuenta a la que pertenece la clave."
+  "claudePrivacyNote": "El texto del libro se envía a la API de Anthropic. Lo que se usa se cobra a la cuenta a la que pertenece la clave.",
+  "librarySelected": "{count} seleccionados",
+  "librarySelectionTags": "Etiquetas y género",
+  "seriesGroup": "Agrupar como serie",
+  "seriesUngroup": "Sacar de la serie",
+  "seriesName": "Nombre de la serie",
+  "seriesNameHint": "Los libros con el nombre de una serie que ya existe se unen a ella. Los volúmenes de una serie comparten los nombres fijados en sus glosarios.",
+  "seriesSection": "Series",
+  "seriesGrouped": "{count} libros agrupados como «{name}»",
+  "seriesUngrouped": "{count} libros sacados de su serie",
+  "seriesGlossaryShare": "Compartir glosarios dentro de una serie",
+  "seriesGlossaryShareHint": "El glosario de un volumen nuevo toma los nombres fijados en los demás volúmenes de la serie, y un nombre que corriges en uno se corrige en los otros. Desactivado: cada volumen conserva el suyo."
 }

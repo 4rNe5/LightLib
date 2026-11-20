@@ -282,6 +282,7 @@ class LibraryGridTile extends StatelessWidget {
     required this.book,
     required this.onTap,
     this.onLongPress,
+    this.selected,
   });
 
   /// Height of the title and author under the cover.
@@ -290,6 +291,9 @@ class LibraryGridTile extends StatelessWidget {
   final LibraryBook book;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+
+  /// While books are being chosen: whether this one is. Null otherwise.
+  final bool? selected;
 
   @override
   Widget build(BuildContext context) {
@@ -358,6 +362,31 @@ class LibraryGridTile extends StatelessWidget {
                         bottom: 7,
                         right: 6,
                         child: _Pill(child: Text('PDF')),
+                      ),
+                    // Being chosen: the ones not chosen step back, the
+                    // chosen ones carry a mark.
+                    if (selected == false)
+                      const ColoredBox(color: Color(0x66000000)),
+                    if (selected != null)
+                      Positioned(
+                        top: 6,
+                        right: 6,
+                        child: Container(
+                          key: ValueKey('librarySelect-${book.id}'),
+                          width: 24,
+                          height: 24,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: selected!
+                                ? scheme.primary
+                                : const Color(0x99000000),
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: selected!
+                              ? Icon(Icons.check,
+                                  size: 16, color: scheme.onPrimary)
+                              : null,
+                        ),
                       ),
                   ],
                 ),

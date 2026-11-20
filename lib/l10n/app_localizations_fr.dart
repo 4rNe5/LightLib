@@ -2522,4 +2522,46 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get claudePrivacyNote =>
       'Le texte du livre est envoyé à l\'API d\'Anthropic. Ce qui est utilisé est facturé au compte auquel appartient la clé.';
+
+  @override
+  String librarySelected(int count) {
+    return '$count sélectionnés';
+  }
+
+  @override
+  String get librarySelectionTags => 'Étiquettes et genre';
+
+  @override
+  String get seriesGroup => 'Regrouper en série';
+
+  @override
+  String get seriesUngroup => 'Retirer de la série';
+
+  @override
+  String get seriesName => 'Nom de la série';
+
+  @override
+  String get seriesNameHint =>
+      'Les livres portant le nom d\'une série existante la rejoignent. Les volumes d\'une série partagent les noms fixés par leurs glossaires.';
+
+  @override
+  String get seriesSection => 'Séries';
+
+  @override
+  String seriesGrouped(int count, String name) {
+    return '$count livres regroupés dans « $name »';
+  }
+
+  @override
+  String seriesUngrouped(int count) {
+    return '$count livres retirés de leur série';
+  }
+
+  @override
+  String get seriesGlossaryShare =>
+      'Partager les glossaires au sein d\'une série';
+
+  @override
+  String get seriesGlossaryShareHint =>
+      'Le glossaire d\'un nouveau volume reprend les noms fixés par les autres volumes de la série, et un nom corrigé dans un volume l\'est dans les autres. Désactivé : chaque volume garde le sien.';
 }

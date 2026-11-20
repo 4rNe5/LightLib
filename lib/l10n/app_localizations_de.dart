@@ -2515,4 +2515,45 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get claudePrivacyNote =>
       'Der Text des Buchs wird an die API von Anthropic gesendet. Der Verbrauch wird dem Konto berechnet, zu dem der Schlüssel gehört.';
+
+  @override
+  String librarySelected(int count) {
+    return '$count ausgewählt';
+  }
+
+  @override
+  String get librarySelectionTags => 'Tags und Genre';
+
+  @override
+  String get seriesGroup => 'Als Reihe gruppieren';
+
+  @override
+  String get seriesUngroup => 'Aus der Reihe nehmen';
+
+  @override
+  String get seriesName => 'Name der Reihe';
+
+  @override
+  String get seriesNameHint =>
+      'Bücher mit dem Namen einer vorhandenen Reihe kommen zu dieser Reihe. Die Bände einer Reihe teilen die Namen, die ihre Glossare festgelegt haben.';
+
+  @override
+  String get seriesSection => 'Reihen';
+
+  @override
+  String seriesGrouped(int count, String name) {
+    return '$count Bücher als „$name“ gruppiert';
+  }
+
+  @override
+  String seriesUngrouped(int count) {
+    return '$count Bücher aus ihrer Reihe genommen';
+  }
+
+  @override
+  String get seriesGlossaryShare => 'Glossare innerhalb einer Reihe teilen';
+
+  @override
+  String get seriesGlossaryShareHint =>
+      'Das Glossar eines neuen Bands übernimmt die Namen der anderen Bände der Reihe, und ein in einem Band korrigierter Name wird in den anderen korrigiert. Aus: Jeder Band behält sein eigenes.';
 }

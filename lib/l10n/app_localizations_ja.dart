@@ -2425,4 +2425,45 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get claudePrivacyNote =>
       '本の本文が Anthropic の API に送信されます。使った分は、キーが属するアカウントに課金されます。';
+
+  @override
+  String librarySelected(int count) {
+    return '$count冊を選択';
+  }
+
+  @override
+  String get librarySelectionTags => 'タグ・ジャンル';
+
+  @override
+  String get seriesGroup => 'シリーズにまとめる';
+
+  @override
+  String get seriesUngroup => 'シリーズから外す';
+
+  @override
+  String get seriesName => 'シリーズ名';
+
+  @override
+  String get seriesNameHint =>
+      '既にあるシリーズと同じ名前にすると、そのシリーズに加わります。同じシリーズの本は、用語集で決めた名前を共有します。';
+
+  @override
+  String get seriesSection => 'シリーズ';
+
+  @override
+  String seriesGrouped(int count, String name) {
+    return '$count冊を「$name」にまとめました';
+  }
+
+  @override
+  String seriesUngrouped(int count) {
+    return '$count冊をシリーズから外しました';
+  }
+
+  @override
+  String get seriesGlossaryShare => 'シリーズ内で用語集を共有';
+
+  @override
+  String get seriesGlossaryShareHint =>
+      '新しい巻の用語集が同じシリーズの他の巻で決めた名前を引き継ぎ、ある巻で直した名前・用語が他の巻にも自動で反映されます。オフにすると巻ごとに別々です。';
 }

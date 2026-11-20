@@ -2429,4 +2429,45 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get claudePrivacyNote =>
       '책 본문이 Anthropic의 API로 전송됩니다. 쓴 만큼 키가 속한 계정에 요금이 부과됩니다.';
+
+  @override
+  String librarySelected(int count) {
+    return '$count권 선택';
+  }
+
+  @override
+  String get librarySelectionTags => '태그·장르';
+
+  @override
+  String get seriesGroup => '시리즈로 묶기';
+
+  @override
+  String get seriesUngroup => '시리즈에서 빼기';
+
+  @override
+  String get seriesName => '시리즈 이름';
+
+  @override
+  String get seriesNameHint =>
+      '이미 있는 시리즈와 같은 이름을 쓰면 그 시리즈에 합쳐집니다. 같은 시리즈의 책은 용어집에서 정한 이름을 함께 씁니다.';
+
+  @override
+  String get seriesSection => '시리즈';
+
+  @override
+  String seriesGrouped(int count, String name) {
+    return '$count권을 ‘$name’ 시리즈로 묶었습니다';
+  }
+
+  @override
+  String seriesUngrouped(int count) {
+    return '$count권을 시리즈에서 뺐습니다';
+  }
+
+  @override
+  String get seriesGlossaryShare => '시리즈 용어집 공유';
+
+  @override
+  String get seriesGlossaryShareHint =>
+      '새 권의 용어집이 같은 시리즈 다른 권에서 정한 이름을 이어받고, 한 권에서 고친 이름·용어가 다른 권에도 자동으로 반영됩니다. 끄면 권마다 따로 둡니다.';
 }

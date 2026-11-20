@@ -16,6 +16,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/translation/book_translation_service.dart';
+import 'package:openlib/services/translation/series_glossary.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translator.dart';
@@ -48,6 +49,9 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
   bool _importing = false;
   bool _lightNovelStyle = TranslationStyle.lightNovel;
 
+  /// A series' volumes share what their glossaries settled.
+  bool _seriesGlossary = true;
+
   @override
   void initState() {
     super.initState();
@@ -59,6 +63,11 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
         .then((value) {
       if (value is String && mounted) {
         setState(() => _target = languageForCode(value).code);
+      }
+    });
+    seriesGlossaryShared().then((on) {
+      if (mounted && on != _seriesGlossary) {
+        setState(() => _seriesGlossary = on);
       }
     });
   }
@@ -81,6 +90,11 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
 
   /// Light-novel style on/off. Each style keeps its own translations, so
   /// the reader and the library translator pick up the other set.
+  Future<void> _setSeriesGlossary(bool on) async {
+    setState(() => _seriesGlossary = on);
+    await _db.savePreference(seriesGlossaryPref, on ? 1 : 0).catchError((_) {});
+  }
+
   Future<void> _setLightNovelStyle(bool on) async {
     setState(() => _lightNovelStyle = on);
     TranslationStyle.lightNovel = on;
@@ -373,6 +387,16 @@ class _TranslationSettingsPageState extends State<TranslationSettingsPage> {
                 style: const TextStyle(fontSize: 12)),
             value: _lightNovelStyle,
             onChanged: _setLightNovelStyle,
+          ),
+          SwitchListTile(
+            key: const ValueKey('seriesGlossaryShare'),
+            contentPadding: EdgeInsets.zero,
+            secondary: const Icon(Icons.collections_bookmark_outlined),
+            title: Text(l10n.seriesGlossaryShare),
+            subtitle: Text(l10n.seriesGlossaryShareHint,
+                style: const TextStyle(fontSize: 12)),
+            value: _seriesGlossary,
+            onChanged: _setSeriesGlossary,
           ),
           const SizedBox(height: 12),
           GeminiEngineSection(onEngineChanged: _restartTranslation),
