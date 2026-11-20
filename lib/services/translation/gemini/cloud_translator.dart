@@ -17,9 +17,10 @@ import 'package:openlib/services/translation/gemini/gemini_api.dart';
 import 'package:openlib/services/translation/gemini/gemini_client.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/paragraph_text.dart'
-    show cleanTranslation, leftoverSourceScript, polishTranslation;
+    show cleanTranslation, leftoverSourceScript;
 import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/translation_qa.dart';
+import 'package:openlib/services/translation/translation_style.dart';
 import 'package:openlib/services/translation/translator.dart';
 
 /// The instructions (system) and the request (user) for [texts].
@@ -50,27 +51,23 @@ import 'package:openlib/services/translation/translator.dart';
       system.writeln(e.promptLine);
     }
   }
+  // The instructions are the same for every request of a book (the
+  // style, how it is narrated, all its names): what changes from one
+  // request to the next - the readings its paragraphs happen to carry -
+  // goes with the paragraphs.
   final covered = {for (final e in glossary) e.source};
   final hints = [
     for (final r in readings)
       if (!covered.any((c) => c.contains(r.key))) r,
   ];
-  if (hints.isNotEmpty) {
-    system
-      ..writeln()
-      ..writeln()
-      ..writeln('Readings of names and words in this book (write names as '
-          'they are read, in $targetLanguage letters; translate ordinary '
-          'words by meaning):');
-    for (final r in hints) {
-      system.writeln('${r.key} = ${r.value}');
-    }
-  }
   system
     ..writeln()
     ..writeln()
     ..write('You receive JSON: "context" is the story just before, already '
         'translated - read it for the flow, never translate or repeat it. '
+        '"readings", when given, says how words of these paragraphs are '
+        'read: write a name as it is read, in $targetLanguage letters, and '
+        'translate an ordinary word by its meaning. '
         '"paragraphs" are the numbered paragraphs to translate. Answer with '
         '{"translations": [{"n": 1, "text": "..."}, ...]}: for each '
         'paragraph its number and its $targetLanguage translation, in '
@@ -88,6 +85,7 @@ import 'package:openlib/services/translation/translator.dart';
               'translation': beforeTranslations[i],
           }
       ],
+    if (hints.isNotEmpty) 'readings': {for (final r in hints) r.key: r.value},
     'paragraphs': [
       for (var i = 0; i < texts.length; i++) {'n': i + 1, 'text': texts[i]}
     ],
@@ -101,7 +99,14 @@ import 'package:openlib/services/translation/translator.dart';
 /// A request to correct [items]: each source, its draft and what is
 /// wrong with it; answered like a translation request.
 String cloudRefinementRequest(
-    List<({String source, String draft, List<String> problems})> items,
+    List<
+            ({
+              String source,
+              String draft,
+              List<String> problems,
+              List<String> before,
+            })>
+        items,
     String targetLanguage) {
   return 'These $targetLanguage translations failed a check. Correct each '
       'one (the problems are listed with it), keeping everything that was '
@@ -112,6 +117,8 @@ String cloudRefinementRequest(
           for (var k = 0; k < items.length; k++)
             {
               'n': k + 1,
+              // The story just before, in Korean: who is spoken of.
+              if (items[k].before.isNotEmpty) 'before': items[k].before,
               'source': items[k].source,
               'draft': items[k].draft,
               'problems': items[k].problems,
@@ -170,13 +177,31 @@ class CloudTranslator implements Translator {
     GeminiClient? client,
     GeminiSettings? settings,
     this.batchSize = 80,
+    this.fixTense = true,
+    this.fixPronouns = true,
+    bool? polish,
     Future<Translator?> Function()? device,
   })  : _client = client ?? GeminiClient.shared,
         _settings = settings ?? GeminiSettings.instance,
+        _polish = polish,
         _deviceSource = device;
 
   final GeminiClient _client;
   final GeminiSettings _settings;
+
+  /// Sends back narration that slips into the present for a sentence
+  /// ([tenseSlips]).
+  final bool fixTense;
+
+  /// Sends back paragraphs that carry 彼女 over as 그녀 ([leansOnShe]).
+  final bool fixPronouns;
+
+  /// Sends back paragraphs thick with word-for-word constructions
+  /// ([readsStiff]) to be said again in natural Korean: the reader's
+  /// choice in settings (off by default - it asks more of the key), unless
+  /// set here.
+  bool get polish => _polish ?? _settings.polish;
+  final bool? _polish;
 
   /// The model on the phone, made on first need (null: none installed).
   final Future<Translator?> Function()? _deviceSource;
@@ -231,6 +256,9 @@ class CloudTranslator implements Translator {
     void Function(int index, String translation)? onEach,
   }) async {
     final results = List<String>.filled(texts.length, '');
+    // Every paragraph's first answer, kept or not: the story as the model
+    // told it, for a correction that has to know who is spoken of.
+    final drafts = List<String>.filled(texts.length, '');
     void deliver(int i, String t) {
       results[i] = t;
       if (t.isNotEmpty) onEach?.call(i, t);
@@ -258,6 +286,20 @@ class CloudTranslator implements Translator {
       _settings.recordOnDevice(indexes.length);
     }
 
+    /// The Korean of the two paragraphs before [i], as far as it is known.
+    List<String> storyBefore(int i) => [
+          for (var k = i - 2; k < i; k++)
+            if (k >= 0 && results[k].isNotEmpty)
+              results[k]
+            else if (k >= 0 && drafts[k].isNotEmpty)
+              drafts[k]
+            else if (k < 0 &&
+                beforeTranslations.length + k >= 0 &&
+                (beforeTranslations[beforeTranslations.length + k] ?? '')
+                    .isNotEmpty)
+              beforeTranslations[beforeTranslations.length + k]!,
+        ];
+
     Future<void> refine(Map<int, (String, String, List<QaIssue>)> flagged,
         String system) async {
       final items = flagged.entries.toList();
@@ -273,6 +315,9 @@ class CloudTranslator implements Translator {
                 problems: [
                   for (final q in e.value.$3) qaProblem(q, targetLanguage)
                 ],
+                before: e.value.$3.contains(QaIssue.pronoun)
+                    ? storyBefore(e.key)
+                    : const [],
               ),
           ], targetLanguage),
           schema: translationSchema(items.length),
@@ -290,10 +335,15 @@ class CloudTranslator implements Translator {
         var best = polishedDraft;
         final again = fixed?[k];
         if (again != null && again.isNotEmpty) {
-          final polished = polishTranslation(
-              cleanTranslation(again), texts[i], targetLanguage);
+          final polished = finishTranslation(
+              cleanTranslation(again), texts[i], targetLanguage, glossary);
           final after = checkTranslation(texts[i], polished,
-              targetLanguage: targetLanguage, glossary: glossary);
+              targetLanguage: targetLanguage,
+              glossary: glossary,
+              also: {
+                for (final q in before)
+                  if (styleChecks.contains(q)) q,
+              });
           if (polished.isNotEmpty && refinedIsBetter(before, after)) {
             best = polished;
           }
@@ -316,7 +366,8 @@ class CloudTranslator implements Translator {
         before: before,
         beforeTranslations: beforeTranslations,
         readings: readingsIn(readings, [...part, ...before]),
-        glossary: glossary.inTexts([...part, ...before], limit: 60),
+        // The whole book's names, the same with every request.
+        glossary: glossary.forBook(),
         lightNovelStyle: TranslationStyle.lightNovel,
         narration: targetLanguage == 'Korean' ? glossary.narrationNote : null,
       );
@@ -397,18 +448,46 @@ class CloudTranslator implements Translator {
       // The same checks as the phone's translations: what fails goes
       // back once, all together, with its problems named.
       final flagged = <int, (String, String, List<QaIssue>)>{};
+      // (A name of the glossary left in kanji is written out, not sent
+      // back.)
+      final cleanedAll = [
+        for (var k = 0; k < got.length; k++)
+          targetLanguage == 'Korean'
+              ? enforceGlossary(
+                  texts[indexes[k]], cleanTranslation(got[k]), glossary)
+              : cleanTranslation(got[k]),
+      ];
+      final polishedAll = [
+        for (var k = 0; k < got.length; k++)
+          finishTranslation(
+              cleanedAll[k], texts[indexes[k]], targetLanguage, glossary),
+      ];
+      // Style, read off the request as a whole: which paragraphs slip out
+      // of a past-tense narration for a sentence.
+      final korean = targetLanguage == 'Korean' && TranslationStyle.lightNovel;
+      final slips = korean && fixTense
+          ? tenseSlips(part, polishedAll, before: beforeTranslations)
+          : const <int>{};
+      var styleFlags = 0;
       for (var k = 0; k < got.length; k++) {
         final i = indexes[k];
-        final cleaned = cleanTranslation(got[k]);
+        final cleaned = cleanedAll[k];
         final leftover =
             leftoverSourceScript(cleaned, targetLanguage).isNotEmpty;
-        final polished = polishTranslation(cleaned, texts[i], targetLanguage);
+        final polished = polishedAll[k];
+        drafts[i] = polished;
         final issues = [
           if (leftover) QaIssue.leftoverSource,
           ...checkTranslation(texts[i], polished,
-                  targetLanguage: targetLanguage, glossary: glossary)
-              .where((q) => q != QaIssue.leftoverSource),
+              targetLanguage: targetLanguage,
+              glossary: glossary,
+              also: {
+                if (slips.contains(k)) QaIssue.tenseSlip,
+                if (korean && fixPronouns) QaIssue.pronoun,
+                if (korean && polish) QaIssue.stiff,
+              }).where((q) => q != QaIssue.leftoverSource),
         ];
+        if (issues.any(styleChecks.contains)) styleFlags++;
         if (issues.isEmpty) {
           deliver(i, polished);
         } else {
@@ -418,12 +497,53 @@ class CloudTranslator implements Translator {
         }
       }
       if (flagged.isNotEmpty) {
+        // Where in a request paragraphs fail tells whether long requests
+        // tire the model (the owner's logs answer it).
+        _logger.info('Paragraphs sent back', tag: 'Gemini', metadata: {
+          'of': got.length,
+          'at': [
+            for (var k = 0; k < got.length; k++)
+              if (flagged.containsKey(indexes[k])) k + 1,
+          ].join(','),
+          'style': styleFlags,
+          'issues': {
+            for (final q in QaIssue.values)
+              if (flagged.values.any((f) => f.$3.contains(q)))
+                q.name: flagged.values.where((f) => f.$3.contains(q)).length,
+          },
+        });
         await refine(flagged, prompt.system);
       }
     }
 
     await run([for (var i = 0; i < texts.length; i++) i]);
     return results;
+  }
+
+  /// A request that is not a translation, answered as JSON after
+  /// [schema] (a book's names, read off its whole text). Null when Gemini
+  /// gives no answer - the day's quota, a block, an error other than a
+  /// key that does not work: the caller then does without.
+  Future<String?> analyse({
+    required String system,
+    required String user,
+    required Map<String, Object?> schema,
+    int maxOutputTokens = 8192,
+  }) async {
+    if (_settings.usage.exhausted) return null;
+    try {
+      final r = await _client.generate(
+        system: system,
+        user: user,
+        schema: schema,
+        maxOutputTokens: maxOutputTokens,
+      );
+      if (r.block != null || r.text.trim().isEmpty) return null;
+      return r.text;
+    } on GeminiError catch (e) {
+      if (e.kind == GeminiErrorKind.badKey) rethrow;
+      return null;
+    }
   }
 
   @override

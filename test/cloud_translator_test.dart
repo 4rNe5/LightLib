@@ -374,4 +374,115 @@ void main() {
     ]);
     expect(calls, 3);
   });
+
+  test('style: a slip of tense and 그녀 go back, with the story before',
+      () async {
+    const sources = ['彼は席に着いた。', 'しずくが手を伸ばす。', '彼女は笑った。', '二人は店を出た。'];
+    const first = ['그는 자리에 앉았다.', '시즈쿠가 손을 뻗는다.', '그녀는 웃었다.', '두 사람은 가게를 나왔다.'];
+    const mended = {
+      'しずくが手を伸ばす。': '시즈쿠가 손을 뻗었다.',
+      '彼女は笑った。': '시즈쿠는 웃었다.',
+    };
+    final server = _Server((p, _) => (
+          200,
+          _ok(p.first.startsWith('FIX:')
+              ? [for (final t in p) mended[t.substring(4)]!]
+              : first)
+        ));
+    final out = await translator(server).translateBatch(sources,
+        targetLanguage: 'Korean', sourceLanguage: 'Japanese');
+    expect(out, [
+      '그는 자리에 앉았다.',
+      '시즈쿠가 손을 뻗었다.',
+      '시즈쿠는 웃었다.',
+      '두 사람은 가게를 나왔다.',
+    ]);
+    // One request, one correction for both.
+    expect(server.bodies.length, 2);
+    final bySource = {for (final r in server.refinements) r['source']: r};
+    expect((bySource['しずくが手を伸ばす。']!['problems'] as List).single,
+        contains('End that sentence in the past'));
+    expect(bySource['しずくが手を伸ばす。']!.containsKey('before'), isFalse);
+    // Who 彼女 is: the Korean of the paragraphs just before.
+    expect(bySource['彼女は笑った。']!['before'],
+        ['그는 자리에 앉았다.', '시즈쿠가 손을 뻗는다.']);
+  });
+
+  test('style: a second answer that is no better is not kept', () async {
+    const sources = ['彼は席に着いた。', 'しずくが手を伸ばす。', '二人は店を出た。'];
+    const first = ['그는 자리에 앉았다.', '시즈쿠가 손을 뻗는다.', '두 사람은 가게를 나왔다.'];
+    final server = _Server((p, _) => (
+          200,
+          // Still in the present.
+          _ok(p.first.startsWith('FIX:') ? ['시즈쿠가 손을 내민다.'] : first)
+        ));
+    final out = await translator(server).translateBatch(sources,
+        targetLanguage: 'Korean', sourceLanguage: 'Japanese');
+    expect(out[1], '시즈쿠가 손을 뻗는다.');
+  });
+
+  test('style: a stiff paragraph goes back only when the reader asks for it',
+      () async {
+    const sources = ['彼は席に着いた。', '彼にとってそれは大事なことだった。', '二人は店を出た。'];
+    const stiff = '그에게 있어서 그것은 중요하다는 것이라고 생각했다.';
+    const first = ['그는 자리에 앉았다.', stiff, '두 사람은 가게를 나왔다.'];
+    _Server server() => _Server((p, _) => (
+          200,
+          _ok(p.first.startsWith('FIX:') ? ['그에게 그것은 소중한 일이었다.'] : first)
+        ));
+    // As it comes: off.
+    final plain = server();
+    expect(
+        (await translator(plain).translateBatch(sources,
+            targetLanguage: 'Korean', sourceLanguage: 'Japanese'))[1],
+        stiff);
+    expect(plain.bodies.length, 1);
+
+    settings.debugSet(polish: true);
+    addTearDown(() => settings.debugSet(polish: false));
+    final asked = server();
+    final out = await translator(asked).translateBatch(sources,
+        targetLanguage: 'Korean', sourceLanguage: 'Japanese');
+    expect(out[1], '그에게 그것은 소중한 일이었다.');
+    expect(asked.bodies.length, 2);
+    expect((asked.refinements.single['problems'] as List).single,
+        contains('word for word'));
+  });
+
+  test('every request of a book opens alike: all its names, readings apart',
+      () async {
+    const glossary = BookGlossary(complete: true, entries: [
+      GlossaryEntry(source: '純太郎', target: '준타로', gender: GlossaryGender.male),
+      GlossaryEntry(source: 'しずく', target: '시즈쿠', gender: GlossaryGender.female),
+      GlossaryEntry(source: '上野', target: '우에노', kind: GlossaryKind.place),
+    ]);
+    final server = _Server((p, _) => (
+          200,
+          _ok([p.single.contains('純太郎') ? '준타로는 걸었다.' : '흉내를 냈다.'])
+        ));
+    final t = translator(server);
+    await t.translateBatch(['純太郎は歩いた。'],
+        targetLanguage: 'Korean',
+        sourceLanguage: 'Japanese',
+        glossary: glossary,
+        readings: const {'真似': 'まね'});
+    await t.translateBatch(['真似をした。'],
+        targetLanguage: 'Korean',
+        sourceLanguage: 'Japanese',
+        glossary: glossary,
+        readings: const {'真似': 'まね'});
+    String system(Map body) =>
+        ((body['systemInstruction'] as Map)['parts'] as List).first['text']
+            as String;
+    String user(Map body) =>
+        ((body['contents'] as List).first['parts'] as List).first['text']
+            as String;
+    // Not only the names of its own paragraphs: the same instructions.
+    expect(system(server.bodies[0]), system(server.bodies[1]));
+    expect(system(server.bodies[0]), contains('しずく = 시즈쿠 (female)'));
+    expect(system(server.bodies[0]), contains('上野 = 우에노 (place)'));
+    expect(system(server.bodies[0]), isNot(contains('まね')));
+    expect(user(server.bodies[0]), isNot(contains('"readings"')));
+    expect(user(server.bodies[1]), contains('"readings":{"真似":"まね"}'));
+  });
 }

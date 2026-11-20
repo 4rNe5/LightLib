@@ -17,6 +17,7 @@ import 'package:openlib/services/heavy_work.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/translation/book_glossary.dart';
+import 'package:openlib/services/translation/gemini/cloud_translator.dart';
 import 'package:openlib/services/translation/translator.dart';
 
 class GlossaryService extends ChangeNotifier {
@@ -98,7 +99,11 @@ class GlossaryService extends ChangeNotifier {
     TranslationPriority priority = TranslationPriority.ahead,
   }) async {
     final current = await load(bookFile);
-    if (current.complete) return current;
+    if (current.complete) {
+      return current.version < BookGlossary.currentVersion
+          ? upgrade(bookFile: bookFile, bookPath: bookPath)
+          : current;
+    }
     return make(
         bookFile: bookFile,
         bookPath: bookPath,
@@ -125,22 +130,112 @@ class GlossaryService extends ChangeNotifier {
     return job;
   }
 
+  /// Called with a book's file name after its glossary was set right
+  /// ([upgrade]): translations already made can be set right with it.
+  static void Function(String bookFile, String bookPath, BookGlossary glossary)?
+      onUpgraded;
+
+  final Map<String, Future<BookGlossary>> _upgrading = {};
+
+  /// The glossaries of the other volumes of [bookFile]'s series the
+  /// library has (the app says which books those are): what they settled
+  /// carries over ([inheritSeries]).
+  static Future<List<BookGlossary>> Function(String bookFile)? seriesOf;
+
+  Future<BookGlossary> _withSeries(
+      String bookFile, BookGlossary glossary, String text) async {
+    final others = seriesOf;
+    if (others == null || text.isEmpty) return glossary;
+    try {
+      return inheritSeries(glossary, await others(bookFile), text);
+    } catch (e) {
+      _logger.warning('Series glossaries not read', tag: 'Glossary', error: e);
+      return glossary;
+    }
+  }
+
+  /// The book read whole by Gemini, a part at a time: its names and
+  /// special terms, with readings where the book gives none. Empty when
+  /// Gemini does not answer (the candidates' way is taken then);
+  /// `cutShort` when it stopped answering part of the way (the day's
+  /// quota, no connection).
+  Future<({List<GlossaryEntry> entries, bool cutShort})> _readWhole(
+      CloudTranslator gemini, BookSurvey survey) async {
+    final answers = <String>[];
+    final chunks = bookAnalysisChunks(survey.text);
+    for (final chunk in chunks) {
+      final answer = await gemini.analyse(
+          system: bookAnalysisInstructions,
+          user: chunk,
+          schema: bookAnalysisSchema);
+      if (answer == null) break;
+      answers.add(answer);
+    }
+    return (
+      entries: parseBookAnalysis(answers, survey),
+      cutShort: answers.length < chunks.length,
+    );
+  }
+
+  /// A glossary made by an earlier version, set right from the book's
+  /// own text ([upgradeGlossary]); no model is asked.
+  Future<BookGlossary> upgrade(
+          {required String bookFile, required String bookPath}) =>
+      _upgrading[bookFile] ??= _upgrade(bookFile, bookPath).whenComplete(() {
+        // (Not `=> remove`: that returns this very future, and waiting
+        // for it here would never end.)
+        _upgrading.remove(bookFile);
+      });
+
+  Future<BookGlossary> _upgrade(String bookFile, String bookPath) async {
+    final old = await load(bookFile);
+    if (old.version >= BookGlossary.currentVersion) return old;
+    final survey = await _survey(bookPath);
+    // The book could not be read now: tried again next time.
+    if (survey.candidates.isEmpty && survey.places.isEmpty) return old;
+    final glossary = await _withSeries(
+        bookFile, upgradeGlossary(old, survey), survey.text);
+    _logger.info('Glossary set right', tag: 'Glossary', metadata: {
+      'book': bookFile,
+      'entries': glossary.entries.length,
+      'changed': [
+        for (final e in glossary.entries)
+          if (!old.entries.any((o) =>
+              o.source == e.source && o.target == e.target))
+            e.source,
+      ].length,
+    });
+    await save(bookFile, glossary);
+    onUpgraded?.call(bookFile, bookPath, glossary);
+    return glossary;
+  }
+
+  Future<BookSurvey> _survey(String bookPath) => AppFiles.instance
+      .readBytes(bookPath)
+      .then((bytes) => runHeavy(() => epubSurvey(bytes!)))
+      .catchError((_) => emptySurvey);
+
   Future<BookGlossary> _make(String bookFile, String bookPath,
       Translator translator, TranslationPriority priority) async {
     final old = await load(bookFile);
     final watch = Stopwatch()..start();
-    final survey = await AppFiles.instance
-        .readBytes(bookPath)
-        .then((bytes) => runHeavy(() => epubSurvey(bytes!)))
-        .catchError((_) => (
-              candidates: <GlossaryCandidate>[],
-              narration: Narration.unknown,
-              hero: null as String?,
-            ));
-    final candidates = survey.candidates;
-    if (candidates.isEmpty) return old;
+    final survey = await _survey(bookPath);
     final entries = <GlossaryEntry>[];
     var answered = false;
+    // Gemini reads the book itself: names no furigana or honorific points
+    // to (a place, an item, a spell), and how they are read.
+    var whole = 0;
+    var cutShort = false;
+    if (translator is CloudTranslator && survey.text.isNotEmpty) {
+      final read = await _readWhole(translator, survey);
+      whole = read.entries.length;
+      cutShort = read.cutShort;
+      entries.addAll(read.entries);
+      answered = read.entries.isNotEmpty;
+    }
+    final candidates = unnamedCandidates(survey, entries);
+    if (survey.candidates.isEmpty && entries.isEmpty) return old;
+    var asked = false;
     for (var i = 0; i < candidates.length; i += glossaryRequestSize) {
       final chunk = candidates.sublist(
           i, (i + glossaryRequestSize).clamp(0, candidates.length));
@@ -151,13 +246,31 @@ class GlossaryService extends ChangeNotifier {
           priority: priority);
       if (answer == null) break;
       answered = true;
+      asked = true;
       entries.addAll(parseGlossaryAnswer(answer, chunk));
     }
     if (!answered) return old;
-    final glossary = mergeGlossary(old, entries)
-        .copyWith(narration: survey.narration, hero: survey.hero);
+    // The places the book names and the names it writes in hiragana come
+    // first: the model's entry for the same word, if it made one, is the
+    // one kept.
+    // Part of the book read and nobody to ask about the rest (the day's
+    // quota ran out, no model on the phone): what was read is used, and
+    // the glossary is made again when the book is next translated.
+    final unfinished = cutShort && candidates.isNotEmpty && !asked;
+    final glossary = await _withSeries(
+        bookFile,
+        mergeGlossary(
+                old, [...survey.places, ...hiraganaNames(survey), ...entries])
+            .copyWith(
+                narration: survey.narration,
+                hero: survey.hero,
+                complete: !unfinished),
+        survey.text);
     _logger.info('Glossary made', tag: 'Glossary', metadata: {
       'book': bookFile,
+      'readWhole': whole,
+      if (cutShort) 'readCutShort': true,
+      if (unfinished) 'unfinished': true,
       'candidates': candidates.length,
       'entries': glossary.entries.length,
       'names': glossary.entries.where((e) => e.isName).length,

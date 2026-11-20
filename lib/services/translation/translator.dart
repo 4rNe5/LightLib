@@ -22,6 +22,7 @@ import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/translation_qa.dart';
+import 'package:openlib/services/translation/translation_style.dart';
 import 'package:openlib/services/translation/translation_scheduler.dart';
 
 export 'package:openlib/services/translation/translation_scheduler.dart'
@@ -874,14 +875,21 @@ class LocalLlmTranslator implements Translator {
       targetLanguage: targetLanguage,
     );
     final maxTokens = (source.length * 3 + 32).clamp(64, 1024);
-    final again = polishTranslation(
+    final again = finishTranslation(
         await _generate(prompt, maxTokens, TranslationPromptFormat.general,
             token,
             head: style),
         source,
-        targetLanguage);
+        targetLanguage,
+        glossary);
     final after = checkTranslation(source, again,
-        targetLanguage: targetLanguage, glossary: glossary);
+        targetLanguage: targetLanguage,
+        glossary: glossary,
+        // Held to the style it was sent back for.
+        also: {
+          for (final q in issues)
+            if (styleChecks.contains(q)) q,
+        });
     final better = again.isNotEmpty && refinedIsBetter(issues, after);
     refinements++;
     if (better) refinementsKept++;
@@ -923,13 +931,18 @@ class LocalLlmTranslator implements Translator {
     final flagged = <int, (String, List<QaIssue>)>{};
     void deliver(int i, String answer) {
       if (results[i] != null || flagged.containsKey(i)) return;
-      final cleaned = cleanTranslation(answer);
+      // A name of the glossary left in kanji is no reason to ask again:
+      // it is written out first.
+      final cleaned = targetLanguage == 'Korean'
+          ? enforceGlossary(texts[i], cleanTranslation(answer), glossary)
+          : cleanTranslation(answer);
       // Source script left in it (checked before polishing, which drops
       // stray kana - and with it half a name written 아まね): translated
       // again alone, with the retry that names the problem, once the
       // batch is done.
       if (leftoverSourceScript(cleaned, targetLanguage).isNotEmpty) return;
-      final polished = polishTranslation(cleaned, texts[i], targetLanguage);
+      final polished =
+          finishTranslation(cleaned, texts[i], targetLanguage, glossary);
       if (polished.isEmpty) return;
       final issues = general
           ? checkTranslation(texts[i], polished,
@@ -987,6 +1000,24 @@ class LocalLlmTranslator implements Translator {
       }
     }
     final style = head;
+    // Now that the batch is whole: narration that slips into the present
+    // for a sentence among past-tense ones ([tenseSlips]) goes back too.
+    // What was shown already is shown again once it is set right.
+    if (general && targetLanguage == 'Korean') {
+      final drafts = [
+        for (var i = 0; i < texts.length; i++) results[i] ?? flagged[i]?.$1,
+      ];
+      for (final i
+          in tenseSlips(texts, drafts, before: beforeTranslations)) {
+        final held = flagged[i];
+        if (held != null) {
+          flagged[i] = (held.$1, [...held.$2, QaIssue.tenseSlip]);
+        } else if (results[i] != null) {
+          flagged[i] = (results[i]!, const [QaIssue.tenseSlip]);
+          results[i] = null;
+        }
+      }
+    }
     for (final MapEntry(key: i, value: (draft, issues)) in flagged.entries) {
       final out = await _refine(
           texts[i], draft, issues, style, glossary, targetLanguage, token);
@@ -1003,6 +1034,9 @@ class LocalLlmTranslator implements Translator {
           _Job(texts[i], targetLanguage, sourceLanguage, context,
               i + 1 < texts.length ? texts[i + 1] : null),
           token);
+      if (out.isNotEmpty && targetLanguage == 'Korean') {
+        out = enforceGlossary(texts[i], out, glossary);
+      }
       if (general && out.isNotEmpty) {
         final issues = checkTranslation(texts[i], out,
             targetLanguage: targetLanguage, glossary: glossary);

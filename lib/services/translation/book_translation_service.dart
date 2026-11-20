@@ -32,6 +32,7 @@ import 'package:openlib/services/translation/gemini/cloud_translator.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart'
     show GeminiError;
 import 'package:openlib/services/translation/translation_engine.dart';
+import 'package:openlib/services/translation/translation_repair.dart';
 import 'package:openlib/services/translation/translator.dart';
 
 /// Preference: translate library books in the background (off unless
@@ -268,6 +269,7 @@ class BookTranslationService extends ChangeNotifier
   Future<void> start() async {
     if (_started) return;
     _started = true;
+    installTranslationRepair();
     WidgetsBinding.instance.addObserver(this);
     final db = MyLibraryDb.instance;
     Future<Object?> pref(String key) =>
@@ -694,8 +696,11 @@ class BookTranslationService extends ChangeNotifier
             readings: readings,
             glossary: glossary,
             onEach: (n, out) {
+              // A paragraph set right after it was kept comes twice:
+              // counted once.
+              final fresh = cache.lookup(texts[batch[n]]!) == null;
               cache.store(texts[batch[n]]!, out);
-              _translatedThisRun++;
+              if (fresh) _translatedThisRun++;
             },
           );
         }

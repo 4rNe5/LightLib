@@ -259,8 +259,9 @@ class ReaderTranslationController extends ChangeNotifier {
                 if (_disposed || out.isEmpty) return;
                 // Shown as soon as it is ready, not when the batch ends.
                 _cache.store(batch[i].value, out);
-                _inFlight.remove(batch[i].value);
-                _done++;
+                // A paragraph set right after it was shown comes twice:
+                // counted once.
+                if (_inFlight.remove(batch[i].value)) _done++;
                 notifyListeners();
               },
             );

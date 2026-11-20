@@ -126,19 +126,25 @@ void main() {
     // A loanword is left to the translation, however often it comes.
     expect(bySource.containsKey('ラブコメ'), isFalse);
     expect(bySource.containsKey('ニコニコ'), isFalse);
-    // The kanji's meaning, not its reading: the reading wins. A spelling
-    // a syllable apart is the model's to keep.
+    // The kanji's meaning, not its reading: the reading wins. So it does
+    // over the model's own spelling of the same reading: names are
+    // written one way (つ is 츠), whatever the model prefers.
     expect(bySource['風靡']!.target, '후비');
-    expect(bySource['夏凪']!.target, '나쓰나기');
+    expect(bySource['夏凪']!.target, '나츠나기');
   });
 
   test('full names split after the family name; edits survive a remake', () {
     final made = mergeGlossary(BookGlossary.empty, const [
       GlossaryEntry(source: '天田', target: '아마다', kind: GlossaryKind.person),
-      GlossaryEntry(source: '天田照人', target: '아마다테루히토', kind: GlossaryKind.person),
+      GlossaryEntry(
+          source: '天田照人',
+          target: '아마다테루히토',
+          kind: GlossaryKind.person,
+          family: '天田'),
     ]);
     expect(made.entries.firstWhere((e) => e.source == '天田照人').target,
         '아마다 테루히토');
+    expect(made.version, BookGlossary.currentVersion);
     final family = tidyNames(const [
       GlossaryEntry(source: '氷高', target: '히다카', kind: GlossaryKind.person,
           gender: GlossaryGender.male),
@@ -155,6 +161,164 @@ void main() {
     ]);
     expect(again.entries.firstWhere((e) => e.source == '和希').target, '가즈키');
     expect(again.entries.any((e) => e.source == '天田'), isTrue);
+  });
+
+  test('a short form of a given name is no family name: 준타로 stays whole',
+      () {
+    // The owner's book: 純くん is 純太郎, and the glossary cut his name
+    // in two (준 타로) 120 times over.
+    final tidy = tidyNames(const [
+      GlossaryEntry(source: '純', target: '준'),
+      GlossaryEntry(source: '純太郎', target: '준타로', reading: 'じゅんたろう'),
+    ]);
+    expect(tidy.last.target, '준타로');
+    // Nor where the model itself wrote the space.
+    const c = GlossaryCandidate(
+        source: '純太郎', count: 147, example: '', reading: 'じゅんたろう');
+    final parsed =
+        parseGlossaryAnswer('[1] 준 타로 | person | male | casual', const [c]);
+    expect(tidyNames(parsed).single.target, '준타로');
+    // A full name the book shows to be two names keeps the model's cut,
+    // with no entry for the family name to cut it by.
+    const full = GlossaryCandidate(
+        source: '石井和希',
+        count: 9,
+        example: '',
+        reading: 'いしいかずき',
+        familyLength: 2);
+    final two = parseGlossaryAnswer('[1] 이시이 카즈키 | person | male', const [full]);
+    expect(two.single.family, '石井');
+    expect(tidyNames(two).single.target, '이시이 카즈키');
+    // Saved and read back, it is still known as two names.
+    expect(GlossaryEntry.fromJson(two.single.toJson())!.family, '石井');
+  });
+
+  test('candidates: where a full name is cut, the book tells', () {
+    final book = [
+      for (var i = 0; i < 4; i++) '「純くん、おはよう」と言われて純太郎は笑った。',
+      for (var i = 0; i < 3; i++) '天田照人は黙っていた。「照人くん」と天田さんは呼ばれた。',
+      for (var i = 0; i < 3; i++) '佐藤花子は教師だ。「佐藤さん」「佐藤先生」',
+    ];
+    final c = glossaryCandidates(book, {
+      '純太郎': 'じゅんたろう',
+      '天田照人': 'あまだてるひと',
+      '佐藤花子': 'さとうはなこ',
+    });
+    int? cut(String source) =>
+        c.firstWhere((x) => x.source == source).familyLength;
+    // 太郎 is never used alone, and 純 is a pet name (純くん).
+    expect(cut('純太郎'), isNull);
+    // 照人 is used alone.
+    expect(cut('天田照人'), 2);
+    // 花子 never is, but 佐藤 is how she is formally addressed.
+    expect(cut('佐藤花子'), 2);
+  });
+
+  test('candidates: a name written in hiragana; everyday loanwords left out',
+      () {
+    final book = [
+      for (var i = 0; i < 5; i++) '「しずくちゃん、おはよう」しずくは笑った。しずくの声がした。',
+      for (var i = 0; i < 6; i++) 'クラスでデートの話をした。たくさんのメッセージが来た。',
+      for (var i = 0; i < 5; i++) 'シエスタは眠っている。みなさんも眠い。',
+    ];
+    final sources = [for (final x in glossaryCandidates(book, const {})) x.source];
+    expect(sources, containsAll(['しずく', 'シエスタ']));
+    // たくさん and みなさん are no one's name; クラス, デート and メッセージ
+    // are words every story has.
+    for (final word in ['たく', 'みな', 'クラス', 'デート', 'メッセージ']) {
+      expect(sources, isNot(contains(word)), reason: word);
+    }
+    final shizuku = glossaryCandidates(book, const {})
+        .firstWhere((x) => x.source == 'しずく');
+    expect(shizuku.girlHonorifics, 5);
+    // Her Korean needs no model: the book writes how she is called.
+    final named = parseGlossaryAnswer('[1] 시즈크 | person | female', [shizuku]);
+    expect(named.single.target, '시즈쿠');
+  });
+
+  test('names with a common noun at the end, and places Korean names itself',
+      () {
+    // The owner's book: 栄華高校 came out 에이가코코.
+    expect(spellName('栄華高校', 'えいがこうこう'), '에이가 고등학교');
+    expect(spellName('桜ヶ丘駅', 'さくらがおかえき'), '사쿠라가오카 역');
+    expect(spellName('東京', 'とうきょう'), '도쿄');
+    expect(spellName('結奈', 'ゆな'), '유나');
+    // Nothing but the noun is not a name ending in it.
+    expect(spellName('高校', 'こうこう'), '코코');
+    const school = GlossaryCandidate(
+        source: '栄華高校', count: 15, example: '', reading: 'えいがこうこう');
+    expect(
+        parseGlossaryAnswer('[1] 에이카 고등학교 | place | -', const [school])
+            .single
+            .target,
+        '에이가 고등학교');
+    // Well-known places the book gives no reading: found in the text,
+    // no model asked. 石川先生 is a person, not the prefecture.
+    final places = knownPlaces([
+      '上野で降りた。上野に人が多い。',
+      '東京に来た。東京から帰る。',
+      '石川先生が来た。石川に行く石川先生は笑った。石川で会う。',
+      '渋谷に一度だけ。',
+      // An everyday word that is also a prefecture's name.
+      '大分慣れた。大分に良くなった。大分で暮らす。',
+    ]);
+    expect({for (final p in places) p.source: p.target},
+        {'上野': '우에노', '東京': '도쿄'});
+    expect(places.every((p) => p.kind == GlossaryKind.place), isTrue);
+  });
+
+  test('a glossary made before is set right from the book, no model asked',
+      () {
+    final old = BookGlossary.fromJson({
+      'version': 1,
+      'complete': true,
+      'narration': 'firstPerson',
+      'entries': [
+        {'source': '純', 'target': '준', 'kind': 'person', 'gender': 'male'},
+        {'source': '純太郎', 'target': '준 타로', 'reading': 'じゅんたろう', 'kind': 'person', 'gender': 'male'},
+        {'source': '栄華高校', 'target': '에이가코코', 'reading': 'えいがこうこう', 'kind': 'place', 'gender': 'unknown'},
+        {'source': '結奈', 'target': '유우나', 'reading': 'ゆな', 'kind': 'person', 'gender': 'female'},
+        {'source': '凜', 'target': '링', 'kind': 'person', 'gender': 'female', 'edited': true},
+        {'source': '天田照人', 'target': '아마다 테루히토', 'reading': 'あまだてるひと', 'kind': 'person', 'gender': 'male'},
+        {'source': '天田', 'target': '아마다', 'reading': 'あまだ', 'kind': 'person', 'gender': 'male'},
+      ],
+    });
+    expect(old.version, 1);
+    const survey = (
+      candidates: [
+        GlossaryCandidate(source: '純', count: 47, example: '', boyHonorifics: 43),
+        GlossaryCandidate(source: '純太郎', count: 147, example: '', reading: 'じゅんたろう'),
+        GlossaryCandidate(source: '栄華高校', count: 15, example: '', reading: 'えいがこうこう'),
+        GlossaryCandidate(source: '結奈', count: 79, example: '', reading: 'ゆな'),
+        GlossaryCandidate(source: '凜', count: 101, example: ''),
+        GlossaryCandidate(source: '天田照人', count: 9, example: '', reading: 'あまだてるひと', familyLength: 2),
+        GlossaryCandidate(source: '天田', count: 20, example: '', reading: 'あまだ'),
+        GlossaryCandidate(source: 'しずく', count: 546, example: '', girlHonorifics: 45),
+      ],
+      places: [
+        GlossaryEntry(source: '上野', target: '우에노', reading: 'うえの', kind: GlossaryKind.place),
+      ],
+      narration: Narration.firstPerson,
+      hero: null,
+      text: '',
+    );
+    final now = upgradeGlossary(old, survey);
+    final target = {for (final e in now.entries) e.source: e.target};
+    expect(now.version, BookGlossary.currentVersion);
+    expect(now.complete, isTrue);
+    expect(now.narration, Narration.firstPerson);
+    expect(target['純太郎'], '준타로');
+    expect(target['栄華高校'], '에이가 고등학교');
+    expect(target['結奈'], '유나');
+    // The reader's own choice is not touched.
+    expect(target['凜'], '링');
+    expect(target['天田照人'], '아마다 테루히토');
+    expect(target['しずく'], '시즈쿠');
+    expect(now.entries.firstWhere((e) => e.source == 'しずく').gender,
+        GlossaryGender.female);
+    expect(target['上野'], '우에노');
+    // Twice changes nothing more.
+    expect(upgradeGlossary(now, survey).encode(), now.encode());
   });
 
   test('a request gets the entries its text contains, longest first', () {
@@ -313,5 +477,54 @@ void main() {
       GlossaryEntry(source: '天田', target: '아마다', kind: GlossaryKind.person),
     ]);
     expect(again.entries.firstWhere((e) => e.source == '天田').target, '');
+  });
+
+  test('the book calls her しずくちゃん: a person, whatever kind of word '
+      'the model took it for', () {
+    const candidates = [
+      GlossaryCandidate(source: 'しずく', count: 546, example: '', girlHonorifics: 45),
+      GlossaryCandidate(source: 'アキラ', count: 16, example: '', boyHonorifics: 10),
+      GlossaryCandidate(source: 'イルカ', count: 7, example: ''),
+      GlossaryCandidate(source: '赤', count: 9, example: '', reading: 'あか', girlHonorifics: 9),
+    ];
+    final entries = parseGlossaryAnswer('''
+[1] 시즈쿠 | term | - | casual, gentle
+[2] 아키라 | term | - | -
+[3] 돌고래 | term | - | -
+[4] 아기 | term | - | -''', candidates);
+    final by = {for (final e in entries) e.source: e};
+    expect(by.keys.toSet(), {'しずく', 'アキラ'});
+    expect(by['しずく']!.target, '시즈쿠');
+    expect(by['しずく']!.kind, GlossaryKind.person);
+    expect(by['しずく']!.gender, GlossaryGender.female);
+    expect(by['しずく']!.speech, 'casual, gentle');
+    expect(by['アキラ']!.kind, GlossaryKind.person);
+    expect(by['アキラ']!.gender, GlossaryGender.male);
+    // Translated, not spelled: the model's word for an ordinary word.
+    expect(by.containsKey('赤'), isFalse);
+
+    // A translation for a name written in hiragana is not its name.
+    final drop = parseGlossaryAnswer('[1] 물방울 | term | - | -', candidates);
+    expect(drop.single.target, '시즈쿠');
+    expect(drop.single.kind, GlossaryKind.person);
+  });
+
+  test('names written in hiragana, from the book alone', () {
+    const BookSurvey survey = (
+      candidates: [
+        GlossaryCandidate(source: 'しずく', count: 546, example: '', girlHonorifics: 45),
+        GlossaryCandidate(source: '純', count: 194, example: '', boyHonorifics: 54),
+        GlossaryCandidate(source: 'モデル', count: 42, example: ''),
+      ],
+      places: [],
+      narration: Narration.firstPerson,
+      hero: null,
+      text: '',
+    );
+    final names = hiraganaNames(survey);
+    expect(names.single.source, 'しずく');
+    expect(names.single.target, '시즈쿠');
+    expect(names.single.gender, GlossaryGender.female);
+    expect(names.single.isName, isTrue);
   });
 }

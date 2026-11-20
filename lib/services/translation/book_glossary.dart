@@ -12,6 +12,7 @@ import 'dart:typed_data';
 
 // Project imports:
 import 'package:openlib/services/epub_package.dart';
+import 'package:openlib/services/translation/japanese_names.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 
 enum GlossaryKind {
@@ -56,6 +57,7 @@ class GlossaryEntry {
     this.gender = GlossaryGender.unknown,
     this.speech,
     this.edited = false,
+    this.family,
   });
 
   /// As written in the book (石井和希, シャーロット).
@@ -75,6 +77,14 @@ class GlossaryEntry {
   /// Changed by the reader: kept when the glossary is made again.
   final bool edited;
 
+  /// The family name this full name starts with (天田 of 天田照人), when
+  /// the book shows it is one: the given name is also used alone. Only
+  /// then is the Korean written in two words (아마다 테루히토). A short
+  /// form of a given name (純 of 純太郎) is not a family name: 준타로.
+  /// Empty: two names, cut where [target] has its space, by an engine
+  /// that read the whole book (a full name the book never shortens).
+  final String? family;
+
   bool get isName => kind != GlossaryKind.term;
 
   GlossaryEntry copyWith({
@@ -83,6 +93,7 @@ class GlossaryEntry {
     GlossaryGender? gender,
     String? speech,
     bool? edited,
+    String? Function()? family,
   }) =>
       GlossaryEntry(
         source: source,
@@ -92,6 +103,7 @@ class GlossaryEntry {
         gender: gender ?? this.gender,
         speech: speech ?? this.speech,
         edited: edited ?? this.edited,
+        family: family == null ? this.family : family(),
       );
 
   Map<String, Object?> toJson() => {
@@ -102,6 +114,7 @@ class GlossaryEntry {
         'gender': gender.name,
         if (speech != null) 'speech': speech,
         if (edited) 'edited': true,
+        if (family != null) 'family': family,
       };
 
   static GlossaryEntry? fromJson(Object? raw) {
@@ -118,6 +131,7 @@ class GlossaryEntry {
           GlossaryGender.unknown,
       speech: raw['speech'] as String?,
       edited: raw['edited'] == true,
+      family: raw['family'] is String ? raw['family'] as String : null,
     );
   }
 
@@ -155,7 +169,17 @@ class BookGlossary {
     this.complete = false,
     this.narration = Narration.unknown,
     this.hero,
+    this.version = currentVersion,
   });
+
+  /// How glossaries are made now. One made before (version 1) may hold a
+  /// given name cut in two (준 타로), a school spelled by its reading
+  /// (에이가코코) and no name written in hiragana: [upgradeGlossary] sets
+  /// that right from the book, without the model.
+  static const currentVersion = 2;
+
+  /// The version this glossary was made as.
+  final int version;
 
   final List<GlossaryEntry> entries;
 
@@ -177,12 +201,14 @@ class BookGlossary {
     bool? complete,
     Narration? narration,
     String? hero,
+    int? version,
   }) =>
       BookGlossary(
         entries: entries ?? this.entries,
         complete: complete ?? this.complete,
         narration: narration ?? this.narration,
         hero: hero ?? this.hero,
+        version: version ?? this.version,
       );
 
   /// What a request is told about the narration, in its words for Korean.
@@ -226,8 +252,25 @@ class BookGlossary {
     return hits.take(limit).toList();
   }
 
+  /// Every entry a request may be told, the same list in the same order
+  /// for the whole book (longest first, as [inTexts]): sent with each
+  /// request to an engine that reads long instructions for little, so
+  /// that no name is ever out of sight - and so that requests open alike.
+  List<GlossaryEntry> forBook({int limit = 160}) {
+    final all = entries
+        .where((e) =>
+            e.target.isNotEmpty &&
+            (_specific(e.source) || e.kind == GlossaryKind.person))
+        .toList()
+      ..sort((a, b) {
+        final byLength = b.source.length.compareTo(a.source.length);
+        return byLength != 0 ? byLength : a.source.compareTo(b.source);
+      });
+    return all.take(limit).toList();
+  }
+
   Map<String, Object?> toJson() => {
-        'version': 1,
+        'version': version,
         'complete': complete,
         'narration': narration.name,
         if (hero != null) 'hero': hero,
@@ -238,6 +281,7 @@ class BookGlossary {
     if (raw is! Map) return empty;
     final list = raw['entries'];
     return BookGlossary(
+      version: raw['version'] is int ? raw['version'] as int : 1,
       complete: raw['complete'] == true,
       narration: Narration.parse(raw['narration']),
       hero: raw['hero'] is String ? raw['hero'] as String : null,
@@ -273,9 +317,16 @@ class GlossaryCandidate {
     this.reading,
     this.boyHonorifics = 0,
     this.girlHonorifics = 0,
+    this.familyLength,
   });
 
   final String source;
+
+  /// How many of [source]'s characters are a family name (2 of 天田照人),
+  /// when the book shows the rest is a given name: it is used alone, or
+  /// the first part is how a person is formally addressed (天田さん) and
+  /// never a pet name (純くん of 純太郎).
+  final int? familyLength;
 
   /// Times the book calls it 〜くん / 〜君 (a boy), and 〜ちゃん (mostly a
   /// girl): the gender the model guesses from one line is often wrong.
@@ -293,6 +344,62 @@ final _smallKanaForCount = RegExp('[ゃゅょャュョぁぃぅぇぉァィゥ�
 final _honorificName = RegExp(
     r'([一-鿿々]{1,4}|[ァ-ヴー]{2,8})(?=さん|くん|君|ちゃん|先輩|先生|様|さま|氏|殿)');
 final _katakanaWord = RegExp(r'[ァ-ヴ][ァ-ヴー]{2,9}');
+
+/// A name written in hiragana (しずく) shows only by how it is used: it
+/// stands before an honorific, at the start of a word.
+final _hiraganaName = RegExp(
+    r'(?<![ぁ-ゖ])([ぁ-ゖ]{2,5})(?=さん|くん|君|ちゃん|先輩|先生|様)');
+
+/// Hiragana before an honorific that is no one's name (たくさん, みなさん,
+/// お母さん written out).
+const _notHiraganaNames = {
+  'たく', 'みな', 'みんな', 'おかあ', 'おとう', 'おにい', 'おねえ', 'おじい',
+  'おばあ', 'おじ', 'おば', 'かあ', 'とう', 'にい', 'ねえ', 'じい', 'ばあ',
+  'あなた', 'おまえ', 'あんた', 'きみ', 'だれ', 'どなた', 'かれ', 'かのじょ',
+  'じぶん', 'おきゃく', 'おじょう', 'おく', 'おかみ', 'だんな', 'むすめ',
+  'むすこ', 'おいしゃ', 'おまわり', 'その', 'この', 'あの', 'どの', 'した',
+  'れた', 'った', 'ない', 'いる', 'ある', 'する', 'なる', 'という', 'こちら',
+  'そちら', 'あちら', 'どちら', 'ごくろう', 'おつかれ', 'おせわ', 'ひと',
+  'こども', 'あか', 'ぼっ', 'おぼっ', 'いも', 'あね', 'あに', 'はは', 'ちち',
+};
+
+/// How one is addressed by family name, or as someone's senior.
+const _formalHonorific = 'さん|先生|先輩|様|氏';
+
+/// Katakana words every story uses and no one is named: left to the
+/// translation, and out of the way of the names.
+const _commonLoanwords = {
+  'クラス', 'クラスメイト', 'デート', 'メッセージ', 'ゲーム', 'コーヒー',
+  'メニュー', 'ベッド', 'イメージ', 'タイミング', 'スマホ', 'スマートフォン',
+  'テーブル', 'カップ', 'カップル', 'ドラマ', 'モデル', 'バイト', 'アルバイト',
+  'テスト', 'タイプ', 'プリント', 'スポーツ', 'ホームルーム', 'ルート',
+  'ファミレス', 'チーム', 'ボール', 'メンバー', 'プライベート', 'コート',
+  'ラーメン', 'シュート', 'カウンター', 'アイコン', 'タクシー', 'ホント',
+  'カッコ', 'ポツリ', 'ヒラヒラ', 'ゴールデンウィーク', 'ショッピングモール',
+  'サングラス', 'プレイ', 'プレー', 'メール', 'ライン', 'ノート', 'ペン',
+  'ドア', 'ソファ', 'ソファー', 'キッチン', 'リビング', 'トイレ', 'シャワー',
+  'タオル', 'シャツ', 'スカート', 'ズボン', 'パジャマ', 'コンビニ', 'スーパー',
+  'レストラン', 'カフェ', 'ケーキ', 'ジュース', 'パン', 'サラダ', 'カレー',
+  'ハンバーグ', 'チョコ', 'チョコレート', 'アイス', 'バス', 'エレベーター',
+  'エスカレーター', 'ホテル', 'ビル', 'マンション', 'アパート', 'テレビ',
+  'ニュース', 'パソコン', 'カメラ', 'ボタン', 'スイッチ', 'ポケット', 'バッグ',
+  'カバン', 'プレゼント', 'パーティー', 'イベント', 'ライブ', 'アイドル',
+  'ファン', 'アニメ', 'マンガ', 'ラノベ', 'キャラ', 'キャラクター', 'ヒロイン',
+  'ストーリー', 'シーン', 'セリフ', 'レベル', 'スキル', 'ステータス', 'ギルド',
+  'パーティ', 'ダンジョン', 'モンスター', 'クエスト', 'アイテム', 'ポーション',
+  'ランク', 'スライム', 'ドラゴン', 'ゴブリン', 'エルフ', 'ドワーフ',
+  'タイトル', 'ページ', 'サイン', 'ポイント', 'チャンス', 'ピンチ', 'ミス',
+  'トラブル', 'ショック', 'ストレス', 'プライド', 'プレッシャー', 'テンション',
+  'リズム', 'ペース', 'バランス', 'センス', 'マナー', 'ルール', 'システム',
+  'データ', 'グループ', 'ペア', 'リーダー', 'ライバル', 'パートナー', 'コンビ',
+  'ママ', 'パパ', 'ベンチ', 'グラウンド', 'プール', 'ジャージ', 'ユニフォーム',
+  'チャイム', 'プロ', 'アマ', 'トップ', 'ラスト', 'スタート', 'ゴール', 'アウト',
+  'セーフ', 'オーケー', 'オッケー', 'ダメ', 'ムリ', 'バカ', 'アホ', 'ヤバ',
+  'ドキドキ', 'ワクワク', 'ニコニコ', 'ニヤニヤ', 'キラキラ', 'フワフワ',
+  'イライラ', 'ソワソワ', 'モヤモヤ', 'ジロジロ', 'チラチラ', 'コクリ',
+  'ニコリ', 'ニヤリ', 'クスクス', 'クスリ', 'ハッキリ', 'ビックリ', 'ガッカリ',
+  'ウットリ', 'スッキリ', 'ゆっくり',
+};
 
 /// Words that stand before an honorific without being anyone's name
 /// (彼女さん, お母さん, 天使様).
@@ -321,7 +428,7 @@ final _afterName = RegExp(
 List<GlossaryCandidate> glossaryCandidates(
   List<String> paragraphs,
   Map<String, String> readings, {
-  int limit = 36,
+  int limit = 48,
 }) {
   final text = paragraphs.join('\n');
   int count(String word) {
@@ -363,14 +470,38 @@ List<GlossaryCandidate> glossaryCandidates(
       found[w] = (null, count(w));
     }
   });
+  // A name in hiragana (しずくちゃん): called so again and again, and
+  // spoken of like a person (しずくは, しずくの) as often.
+  final hiragana = <String, int>{};
+  for (final m in _hiraganaName.allMatches(text)) {
+    final w = m.group(1)!;
+    hiragana[w] = (hiragana[w] ?? 0) + 1;
+  }
+  hiragana.forEach((w, n) {
+    if (n < 3 || found.containsKey(w) || _notHiraganaNames.contains(w)) return;
+    final told = RegExp('(?<![ぁ-ゖ])${RegExp.escape(w)}(?:[はがのをにともへ、。！？!?」』…]|\$)',
+            multiLine: true)
+        .allMatches(text)
+        .length;
+    if (told >= 3) found[w] = (null, count(w));
+  });
+  // Katakana words used again and again may be names (シエスタ) or plain
+  // loanwords (クラス, デート): the model tells. Those no one is called by
+  // come after every name, and only a few of them, so that they never
+  // push a name out.
   final katakana = <String, int>{};
   for (final m in _katakanaWord.allMatches(text)) {
     final w = m.group(0)!;
     katakana[w] = (katakana[w] ?? 0) + 1;
   }
+  final plain = <String>{};
   katakana.forEach((w, n) {
-    if (n >= 5 && !found.containsKey(w) && !_notNames.contains(w)) {
+    if (n >= 5 &&
+        !found.containsKey(w) &&
+        !_notNames.contains(w) &&
+        !_commonLoanwords.contains(w)) {
       found[w] = (null, n);
+      plain.add(w);
     }
   });
 
@@ -385,11 +516,41 @@ List<GlossaryCandidate> glossaryCandidates(
 
   // A shorter candidate inside a longer one counts on its own only where
   // it appears alone (和希 in 石井和希).
-  final ranked = found.entries.where((e) => e.value.$2 >= 2).toList()
+  final frequent = found.entries.where((e) => e.value.$2 >= 2).toList()
     ..sort((a, b) => b.value.$2.compareTo(a.value.$2));
+  final names = frequent.where((e) => !plain.contains(e.key)).toList();
+  final words = frequent.where((e) => plain.contains(e.key)).toList();
+  // Some room is kept for them all the same: a story's people may all
+  // have katakana names no one adds さん to.
+  final kept = names.take(limit - words.length.clamp(0, 12)).toList();
+  final ranked = [
+    ...kept,
+    ...words.take((limit - kept.length).clamp(0, 24)),
+  ]..sort((a, b) => b.value.$2.compareTo(a.value.$2));
   int honorifics(String word, String pattern) =>
       RegExp('${RegExp.escape(word)}(?:$pattern)').allMatches(text).length;
-  final picked = [for (final e in ranked.take(limit)) e.key];
+  final picked = [for (final e in ranked) e.key];
+  // Where a full name is cut (天田|照人): after a shorter candidate it
+  // starts with, when the rest is a name of its own - a candidate, or
+  // used alone - or when that first part is how the person is formally
+  // addressed and never a pet name (純くん is 純太郎's, not a family).
+  int? familyLength(String full) {
+    if (!_kanjiOnly.hasMatch(full)) return null;
+    for (final first in picked) {
+      if (first == full || !full.startsWith(first)) continue;
+      final rest = full.substring(first.length);
+      if (rest.isEmpty) continue;
+      final alone = count(rest) - count(full);
+      if (picked.contains(rest) || (rest.runes.length >= 2 && alone >= 2)) {
+        return first.length;
+      }
+      if (honorifics(first, _formalHonorific) >= 2 &&
+          honorifics(first, 'くん|君|ちゃん') == 0) {
+        return first.length;
+      }
+    }
+    return null;
+  }
   // A family name and a given name written together (藤宮周) are one
   // person: how either is addressed tells both's gender.
   final partners = {
@@ -403,7 +564,7 @@ List<GlossaryCandidate> glossaryCandidates(
       honorifics(word, pattern) +
       partners[word]!.fold(0, (n, o) => n + honorifics(o, pattern));
   return [
-    for (final e in ranked.take(limit))
+    for (final e in ranked)
       GlossaryCandidate(
         source: e.key,
         reading: e.value.$1,
@@ -411,8 +572,65 @@ List<GlossaryCandidate> glossaryCandidates(
         example: _exampleOf(paragraphs, e.key),
         boyHonorifics: addressed(e.key, 'くん|君'),
         girlHonorifics: addressed(e.key, 'ちゃん'),
+        familyLength: familyLength(e.key),
       ),
   ];
+}
+
+/// The well-known places of Japan [paragraphs] name ([japanPlaceNames],
+/// [japanPlaceReadings]), as entries: no model is asked about them. One
+/// that the book calls like a person (千葉さん, 石川先生) is someone's
+/// name and left to the candidates.
+List<GlossaryEntry> knownPlaces(List<String> paragraphs, {int limit = 40}) {
+  final text = paragraphs.join('\n');
+  final hits = <(String, String, int)>[];
+  void look(String source, String target) {
+    var n = 0;
+    for (var i = text.indexOf(source); i >= 0; i = text.indexOf(source, i + 1)) {
+      n++;
+    }
+    if (n < 2) return;
+    if (RegExp('${RegExp.escape(source)}(?:さん|くん|君|ちゃん|先生|先輩|様)')
+        .hasMatch(text)) {
+      return;
+    }
+    // Spoken of as somewhere one is, goes to or comes from - twice.
+    if (RegExp('${RegExp.escape(source)}'
+                '(?:[にでへ]|から|まで|駅|行き|方面|出身|あたり|の街|の駅|の近く|県|市|区)')
+            .allMatches(text)
+            .length <
+        2) {
+      return;
+    }
+    hits.add((source, target, n));
+  }
+
+  japanPlaceNames.forEach(look);
+  japanPlaceReadings.forEach((source, reading) {
+    if (!japanPlaceNames.containsKey(source)) look(source, kanaToHangul(reading));
+  });
+  hits.sort((a, b) => b.$3.compareTo(a.$3));
+  return [
+    for (final h in hits.take(limit))
+      GlossaryEntry(
+        source: h.$1,
+        target: h.$2,
+        reading: japanPlaceReadings[h.$1],
+        kind: GlossaryKind.place,
+      ),
+  ];
+}
+
+/// A name's Korean form from the book's [reading] of it: the reading in
+/// Hangul, a common noun it ends in translated (栄華高校 えいがこうこう →
+/// 에이가 고등학교), and a place Korean names its own way as Korean does
+/// (東京 → 도쿄).
+String spellName(String source, String reading) {
+  final known = japanPlaceNames[source];
+  if (known != null) return known;
+  final cut = splitNameSuffix(source, _hiragana(reading));
+  if (cut != null) return '${kanaToHangul(cut.reading)} ${cut.korean}';
+  return kanaToHangul(reading);
 }
 
 String _exampleOf(List<String> paragraphs, String word) {
@@ -486,20 +704,349 @@ String _exampleOf(List<String> paragraphs, String word) {
 List<GlossaryCandidate> epubGlossaryCandidates(Uint8List bytes) =>
     epubSurvey(bytes).candidates;
 
-/// The EPUB in [bytes]: its glossary candidates and how it is narrated
-/// (for an isolate).
-({List<GlossaryCandidate> candidates, Narration narration, String? hero})
-    epubSurvey(Uint8List bytes) {
+/// What a book's text tells about its names, before any model is asked.
+typedef BookSurvey = ({
+  List<GlossaryCandidate> candidates,
+  List<GlossaryEntry> places,
+  Narration narration,
+  String? hero,
+
+  /// The book's paragraphs, one a line: for an engine that reads the
+  /// whole book ([bookAnalysisChunks]), and to tell which names of an
+  /// earlier volume this one has.
+  String text,
+});
+
+const BookSurvey emptySurvey = (
+  candidates: <GlossaryCandidate>[],
+  places: <GlossaryEntry>[],
+  narration: Narration.unknown,
+  hero: null,
+  text: '',
+);
+
+/// The EPUB in [bytes]: its glossary candidates, the well-known places
+/// it names, and how it is narrated (for an isolate).
+BookSurvey epubSurvey(Uint8List bytes) {
   final book = EpubPackage.open(bytes);
-  if (book == null) {
-    return (candidates: const [], narration: Narration.unknown, hero: null);
-  }
+  if (book == null) return emptySurvey;
   final paragraphs = [
     for (final path in book.spine) ...readerParagraphs(book.text(path) ?? ''),
   ];
   final candidates = glossaryCandidates(paragraphs, epubRubyReadings(book));
   final told = bookNarration(paragraphs, [for (final c in candidates) c.source]);
-  return (candidates: candidates, narration: told.narration, hero: told.hero);
+  final taken = {for (final c in candidates) c.source};
+  return (
+    candidates: candidates,
+    places: [
+      for (final p in knownPlaces(paragraphs))
+        if (!taken.contains(p.source)) p,
+    ],
+    narration: told.narration,
+    hero: told.hero,
+    text: paragraphs.join('\n'),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// The whole book read by the engine (Gemini)
+// ---------------------------------------------------------------------------
+
+/// How much of the book one request reads.
+const bookAnalysisChunk = 30000;
+
+/// [text] (a book, a paragraph a line) in pieces of about
+/// [bookAnalysisChunk] characters, cut between paragraphs; at most [most]
+/// (a very long book is read from its start).
+List<String> bookAnalysisChunks(String text,
+    {int size = bookAnalysisChunk, int most = 8}) {
+  final chunks = <String>[];
+  final now = StringBuffer();
+  for (final line in text.split('\n')) {
+    if (now.isNotEmpty && now.length + line.length > size) {
+      chunks.add(now.toString());
+      now.clear();
+      if (chunks.length == most) return chunks;
+    }
+    now.writeln(line);
+  }
+  if (now.isNotEmpty) chunks.add(now.toString());
+  return chunks;
+}
+
+/// What an engine that reads the book itself is asked: every name and
+/// special term, as the text writes it.
+const bookAnalysisInstructions = """
+You are preparing the list of names for translating a Japanese light novel into Korean.
+Read this part of the book and list every proper name and every special term the story uses more than once: people (a family name, a given name, a full name and a nickname each as the text writes them), places, schools and organisations, named items, skills and spells. Do not list ordinary words, sound words or everyday loanwords.
+For each one give:
+- src: exactly as it is written in the text.
+- reading: how it is read, in hiragana (for a word written in katakana, the katakana itself). Read a name the way the text's own furigana or the story shows; where nothing shows it, the most usual reading.
+- kind: person, nickname, place, organisation, item, skill or term.
+- ko: the Korean. A person's or place's name by its reading in Hangul (石井和希 → 이시이 카즈키, 風宮 → 카자미야), without long vowels (ゆうな → 유나); a common noun at the end of a name translated (栄華高校 → 에이가 고등학교, 桜駅 → 사쿠라 역); a foreign name as Korean writes it (シャーロット → 샬럿); an item, skill, spell or term by its natural Korean.
+- gender: male or female for a person the text shows to be one, otherwise -.
+- speech: for a person who speaks, polite or casual and their tone in two or three words (polite, gentle); otherwise -.""";
+
+const bookAnalysisSchema = <String, Object?>{
+  'type': 'object',
+  'properties': {
+    'entries': {
+      'type': 'array',
+      'items': {
+        'type': 'object',
+        'properties': {
+          'src': {'type': 'string'},
+          'reading': {'type': 'string'},
+          'kind': {'type': 'string'},
+          'ko': {'type': 'string'},
+          'gender': {'type': 'string'},
+          'speech': {'type': 'string'},
+        },
+        'required': ['src', 'kind', 'ko'],
+      },
+    },
+  },
+  'required': ['entries'],
+};
+
+final _japanese = RegExp(r'[぀-ヿ一-鿿々]');
+
+/// The entries in an engine's answers to [bookAnalysisInstructions]
+/// ([answers]: one JSON text per part of the book), checked against the
+/// book ([survey]): a word the text does not have twice is not kept, and
+/// a name the book itself spells out - by furigana, or in hiragana - is
+/// written as the book has it, whatever the engine answered.
+List<GlossaryEntry> parseBookAnalysis(
+    Iterable<String> answers, BookSurvey survey) {
+  final text = survey.text;
+  final candidates = {for (final c in survey.candidates) c.source: c};
+  int count(String word) {
+    var n = 0;
+    for (var i = text.indexOf(word); i >= 0; i = text.indexOf(word, i + 1)) {
+      n++;
+    }
+    return n;
+  }
+
+  final out = <String, GlossaryEntry>{};
+  // Full names the engine wrote in two words.
+  final cut = <String>{};
+  for (final answer in answers) {
+    final Object? decoded;
+    try {
+      decoded = jsonDecode(answer);
+    } catch (_) {
+      continue;
+    }
+    final list = decoded is Map ? decoded['entries'] : null;
+    if (list is! List) continue;
+    for (final raw in list) {
+      if (raw is! Map) continue;
+      final src = '${raw['src'] ?? ''}'.trim();
+      if (src.isEmpty || src.runes.length > 12 || out.containsKey(src)) {
+        continue;
+      }
+      if (!_japanese.hasMatch(src) ||
+          _notNames.contains(src) ||
+          _notHiraganaNames.contains(src) ||
+          _commonLoanwords.contains(src)) {
+        continue;
+      }
+      // 純くん, 玲子さん: the name is listed on its own, and how くん is
+      // said in Korean is the translation's to say, not a name's.
+      final addressed = _addressedForm.firstMatch(src);
+      if (addressed != null && addressed.start > 0) continue;
+      final c = candidates[src];
+      final kindText = '${raw['kind'] ?? ''}'.trim().toLowerCase();
+      final ko = '${raw['ko'] ?? ''}'.replaceAll(RegExp(r'[*"“”]'), '').trim();
+      var kind = kindText.startsWith('person') ||
+              kindText.startsWith('nick') ||
+              (c != null && _addressedAsPerson(c, ko))
+          ? GlossaryKind.person
+          : kindText.startsWith('place') || kindText.startsWith('org')
+              ? GlossaryKind.place
+              : GlossaryKind.term;
+      // One kanji is a name only where the book's own use says so.
+      if (src.runes.length == 1 && (kind != GlossaryKind.person || c == null)) {
+        continue;
+      }
+      // An everyday word in katakana is the translation's to word.
+      if (kind == GlossaryKind.term &&
+          kindText.startsWith('term') &&
+          _katakanaOnly.hasMatch(src)) {
+        continue;
+      }
+      if (count(src) < 2) continue;
+      final reading = '${raw['reading'] ?? ''}'.trim();
+      final usable =
+          ko.isNotEmpty && _hangul.hasMatch(ko) && !_foreign.hasMatch(ko);
+      String? target;
+      if (kind != GlossaryKind.term) {
+        final written = c == null ? null : _nameFromBook(c);
+        if (written != null) {
+          target = written;
+        } else if (_hiraganaOnly.hasMatch(src)) {
+          target = kanaToHangul(src);
+        } else if (_hiraganaOnly.hasMatch(reading) &&
+            !_katakana.hasMatch(src)) {
+          // The engine's own reading, written the one way names are
+          // written here: always for a person (a name is its sound,
+          // whatever Korean came with it), otherwise where its Korean is
+          // that sound too. Where that is a translation (宿直室 → 숙직실,
+          // not 슈쿠초쿠시츠; a nickname that is an ordinary word), its
+          // Korean stands - a place's as a term's, it is no name.
+          final spelled = spellName(src, reading);
+          final bare = ko.replaceAll(' ', '');
+          // (A school's or a station's name is its first part: 栄華 of
+          // 栄華高校, whatever word the engine has for 高校.)
+          final ending = splitNameSuffix(src, reading);
+          final alike = ending == null
+              ? _soundsLike(bare, spelled.replaceAll(' ', ''))
+              : _startsLike(bare, kanaToHangul(ending.reading));
+          if (!usable || alike || kindText.startsWith('person')) {
+            target = spelled;
+          } else if (kind == GlossaryKind.place) {
+            kind = GlossaryKind.term;
+          }
+        }
+        // Family and given name, cut where the engine cut them.
+        if (target != null &&
+            RegExp(r'^\S+ \S+$').hasMatch(ko) &&
+            ko.replaceAll(' ', '') == target.replaceAll(' ', '')) {
+          target = ko;
+          if (kindText.startsWith('person') && src.runes.length >= 4) {
+            cut.add(src);
+          }
+        }
+      }
+      target ??= ko;
+      if (target.isEmpty || !_hangul.hasMatch(target) || _foreign.hasMatch(target)) {
+        continue;
+      }
+      var gender = GlossaryGender.parse('${raw['gender'] ?? ''}');
+      if (c != null) {
+        if (c.boyHonorifics >= 2 && c.boyHonorifics > c.girlHonorifics) {
+          gender = GlossaryGender.male;
+        } else if (c.girlHonorifics >= 2 &&
+            c.girlHonorifics > c.boyHonorifics) {
+          gender = GlossaryGender.female;
+        }
+      }
+      final speechText = '${raw['speech'] ?? ''}'.trim();
+      out[src] = GlossaryEntry(
+        source: src,
+        target: target,
+        reading: c?.reading ??
+            (_hiraganaOnly.hasMatch(reading) && src != reading ? reading : null),
+        kind: kind,
+        gender: kind == GlossaryKind.person ? gender : GlossaryGender.unknown,
+        speech: kind == GlossaryKind.person &&
+                RegExp(r'polite|casual|formal|rough|blunt|gentle',
+                        caseSensitive: false)
+                    .hasMatch(speechText)
+            ? speechText.toLowerCase()
+            : null,
+        family: c == null ? null : _familyOf(c),
+      );
+    }
+  }
+  // Which full names are two names: one that starts with another name
+  // of the list and goes on with a name used by itself (神坂 + しずく),
+  // or, for a name the book never shortens, where the engine cut it.
+  // 純太郎 after 純 is neither.
+  final people = {
+    for (final e in out.values)
+      if (e.kind == GlossaryKind.person) e.source: e,
+  };
+  for (final e in people.values) {
+    if (e.family != null) continue;
+    String? family;
+    final bare = e.target.replaceAll(' ', '');
+    for (var k = e.source.length - 1; k >= 1 && family == null; k--) {
+      final first = people[e.source.substring(0, k)];
+      final rest = e.source.substring(k);
+      if (first == null) continue;
+      final head = first.target.replaceAll(' ', '');
+      if (!bare.startsWith(head) || bare.length == head.length) continue;
+      if (people.containsKey(rest) ||
+          candidates.containsKey(rest) ||
+          (rest.runes.length >= 2 && count(rest) - count(e.source) >= 2)) {
+        family = first.source;
+      }
+    }
+    family ??= cut.contains(e.source) ? '' : null;
+    if (family != null) out[e.source] = e.copyWith(family: () => family);
+  }
+  return out.values.toList();
+}
+
+/// Whether [korean] opens with the sound [spelled], give or take a
+/// syllable.
+bool _startsLike(String korean, String spelled) {
+  for (final n in [spelled.length, spelled.length - 1, spelled.length + 1]) {
+    if (n >= 1 &&
+        n <= korean.length &&
+        _soundsLike(korean.substring(0, n), spelled)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// A name with how it is addressed after it (純くん, 玲子さん, 立川先生).
+final _addressedForm = RegExp(
+    r'(くん|君|ちゃん|さん|様|さま|先輩|せんぱい|センパイ|先生|氏|殿|たん)$');
+
+/// The candidates an engine is still asked about after it read the book
+/// ([read]: what the reading named; empty when it did not answer): those
+/// it left unnamed - without the words in katakana nobody is addressed
+/// by, which it read in their place and did not take for names (イルカ
+/// of a dolphin show; asked one line at a time, a model calls it someone).
+List<GlossaryCandidate> unnamedCandidates(
+    BookSurvey survey, Iterable<GlossaryEntry> read) {
+  final named = {for (final e in read) e.source};
+  return [
+    for (final c in survey.candidates)
+      if (!named.contains(c.source) &&
+          !(named.isNotEmpty &&
+              c.reading == null &&
+              c.boyHonorifics + c.girlHonorifics == 0 &&
+              _katakanaOnly.hasMatch(c.source)))
+        c,
+  ];
+}
+
+/// [glossary] with what earlier volumes of the series settled ([earlier],
+/// their glossaries): a name this book has that it has no entry for is
+/// taken over, and so is the way a name is written where the earlier
+/// volume knew better - the reader set it, or that book gave its reading
+/// and this one does not (風宮 without furigana in volume 1, かざみや in
+/// volume 2).
+BookGlossary inheritSeries(
+    BookGlossary glossary, Iterable<BookGlossary> earlier, String text) {
+  final entries = {for (final e in glossary.entries) e.source: e};
+  var changed = false;
+  for (final other in earlier) {
+    for (final e in other.entries) {
+      if (e.target.isEmpty || !e.isName || !text.contains(e.source)) continue;
+      final mine = entries[e.source];
+      if (mine == null) {
+        entries[e.source] = e.copyWith(edited: false);
+        changed = true;
+        continue;
+      }
+      if (mine.edited || mine.target == e.target) continue;
+      final theirsKnows = e.edited || e.reading != null;
+      final mineKnows = mine.reading != null;
+      if (theirsKnows && !mineKnows) {
+        entries[e.source] = mine.copyWith(target: e.target);
+        changed = true;
+      }
+    }
+  }
+  return changed
+      ? glossary.copyWith(entries: tidyNames(entries.values.toList()))
+      : glossary;
 }
 
 // ---------------------------------------------------------------------------
@@ -585,7 +1132,13 @@ List<GlossaryEntry> parseGlossaryAnswer(
     } else if (c.girlHonorifics >= 2 && c.girlHonorifics > c.boyHonorifics) {
       gender = GlossaryGender.female;
     }
-    final resolvedKind = kind ?? GlossaryKind.term;
+    // So does how it is addressed: しずく is "a drop" to the model, and
+    // the girl everyone calls しずくちゃん to the book.
+    final resolvedKind =
+        (kind ?? GlossaryKind.term) == GlossaryKind.term &&
+                _addressedAsPerson(c, target)
+            ? GlossaryKind.person
+            : kind ?? GlossaryKind.term;
     final speechText = parts.length > 3 ? parts[3].trim() : '';
     final speech = resolvedKind == GlossaryKind.person &&
             RegExp(r'polite|casual|formal|rough|blunt|gentle',
@@ -593,13 +1146,28 @@ List<GlossaryEntry> parseGlossaryAnswer(
                 .hasMatch(speechText)
         ? speechText.toLowerCase()
         : null;
-    if (resolvedKind != GlossaryKind.term && c.reading != null) {
-      final spelled = kanaToHangul(c.reading!);
-      final bare = target.replaceAll(' ', '');
-      if (!_hangul.hasMatch(target) ||
-          _foreign.hasMatch(target) ||
-          !_soundsLike(bare, spelled)) {
-        target = spelled;
+    if (resolvedKind != GlossaryKind.term) {
+      final written = _nameFromBook(c);
+      if (written != null) {
+        // The book says how it is read: that, written the one way names
+        // are written here, and not the model's own spelling of it
+        // (유우나 for ゆうな, 에이카 for えいが). Where the model spells
+        // it the same, the space it put between family and given name
+        // comes along ([tidyNames] keeps it only where the book shows
+        // two names).
+        if (target.replaceAll(' ', '') != written.replaceAll(' ', '')) {
+          target = written;
+        }
+      } else if (c.reading != null) {
+        // A reading in katakana is a foreign word (聖剣 エクスカリバー):
+        // the model's Korean for it, unless it is far from the reading.
+        final spelled = spellName(c.source, c.reading!);
+        final bare = target.replaceAll(' ', '');
+        if (!_hangul.hasMatch(target) ||
+            _foreign.hasMatch(target) ||
+            !_soundsLike(bare, spelled.replaceAll(' ', ''))) {
+          target = spelled;
+        }
       }
     }
     if (target.isEmpty || _foreign.hasMatch(target)) continue;
@@ -628,10 +1196,64 @@ List<GlossaryEntry> parseGlossaryAnswer(
           ? gender
           : GlossaryGender.unknown,
       speech: speech,
+      family: _familyOf(c),
     ));
   }
   return out;
 }
+
+final _hiraganaOnly = RegExp(r'^[ぁ-ゖー]+$');
+
+/// The Korean of a name the book itself spells out: one it gives a
+/// hiragana reading (結奈 ゆな), or writes in hiragana (しずく). Null for
+/// a name only the model can put in Korean (凜 without a reading, a
+/// katakana name such as シャーロット).
+String? _nameFromBook(GlossaryCandidate c) {
+  final reading = c.reading;
+  if (reading != null && _hiraganaOnly.hasMatch(reading)) {
+    return spellName(c.source, reading);
+  }
+  if (reading == null && _hiraganaOnly.hasMatch(c.source)) {
+    return kanaToHangul(c.source);
+  }
+  return null;
+}
+
+/// Whether the book shows [c] to be someone, whatever kind of word a
+/// model took it for: it is written in hiragana (which only a word the
+/// book calls 〜くん / 〜ちゃん is a candidate for), or it is so called
+/// and [korean] - the model's word for it - is its sound and not a
+/// translation (아키라 for アキラ, not 밝음).
+bool _addressedAsPerson(GlossaryCandidate c, String korean) {
+  if (c.reading == null && _hiraganaOnly.hasMatch(c.source)) return true;
+  if (c.boyHonorifics + c.girlHonorifics < 2) return false;
+  final spelled = _nameFromBook(c) ??
+      (_katakanaOnly.hasMatch(c.source) ? kanaToHangul(c.source) : null);
+  return spelled != null &&
+      _soundsLike(korean.replaceAll(' ', ''), spelled.replaceAll(' ', ''));
+}
+
+/// The names [survey]'s book writes in hiragana (a word in hiragana is
+/// a candidate only where the book calls it 〜くん / 〜ちゃん), written
+/// as the book has them: there whether or not a model answers about
+/// them.
+List<GlossaryEntry> hiraganaNames(BookSurvey survey) => [
+      for (final c in survey.candidates)
+        if (c.reading == null && _hiraganaOnly.hasMatch(c.source))
+          GlossaryEntry(
+            source: c.source,
+            target: kanaToHangul(c.source),
+            gender: c.boyHonorifics >= 2 && c.boyHonorifics > c.girlHonorifics
+                ? GlossaryGender.male
+                : c.girlHonorifics >= 2 && c.girlHonorifics > c.boyHonorifics
+                    ? GlossaryGender.female
+                    : GlossaryGender.unknown,
+          ),
+    ];
+
+String? _familyOf(GlossaryCandidate c) => c.familyLength == null
+    ? null
+    : c.source.substring(0, c.familyLength!.clamp(0, c.source.length));
 
 /// Whether the model's [name] is the [spelled] reading, give or take a
 /// long vowel or a syllable (후우비 for 후비, not 풍미 for 후비).
@@ -645,23 +1267,26 @@ bool _soundsLike(String name, String spelled) {
   return shared * 2 >= spelled.length + 1 || shared == spelled.length;
 }
 
-/// Full names spelled as one word (天田照人 → 아마다테루히토, from the
-/// reading) split after the family name another entry gives (天田 = 아마다):
-/// 아마다 테루히토.
+/// A person's name in Korean is one word, or two where the book shows a
+/// family name and a given name ([GlossaryEntry.family]): 天田照人 →
+/// 아마다 테루히토, after the family name another entry gives (天田 =
+/// 아마다) or where the model put the space. Without that it is never
+/// cut: 純 is 純太郎's short form, not his family, and 준타로 stays whole
+/// whatever the model wrote.
 ///
 /// A family name also takes the gender of the one full name it starts
 /// (氷高 of 氷高命: female), and none when several people share it.
 List<GlossaryEntry> tidyNames(List<GlossaryEntry> entries) {
   final names = {
     for (final e in entries)
-      if (e.kind == GlossaryKind.person) e.source: e.target,
+      if (e.kind == GlossaryKind.person)
+        e.source: e.target.replaceAll(' ', ''),
   };
   final people = entries.where((e) => e.kind == GlossaryKind.person).toList();
   return [
     for (final e in entries)
       if (e.kind == GlossaryKind.person && !e.edited)
-        _familyGender(
-            e.target.contains(' ') ? e : _splitFullName(e, names), people)
+        _familyGender(_spaced(e, names), people)
       else
         e,
   ];
@@ -677,15 +1302,53 @@ GlossaryEntry _familyGender(GlossaryEntry e, List<GlossaryEntry> people) {
       gender: genders.length == 1 ? genders.first : GlossaryGender.unknown);
 }
 
-GlossaryEntry _splitFullName(GlossaryEntry e, Map<String, String> names) {
-  for (final MapEntry(key: family, value: hangul) in names.entries) {
-    if (family == e.source || !e.source.startsWith(family)) continue;
-    if (hangul.contains(' ') || !e.target.startsWith(hangul)) continue;
-    final rest = e.target.substring(hangul.length);
-    if (rest.isEmpty) continue;
-    return e.copyWith(target: '$hangul $rest');
+GlossaryEntry _spaced(GlossaryEntry e, Map<String, String> names) {
+  final bare = e.target.replaceAll(' ', '');
+  final family = e.family;
+  if (family == null || bare.isEmpty) return e.copyWith(target: bare);
+  final hangul = names[family];
+  if (hangul != null &&
+      hangul.isNotEmpty &&
+      bare.startsWith(hangul) &&
+      bare.length > hangul.length) {
+    return e.copyWith(target: '$hangul ${bare.substring(hangul.length)}');
   }
-  return e;
+  // No entry for the family name: the model's own cut, if it made one.
+  final parts = e.target.trim().split(RegExp(r'\s+'));
+  return e.copyWith(target: parts.length == 2 ? parts.join(' ') : bare);
+}
+
+/// A glossary made before [BookGlossary.currentVersion], set right from
+/// what the book's text tells ([survey]) - no model is asked: names cut
+/// where the book shows no family name are joined again, names the book
+/// gives a reading are spelled from it (a school's last word translated),
+/// names written in hiragana and well-known places are added. What the
+/// reader changed stays as it is.
+BookGlossary upgradeGlossary(BookGlossary old, BookSurvey survey) {
+  final bySource = {for (final c in survey.candidates) c.source: c};
+  final entries = <String, GlossaryEntry>{};
+  for (final e in old.entries) {
+    final c = bySource[e.source];
+    if (e.edited || c == null || e.target.isEmpty) {
+      entries[e.source] = e;
+      continue;
+    }
+    final written = e.isName ? _nameFromBook(c) : null;
+    entries[e.source] = e.copyWith(
+      target: written ?? e.target,
+      family: () => _familyOf(c),
+    );
+  }
+  for (final name in hiraganaNames(survey)) {
+    entries.putIfAbsent(name.source, () => name);
+  }
+  for (final place in survey.places) {
+    entries.putIfAbsent(place.source, () => place);
+  }
+  return old.copyWith(
+    entries: tidyNames(entries.values.toList()),
+    version: BookGlossary.currentVersion,
+  );
 }
 
 /// The glossary before the model has looked at it: the book's furigana
@@ -714,7 +1377,9 @@ BookGlossary mergeGlossary(BookGlossary old, List<GlossaryEntry> fresh) {
     merged[e.source] = e;
   }
   return old.copyWith(
-      entries: tidyNames(merged.values.toList()), complete: true);
+      entries: tidyNames(merged.values.toList()),
+      complete: true,
+      version: BookGlossary.currentVersion);
 }
 
 /// How [paragraphs] narrate: in the first person when the narration says

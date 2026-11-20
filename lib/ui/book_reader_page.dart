@@ -42,6 +42,7 @@ import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/translation_engine.dart';
+import 'package:openlib/services/translation/translation_repair.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
 import 'package:openlib/state/state.dart' show saveEpubState;
@@ -630,6 +631,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       unawaited(GlossaryService.instance
           .load(widget.fileName)
           .then((_) => _onGlossaryChanged()));
+      installTranslationRepair();
       unawaited(GlossaryService.instance
           .ensure(bookFile: widget.fileName, bookPath: path, translator: urgent)
           .then((_) {}, onError: (e) {
