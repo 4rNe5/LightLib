@@ -56,7 +56,7 @@ const calls = async re => (await state(mock)).calls.filter(c => re.test(c))
 const one = await open(await browser.createBrowserContext())
 const h1 = helpers(one)
 await h1.tapText('설정', { exact: true }); await sleep(1000)
-await h1.tapText('Gemini', { exact: true }); await sleep(900)
+await h1.tapText('번역 엔진', { exact: true }); await sleep(900)
 await one.mouse.click(820, 206); await sleep(500)
 await one.keyboard.type('AIzaTESTkeyFromBrowserOne1234', { delay: 8 }); await sleep(400)
 await h1.tapText('저장 후 연결 확인'); await sleep(4000)
@@ -72,7 +72,7 @@ log('key in the second browser:', JSON.stringify(await h2.stored('/support/gemin
 // Removed there: removed on the account, and in the first browser at its next sync.
 // Removed in the second browser: removed on the account, and in the first at its next sync.
 await h2.tapText('설정', { exact: true }); await sleep(1000)
-await h2.tapText('Gemini', { exact: true }); await sleep(900)
+await h2.tapText('번역 엔진', { exact: true }); await sleep(900)
 await two.screenshot({ path: `${shots}/sync2_2_second.png` })
 log('second browser shows the saved key:', !!(await (async () => { await h2.semantics(); return h2.find('저장된 키') })()))
 await two.close()

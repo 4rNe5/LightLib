@@ -1,6 +1,6 @@
 // Web settings: sync and the account, the translation language and
-// style, Gemini (the only engine the web has), and what this browser
-// keeps. A wide window shows them as a dialog over the library with its
+// style, the engine (Gemini or Claude, each with its key) and what this
+// browser keeps. A wide window shows them as a dialog over the library with its
 // sections down the side; a narrow one as a page.
 
 // Dart imports:
@@ -91,7 +91,7 @@ class _WebSettingsPageState extends State<WebSettingsPage> {
   String _label(AppLocalizations l10n, _Section s) => switch (s) {
         _Section.sync => l10n.syncTitle,
         _Section.translation => l10n.webSectionTranslation,
-        _Section.gemini => 'Gemini',
+        _Section.gemini => l10n.translationEngine,
         _Section.storage => l10n.webStorage,
       };
 

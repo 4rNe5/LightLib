@@ -3,6 +3,7 @@
 // when it cannot translate, and what today's requests cost.
 
 // Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 // Package imports:
@@ -151,6 +152,8 @@ class _ClaudeEngineBodyState extends State<ClaudeEngineBody> {
           Text(l10n.claudeThinkingHint, style: small),
           const SizedBox(height: 12),
           if (_settings.hasKey) _usageCard(l10n, theme, small),
+          // (The web has no model of its own.)
+          if (!kIsWeb)
           SwitchListTile(
             key: const ValueKey('claudeDeviceFallback'),
             contentPadding: EdgeInsets.zero,

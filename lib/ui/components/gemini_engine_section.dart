@@ -44,7 +44,7 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
   void initState() {
     super.initState();
     _settings.load();
-    if (!kIsWeb) _claude.load();
+    _claude.load();
   }
 
   @override
@@ -112,23 +112,24 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
     return ListenableBuilder(
       listenable: Listenable.merge([_settings, _claude]),
       builder: (context, _) {
-        final claude = !kIsWeb && _claude.useClaude;
+        final claude = _claude.useClaude;
         final gemini = !claude && _settings.useGemini;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // The web has no model of its own to choose instead.
-            if (!kIsWeb) ...[
+            ...[
             Text(l10n.translationEngine, style: theme.textTheme.titleSmall),
             const SizedBox(height: 6),
             SegmentedButton<_Engine>(
               key: const ValueKey('translationEngine'),
               showSelectedIcon: false,
               segments: [
-                ButtonSegment(
-                    value: _Engine.device,
-                    icon: const Icon(Icons.smartphone_outlined),
-                    label: Text(l10n.translationEngineDevice)),
+                // The web has no model of its own to choose instead.
+                if (!kIsWeb)
+                  ButtonSegment(
+                      value: _Engine.device,
+                      icon: const Icon(Icons.smartphone_outlined),
+                      label: Text(l10n.translationEngineDevice)),
                 ButtonSegment(
                     value: _Engine.gemini,
                     label: Text(l10n.translationEngineGemini)),
@@ -139,7 +140,7 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
               selected: {
                 claude
                     ? _Engine.claude
-                    : gemini
+                    : gemini || kIsWeb
                         ? _Engine.gemini
                         : _Engine.device,
               },

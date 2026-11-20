@@ -220,7 +220,7 @@ class GeminiSettings extends ChangeNotifier implements CloudSettings {
 
   /// Another engine was chosen ([gemini]: this one was).
   void engineChosen({required bool gemini}) {
-    if (kIsWeb || _useGemini == gemini) return;
+    if (_useGemini == gemini) return;
     _useGemini = gemini;
     notifyListeners();
   }
@@ -300,8 +300,10 @@ class GeminiSettings extends ChangeNotifier implements CloudSettings {
     final db = MyLibraryDb.instance;
     Future<Object?> pref(String k) =>
         db.getPreference(k).catchError((_) => null);
-    // The web has no model of its own: Gemini is the only engine there.
-    _useGemini = kIsWeb || await pref(translationEnginePref) == 'gemini';
+    // The web has no model of its own: Gemini there, unless Claude is
+    // chosen.
+    final engine = await pref(translationEnginePref);
+    _useGemini = engine == 'gemini' || (kIsWeb && engine != claudeEngine);
     _model = geminiModelFor(await pref(geminiModelPref) as String?);
     _safety = decodeSafety(await pref(geminiSafetyPref));
     final c = int.tryParse('${await pref(geminiConcurrencyPref)}');

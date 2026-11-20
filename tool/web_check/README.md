@@ -3,7 +3,8 @@
 The built web app (`build/web`) run in headless Chrome: real mouse clicks
 and touches at real coordinates, the sync project answered by a stand-in
 that lives in memory (no account, nothing on the owner's project is
-touched), Gemini answered by a stand-in too (the API is never called).
+touched), Gemini and Claude answered by stand-ins too (the APIs are never
+called).
 
 ```bash
 cd tool/web_check && npm install          # puppeteer-core; Chrome at $CHROME or /usr/bin/google-chrome
@@ -16,6 +17,7 @@ node mock_project.mjs /tmp/lib24 8099 &                   # the stand-in project
 node library.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/shots desktop   # or: mobile
 node account.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/shots /tmp/other.epub
 node translate.mjs http://127.0.0.1:8094/ /tmp/haru.epub /tmp/shots
+node claude.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/haru.epub /tmp/shots
 node reader_taps.mjs http://127.0.0.1:8094/ /tmp/haru.epub /tmp/shots
 node desktop_reading.mjs http://127.0.0.1:8094/ /tmp/horizontal.epub /tmp/shots
 node drop.mjs http://127.0.0.1:8094/ /tmp/other.epub /tmp/shots
@@ -29,6 +31,7 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 |---|---|
 | `library.mjs` | Signed in: every book listed without one file fetched; a book's card; "Read" fetches that one file with its progress; the reader; back in the library the book is here and read a little; search, the side bar, the right-click menu, settings |
 | `account.mjs` | The Gemini key typed in one browser is on the account and in a second browser; a book added here goes up with its details and small cover; this browser's copy goes while the account keeps the book; a deletion reaches the account |
+| `claude.mjs` | Signed in to an account a phone put its Claude key on: the key comes with the first sync, Settings has its switch, Claude is chosen, a book is translated by it - every request saying it comes from a browser, none refused by the site's policy, none to Gemini |
 | `translate.mjs` | Not signed in: an EPUB added, opened, translated (stand-in), kept over a reload, shown without a key |
 | `reader_taps.mjs` | A phone: the reader's bars, a sheet over the page and a message's button take real taps |
 | `desktop_reading.mjs` | A horizontal book in a wide window: the column's width when scrolling, two pages when turning, keys and wheel |
