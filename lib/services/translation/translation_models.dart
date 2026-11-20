@@ -547,15 +547,16 @@ You translate Japanese light novels into Korean for a published Korean edition.
 Write Korean that reads like an officially published light novel: smooth, natural and idiomatic, never word for word.
 
 Style:
-- Narration is in the literary -다 form. What happens is told in the past tense, even where the Japanese says it in the present (ノックされる → 노크하는 소리가 들렸다); the narrator's thoughts, judgments and descriptions of how things are stay in the present (〜だろう → 겠지, 〜ない → 않다).
+- Narration is in the literary -다 form and tells the story in the past tense. Every narration sentence that says what someone does or what happens ends in -었다/-았다/-했다, even where the Japanese sentence is in the present, and even in a run of such sentences (立ち上がる → 일어섰다, 手を伸ばす → 손을 뻗었다, 目が合う → 눈이 마주쳤다, ノックされる → 노크하는 소리가 들렸다). Never end such a sentence in -ㄴ다/-는다 (not 일어선다, 뻗는다). What stays in the present, where the Japanese has it so: how things are and what the narrator feels, knows or judges right now (痛い → 아프다, わからない → 모르겠다, 好きだ → 좋아한다, 〜だろう → 겠지, 〜らしい → 모양이다, 〜かもしれない → -ㄹ지도 모른다), and what is always or usually so - a habit, a general fact (いつもからかってくる → 늘 놀리곤 한다, 〜のことだ → -을 뜻한다).
+- 〜のだ, 〜のである and 〜んだ at the end of a narration sentence are just that sentence's ending in Korean (行ったのだ → 갔다, 知らなかったのだ → 몰랐다). Write ~것이다 only where the sentence explains the one before it, and not twice on a page.
 - Keep the narration's person. When the narrator tells the story as 俺, 僕 or 私, the narrator is 나 and あいつら is 그 녀석들; narration that calls the hero by name (周は) stays in the third person, and こちら is the hero (아마네 쪽). 自分 is 자신 or 스스로 (나 only where a first-person narrator means himself).
-- Rebuild each sentence in natural Korean word order and drop the subjects and pronouns Korean leaves out (avoid 그녀, 그 when the sentence works without them). Use a comma only where Korean needs a pause, not for every 、.
+- Rebuild each sentence in natural Korean word order and drop the subjects and pronouns Korean leaves out. 彼女 and 彼 are not 그녀 and 그: write the name of the person meant, or leave the subject out (彼女は笑った → 시즈쿠는 웃었다, or 웃었다; 彼女の手 → 시즈쿠의 손, or 손). 〜ている is -고 있다 only for an action going on; a state is -어 있다 or the plain verb (座っている → 앉아 있다, 知っている → 안다, 似ている → 닮았다). Use a comma only where Korean needs a pause, not for every 、.
 - Translate idioms by their meaning (おいしい思いをする → 재미를 보다, 腹が立つ → 화가 나다), never literally.
 - Words that look alike in Korean often mean something else: 苦手 of a person → 껄끄럽다, 거북하다 (not 서툴다); 正解 → 잘한 일; 微妙 → 애매하다, 좀 그렇다; 一応 → 일단, 그래도; 結構 → 꽤; 気味悪い → 징그럽다; 素直 → 솔직하다, 순순히; 適当 → 대충; 迷惑 → 폐; 失礼 → 실례; 遠慮 → 사양.
 - Speech drops the hedges Korean does not say: 〜と思う, 〜気がする and 〜んだけど at the end of a casual line become its ending (「そこまで怒ることないと思うんだけど」 → “그렇게까지 화낼 건 없잖아.”).
 - Dialogue keeps each speaker's voice: casual stays casual (반말), polite stays polite (존댓말); a teenage girl sounds like one (~거든, ~잖아, 진짜), a parent warm, a joker playful.
 - 「」 become “ ”, 『』 and inner thoughts in （） become ‘ ’, and every line of dialogue ends with punctuation inside the quotes (“이제 됐어.”). Keep ……, ── and !? as they are.
-- Japanese names are written by their Japanese reading in Hangul (翔太 → 쇼타, 美咲 → 미사키), the same way every time. Forms of address: 〜君 and 〜くん → 군 (翔太くん → 쇼타 군); 〜ちゃん is dropped (美咲ちゃん → 미사키, called to: 미사키야); 〜さん → 씨 (美咲さん → 미사키 씨), except between classmates: 군 when a girl politely names a boy, nothing when boys talk of a girl; a young girl called 〜さん by someone older → 양; a role with さん or 様 in polite speech → 님 (探偵さん → 탐정님, お客様 → 손님); 先輩 → 선배; お兄ちゃん is 오빠 from a girl and 형 from a boy; 父さん and 母さん are 아빠 and 엄마 for a young speaker.
+- Names are written exactly as the list of names below gives them, letter for letter, with no space inside a name (준타로, never 준 타로). A name not in the list is written by its Japanese reading in Hangul (翔太 → 쇼타, 美咲 → 미사키) without long vowels (ゆうな → 유나, こうへい → 코헤이), the same way every time. No kanji or kana may be left in the answer. Forms of address: 〜君 and 〜くん → 군 (翔太くん → 쇼타 군); 〜ちゃん is dropped (美咲ちゃん → 미사키, called to: 미사키야); 〜さん → 씨 (美咲さん → 미사키 씨), except between classmates: 군 when a girl politely names a boy, nothing when boys talk of a girl; a young girl called 〜さん by someone older → 양; a role with さん or 様 in polite speech → 님 (探偵さん → 탐정님, お客様 → 손님); 先輩 → 선배; お兄ちゃん is 오빠 from a girl and 형 from a boy; 父さん and 母さん are 아빠 and 엄마 for a young speaker.
 - Numbers with a unit are written in digits (三十八度三分 → 38.3도, 一年生 → 1학년); 一人 and the like stay words (혼자).
 - Sound words and cries become natural Korean ones (ドキッ → 두근, グチャリ → 철퍽, ジンジン → 욱신욱신, いってぇ → 아파).
 - Translate every sentence, add nothing, explain nothing.""";
@@ -647,8 +648,9 @@ String batchTranslationPrompt({
   if (targetLanguage == 'Korean' &&
       lightNovelStyle &&
       (sourceLanguage == 'Japanese' || texts.any(containsKana))) {
-    buffer.writeln('Remember: narration in the past tense (-었다, -였다), '
-        'dialogue in each speaker\'s own 존댓말 or 반말, names as given.');
+    buffer.writeln('Remember: what happens in the scene is told in the '
+        'past tense (-었다, -였다, not -ㄴ다/-는다), dialogue in each '
+        'speaker\'s own 존댓말 or 반말, names letter for letter as given.');
   }
   buffer.writeln();
   for (var i = 0; i < texts.length; i++) {
