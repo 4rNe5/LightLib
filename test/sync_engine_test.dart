@@ -3,6 +3,7 @@
 // what a run reports while it goes.
 
 // Dart imports:
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -311,6 +312,15 @@ class _Local implements SyncLocal {
   @override
   Future<void> applySetting(String name, String value) async =>
       settingValues[name] = value;
+}
+
+/// A device whose setting is a map it adds what arrives to.
+class _Merging extends _Local {
+  @override
+  Future<void> applySetting(String name, String value) async {
+    final mine = jsonDecode(settingValues[name] ?? '{}') as Map;
+    settingValues[name] = jsonEncode({...mine, ...jsonDecode(value) as Map});
+  }
 }
 
 const a = 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
@@ -1118,6 +1128,38 @@ void main() {
       expect(report.settingsSent + report.settingsReceived, 0);
       expect(local.settingValues[name], 'mine');
       expect(remote.settingRows[name]!.value, 'theirs');
+    });
+  });
+
+  group('a setting both sides add to (the series)', () {
+    const name = 'series';
+    final early = DateTime.utc(2026, 11, 9, 10);
+
+    test('taken, and what only this device has goes up with the same run',
+        () async {
+      final merging = _Merging()
+        ..shared = [name]
+        ..settingValues[name] = jsonEncode({'x': 'Mine'});
+      await remote.putSetting(name, jsonEncode({'y': 'Theirs'}), early,
+          device: 'other');
+
+      final report =
+          await SyncEngine(local: merging, remote: remote).runSettings();
+
+      expect(report.settingsReceived, 1);
+      expect(report.settingsSent, 1);
+      expect(jsonDecode(merging.settingValues[name]!),
+          {'x': 'Mine', 'y': 'Theirs'});
+      expect(jsonDecode(remote.settingRows[name]!.value),
+          {'x': 'Mine', 'y': 'Theirs'});
+      expect(remote.settingRows[name]!.updatedAt.isAfter(early), isTrue);
+
+      // Nothing more to say: the next run is quiet.
+      remote.calls.clear();
+      final again =
+          await SyncEngine(local: merging, remote: remote).runSettings();
+      expect(again.settingsSent, 0);
+      expect(again.settingsReceived, 0);
     });
   });
 

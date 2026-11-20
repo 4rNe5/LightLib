@@ -21,6 +21,7 @@ import 'package:openlib/services/heavy_work.dart';
 import 'package:openlib/services/local_book_import.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/storage/app_files.dart';
+import 'package:openlib/services/sync/series_sync.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/translation/claude/claude_settings.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
@@ -238,11 +239,15 @@ class LibrarySyncLocal implements SyncLocal {
   Future<List<String>> syncedSettings() async {
     Future<bool> on(String pref) async =>
         await _db.getPreference(pref).catchError((_) => null) != 0;
+    // (Before the run reads when each setting changed: what the reader
+    // did to the series here counts as changed now.)
+    await _reconcileSeries();
     return [
       if (await on(syncGeminiKeyPref)) geminiKeySetting,
       // The web does not translate with Claude, and a page is no place
       // for a paid key.
       if (!kIsWeb && await on(syncClaudeKeyPref)) claudeKeySetting,
+      seriesSetting,
     ];
   }
 
@@ -255,6 +260,8 @@ class LibrarySyncLocal implements SyncLocal {
       case claudeKeySetting:
         await ClaudeSettings.instance.load();
         return ClaudeSettings.instance.sharedValue;
+      case seriesSetting:
+        return encodeSeries(await _sharedSeries());
     }
     return '';
   }
@@ -266,6 +273,64 @@ class LibrarySyncLocal implements SyncLocal {
         await GeminiSettings.instance.applySynced(value);
       case claudeKeySetting:
         await ClaudeSettings.instance.applySynced(value);
+      case seriesSetting:
+        await _reconcileSeries(theirs: decodeSeries(value));
+    }
+  }
+
+  /// The series as the account has them, as far as this device knows.
+  Future<Map<String, String>> _sharedSeries() async => decodeSeries(
+      '${await _db.getPreference(seriesSharedPref).catchError((_) => null) ?? ''}');
+
+  /// Brings the shared map and this device's books together. What the
+  /// reader changed here since the last run is written into the map (and
+  /// the setting counts as changed now); [theirs], when a run brought
+  /// it, stands for every book it speaks of, and what only this device
+  /// knew stays; then each book here is in the series the map says.
+  Future<void> _reconcileSeries({Map<String, String>? theirs}) async {
+    final shared = await _sharedSeries();
+    final was = encodeSeries(shared);
+    if (theirs != null) shared.addAll(theirs);
+    final rows = await _db.getSeriesForAll();
+    final marks = theirs != null
+        ? const <String, String>{}
+        : await _db.getSyncStates(MyLibraryDb.seriesChangeMark);
+    final md5s = await _db.getSyncStates('md5:');
+    var told = false;
+    for (final book in await books()) {
+      final marked =
+          marks.containsKey('${MyLibraryDb.seriesChangeMark}${book.id}');
+      final here = rows[book.id] ?? '';
+      // (A file is read for its MD5 only for the reader's own change.)
+      final md5 = md5FromBookId(book.id) ??
+          md5s['md5:${book.fileName}'] ??
+          (marked ? await md5Of(book) : null);
+      if (md5 == null) continue;
+      final known = shared[md5];
+      if (marked) {
+        if (known != here && (here.isNotEmpty || (known ?? '').isNotEmpty)) {
+          shared[md5] = here;
+          told = true;
+        }
+      } else if (known == null) {
+        // Grouped before the devices shared this.
+        if (here.isNotEmpty) {
+          shared[md5] = here;
+          told = true;
+        }
+      } else if (known != here) {
+        await _db
+            .setSeries([book.id], known.isEmpty ? null : known, fromSync: true);
+      }
+    }
+    for (final mark in marks.keys) {
+      await _db.setSyncState(mark, null);
+    }
+    final now = encodeSeries(shared);
+    if (now != was) await _db.savePreference(seriesSharedPref, now);
+    if (told) {
+      await _db.setSyncState(
+          'set:$seriesSetting', '${DateTime.now().millisecondsSinceEpoch}');
     }
   }
 }

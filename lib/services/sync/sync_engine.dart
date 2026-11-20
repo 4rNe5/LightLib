@@ -26,7 +26,7 @@
 // ([SyncEngine.fetchBook]). Nothing is deleted there because a file is
 // not in the browser; a deletion is asked for ([SyncEngine.deleteBook]).
 //
-// Settings the devices share (the Gemini key) follow the newest-wins rule
+// Settings the devices share (the engines' keys, the series) follow the newest-wins rule
 // of positions.
 
 // Dart imports:
@@ -956,14 +956,6 @@ class SyncEngine {
         final remoteAt = remoteSetting?.updatedAt;
         final localMs = int.tryParse(stamps['set:$name'] ?? '');
         final sentMs = int.tryParse(sent['setSent:$name'] ?? '');
-        Future<void> take() async {
-          await local.applySetting(name, remoteSetting!.value);
-          final ms = '${remoteAt!.millisecondsSinceEpoch}';
-          await local.setState('set:$name', ms);
-          await local.setState('setSent:$name', ms);
-          report.settingsReceived++;
-        }
-
         Future<void> send(DateTime at, {bool evenEmpty = false}) async {
           final value = await local.setting(name);
           if (value.isEmpty && !evenEmpty) return;
@@ -972,6 +964,26 @@ class SyncEngine {
           await local.setState('set:$name', ms);
           await local.setState('setSent:$name', ms);
           report.settingsSent++;
+        }
+
+        Future<void> take() async {
+          await local.applySetting(name, remoteSetting!.value);
+          final ms = '${remoteAt!.millisecondsSinceEpoch}';
+          await local.setState('set:$name', ms);
+          await local.setState('setSent:$name', ms);
+          report.settingsReceived++;
+          // A setting both sides add to (the series: each device knows
+          // its own books') is not all theirs after it was taken: what
+          // is here besides goes up, as of now.
+          final mine = await local.setting(name);
+          if (mine.isNotEmpty && mine != remoteSetting.value) {
+            // (To the millisecond, as the time kept here is: a finer
+            // time on the account would look newer at the next run.)
+            final now = DateTime.fromMillisecondsSinceEpoch(
+                DateTime.now().millisecondsSinceEpoch,
+                isUtc: true);
+            await send(now.isAfter(remoteAt) ? now : remoteAt);
+          }
         }
 
         if (localMs == null) {

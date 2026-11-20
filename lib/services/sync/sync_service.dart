@@ -200,6 +200,7 @@ class SyncService extends ChangeNotifier {
             .catchError((_) => null) !=
         0;
     ClaudeSettings.onKeyChanged = _onClaudeKeyChanged;
+    MyLibraryDb.onSeriesChanged = _onSeriesChanged;
     _auth = Supabase.instance.client.auth.onAuthStateChange.listen((state) {
       notifyListeners();
       if (state.event == AuthChangeEvent.signedIn) {
@@ -305,11 +306,13 @@ class SyncService extends ChangeNotifier {
         onLocalChange: () => onLocalChanges?.call(),
       );
 
-  /// Only the shared settings (the engines' keys), both ways.
+  /// Only the shared settings (the engines' keys, the series), both ways.
   Future<void> syncSettings() async {
     if (!signedIn) return;
     try {
       final report = await _engine().runSettings();
+      // (A series made on another device shows in the library.)
+      if (report.settingsReceived > 0) onLocalChanges?.call();
       if (report.errors.isNotEmpty) {
         _logger.warning('Settings not synced',
             tag: 'Sync', metadata: {'error': report.errors.first});
@@ -447,7 +450,9 @@ class SyncService extends ChangeNotifier {
       lastError = report.errors.isEmpty ? null : report.errors.first;
       _logger.info('Synced',
           tag: 'Sync', metadata: {'report': '$report', 'quick': quick});
-      if (report.changedHere) onLocalChanges?.call();
+      if (report.changedHere || report.settingsReceived > 0) {
+        onLocalChanges?.call();
+      }
       if (report.translationsReceived > 0 || report.glossariesReceived > 0) {
         arrived.value++;
       }
@@ -560,6 +565,13 @@ class SyncService extends ChangeNotifier {
           .catchError((_) {});
       if (_claudeKeySync) await syncSettings();
     }());
+  }
+
+  /// The reader made or changed a series here (the books are marked in
+  /// the database): the other devices are told.
+  void _onSeriesChanged() {
+    if (!_auto || !signedIn) return;
+    unawaited(syncSettings().catchError((_) {}));
   }
 
   void _onGlossarySaved(String bookFile) {

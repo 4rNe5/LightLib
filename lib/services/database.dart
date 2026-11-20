@@ -565,7 +565,8 @@ class MyLibraryDb {
 
   /// Puts [bookIds] in [series], or takes them out of theirs when
   /// [series] is null or empty.
-  Future<void> setSeries(Iterable<String> bookIds, String? series) async {
+  Future<void> setSeries(Iterable<String> bookIds, String? series,
+      {bool fromSync = false}) async {
     final dbInstance = await instance.database;
     final name = series?.trim() ?? '';
     final batch = dbInstance.batch();
@@ -578,7 +579,23 @@ class MyLibraryDb {
       }
     }
     await batch.commit(noResult: true);
+    if (fromSync) return;
+    // The reader's own change: marked book by book until sync has told
+    // the other devices ([seriesChangeMark]).
+    final stamp = '${DateTime.now().millisecondsSinceEpoch}';
+    for (final id in bookIds) {
+      await setSyncState('$seriesChangeMark$id', stamp);
+    }
+    onSeriesChanged?.call();
   }
+
+  /// Sync state: a book whose series the reader changed here, not yet
+  /// told to the account (`ser:<bookId>`).
+  static const seriesChangeMark = 'ser:';
+
+  /// Called after the reader put books in a series or took them out
+  /// (sync sends it on); not for what another device said.
+  static void Function()? onSeriesChanged;
 
   /// Map of bookId to the series the reader put it in.
   Future<Map<String, String>> getSeriesForAll() async {
