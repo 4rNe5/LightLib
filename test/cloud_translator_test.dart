@@ -485,4 +485,193 @@ void main() {
     expect(user(server.bodies[0]), isNot(contains('"readings"')));
     expect(user(server.bodies[1]), contains('"readings":{"真似":"まね"}'));
   });
+
+  group('paragraphs to send back, gathered (a book on its own)', () {
+    const a = ['彼は席に着いた。', 'しずくが手を伸ばす。', '二人は店を出た。'];
+    const aFirst = ['그는 자리에 앉았다.', '시즈쿠가 손을 뻗는다.', '두 사람은 가게를 나왔다.'];
+    const b = ['彼は窓を開けた。', '風が部屋を駆け抜ける。', '彼は窓を閉めた。'];
+    const bFirst = ['그는 창문을 열었다.', '바람이 방을 스쳐 지나간다.', '그는 창문을 닫았다.'];
+    const mended = {
+      'しずくが手を伸ばす。': '시즈쿠가 손을 뻗었다.',
+      '風が部屋を駆け抜ける。': '바람이 방을 스쳐 지나갔다.',
+    };
+
+    CloudTranslator gathering(_Server server) => CloudTranslator(
+          client: GeminiClient(
+              dio: Dio()..httpClientAdapter = server,
+              settings: settings,
+              sleep: (_) async {}),
+          settings: settings,
+          gatherCorrections: true,
+          device: () async => device,
+        );
+
+    /// What each paragraph of a request was handed, in order.
+    (Map<int, List<String>>, void Function(int, String)) heard() {
+      final all = <int, List<String>>{};
+      return (all, (i, t) => all.putIfAbsent(i, () => []).add(t));
+    }
+
+    test('first answers at once, one request for the corrections of '
+        'several, each back where it came from', () async {
+      final server = _Server((p, _) => (
+            200,
+            _ok(p.first.startsWith('FIX:')
+                ? [for (final t in p) mended[t.substring(4)]!]
+                : p.first == a.first
+                    ? aFirst
+                    : bFirst)
+          ));
+      final translator = gathering(server);
+      final (heardA, onA) = heard();
+      final (heardB, onB) = heard();
+      await translator.translateBatch(a,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onA);
+      await translator.translateBatch(b,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onB);
+      // Two translation requests and nothing more yet; the paragraph to
+      // be sent back is with the caller as it first came.
+      expect(server.bodies.length, 2);
+      expect(heardA[1], ['시즈쿠가 손을 뻗는다.']);
+      expect(heardB[1], ['바람이 방을 스쳐 지나간다.']);
+
+      await translator.flushCorrections();
+      expect(server.bodies.length, 3);
+      expect(server.refinements.map((r) => r['source']),
+          ['しずくが手を伸ばす。', '風が部屋を駆け抜ける。']);
+      expect(heardA[1], ['시즈쿠가 손을 뻗는다.', '시즈쿠가 손을 뻗었다.']);
+      expect(heardB[1], ['바람이 방을 스쳐 지나간다.', '바람이 방을 스쳐 지나갔다.']);
+      // Nothing else was touched, and nothing is left to send.
+      expect(heardA[0], ['그는 자리에 앉았다.']);
+      expect(heardB[2], ['그는 창문을 닫았다.']);
+      await translator.flushCorrections();
+      expect(server.bodies.length, 3);
+    });
+
+    test('corrections that came back in each other\'s place: none is used',
+        () async {
+      final server = _Server((p, _) => (
+            200,
+            _ok(p.first.startsWith('FIX:')
+                // One place late, the last come round to the first.
+                ? [
+                    for (var k = 0; k < p.length; k++)
+                      mended[p[(k + 1) % p.length].substring(4)]!
+                  ]
+                : p.first == a.first
+                    ? aFirst
+                    : bFirst)
+          ));
+      final translator = gathering(server);
+      final (heardA, onA) = heard();
+      final (heardB, onB) = heard();
+      await translator.translateBatch(a,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onA);
+      await translator.translateBatch(b,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onB);
+      await translator.flushCorrections();
+      expect(server.bodies.length, 3);
+      // Each keeps its own first answer; no paragraph has another's text.
+      expect(heardA[1], ['시즈쿠가 손을 뻗는다.']);
+      expect(heardB[1], ['바람이 방을 스쳐 지나간다.']);
+    });
+
+    test('the same correction for two different paragraphs: none is used',
+        () async {
+      final server = _Server((p, _) => (
+            200,
+            _ok(p.first.startsWith('FIX:')
+                ? [for (final _ in p) '시즈쿠가 손을 뻗었다.']
+                : p.first == a.first
+                    ? aFirst
+                    : bFirst)
+          ));
+      final translator = gathering(server);
+      final (heardA, onA) = heard();
+      final (heardB, onB) = heard();
+      await translator.translateBatch(a,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onA);
+      await translator.translateBatch(b,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onB);
+      await translator.flushCorrections();
+      expect(heardA[1], ['시즈쿠가 손을 뻗는다.']);
+      expect(heardB[1], ['바람이 방을 스쳐 지나간다.']);
+    });
+
+    test('a draft with Japanese left in it is not shown: it waits for its '
+        'correction', () async {
+      const first = ['그는 자리에 앉았다.', 'しずく가 손을 뻗었다.', '두 사람은 가게를 나왔다.'];
+      final server = _Server((p, _) => (
+            200,
+            _ok(p.first.startsWith('FIX:') ? ['시즈쿠가 손을 뻗었다.'] : first)
+          ));
+      final translator = gathering(server);
+      final (all, on) = heard();
+      final out = await translator.translateBatch(a,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: on);
+      expect(all.containsKey(1), isFalse);
+      expect(out[1], isEmpty);
+      await translator.flushCorrections();
+      expect(all[1], ['시즈쿠가 손을 뻗었다.']);
+    });
+
+    test('no answer to the corrections: the first answers stand', () async {
+      final server = _Server((p, _) => p.first.startsWith('FIX:')
+          ? (200, _ok(const ['하나뿐']))
+          : (200, _ok(p.first == a.first ? aFirst : bFirst)));
+      final translator = gathering(server);
+      final (heardA, onA) = heard();
+      final (heardB, onB) = heard();
+      await translator.translateBatch(a,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onA);
+      await translator.translateBatch(b,
+          targetLanguage: 'Korean', sourceLanguage: 'Japanese', onEach: onB);
+      await translator.flushCorrections();
+      expect(heardA[1], ['시즈쿠가 손을 뻗는다.']);
+      expect(heardB[1], ['바람이 방을 스쳐 지나간다.']);
+    });
+
+    test('one paragraph asked for by itself is corrected at once', () async {
+      final server = _Server((p, _) => (
+            200,
+            _ok(p.first.startsWith('FIX:') ? ['시즈쿠가 손을 뻗었다.'] : ['しずく가 손을 뻗었다.'])
+          ));
+      final translator = gathering(server);
+      expect(
+          await translator.translate('しずくが手を伸ばす。',
+              targetLanguage: 'Korean', sourceLanguage: 'Japanese'),
+          '시즈쿠가 손을 뻗었다.');
+      expect(server.bodies.length, 2);
+    });
+  });
+
+  test('corrections out of place are told from corrections', () {
+    const drafts = ['시즈쿠가 손을 뻗는다.', '바람이 방을 스쳐 지나간다.', '그녀는 조용히 웃고 있었다.'];
+    // Each its own, a little changed.
+    expect(
+        misplacedCorrections(drafts,
+            const ['시즈쿠가 손을 뻗었다.', '바람이 방을 스쳐 지나갔다.', '시즈쿠는 조용히 웃었다.']),
+        isEmpty);
+    // One place late.
+    expect(
+        misplacedCorrections(drafts,
+            const ['그녀는 조용히 웃었다.', '시즈쿠가 손을 뻗었다.', '바람이 방을 스쳐 지나갔다.']),
+        {0, 1, 2});
+    // One paragraph's text twice.
+    expect(
+        misplacedCorrections(drafts,
+            const ['시즈쿠가 손을 뻗었다.', '시즈쿠가 손을 뻗었다.', '시즈쿠는 조용히 웃었다.']),
+        containsAll([0, 1]));
+    // The story shown before it, given back as the correction.
+    expect(
+        misplacedCorrections(const ['그녀는 조용히 웃고 있었다.'],
+            const ['시즈쿠가 가게 문을 열고 들어왔다.'],
+            before: const [
+              ['시즈쿠가 가게 문을 열고 들어왔다.']
+            ]),
+        {0});
+    // Two short lines that are alike may well be corrected alike.
+    expect(misplacedCorrections(const ['“응.”', '“응.”'], const ['“응.”', '“응.”']),
+        isEmpty);
+  });
 }

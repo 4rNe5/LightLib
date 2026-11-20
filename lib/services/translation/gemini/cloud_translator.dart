@@ -172,6 +172,91 @@ int? slippedAt(List<String> sources, List<String> outs, String? previous,
   return null;
 }
 
+/// Which answers to a request to correct several paragraphs are not their
+/// own paragraph's ([drafts]: what was sent, [corrected]: what came back,
+/// in the same order; [before]: the story shown with each, if any). A
+/// correction changes a draft a little; one that reads like another
+/// item's draft, or like the story shown before it, or that came back
+/// word for word for two different drafts, was put in the wrong place.
+/// Any at all, and the whole answer is one that slipped: none of it is
+/// to be used.
+Set<int> misplacedCorrections(List<String> drafts, List<String> corrected,
+    {List<List<String>> before = const []}) {
+  final out = <int>{};
+  String bare(String t) => t.replaceAll(RegExp(r'\s'), '');
+  for (var k = 0; k < corrected.length; k++) {
+    final mine = corrected[k];
+    if (mine.isEmpty) continue;
+    for (var j = 0; j < corrected.length; j++) {
+      if (j == k) continue;
+      // One text for two paragraphs that were not alike.
+      if (bare(mine) == bare(corrected[j]) &&
+          bare(drafts[k]) != bare(drafts[j]) &&
+          textSimilarity(drafts[k], drafts[j]) < 0.9) {
+        out
+          ..add(k)
+          ..add(j);
+      }
+    }
+    // Too short to tell one line from another by its letters.
+    if (bare(mine).length < 8) continue;
+    final own = textSimilarity(mine, drafts[k]);
+    for (var j = 0; j < drafts.length; j++) {
+      if (j == k) continue;
+      final other = textSimilarity(mine, drafts[j]);
+      if (other >= 0.6 && other > own + 0.15) out.add(k);
+    }
+    if (k < before.length) {
+      for (final line in before[k]) {
+        final other = textSimilarity(mine, line);
+        if (other >= 0.6 && other > own + 0.15) out.add(k);
+      }
+    }
+  }
+  return out;
+}
+
+/// A paragraph waiting to be sent back: its first answer and what is
+/// wrong with it.
+class _Held {
+  _Held({
+    required this.source,
+    required this.sent,
+    required this.draft,
+    required this.issues,
+    required this.before,
+    required this.targetLanguage,
+    required this.glossary,
+    required this.system,
+    required this.deliver,
+    required this.fallback,
+    required this.shown,
+  });
+
+  final String source;
+
+  /// The draft as the model wrote it (kana and all), and as it is kept
+  /// (polished) when the correction is no better.
+  final String sent;
+  final String draft;
+  final List<QaIssue> issues;
+
+  /// The story just before, in Korean, where the correction needs it.
+  final List<String> before;
+  final String targetLanguage;
+  final BookGlossary glossary;
+
+  /// The instructions the paragraph was translated under.
+  final String system;
+  final void Function(String translation) deliver;
+
+  /// Nothing usable came: the phone, where the reader allows it.
+  final Future<void> Function() fallback;
+
+  /// The draft is already with the caller (a correction replaces it).
+  final bool shown;
+}
+
 class CloudTranslator implements Translator {
   CloudTranslator({
     GeminiClient? client,
@@ -179,6 +264,7 @@ class CloudTranslator implements Translator {
     this.batchSize = 80,
     this.fixTense = true,
     this.fixPronouns = true,
+    this.gatherCorrections = false,
     bool? polish,
     Future<Translator?> Function()? device,
   })  : _client = client ?? GeminiClient.shared,
@@ -195,6 +281,21 @@ class CloudTranslator implements Translator {
 
   /// Sends back paragraphs that carry 彼女 over as 그녀 ([leansOnShe]).
   final bool fixPronouns;
+
+  /// Paragraphs to be sent back are held and sent together, about
+  /// [correctionBatch] in a request ([flushCorrections] sends the rest),
+  /// instead of a request of three or four after every translation
+  /// request: a whole book takes about half the requests. Their first
+  /// answers are handed over at once and replaced when the correction
+  /// comes - except one too broken to show (text left untranslated, a
+  /// sentence dropped), which waits for it. For a book translated on its
+  /// own; the page on screen is corrected at once.
+  final bool gatherCorrections;
+
+  /// How many held paragraphs make a request.
+  static const correctionBatch = 24;
+  final List<_Held> _held = [];
+  Future<void> _flushing = Future<void>.value();
 
   /// Sends back paragraphs thick with word-for-word constructions
   /// ([readsStiff]) to be said again in natural Korean: the reader's
@@ -235,11 +336,13 @@ class CloudTranslator implements Translator {
     String? following,
     TranslationPriority priority = TranslationPriority.background,
   }) async {
-    final out = await translateBatch([text],
+    // One paragraph, answered here and now: nothing is held back.
+    final out = await _translateBatch([text],
         targetLanguage: targetLanguage,
         sourceLanguage: sourceLanguage,
         before: context == null ? const [] : [context],
-        priority: priority);
+        priority: priority,
+        gather: false);
     return out.first;
   }
 
@@ -254,6 +357,136 @@ class CloudTranslator implements Translator {
     BookGlossary glossary = BookGlossary.empty,
     TranslationPriority priority = TranslationPriority.background,
     void Function(int index, String translation)? onEach,
+  }) =>
+      _translateBatch(texts,
+          targetLanguage: targetLanguage,
+          sourceLanguage: sourceLanguage,
+          before: before,
+          beforeTranslations: beforeTranslations,
+          readings: readings,
+          glossary: glossary,
+          priority: priority,
+          onEach: onEach,
+          gather: gatherCorrections);
+
+  /// Sends what is held ([gatherCorrections]) and hands over what comes
+  /// back, to the callers the paragraphs came from. Called when a book's
+  /// run ends or stops; safe to call at any time. With [onlyFull], only
+  /// while a whole request's worth is waiting (the rest waits for more).
+  Future<void> flushCorrections({bool onlyFull = false}) {
+    return _flushing = _flushing.then((_) async {
+      while (onlyFull
+          ? _held.length >= correctionBatch
+          : _held.isNotEmpty) {
+        // Those translated under the same instructions go together.
+        final first = _held.first;
+        final group = [
+          for (final h in _held)
+            if (h.system == first.system &&
+                h.targetLanguage == first.targetLanguage)
+              h,
+        ].take(correctionBatch).toList();
+        _held.removeWhere(group.contains);
+        try {
+          await _correct(group);
+        } on GeminiError {
+          // A key that stopped working: the drafts stand.
+          for (final h in group) {
+            if (!h.shown && h.draft.isNotEmpty) h.deliver(h.draft);
+          }
+        }
+      }
+    });
+  }
+
+  /// One request to correct [items]; each gets its correction if that is
+  /// its own and better, its draft otherwise.
+  Future<void> _correct(List<_Held> items) async {
+    if (items.isEmpty) return;
+    final language = items.first.targetLanguage;
+    List<String>? fixed;
+    if (!_settings.usage.exhausted) {
+      try {
+        final r = await _client.generate(
+          system: items.first.system,
+          user: cloudRefinementRequest([
+            for (final h in items)
+              (
+                source: h.source,
+                draft: h.sent,
+                problems: [for (final q in h.issues) qaProblem(q, language)],
+                before: h.before,
+              ),
+          ], language),
+          schema: translationSchema(items.length),
+          maxOutputTokens:
+              (items.fold<int>(0, (n, h) => n + h.source.length * 3) + 1024)
+                  .clamp(1024, 65536),
+        );
+        if (r.block == null) fixed = parseTranslations(r.text, items.length);
+      } on GeminiError catch (e) {
+        if (e.kind == GeminiErrorKind.badKey) rethrow;
+      }
+    }
+    // An answer with a correction in the wrong place is one that slipped
+    // (a paragraph twice, the rest a place late): none of it is used.
+    if (fixed != null && items.length > 1) {
+      final misplaced = misplacedCorrections(
+          [for (final h in items) h.sent], fixed,
+          before: [for (final h in items) h.before]);
+      if (misplaced.isNotEmpty) {
+        _logger.warning('Corrections out of place, not used',
+            tag: 'Gemini',
+            metadata: {'at': misplaced.join(','), 'of': items.length});
+        fixed = null;
+      }
+    }
+    var kept = 0;
+    for (var k = 0; k < items.length; k++) {
+      final h = items[k];
+      var best = h.draft;
+      final again = fixed?[k];
+      if (again != null && again.isNotEmpty) {
+        final polished = finishTranslation(
+            cleanTranslation(again), h.source, h.targetLanguage, h.glossary);
+        final after = checkTranslation(h.source, polished,
+            targetLanguage: h.targetLanguage,
+            glossary: h.glossary,
+            also: {
+              for (final q in h.issues)
+                if (styleChecks.contains(q)) q,
+            });
+        if (polished.isNotEmpty && refinedIsBetter(h.issues, after)) {
+          best = polished;
+          kept++;
+        }
+      }
+      if (best.isEmpty) {
+        await h.fallback();
+      } else if (!h.shown || best != h.draft) {
+        h.deliver(best);
+      }
+    }
+    if (items.length > 1 || gatherCorrections) {
+      _logger.info('Corrections', tag: 'Gemini', metadata: {
+        'sent': items.length,
+        'kept': kept,
+        'answered': fixed != null,
+      });
+    }
+  }
+
+  Future<List<String>> _translateBatch(
+    List<String> texts, {
+    required String targetLanguage,
+    String? sourceLanguage,
+    List<String> before = const [],
+    List<String?> beforeTranslations = const [],
+    Map<String, String> readings = const {},
+    BookGlossary glossary = BookGlossary.empty,
+    TranslationPriority priority = TranslationPriority.background,
+    void Function(int index, String translation)? onEach,
+    required bool gather,
   }) async {
     final results = List<String>.filled(texts.length, '');
     // Every paragraph's first answer, kept or not: the story as the model
@@ -299,62 +532,6 @@ class CloudTranslator implements Translator {
                     .isNotEmpty)
               beforeTranslations[beforeTranslations.length + k]!,
         ];
-
-    Future<void> refine(Map<int, (String, String, List<QaIssue>)> flagged,
-        String system) async {
-      final items = flagged.entries.toList();
-      List<String>? fixed;
-      try {
-        final r = await _client.generate(
-          system: system,
-          user: cloudRefinementRequest([
-            for (final e in items)
-              (
-                source: texts[e.key],
-                draft: e.value.$1,
-                problems: [
-                  for (final q in e.value.$3) qaProblem(q, targetLanguage)
-                ],
-                before: e.value.$3.contains(QaIssue.pronoun)
-                    ? storyBefore(e.key)
-                    : const [],
-              ),
-          ], targetLanguage),
-          schema: translationSchema(items.length),
-          maxOutputTokens:
-              (items.fold<int>(0, (n, e) => n + texts[e.key].length * 3) + 1024)
-                  .clamp(1024, 65536),
-        );
-        if (r.block == null) fixed = parseTranslations(r.text, items.length);
-      } on GeminiError catch (e) {
-        if (e.kind == GeminiErrorKind.badKey) rethrow;
-      }
-      for (var k = 0; k < items.length; k++) {
-        final i = items[k].key;
-        final (_, polishedDraft, before) = items[k].value;
-        var best = polishedDraft;
-        final again = fixed?[k];
-        if (again != null && again.isNotEmpty) {
-          final polished = finishTranslation(
-              cleanTranslation(again), texts[i], targetLanguage, glossary);
-          final after = checkTranslation(texts[i], polished,
-              targetLanguage: targetLanguage,
-              glossary: glossary,
-              also: {
-                for (final q in before)
-                  if (styleChecks.contains(q)) q,
-              });
-          if (polished.isNotEmpty && refinedIsBetter(before, after)) {
-            best = polished;
-          }
-        }
-        if (best.isNotEmpty) {
-          deliver(i, best);
-        } else {
-          await onDevice([i]);
-        }
-      }
-    }
 
     Future<void> run(List<int> indexes, {int depth = 0}) async {
       if (_settings.usage.exhausted) return onDevice(indexes);
@@ -512,7 +689,45 @@ class CloudTranslator implements Translator {
                 q.name: flagged.values.where((f) => f.$3.contains(q)).length,
           },
         });
-        await refine(flagged, prompt.system);
+        final held = [
+          for (final MapEntry(key: i, value: (sent, draft, issues))
+              in flagged.entries)
+            _Held(
+              source: texts[i],
+              sent: sent,
+              draft: draft,
+              issues: issues,
+              before: issues.contains(QaIssue.pronoun)
+                  ? storyBefore(i)
+                  : const [],
+              targetLanguage: targetLanguage,
+              glossary: glossary,
+              system: prompt.system,
+              deliver: (t) => deliver(i, t),
+              fallback: () => onDevice([i]),
+              // A draft with text left untranslated or sentences missing
+              // is not shown: it waits for its correction.
+              shown: gather &&
+                  draft.isNotEmpty &&
+                  !issues.any(const {
+                    QaIssue.leftoverSource,
+                    QaIssue.repetition,
+                    QaIssue.tooShort,
+                    QaIssue.tooLong,
+                  }.contains),
+            ),
+        ];
+        if (!gather) {
+          await _correct(held);
+        } else {
+          for (final h in held) {
+            if (h.shown) h.deliver(h.draft);
+          }
+          _held.addAll(held);
+          if (_held.length >= correctionBatch) {
+            await flushCorrections(onlyFull: true);
+          }
+        }
       }
     }
 

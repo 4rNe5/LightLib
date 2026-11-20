@@ -667,6 +667,14 @@ class BookTranslationService extends ChangeNotifier
     final inFlight = <Future<void>>{};
     Object? fatal;
 
+    /// The paragraphs Gemini held to send back together, sent and kept
+    /// (each comes through the request it was translated in).
+    Future<void> corrections() async {
+      if (translator is CloudTranslator) {
+        await translator.flushCorrections().catchError((_) {});
+      }
+    }
+
     Future<void> work(int i, List<int> batch) async {
       final text = texts[i]!;
       try {
@@ -726,6 +734,7 @@ class BookTranslationService extends ChangeNotifier
       if (!pending(text)) continue;
       if (!await _waitForRoom()) {
         await Future.wait(inFlight);
+        await corrections();
         report(BookTranslationState.waiting);
         await cache.flush();
         return;
@@ -765,6 +774,7 @@ class BookTranslationService extends ChangeNotifier
       await cache.flush();
       throw fatal!;
     }
+    await corrections();
     await cache.flush();
     report(done() == unique.length
         ? BookTranslationState.done

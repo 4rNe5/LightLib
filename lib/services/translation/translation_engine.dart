@@ -98,10 +98,13 @@ class TranslationEngines {
   /// Library books' translator (background priority on the phone).
   static Future<Translator?> forLibrary() async {
     if (await cloud()) {
-      return CloudTranslator(device: () async {
-        final shared = await SharedTranslationEngine.instance.acquire();
-        return shared == null ? null : SharedHandle(shared);
-      });
+      return CloudTranslator(
+          // A book on its own: the paragraphs to send back go together.
+          gatherCorrections: true,
+          device: () async {
+            final shared = await SharedTranslationEngine.instance.acquire();
+            return shared == null ? null : SharedHandle(shared);
+          });
     }
     final shared = await SharedTranslationEngine.instance.acquire();
     return shared == null ? null : SharedHandle(shared);
