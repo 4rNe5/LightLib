@@ -38,9 +38,35 @@ const _keptBlockTags = {
   'figcaption',
 };
 
+final _marksOnly = RegExp(r'^[^\p{L}\p{N}\s]{1,6}$', unicode: true);
+final _voicedGlyph = RegExp(r'^(.)(半?)濁点$', unicode: true);
+
+/// What a picture set in a line of text stands for: a glyph the fonts do
+/// not have (外字, `<img class="gaiji" alt="!!?">` in the Japanese
+/// publishers' EPUBs). Its `alt` where that is the glyph itself - marks,
+/// one character, a kana with its voicing mark (ア濁点) - and '' where
+/// the book does not say. Null when the picture is an illustration.
+/// The reader's page reads the same (reader_web/src/paragraphs.js).
+String? glyphOf(dom.Element img) {
+  if (img.localName?.toLowerCase() != 'img') return null;
+  final alt = (img.attributes['alt'] ?? '').trim();
+  // (No illustration is described as "!?".)
+  if (_marksOnly.hasMatch(alt)) return alt;
+  final named = (img.attributes['class'] ?? '')
+      .split(RegExp(r'\s+'))
+      .any((c) => c.startsWith('gaiji'));
+  if (!named) return null;
+  final voiced = _voicedGlyph.firstMatch(alt);
+  if (voiced != null) {
+    return '${voiced.group(1)}${voiced.group(2)!.isEmpty ? '\u3099' : '\u309A'}';
+  }
+  return alt.runes.length == 1 ? alt : '';
+}
+
 /// The readable text of [element]: ruby readings dropped, `<br>` kept as
-/// line breaks, runs of spaces collapsed. Empty when the element holds no
-/// text (an illustration, a spacer).
+/// line breaks, runs of spaces collapsed, a glyph set as a picture read
+/// as the glyph ([glyphOf]). Empty when the element holds no text (an
+/// illustration, a spacer).
 String paragraphText(dom.Element element) {
   final buffer = StringBuffer();
   void walk(dom.Node node) {
@@ -49,6 +75,10 @@ String paragraphText(dom.Element element) {
       if (tag == null || _droppedTags.contains(tag)) return;
       if (tag == 'br') {
         buffer.write('\n');
+        return;
+      }
+      if (tag == 'img') {
+        buffer.write(glyphOf(node) ?? '');
         return;
       }
     } else if (node is dom.Text) {
@@ -75,12 +105,17 @@ String paragraphText(dom.Element element) {
 bool shouldTranslate(String text) =>
     RegExp(r'\p{L}', unicode: true).hasMatch(text);
 
-/// Whether [element] carries an image. Such paragraphs are shown as the
-/// original HTML so the illustration stays.
-bool containsImage(dom.Element element) =>
-    element.localName == 'img' ||
-    element.localName == 'image' ||
-    element.querySelector('img, image, svg') != null;
+/// Whether [element] carries an illustration. Such paragraphs are shown
+/// as the original HTML so the illustration stays. A glyph set as a
+/// picture in a line of text ([glyphOf]) is not one: a book that writes
+/// "!!?" as a picture had every such line left untranslated.
+bool containsImage(dom.Element element) {
+  final tag = element.localName?.toLowerCase();
+  if (tag == 'image' || tag == 'svg' || tag == 'video') return true;
+  if (tag == 'img') return glyphOf(element) == null;
+  return element.querySelector('image, svg, video') != null ||
+      element.querySelectorAll('img').any((img) => glyphOf(img) == null);
+}
 
 /// HTML for a translated paragraph: the original block tag (so headings
 /// stay headings) holding the escaped translation, line breaks as `<br>`.
@@ -268,7 +303,8 @@ String expandSelfClosingTags(String xhtml) =>
     });
 
 /// The paragraphs of one XHTML document as the book reader splits them:
-/// leaf blocks with letters, pictures skipped, text as [paragraphText].
+/// leaf blocks with letters, illustrations skipped ([containsImage]), text
+/// as [paragraphText].
 List<String> readerParagraphs(String xhtml) {
   final doc = html_parser.parse(expandSelfClosingTags(xhtml));
   final body = doc.body;
@@ -276,7 +312,7 @@ List<String> readerParagraphs(String xhtml) {
   final out = <String>[];
   for (final el in body.querySelectorAll(readerParagraphBlocks)) {
     if (el.querySelector(readerParagraphBlocks) != null) continue;
-    if (el.querySelector('img, svg, image, video') != null) continue;
+    if (containsImage(el)) continue;
     final text = paragraphText(el);
     if (text.isEmpty || !shouldTranslate(text)) continue;
     out.add(text);

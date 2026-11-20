@@ -38,6 +38,22 @@ Uint8List _epub() {
 }
 
 void main() {
+  test('a line with a glyph set as a picture is translated; an '
+      'illustration stays', () {
+    const xhtml = '<html><head><title>t</title></head><body>'
+        '<p>「いいのかな<img class="gaiji" src="g.png" alt="!!?"/>」</p>'
+        '<p><img src="i.png" alt=""/></p></body></html>';
+    final line = readerParagraphs(xhtml).single;
+    expect(line, '「いいのかな!!?」');
+    final counts = [0, 0];
+    final out = translateXhtml(
+        xhtml, {TranslationCache.keyFor(line): '“괜찮은 걸까!!?”'}, 'ko', counts);
+    expect(counts, [1, 1]);
+    expect(out, contains('<p>“괜찮은 걸까!!?”</p>'));
+    expect(out, isNot(contains('g.png')));
+    expect(out, contains('<p><img src="i.png" alt=""/></p>'));
+  });
+
   test('paragraphs replaced, the rest kept, the book marked and laid out '
       'for the translation', () {
     final bytes = _epub();

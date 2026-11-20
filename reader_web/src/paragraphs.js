@@ -5,9 +5,34 @@
 const BLOCKS = 'p,h1,h2,h3,h4,h5,h6,li,blockquote,dt,dd,figcaption,td,th,div,caption'
 const DROPPED = new Set(['RT', 'RP', 'SCRIPT', 'STYLE'])
 const LETTER = /\p{L}/u
+const MARKS_ONLY = /^[^\p{L}\p{N}\s]{1,6}$/u
+const VOICED_GLYPH = /^(.)(半?)濁点$/u
+
+/** paragraph_text.dart's glyphOf(): what a picture set in a line of text
+ *  stands for - a glyph the fonts do not have (外字,
+ *  <img class="gaiji" alt="!!?">): its alt where that is the glyph itself,
+ *  '' where the book does not say, null when it is an illustration. */
+export function glyphOf(img) {
+    const alt = (img.getAttribute('alt') ?? '').trim()
+    if (MARKS_ONLY.test(alt)) return alt
+    const named = (img.getAttribute('class') ?? '').split(/\s+/).some(c => c.startsWith('gaiji'))
+    if (!named) return null
+    const voiced = VOICED_GLYPH.exec(alt)
+    if (voiced) return voiced[1] + (voiced[2] ? '\u309A' : '\u3099')
+    return [...alt].length === 1 ? alt : ''
+}
+
+/** paragraph_text.dart's containsImage(): an illustration in the block
+ *  (a glyph set as a picture is not one). */
+export function hasIllustration(el) {
+    if (el.querySelector('svg, image, video')) return true
+    for (const img of el.querySelectorAll('img')) if (glyphOf(img) == null) return true
+    return false
+}
 
 /** paragraph_text.dart's paragraphText(): ruby readings dropped, <br> as a
- *  line break, runs of spaces collapsed, empty lines dropped. */
+ *  line break, runs of spaces collapsed, empty lines dropped, a glyph set
+ *  as a picture read as the glyph. */
 export function textOf(el) {
     let out = ''
     const walk = node => {
@@ -15,6 +40,7 @@ export function textOf(el) {
             const tag = node.tagName.toUpperCase()
             if (DROPPED.has(tag)) return
             if (tag === 'BR') { out += '\n'; return }
+            if (tag === 'IMG') { out += glyphOf(node) ?? ''; return }
         } else if (node.nodeType === 3) {
             out += node.data
             return
@@ -36,8 +62,9 @@ export function collectParagraphs(doc) {
     for (const el of body.querySelectorAll(BLOCKS)) {
         if (el.querySelector(BLOCKS)) continue
         if (el.hasAttribute('data-foliate-chunk')) continue
-        // An illustration with a caption stays as it is.
-        if (el.querySelector('img, svg, image, video')) continue
+        // An illustration with a caption stays as it is; a line with a
+        // glyph set as a picture (!!? in some books) is a line of text.
+        if (hasIllustration(el)) continue
         const text = textOf(el)
         if (!text || !LETTER.test(text)) continue
         items.push({ el, text, original: null, shown: null })

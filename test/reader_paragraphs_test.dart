@@ -22,6 +22,32 @@ void main() {
         '<br/><img src="a"/><span></span>');
   });
 
+  test('a glyph set as a picture in a line is text: the line is a '
+      'paragraph, read with the glyph; an illustration is not', () {
+    // (The Japanese publishers' EPUBs write what the fonts lack - and
+    // some write "!!?" - as <img class="gaiji">: every such line was
+    // left untranslated.)
+    const xhtml = '<html><head><title>t</title></head><body>'
+        '<p>「それでいいのかな<img class="gaiji" src="../image/gaiji-0003.png" alt="!!?"/>」</p>'
+        '<p>魔法<img class="gaiji" src="g5.png" alt="杖"/>の職人だ。</p>'
+        '<p>「<img class="gaiji-line" src="g1.png" alt="ア濁点"/>ー」と叫ぶ</p>'
+        '<p>名は<img class="gaiji" src="g2.png" alt="外字の説明"/>だった</p>'
+        '<p>なんだって<img src="mark.png" alt="!?"/></p>'
+        // Illustrations, with and without words beside them.
+        '<p><img src="../image/i-001.jpg" alt=""/></p>'
+        '<div><img src="../image/i-002.jpg" alt="絵"/>挿絵の説明</div>'
+        '<p>図<img class="fit" src="../image/i-003.jpg" alt="図版"/></p>'
+        '<p>次の<img class="gaiji" src="g5.png" alt="杖"/><svg></svg>は絵</p>'
+        '</body></html>';
+    expect(readerParagraphs(xhtml), [
+      '「それでいいのかな!!?」',
+      '魔法杖の職人だ。',
+      '「ア\u3099ー」と叫ぶ',
+      '名はだった',
+      'なんだって!?',
+    ]);
+  });
+
   test('leaf blocks with letters, ruby readings dropped, pictures skipped',
       () {
     const xhtml = '''<?xml version="1.0" encoding="UTF-8"?>

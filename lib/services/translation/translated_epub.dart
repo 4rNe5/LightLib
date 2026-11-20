@@ -59,7 +59,7 @@ String translateXhtml(String xhtml, Map<String, String> translations,
   final edits = <(int, int, String)>[];
   for (final el in body.querySelectorAll(readerParagraphBlocks)) {
     if (el.querySelector(readerParagraphBlocks) != null) continue;
-    if (el.querySelector('img, svg, image, video') != null) continue;
+    if (containsImage(el)) continue;
     final text = paragraphText(el);
     if (text.isEmpty || !shouldTranslate(text)) continue;
     counts[1]++;

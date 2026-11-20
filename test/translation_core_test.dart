@@ -132,6 +132,22 @@ void main() {
           html_parser.parseFragment('<p><img src="a.png"/></p>').children.first;
       expect(containsImage(el), isTrue);
     });
+
+    test('a glyph set as a picture is not an illustration', () {
+      one(String html) => html_parser.parseFragment(html).children.first;
+      final line = one('<p>いいのかな<img class="gaiji" src="g.png" alt="!!?"/>」</p>');
+      expect(containsImage(line), isFalse);
+      expect(paragraphText(line), 'いいのかな!!?」');
+      expect(glyphOf(one('<img class="gaiji" alt="葛"/>')), '葛');
+      expect(glyphOf(one('<img class="x gaiji-wide" alt=""/>')), '');
+      expect(glyphOf(one('<img class="gaiji" alt="パ半濁点"/>')), 'パ\u309A');
+      expect(glyphOf(one('<img alt="♡"/>')), '♡');
+      // What an illustration is called is not a glyph, one letter or not.
+      expect(glyphOf(one('<img alt="絵"/>')), isNull);
+      expect(glyphOf(one('<img src="a.jpg" alt="1"/>')), isNull);
+      expect(containsImage(one('<p>説明<img src="a.jpg" alt="挿絵"/></p>')),
+          isTrue);
+    });
   });
 
   group('translatedHtml', () {

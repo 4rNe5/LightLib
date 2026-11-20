@@ -68,7 +68,9 @@ ${s.dark ? `
 /* dark themes: text the book colours black would vanish */
 body *:not(a):not(svg):not(svg *):not(img) { color: inherit !important; border-color: ${secondary} !important; }
 body *:not(img):not(svg) { background-color: transparent !important; }
-img { filter: none; }` : ''}
+img { filter: none; }
+/* a glyph set as a picture is black on nothing (or on white): as text is */
+img[class^="gaiji"], img[class*=" gaiji"] { filter: invert(1); mix-blend-mode: screen; }` : ''}
 a, a:link, a:visited { color: ${link}; text-decoration-color: ${secondary}; }
 ::selection { background: ${s.selection ?? 'rgba(80,140,255,.35)'}; }
 
