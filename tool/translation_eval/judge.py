@@ -15,9 +15,12 @@ is a pointer for a reader to check, not a verdict.
 
 Each file is an EVAL_OUT of gemini_pipeline_test.dart or
 device_pipeline_test.dart ("sources" and "final"; name=file.json:first
-takes its first answers). One request for each --chunk paragraphs. The key
-is read from the environment only; --out holds the book's text and stays
-out of the repository.
+takes its first answers; a+b.json reads two files as one). One request
+for each --chunk paragraphs. A --model that starts with "claude" is asked
+through the Claude API with EVAL_CLAUDE_KEY ([EVAL_CLAUDE_WORKSPACE],
+[--effort medium]): when the translators are of two families, a judge
+from each says more than one. The key is read from the environment only;
+--out holds the book's text and stays out of the repository.
 """
 import argparse
 import collections
@@ -41,6 +44,68 @@ Answer with JSON only: {"items": [{"n": 1, "best": 2, "worst": 1, "errors": [1]}
 - worst: the number of the worst; 0 when none is clearly worse.
 - errors: the numbers of the translations with a real mistranslation or an omission; [] when there is none.
 Small differences in wording that a reader would not notice are not a reason to pick one: answer 0."""
+
+
+ANSWER = {
+    'type': 'object',
+    'additionalProperties': False,
+    'required': ['items'],
+    'properties': {'items': {'type': 'array', 'items': {
+        'type': 'object',
+        'additionalProperties': False,
+        'required': ['n', 'best', 'worst', 'errors'],
+        'properties': {
+            'n': {'type': 'integer'},
+            'best': {'type': 'integer'},
+            'worst': {'type': 'integer'},
+            'errors': {'type': 'array', 'items': {'type': 'integer'}},
+        }}}},
+}
+
+
+def ask_claude(model, key, user, effort):
+    """One request to the Claude API; usage under Gemini's names."""
+    body = {
+        'model': model,
+        'max_tokens': 32000,
+        'system': SYSTEM,
+        'messages': [{'role': 'user', 'content': user}],
+        'output_config': {
+            'effort': effort,
+            'format': {'type': 'json_schema', 'schema': ANSWER},
+        },
+    }
+    headers = {'Content-Type': 'application/json', 'x-api-key': key,
+               'anthropic-version': '2023-06-01'}
+    workspace = os.environ.get('EVAL_CLAUDE_WORKSPACE')
+    if workspace:
+        headers['anthropic-workspace-id'] = workspace
+    request = urllib.request.Request(
+        'https://api.anthropic.com/v1/messages',
+        data=json.dumps(body).encode(), headers=headers)
+    for attempt in range(4):
+        try:
+            with urllib.request.urlopen(request, timeout=900) as response:
+                data = json.load(response)
+            text = ''.join(b.get('text', '') for b in data.get('content', [])
+                           if b.get('type') == 'text')
+            used = data.get('usage', {})
+            thought = (used.get('output_tokens_details') or {}).get(
+                'thinking_tokens', 0)
+            return text, {
+                'promptTokenCount': used.get('input_tokens', 0)
+                + used.get('cache_read_input_tokens', 0)
+                + used.get('cache_creation_input_tokens', 0),
+                'candidatesTokenCount': used.get('output_tokens', 0) - thought,
+                'thoughtsTokenCount': thought,
+            }
+        except urllib.error.HTTPError as e:
+            detail = e.read().decode('utf-8', 'replace')
+            if e.code in (429, 500, 529) and attempt < 3:
+                time.sleep(20 * (attempt + 1))
+                continue
+            sys.exit(f'{model}: HTTP {e.code} {detail[:300]}')
+    sys.exit('no answer')
 
 
 def ask(model, key, user):
@@ -81,24 +146,31 @@ def main():
     parser.add_argument('--model', default='gemini-3.8-flash')
     parser.add_argument('--chunk', type=int, default=40)
     parser.add_argument('--seed', type=int, default=7)
+    parser.add_argument('--effort', default='medium',
+                        help='how much a Claude judge thinks')
     parser.add_argument('--out')
     args = parser.parse_args()
-    key = os.environ.get('EVAL_GEMINI_KEY')
+    claude = args.model.startswith('claude')
+    variable = 'EVAL_CLAUDE_KEY' if claude else 'EVAL_GEMINI_KEY'
+    key = os.environ.get(variable)
     if not key:
-        sys.exit('EVAL_GEMINI_KEY is not set')
+        sys.exit(f'{variable} is not set')
 
     names, by_source, order = [], {}, None
     for spec in args.sets:
         name, _, path = spec.partition('=')
         path, _, field = path.partition(':')
-        data = json.load(open(path, encoding='utf-8'))
-        translations = data[field or 'final']
+        sources, translations = [], []
+        for part in path.split('+'):
+            data = json.load(open(part, encoding='utf-8'))
+            sources += data['sources']
+            translations += data[field or 'final']
         names.append(name)
         by_source[name] = {
             re.sub(r'\s', '', s): t
-            for s, t in zip(data['sources'], translations) if t}
+            for s, t in zip(sources, translations) if t}
         if order is None:
-            order = data['sources']
+            order = sources
     shared = [s for s in order
               if all(re.sub(r'\s', '', s) in by_source[n] for n in names)]
     rng = random.Random(args.seed)
@@ -123,7 +195,8 @@ def main():
              'translations': {str(p + 1): it['texts'][i]
                               for p, i in enumerate(it['order'])}}
             for k, it in enumerate(chunk)]}, ensure_ascii=False)
-        text, used = ask(args.model, key, user)
+        text, used = (ask_claude(args.model, key, user, args.effort) if claude
+                      else ask(args.model, key, user))
         for k in ('promptTokenCount', 'candidatesTokenCount', 'thoughtsTokenCount'):
             usage[k] += used.get(k, 0)
         usage['requests'] += 1
@@ -172,6 +245,20 @@ def main():
     for name in names:
         print(f'| {name} | {share(best[name])} | {share(worst[name])} | '
               f'{share(errors[name])} |')
+    # Two by two, read off the same answers: one is ahead of another in
+    # a paragraph where it was the best and the other was not, or the
+    # other was the worst and it was not.
+    if len(names) > 2:
+        print('\n| 둘씩 (앞 : 뒤) | 앞이 나음 | 뒤가 나음 |')
+        print('|---|---|---|')
+
+        def rank(v, name):
+            return (v['best'] == name) - (v['worst'] == name)
+        for i, a in enumerate(names):
+            for b in names[i + 1:]:
+                ahead = sum(1 for v in verdicts if rank(v, a) > rank(v, b))
+                behind = sum(1 for v in verdicts if rank(v, a) < rank(v, b))
+                print(f'| {a} : {b} | {ahead} | {behind} |')
     if args.out:
         json.dump({'model': args.model, 'names': names, 'judged': judged,
                    'undecided': undecided, 'best': best, 'worst': worst,

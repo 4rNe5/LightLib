@@ -76,7 +76,8 @@ The app's own `GlossaryService` (the book read whole) and `CloudTranslator`,
 with the traffic counted: requests and tokens by kind, what was sent back and
 why, and the first answers beside the final ones (a paragraph sent back is
 shown as it stood before). `EVAL_TRANSLATED` adds the same paragraphs of an
-earlier translation as a third column.
+earlier translation as a third column (and keeps them in `EVAL_OUT` as
+`earlier`, for the judge: `old=out.json:earlier`).
 
 | Variable | |
 |---|---|
@@ -85,6 +86,7 @@ earlier translation as a third column.
 | `EVAL_GLOSSARY` | `make` (default: the book is read, one request for each 30,000 characters), `book`, or a glossary's JSON (no reading: the cheap way to try a change again) |
 | `EVAL_SERIES` | glossaries of the series' other volumes, standing in for the library |
 | `EVAL_THINKING` | `speed` (default), `balanced` or `quality`: thinking tokens are billed as output |
+| `EVAL_GATHER=1` | paragraphs to send back are held and sent together, as when a book is translated on its own |
 | `EVAL_STYLE=0` | no tense or 그녀 check |
 | `EVAL_POLISH=1` | the reader's "smooth out stiff sentences" on |
 
@@ -99,19 +101,50 @@ check lowered "동작 현재형 비율" by turning the book's own present (a hab
 feeling) into the past. The table cannot tell a slip from the author's tense;
 the sentences in `EVAL_OUT`'s `sentBack` can.
 
+## Claude's way, against the API
+
+The same file and the same steps with another engine: `EVAL_CLAUDE_KEY` in
+place of `EVAL_GEMINI_KEY`.
+
+```bash
+EVAL_CLAUDE_KEY=... EVAL_CLAUDE_MODEL=claude-sonnet-5-5 \
+EVAL_SOURCE=book.epub EVAL_STARTS=890,1923 EVAL_GLOSSARY=glossary.json \
+EVAL_OUT=out.json \
+/opt/flutter/bin/flutter test --no-pub tool/translation_eval/gemini_pipeline_test.dart
+```
+
+| Variable | |
+|---|---|
+| `EVAL_CLAUDE_MODEL` | the app's first model when left out; any id the key can call |
+| `EVAL_CLAUDE_WORKSPACE` | for a key that is not tied to a workspace (`wrkspc_...`) |
+| `EVAL_THINKING` | `speed` (no thinking, effort low), `balanced` (medium), `quality` (high) |
+
+It is paid: the last line of the traffic table gives the dollars at the list
+price (`ClaudeModel.cost`, the cache's share counted). Claude counts about
+one and a half times the tokens Gemini does for the same Japanese and Korean,
+so prices are compared on the tokens each one reports, not on its price list.
+To compare engines, give both the same `EVAL_GLOSSARY` file and the same
+`EVAL_STARTS`.
+
 ## Which reads better
 
 ```bash
 EVAL_GEMINI_KEY=... python3 tool/translation_eval/judge.py \
     --model gemini-3.8-flash old=old.json new=new.json
+EVAL_CLAUDE_KEY=... python3 tool/translation_eval/judge.py \
+    --model claude-fable-5-2 flash=a.json+b.json sonnet=c.json+d.json
 ```
 
 Each file is an `EVAL_OUT` of the two tests above. For every paragraph the
 files share, a stronger model sees the Japanese and the translations under
 numbers, shuffled per paragraph, and names the best, the worst and any with a
-mistranslation; one request for forty paragraphs. It is the only check here
-that reads the prose - and it is a model of the translators' own family, so
-what it prefers is a pointer for a person to read, not a verdict. Its noise is
+mistranslation; one request for forty paragraphs. With three or more it also
+prints them two by two, read off the same answers. `a.json+b.json` reads two
+runs as one. It is the only check here that reads the prose - and a judge is
+of some translator's family, so what it prefers is a pointer for a person to
+read, not a verdict: when Gemini's and Claude's translations are compared,
+ask a judge of each family (`--model claude-...` goes through the Claude API
+with `EVAL_CLAUDE_KEY`, and is paid) and believe what both say. Its noise is
 large: two runs of the same model and prompt were judged 64 : 47. Read a gap
 smaller than that as none.
 

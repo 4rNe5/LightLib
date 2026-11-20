@@ -2,8 +2,8 @@
 
 Flutter e-book app for Android (fork of OpenlibExtended → Openlib), built for
 Japanese light novels: EPUB reader (foliate-js), translation on the device
-(Gemma 4 via llamadart) or with Gemini, background/whole-book translation,
-library with widgets. Owner: 4rNe5. Reports go to the owner in Korean.
+(Gemma 4 via llamadart), with Gemini or with Claude, background/whole-book
+translation, library with widgets and series. Owner: 4rNe5. Reports go to the owner in Korean.
 
 ## Working rules
 - Commit and push only when the owner says so ("ㄱㄱ", "커밋해"). A stop hook
@@ -125,9 +125,11 @@ debug key (only CI signs releases).
 | Sync | `lib/services/sync/` (`sync_engine`, `supabase_remote`, `library_sync_local`, `sync_service`); settings `lib/ui/components/sync_section.dart` |
 | Files the app keeps (web: IndexedDB) | `lib/services/storage/` (`AppFiles`) |
 | Older reader | `lib/ui/epub_viewer.dart` |
-| Engine choice (device / Gemini) | `lib/services/translation/translation_engine.dart` |
+| Engine choice (device / Gemini / Claude) | `lib/services/translation/translation_engine.dart` (`translationEnginePref`: one engine at a time, each engine's settings tell the others') |
 | Device translation | `translator.dart` (`LocalLlmTranslator`, scheduler, `SharedTranslationEngine`), `third_party/llamadart` (see `PATCHES.md`) |
-| Gemini | `lib/services/translation/gemini/` (`gemini_api`, `gemini_client`, `gemini_settings`, `cloud_translator`); settings UI `lib/ui/components/gemini_engine_section.dart` |
+| Gemini | `lib/services/translation/gemini/` (`gemini_api`, `gemini_client`, `gemini_settings`: today's use kept per model, `usageOf`); settings UI `lib/ui/components/gemini_engine_section.dart` (the engine choice is there too) |
+| What every engine off the phone shares | `cloud_engine.dart` (`CloudClient`, `CloudSettings`: results and errors are Gemini's types), `gemini/cloud_translator.dart` (prompts, checks, corrections - `gatherCorrections` for a book on its own: held, sent 24 together, an answer with one out of place not used, `misplacedCorrections`) |
+| Claude (devices only; key in `claude_api_key`, on the device only) | `lib/services/translation/claude/` (`claude_api`: models and prices, `claudeRequest`, `claudeSchema`, `claudeError`; `claude_client`; `claude_settings`: cost per model); settings UI `lib/ui/components/claude_engine_section.dart` |
 | Prompts, styles | `translation_models.dart` (`batchPromptHead`, Korean light-novel style) |
 | Checks and fixes | `translation_qa.dart` (`checkTranslation`, `finishTranslation`; names written as the glossary has them: `enforceGlossary`), `translation_style.dart` (how narration ends, read off the last syllables: `tenseSlips`, `leansOnShe`, `readsStiff`), `paragraph_text.dart` (`cleanTranslation`, `polishTranslation`) |
 | Translations on real books, counted | `tool/translation_eval/` (its README): a book and its exported translation, the phone's steps against a `llama-server`, or `GlossaryService` and `CloudTranslator` against the API with a key |
@@ -135,6 +137,7 @@ debug key (only CI signs releases).
 | Saved translations | `translation_cache.dart` — one set per book × language × style (`shared`, `shared+plain`), JSON under `<books>/.translations/` |
 | Glossary per book | `book_glossary.dart` (candidates, `BookSurvey`, `parseGlossaryAnswer`, `tidyNames`, `upgradeGlossary`; Gemini reading the whole book: `bookAnalysis*`), `japanese_names.dart` (the noun a name ends in, well-known places), `glossary_service.dart`, `series_glossary.dart` (the other volumes' names), `translation_repair.dart` (saved translations set right after a glossary is) |
 | Library/background and "translate this whole book" | `book_translation_service.dart`, `lib/ui/components/priority_translation_card.dart` |
+| Series the reader makes | table `bookseries` (`MyLibraryDb.setSeries`), `library_organization.dart` (`librarySeries`: volumes by the number in their titles; `suggestedSeriesName`), `lib/ui/mylibrary_page.dart` (a long press chooses books, the bar over the foot of the list, a row per series; its books leave the grid unless something is searched), `series_glossary.dart` (`sameSeries`: titles and the reader's grouping, which has the last word; `passOnToSeries` an edit to the other volumes, `shareWithinSeries` on grouping; pref `seriesGlossaryShare`, on unless turned off) |
 | Translated EPUB export | `translated_epub.dart` |
 | Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
 | Hidden covers | `lib/services/hidden_covers.dart` |
@@ -167,6 +170,16 @@ debug key (only CI signs releases).
   words - a word the book calls 〜ちゃん is a person
   (`_addressedAsPerson`), and `hiraganaNames` puts such names in even
   when no answer comes.
+- One person, one spelling (`_onePersonOneSpelling`, glossary version 3):
+  an engine reading a book wrote 結奈 = 유나 (the book's own ゆな) and,
+  in the same list, 高森結奈 = 타카모리 유이나 and 結奈りん = 유이나린.
+  With two of three entries saying 유이나, Flash-Lite wrote 유이나 in
+  every paragraph of the book and the corrections brought back half. A
+  full name is written with its parts' own entries, a pet form (りん,
+  ちん, っち…) as the name and its tail, and where the book spells the
+  full name the given name follows that; the reader's entries are
+  followed and never changed. When names flip in a translation, read the
+  glossary for two spellings of one person before blaming the engine.
 - A glossary's rules changed: `BookGlossary.version`. An older one is set
   right from the book without a model (`upgradeGlossary`), and the saved
   translations after it (`translation_repair.dart`).
@@ -204,16 +217,58 @@ debug key (only CI signs releases).
   `gemini-3.5-flash` (a book is 45 and more), and a 429 that names a
   per-day quota ends the day for that key (`usage.exhausted`). 3.5
   Flash is on the list (`geminiModels`) with that figure; 3.5 Flash-Lite
-  stays the one a reader starts with. A book costs about two requests
-  for each 80 paragraphs - the translation, and the paragraphs sent back
-  (a fixed 2,000 tokens of instructions for three or four paragraphs) -
-  and one for each 30,000 characters when its glossary is first made.
+  stays the one a reader starts with. In the reader a screenful costs
+  two requests - the translation, and the paragraphs sent back (a fixed
+  2,000 tokens of instructions for three or four paragraphs). A book
+  translated on its own holds those and sends them 24 together
+  (`gatherCorrections`): 480 paragraphs were 6 requests and 1, not 6
+  and 5, so a book is about 50 requests, not 90 - and one more for
+  each 30,000 characters when its glossary is first made.
   "Balanced" thinking on Flash-Lite thought nothing (0 thinking tokens,
   the same answers within the noise of a second run).
 - Whether a translation reads better is asked of a reader, or failing
   that of a stronger model that does not know which is which
   (`tool/translation_eval/judge.py`). Two runs of one model with one
-  prompt came out 64 : 47 there: a difference that size is noise.
+  prompt came out 64 : 47 there: a difference that size is noise. When
+  the translators are of two families, a judge of each is asked and
+  what both say is believed.
+- Claude (Messages API, `claude_api.dart`): no thinking is asked for
+  differently by model (`ClaudeQuiet`: Haiku `disabled`, Sonnet
+  `between_tools`, Opus cannot - it thought nothing at effort `low`
+  anyway); `temperature` is not sent; a schema's objects are closed and
+  carry no sizes (`claudeSchema`); a key not tied to a workspace needs
+  `anthropic-workspace-id` (the error says so: `badKey`, shown as it
+  is); "credit balance is too low" is the one error that ends the key
+  for the day. Claude counts about 1.5 times the tokens Gemini does for
+  the same Japanese and Korean: compare prices on measured tokens.
+  Book 3, 240 paragraphs, the same glossary, judged blind by Gemini 3.8
+  Flash and by Claude Fable 5.2 (paragraphs where one was ahead of the
+  other): Sonnet 5.5 over Gemini 3.5 Flash 70 : 21 and 72 : 20; Haiku
+  5.5 about level with that Flash (Gemini's judge 51 : 32, then 22 : 30
+  on a part of the same paragraphs judged again; Claude's 62 : 31) and
+  well over Flash-Lite (93 : 27 and 81 : 29); Sonnet over Opus 5.5
+  76 : 55 and 49 : 44 (Opus had the most mistranslations pointed out of
+  the three). For 160 paragraphs at list prices: Haiku $0.005,
+  Flash-Lite $0.02, 3.5 Flash $0.06, Sonnet $0.10, Opus $0.19. Haiku
+  once gave a whole request back in Japanese (1 of 14): `leftoverSource`
+  flagged all 80 and the correction request translated them - that
+  check is what makes the cheap model usable. Thinking bought nothing:
+  "balanced" on Sonnet thought nothing (0 thinking tokens), on Haiku it
+  thought twice the answer's tokens and neither judge preferred it.
+  Books 1 and 2 (240 paragraphs each, against the translations the
+  owner had): Sonnet over those 102 : 44 / 102 : 34 and 111 : 64 /
+  96 : 47, Haiku over them in book 1 (87 : 49 / 77 : 48) and level in
+  book 2, Flash-Lite with today's steps not over them in either
+  (67 : 75 / 55 : 82, 74 : 100 / 44 : 90): the steps set names and
+  slips right, the prose is the model's.
+- The library's bar of chosen books: a button with an icon does not let
+  its label give way (it overflowed in English at 360 dp), and a
+  snackbar still showing lies over it (`hideCurrentSnackBar` when a
+  book is chosen).
+- Android's own backup and device transfer would carry the files of the
+  app's folder: the keys and the Z-Library session are left out by name
+  (`res/xml/backup_rules.xml`, `data_extraction_rules.xml`). A new file
+  that holds a secret is added to both.
 - `map[k] ??= work().whenComplete(() => map.remove(k))` never ends:
   `remove` returns that very future and `whenComplete` waits for it. Use
   a block body.
@@ -313,13 +368,16 @@ debug key (only CI signs releases).
    stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
    two-page spread on unfolded screens.
    Translation quality, not done yet (project doc
-   `claude/translation-quality-status.md`): Gemini measured on more than
-   one book (book 3 only so far), runs of present-tense narration on
+   `claude/translation-quality-status.md`,
+   `claude/translation-engines-status.md`): Gemini 3.5 Flash measured
+   on more than book 3, runs of present-tense narration on
    Flash-Lite (left as the book has them), names the device finds without
    honorifics
    (kanji pairs that always go together), on the phone a draft whose
    flagged paragraphs go to Gemini when online, a no-kanji grammar for
-   GGUF models.
+   GGUF models. Claude: on the web (a key in a page), its key between
+   devices, older models on the list. Series: between devices and on
+   the web (the grouping is kept in this device's database only).
 4. Study, later: a bundled pre-translated dictionary (JMdict + Korean
    meanings) as an extension; the word sheet would show it before the
    engine's contextual meaning.
