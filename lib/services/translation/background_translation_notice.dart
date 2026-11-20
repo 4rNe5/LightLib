@@ -80,7 +80,8 @@ class BackgroundTranslationNotice {
   @visibleForTesting
   static bool? supportedOverride;
 
-  bool get supported => supportedOverride ?? Platform.isAndroid;
+  // (`Platform` throws in a browser.)
+  bool get supported => supportedOverride ?? (!kIsWeb && Platform.isAndroid);
 
   /// Whether the notification (and so the service) is up.
   bool get showing => _showing;

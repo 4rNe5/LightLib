@@ -4,8 +4,10 @@
 import 'dart:async';
 import 'dart:io';
 import 'dart:isolate';
+import 'dart:typed_data';
 
 // Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/widgets.dart';
 
 // Package imports:
@@ -22,6 +24,7 @@ import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/epub_package.dart';
 import 'package:openlib/services/logger.dart';
+import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/translation/background_translation_notice.dart';
 import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
@@ -177,27 +180,58 @@ class BookTranslationProgress {
   double get fraction => total == 0 ? 1 : done / total;
 }
 
+/// [work] on the book at [path], off the UI thread on a device (the file
+/// is read there too). A browser has no isolates and no files: the book
+/// comes out of what the page keeps, and the work is done in place.
+/// [work] is a function of this file's own, never a closure made where
+/// it is called: what goes to another isolate takes along everything
+/// its scope holds.
+Future<R> _withBook<R>(
+    String path, FutureOr<R> Function(Uint8List bytes) work) {
+  if (!kIsWeb) {
+    return Isolate.run(() async => work(await File(path).readAsBytes()));
+  }
+  return () async {
+    final bytes = await AppFiles.instance.readBytes(path);
+    if (bytes == null) throw StateError('the book is not in this browser');
+    return work(bytes);
+  }();
+}
+
+Map<String, String> _rubyReadingsOf(Uint8List bytes) {
+  final book = EpubPackage.open(bytes);
+  return book == null ? <String, String>{} : epubRubyReadings(book);
+}
+
+Future<String?> _languageOf(Uint8List bytes) async {
+  final book = await EpubReader.openBook(bytes);
+  final languages = book.Schema?.Package?.Metadata?.Languages;
+  return (languages == null || languages.isEmpty) ? null : languages.first;
+}
+
+Future<List<String?>> _paragraphTextsOf(Uint8List bytes) async {
+  final paragraphs = epubReaderParagraphs(bytes);
+  if (paragraphs != null && paragraphs.isNotEmpty) return paragraphs;
+  final book = await EpubReader.readBook(bytes);
+  final chapters = parseChapters(book);
+  final flat = parseParagraphs(chapters, book.Content).flatParagraphs;
+  return [
+    for (final paragraph in flat)
+      () {
+        final element = paragraph.element;
+        if (containsImage(element)) return null;
+        final text = paragraphText(element);
+        return shouldTranslate(text) ? text : null;
+      }(),
+  ];
+}
+
 /// The translatable text of every paragraph of an EPUB, in reading order,
 /// split exactly as the book reader splits it (so both share one cache).
 /// Books it cannot read fall back to the older reader's parser, whose
 /// null entries need no translation (images, scene breaks).
-Future<List<String?>> epubParagraphTexts(String path) => Isolate.run(() async {
-      final bytes = await File(path).readAsBytes();
-      final paragraphs = epubReaderParagraphs(bytes);
-      if (paragraphs != null && paragraphs.isNotEmpty) return paragraphs;
-      final book = await EpubReader.readBook(bytes);
-      final chapters = parseChapters(book);
-      final flat = parseParagraphs(chapters, book.Content).flatParagraphs;
-      return [
-        for (final paragraph in flat)
-          () {
-            final element = paragraph.element;
-            if (containsImage(element)) return null;
-            final text = paragraphText(element);
-            return shouldTranslate(text) ? text : null;
-          }(),
-      ];
-    });
+Future<List<String?>> epubParagraphTexts(String path) =>
+    _withBook(path, _paragraphTextsOf);
 
 /// Works through the library's EPUBs one paragraph at a time with the
 /// shared engine at background priority, only when turned on, and gently:
@@ -366,7 +400,9 @@ class BookTranslationService extends ChangeNotifier
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     final wasForeground = _foreground;
-    _foreground = state == AppLifecycleState.resumed;
+    // (A tab that lost the focus, or is behind another, still runs: a
+    // page has no service to hand the work to, and none is needed.)
+    _foreground = kIsWeb || state == AppLifecycleState.resumed;
     if (_foreground && !wasForeground) {
       _serviceTimedOut = false;
       scanSoon();
@@ -444,7 +480,9 @@ class BookTranslationService extends ChangeNotifier
           _bookNumber = n + 1;
           final fileName = book.getFileName();
           final path = p.join(storage, fileName);
-          if (!await File(path).exists()) {
+          if (!await (kIsWeb
+              ? AppFiles.instance.exists(path)
+              : File(path).exists())) {
             if (fileName == _priorityFile) {
               _priorityFile = null;
               await MyLibraryDb.instance
@@ -648,10 +686,8 @@ class BookTranslationService extends ChangeNotifier
     await _updateNotice(force: true);
 
     final source = sourceLanguageName(await _bookLanguage(path));
-    final readings = await Isolate.run(() async {
-      final book = EpubPackage.open(await File(path).readAsBytes());
-      return book == null ? <String, String>{} : epubRubyReadings(book);
-    }).catchError((_) => <String, String>{});
+    final readings = await _withBook(path, _rubyReadingsOf)
+        .catchError((_) => <String, String>{});
     // The names and terms every paragraph uses alike, made once per book.
     final glossary = await GlossaryService.instance
         .ensure(
@@ -784,13 +820,7 @@ class BookTranslationService extends ChangeNotifier
 
   Future<String?> _bookLanguage(String path) async {
     try {
-      return await Isolate.run(() async {
-        final book = await EpubReader.openBook(await File(path).readAsBytes());
-        final languages = book.Schema?.Package?.Metadata?.Languages;
-        return (languages == null || languages.isEmpty)
-            ? null
-            : languages.first;
-      });
+      return await _withBook(path, _languageOf);
     } catch (_) {
       return null;
     }

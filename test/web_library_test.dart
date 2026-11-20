@@ -24,7 +24,9 @@ import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/storage/idb_app_files.dart';
 import 'package:openlib/services/sync/remote_library.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
+import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/web/web_book_dialog.dart';
+import 'package:openlib/web/web_book_translation.dart';
 import 'package:openlib/web/web_book_opening.dart';
 import 'package:openlib/web/web_cover.dart';
 import 'package:openlib/web/web_library.dart';
@@ -444,6 +446,62 @@ void main() {
 
     testWidgets('a phone: stacked, nothing overflows', (tester) async {
       expect(await open(tester, const Size(360, 640)), WebBookAction.read);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('"translate this book to the end": offered with what it '
+        'does; while it runs, how far and a stop; then done', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final service = BookTranslationService.instance;
+      addTearDown(() => service.debugShow());
+      final mine = merged(local: [here(c, 'Here Too')]).single;
+      await tester.pumpWidget(
+          app(Scaffold(body: WebBookTranslation(book: mine))));
+      expect(find.byKey(const ValueKey('webTranslateWhole')), findsOneWidget);
+      expect(find.text('Translate this whole book'), findsOneWidget);
+      expect(find.textContaining('while this tab is open'), findsOneWidget);
+      expect(find.byKey(const ValueKey('webTranslateStop')), findsNothing);
+
+      service.debugShow(priorityFile: 'Here Too.epub');
+      await tester.pump();
+      expect(find.byKey(const ValueKey('webTranslateRunning')), findsOneWidget);
+      // How far is not known yet: no bar that runs without end.
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+      service.debugShow(
+          priorityFile: 'Here Too.epub',
+          progress: const BookTranslationProgress(
+              fileName: 'Here Too.epub',
+              title: 'Here Too',
+              done: 120,
+              total: 480,
+              state: BookTranslationState.translating));
+      await tester.pump();
+      expect(
+          tester
+              .widget<Text>(find.byKey(const ValueKey('webTranslateProgress')))
+              .data,
+          contains('120/480'));
+      expect(
+          tester
+              .widget<LinearProgressIndicator>(
+                  find.byType(LinearProgressIndicator))
+              .value,
+          0.25);
+      expect(find.byKey(const ValueKey('webTranslateStop')), findsOneWidget);
+
+      service.debugShow(
+          progress: const BookTranslationProgress(
+              fileName: 'Here Too.epub',
+              title: 'Here Too',
+              done: 480,
+              total: 480,
+              state: BookTranslationState.done));
+      await tester.pump();
+      final button = tester.widget<OutlinedButton>(
+          find.byKey(const ValueKey('webTranslateWhole')));
+      expect(button.onPressed, isNull);
       expect(tester.takeException(), isNull);
     });
 
