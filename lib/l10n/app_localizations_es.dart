@@ -2442,4 +2442,72 @@ class AppLocalizationsEs extends AppLocalizations {
   String syncHeldDeleteConfirm(int count) {
     return '$count libros se eliminarán de la cuenta y de tus otros dispositivos. No se puede deshacer.';
   }
+
+  @override
+  String get translationEngineClaude => 'Claude';
+
+  @override
+  String get translationEngineClaudeHint =>
+      'Claude de Anthropic traduce por internet con tu propia clave de API. Es de pago: lo que gasta un libro se descuenta del crédito de la cuenta.';
+
+  @override
+  String get claudeKeyHint =>
+      'Se crea en la Claude Console (platform.claude.com). Se guarda solo en este dispositivo: ni en copias de seguridad ni en la sincronización.';
+
+  @override
+  String get claudeWorkspace => 'ID del espacio de trabajo (opcional)';
+
+  @override
+  String get claudeWorkspaceHint =>
+      'Solo para una clave que no esté ligada a un espacio de trabajo (wrkspc_…). Si no, déjalo vacío.';
+
+  @override
+  String claudeModelInfo(String input, String output) {
+    return 'Por millón de tokens: \$$input de entrada / \$$output de salida';
+  }
+
+  @override
+  String get claudeThinkingHint =>
+      '«Velocidad» responde sin pensar (Opus siempre piensa un poco). Cuanto más piensa, mejor el matiz, más tarda cada petición y más cuesta (los tokens de pensamiento se cobran como salida).';
+
+  @override
+  String claudeUsageRequests(int count) {
+    return 'Peticiones $count';
+  }
+
+  @override
+  String claudeUsageRefused(int count) {
+    return 'Párrafos rechazados $count';
+  }
+
+  @override
+  String claudeCostToday(String cost) {
+    return 'Coste de hoy: unos $cost';
+  }
+
+  @override
+  String claudeUsageOther(String model, int count, String cost) {
+    return '$model: $count peticiones hoy, unos $cost';
+  }
+
+  @override
+  String get claudeExhausted =>
+      'El crédito de la cuenta se ha agotado. Añade crédito en la Claude Console y vuelve a comprobar la clave.';
+
+  @override
+  String claudeTestBadKey(String error) {
+    return 'La clave no funciona: $error';
+  }
+
+  @override
+  String get claudePolishHint =>
+      'Solo los párrafos que suenan literales se envían otra vez a Claude para pulirlos. Cuesta algunas peticiones y tokens más.';
+
+  @override
+  String get claudeDeviceFallbackHint =>
+      'Si falla la conexión, se agota el crédito o Claude rechaza una petición, el modelo del dispositivo traduce esos párrafos.';
+
+  @override
+  String get claudePrivacyNote =>
+      'El texto del libro se envía a la API de Anthropic. Lo que se usa se cobra a la cuenta a la que pertenece la clave.';
 }

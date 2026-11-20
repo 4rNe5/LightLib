@@ -1,14 +1,18 @@
-// Which engine translates - the model on the phone or Gemini - for the
-// reader and for library books, and under which id their translations
-// are kept (each engine's apart, like each model's).
+// Which engine translates - the model on the phone, Gemini or Claude -
+// for the reader and for library books, and under which id their
+// translations are kept (one set for every engine, per style).
 
 // Flutter imports:
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 // Project imports:
-import 'package:openlib/services/translation/gemini/cloud_translator.dart';
-import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/book_glossary.dart';
+import 'package:openlib/services/translation/claude/claude_client.dart';
+import 'package:openlib/services/translation/claude/claude_settings.dart';
+import 'package:openlib/services/translation/cloud_engine.dart';
+import 'package:openlib/services/translation/gemini/cloud_translator.dart';
+import 'package:openlib/services/translation/gemini/gemini_client.dart';
+import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
 import 'package:openlib/services/translation/translation_model_store.dart';
 import 'package:openlib/services/translation/translation_models.dart';
@@ -17,15 +21,29 @@ import 'package:openlib/services/translation/translator.dart';
 class TranslationEngines {
   TranslationEngines._();
 
-  /// Gemini is chosen and has a key.
-  static Future<bool> cloud() async {
+  /// An engine off the phone (Gemini, Claude) is chosen and has a key.
+  static Future<bool> cloud() async => await _chosen() != null;
+
+  /// That engine: what sends its requests, and the reader's choices for
+  /// it.
+  static Future<({CloudClient client, CloudSettings settings})?>
+      _chosen() async {
+    if (!kIsWeb) {
+      await ClaudeSettings.instance.load();
+      if (ClaudeSettings.instance.active) {
+        return (client: ClaudeClient.shared, settings: ClaudeSettings.instance);
+      }
+    }
     await GeminiSettings.instance.load();
-    return GeminiSettings.instance.active;
+    if (GeminiSettings.instance.active) {
+      return (client: GeminiClient.shared, settings: GeminiSettings.instance);
+    }
+    return null;
   }
 
   /// The id translations are kept under (one set for every engine, per
   /// style); null when nothing can translate (no model on the phone,
-  /// Gemini not set up).
+  /// no engine off it set up).
   static Future<String?> cacheModelId() async {
     if (!await cloud() &&
         (kIsWeb ||
@@ -81,8 +99,11 @@ class TranslationEngines {
 
   /// The reader's translator: the page on screen goes first.
   static Future<Translator?> forReader() async {
-    if (await cloud()) {
+    final engine = await _chosen();
+    if (engine != null) {
       return CloudTranslator(
+        client: engine.client,
+        settings: engine.settings,
         // A screenful at a time, so the first page comes quickly.
         batchSize: 24,
         device: () async {
@@ -97,8 +118,11 @@ class TranslationEngines {
 
   /// Library books' translator (background priority on the phone).
   static Future<Translator?> forLibrary() async {
-    if (await cloud()) {
+    final engine = await _chosen();
+    if (engine != null) {
       return CloudTranslator(
+          client: engine.client,
+          settings: engine.settings,
           // A book on its own: the paragraphs to send back go together.
           gatherCorrections: true,
           device: () async {

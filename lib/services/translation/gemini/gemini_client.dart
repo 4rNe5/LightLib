@@ -11,10 +11,11 @@ import 'package:dio/dio.dart';
 
 // Project imports:
 import 'package:openlib/services/logger.dart';
+import 'package:openlib/services/translation/cloud_engine.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 
-class GeminiClient {
+class GeminiClient implements CloudClient {
   GeminiClient({
     Dio? dio,
     GeminiSettings? settings,
@@ -67,6 +68,7 @@ class GeminiClient {
   /// One generateContent request. Throws [GeminiError] when it cannot be
   /// answered (the day's quota, a bad key, a refused request, no
   /// connection after retries).
+  @override
   Future<GeminiResult> generate({
     required String system,
     required String user,

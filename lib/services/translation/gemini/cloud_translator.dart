@@ -1,4 +1,5 @@
-// A [Translator] on Gemini: many paragraphs per request, the answer
+// A [Translator] on an engine off the phone (Gemini, or Claude through
+// the same steps): many paragraphs per request, the answer
 // constrained to exactly one translation each, the app's own style
 // instructions and the book's glossary. What Gemini cannot translate goes
 // to the model on the phone (the day's quota, a filter, no connection) -
@@ -14,6 +15,7 @@ import 'package:openlib/services/epub_package.dart' show readingsIn;
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/translation/book_glossary.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart';
+import 'package:openlib/services/translation/cloud_engine.dart';
 import 'package:openlib/services/translation/gemini/gemini_client.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/services/translation/paragraph_text.dart'
@@ -259,8 +261,8 @@ class _Held {
 
 class CloudTranslator implements Translator {
   CloudTranslator({
-    GeminiClient? client,
-    GeminiSettings? settings,
+    CloudClient? client,
+    CloudSettings? settings,
     this.batchSize = 80,
     this.fixTense = true,
     this.fixPronouns = true,
@@ -272,8 +274,13 @@ class CloudTranslator implements Translator {
         _polish = polish,
         _deviceSource = device;
 
-  final GeminiClient _client;
-  final GeminiSettings _settings;
+  /// The engine asked (Gemini unless another is given) and the reader's
+  /// choices for it.
+  final CloudClient _client;
+  final CloudSettings _settings;
+
+  /// The engine's name, in the log.
+  String get _tag => _settings.engineLabel;
 
   /// Sends back narration that slips into the present for a sentence
   /// ([tenseSlips]).
@@ -318,7 +325,7 @@ class CloudTranslator implements Translator {
   int get concurrency => _settings.concurrency;
 
   @override
-  String? get deviceLabel => 'Gemini';
+  String? get deviceLabel => _settings.engineLabel;
 
   @override
   Future<void> load() async {}
@@ -405,7 +412,7 @@ class CloudTranslator implements Translator {
     if (items.isEmpty) return;
     final language = items.first.targetLanguage;
     List<String>? fixed;
-    if (!_settings.usage.exhausted) {
+    if (!_settings.exhausted) {
       try {
         final r = await _client.generate(
           system: items.first.system,
@@ -436,7 +443,7 @@ class CloudTranslator implements Translator {
           before: [for (final h in items) h.before]);
       if (misplaced.isNotEmpty) {
         _logger.warning('Corrections out of place, not used',
-            tag: 'Gemini',
+            tag: _tag,
             metadata: {'at': misplaced.join(','), 'of': items.length});
         fixed = null;
       }
@@ -468,7 +475,7 @@ class CloudTranslator implements Translator {
       }
     }
     if (items.length > 1 || gatherCorrections) {
-      _logger.info('Corrections', tag: 'Gemini', metadata: {
+      _logger.info('Corrections', tag: _tag, metadata: {
         'sent': items.length,
         'kept': kept,
         'answered': fixed != null,
@@ -534,7 +541,7 @@ class CloudTranslator implements Translator {
         ];
 
     Future<void> run(List<int> indexes, {int depth = 0}) async {
-      if (_settings.usage.exhausted) return onDevice(indexes);
+      if (_settings.exhausted) return onDevice(indexes);
       final part = [for (final i in indexes) texts[i]];
       final prompt = cloudTranslationPrompt(
         texts: part,
@@ -565,8 +572,8 @@ class CloudTranslator implements Translator {
           rethrow;
         }
         // The day's quota, the service down, no connection.
-        _logger.warning('Gemini unavailable, translating on the device',
-            tag: 'Gemini', metadata: {'kind': e.kind.name});
+        _logger.warning('$_tag unavailable, translating on the device',
+            tag: _tag, metadata: {'kind': e.kind.name});
         return onDevice(indexes);
       }
       final block = result.block;
@@ -579,8 +586,8 @@ class CloudTranslator implements Translator {
           return;
         }
         _settings.recordBlocked(block, 1);
-        _logger.info('Gemini blocked a paragraph',
-            tag: 'Gemini', metadata: {'kind': block.name});
+        _logger.info('$_tag blocked a paragraph',
+            tag: _tag, metadata: {'kind': block.name});
         if (block == GeminiBlockKind.prohibited) {
           // Refused under the API's own policy: kept as written, not
           // routed around the refusal.
@@ -607,8 +614,8 @@ class CloudTranslator implements Translator {
                 ? texts[first - 1]
                 : (before.isNotEmpty ? before.last : null));
         if (slip != null) {
-          _logger.warning('Gemini answer slipped by a paragraph',
-              tag: 'Gemini', metadata: {'at': slip, 'of': part.length});
+          _logger.warning('$_tag answer slipped by a paragraph',
+              tag: _tag, metadata: {'at': slip, 'of': part.length});
           got = null;
         }
       }
@@ -676,7 +683,7 @@ class CloudTranslator implements Translator {
       if (flagged.isNotEmpty) {
         // Where in a request paragraphs fail tells whether long requests
         // tire the model (the owner's logs answer it).
-        _logger.info('Paragraphs sent back', tag: 'Gemini', metadata: {
+        _logger.info('Paragraphs sent back', tag: _tag, metadata: {
           'of': got.length,
           'at': [
             for (var k = 0; k < got.length; k++)
@@ -745,7 +752,7 @@ class CloudTranslator implements Translator {
     required Map<String, Object?> schema,
     int maxOutputTokens = 8192,
   }) async {
-    if (_settings.usage.exhausted) return null;
+    if (_settings.exhausted) return null;
     try {
       final r = await _client.generate(
         system: system,
@@ -766,7 +773,7 @@ class CloudTranslator implements Translator {
       {required int maxTokens,
       TranslationPriority priority = TranslationPriority.background,
       String? head}) async {
-    if (_settings.usage.exhausted) {
+    if (_settings.exhausted) {
       final device = await _onDevice();
       return device?.complete(prompt,
           maxTokens: maxTokens, priority: priority, head: head);

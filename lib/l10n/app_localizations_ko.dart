@@ -2361,4 +2361,72 @@ class AppLocalizationsKo extends AppLocalizations {
   String syncHeldDeleteConfirm(int count) {
     return '$count권을 계정과 다른 기기에서도 지웁니다. 되돌릴 수 없습니다.';
   }
+
+  @override
+  String get translationEngineClaude => 'Claude';
+
+  @override
+  String get translationEngineClaudeHint =>
+      'Anthropic의 Claude가 내 API 키로 인터넷을 통해 번역합니다. 유료이며, 쓴 만큼 계정 크레딧에서 빠집니다.';
+
+  @override
+  String get claudeKeyHint =>
+      'Claude Console(platform.claude.com)에서 만듭니다. 이 기기에만 저장되며 백업·동기화에 들어가지 않습니다.';
+
+  @override
+  String get claudeWorkspace => '워크스페이스 ID (선택)';
+
+  @override
+  String get claudeWorkspaceHint =>
+      '키가 한 워크스페이스에 묶여 있지 않을 때만 적습니다 (wrkspc_…). 그 외에는 비워 둡니다.';
+
+  @override
+  String claudeModelInfo(String input, String output) {
+    return '100만 토큰당 입력 \$$input / 출력 \$$output';
+  }
+
+  @override
+  String get claudeThinkingHint =>
+      '속도 우선은 생각 없이 바로 답합니다(Opus는 항상 조금 생각합니다). 더 생각할수록 뉘앙스를 잘 살리지만 요청마다 시간이 더 걸리고 비용도 늘어납니다 (생각 토큰은 출력 요금).';
+
+  @override
+  String claudeUsageRequests(int count) {
+    return '요청 $count회';
+  }
+
+  @override
+  String claudeUsageRefused(int count) {
+    return '거절된 문단 $count';
+  }
+
+  @override
+  String claudeCostToday(String cost) {
+    return '오늘 요금 약 $cost';
+  }
+
+  @override
+  String claudeUsageOther(String model, int count, String cost) {
+    return '$model: 오늘 요청 $count회, 약 $cost';
+  }
+
+  @override
+  String get claudeExhausted =>
+      '계정 크레딧을 다 썼습니다. Claude Console에서 충전한 뒤 키를 다시 확인하세요.';
+
+  @override
+  String claudeTestBadKey(String error) {
+    return '키를 쓸 수 없습니다: $error';
+  }
+
+  @override
+  String get claudePolishHint =>
+      '직역투가 짙은 문단만 Claude에 한 번 더 보내 자연스럽게 고칩니다. 요청과 토큰이 조금 더 듭니다.';
+
+  @override
+  String get claudeDeviceFallbackHint =>
+      '연결 문제, 크레딧 소진, Claude가 요청을 거절한 경우 그 문단만 기기 모델이 번역합니다.';
+
+  @override
+  String get claudePrivacyNote =>
+      '책 본문이 Anthropic의 API로 전송됩니다. 쓴 만큼 키가 속한 계정에 요금이 부과됩니다.';
 }

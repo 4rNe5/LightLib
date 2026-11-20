@@ -1,6 +1,7 @@
-// Settings: which engine translates (the phone or Gemini), Gemini's key,
-// model, safety filters, what happens when it cannot translate, and
-// today's use against the limits the API reported.
+// Settings: which engine translates (the phone, Gemini or Claude), and
+// for Gemini its key, model, safety filters, what happens when it cannot
+// translate, and today's use against the limits the API reported.
+// Claude's own settings are `claude_engine_section.dart`.
 
 // Flutter imports:
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -11,9 +12,11 @@ import 'package:url_launcher/url_launcher.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/translation/claude/claude_settings.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart';
 import 'package:openlib/services/translation/gemini/gemini_client.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
+import 'package:openlib/ui/components/claude_engine_section.dart';
 
 class GeminiEngineSection extends StatefulWidget {
   const GeminiEngineSection({super.key, required this.onEngineChanged});
@@ -28,8 +31,11 @@ class GeminiEngineSection extends StatefulWidget {
 
 enum _Test { none, running, ok, badKey, failed }
 
+enum _Engine { device, gemini, claude }
+
 class _GeminiEngineSectionState extends State<GeminiEngineSection> {
   final _settings = GeminiSettings.instance;
+  final _claude = ClaudeSettings.instance;
   final _keyField = TextEditingController();
   _Test _test = _Test.none;
   String _testError = '';
@@ -38,6 +44,7 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
   void initState() {
     super.initState();
     _settings.load();
+    if (!kIsWeb) _claude.load();
   }
 
   @override
@@ -103,9 +110,10 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
     final scheme = theme.colorScheme;
     final small = TextStyle(fontSize: 12, color: scheme.onSurfaceVariant);
     return ListenableBuilder(
-      listenable: _settings,
+      listenable: Listenable.merge([_settings, _claude]),
       builder: (context, _) {
-        final gemini = _settings.useGemini;
+        final claude = !kIsWeb && _claude.useClaude;
+        final gemini = !claude && _settings.useGemini;
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -113,26 +121,44 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
             if (!kIsWeb) ...[
             Text(l10n.translationEngine, style: theme.textTheme.titleSmall),
             const SizedBox(height: 6),
-            SegmentedButton<bool>(
+            SegmentedButton<_Engine>(
               key: const ValueKey('translationEngine'),
               showSelectedIcon: false,
               segments: [
                 ButtonSegment(
-                    value: false,
+                    value: _Engine.device,
                     icon: const Icon(Icons.smartphone_outlined),
                     label: Text(l10n.translationEngineDevice)),
                 ButtonSegment(
-                    value: true,
-                    icon: const Icon(Icons.cloud_outlined),
+                    value: _Engine.gemini,
                     label: Text(l10n.translationEngineGemini)),
+                ButtonSegment(
+                    value: _Engine.claude,
+                    label: Text(l10n.translationEngineClaude)),
               ],
-              selected: {gemini},
+              selected: {
+                claude
+                    ? _Engine.claude
+                    : gemini
+                        ? _Engine.gemini
+                        : _Engine.device,
+              },
               onSelectionChanged: (v) async {
-                await _settings.setUseGemini(v.first);
+                // (Each engine's settings tell the others' they are not
+                // the one chosen.)
+                switch (v.first) {
+                  case _Engine.device:
+                    await _settings.setUseGemini(false);
+                  case _Engine.gemini:
+                    await _settings.setUseGemini(true);
+                  case _Engine.claude:
+                    await _claude.setUseClaude(true);
+                }
                 widget.onEngineChanged();
               },
             ),
             ],
+            if (claude) ClaudeEngineBody(onEngineChanged: widget.onEngineChanged),
             if (gemini) ...[
               const SizedBox(height: 6),
               Text(l10n.translationEngineGeminiHint, style: small),

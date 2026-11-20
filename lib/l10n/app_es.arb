@@ -709,5 +709,21 @@
   "syncUnreadable": "{count} libros no se pudieron abrir y quedaron fuera de la sincronización: {names}. Sus archivos no los creó esta app (los puso otra app o una instalación anterior). Descárgalos de nuevo o añádelos con Importar EPUB / PDF.",
   "syncHeldDelete": "Eliminar también de la cuenta",
   "syncHeldFetch": "Traerlos de vuelta aquí",
-  "syncHeldDeleteConfirm": "{count} libros se eliminarán de la cuenta y de tus otros dispositivos. No se puede deshacer."
+  "syncHeldDeleteConfirm": "{count} libros se eliminarán de la cuenta y de tus otros dispositivos. No se puede deshacer.",
+  "translationEngineClaude": "Claude",
+  "translationEngineClaudeHint": "Claude de Anthropic traduce por internet con tu propia clave de API. Es de pago: lo que gasta un libro se descuenta del crédito de la cuenta.",
+  "claudeKeyHint": "Se crea en la Claude Console (platform.claude.com). Se guarda solo en este dispositivo: ni en copias de seguridad ni en la sincronización.",
+  "claudeWorkspace": "ID del espacio de trabajo (opcional)",
+  "claudeWorkspaceHint": "Solo para una clave que no esté ligada a un espacio de trabajo (wrkspc_…). Si no, déjalo vacío.",
+  "claudeModelInfo": "Por millón de tokens: ${input} de entrada / ${output} de salida",
+  "claudeThinkingHint": "«Velocidad» responde sin pensar (Opus siempre piensa un poco). Cuanto más piensa, mejor el matiz, más tarda cada petición y más cuesta (los tokens de pensamiento se cobran como salida).",
+  "claudeUsageRequests": "Peticiones {count}",
+  "claudeUsageRefused": "Párrafos rechazados {count}",
+  "claudeCostToday": "Coste de hoy: unos {cost}",
+  "claudeUsageOther": "{model}: {count} peticiones hoy, unos {cost}",
+  "claudeExhausted": "El crédito de la cuenta se ha agotado. Añade crédito en la Claude Console y vuelve a comprobar la clave.",
+  "claudeTestBadKey": "La clave no funciona: {error}",
+  "claudePolishHint": "Solo los párrafos que suenan literales se envían otra vez a Claude para pulirlos. Cuesta algunas peticiones y tokens más.",
+  "claudeDeviceFallbackHint": "Si falla la conexión, se agota el crédito o Claude rechaza una petición, el modelo del dispositivo traduce esos párrafos.",
+  "claudePrivacyNote": "El texto del libro se envía a la API de Anthropic. Lo que se usa se cobra a la cuenta a la que pertenece la clave."
 }

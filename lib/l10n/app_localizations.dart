@@ -4337,6 +4337,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} books will be deleted from the account and from your other devices. This cannot be undone.'**
   String syncHeldDeleteConfirm(int count);
+
+  /// translationEngineClaude
+  ///
+  /// In en, this message translates to:
+  /// **'Claude'**
+  String get translationEngineClaude;
+
+  /// translationEngineClaudeHint
+  ///
+  /// In en, this message translates to:
+  /// **'Anthropic\'s Claude translates over the internet with your own API key. It is paid: what a book uses comes off the account\'s credit.'**
+  String get translationEngineClaudeHint;
+
+  /// claudeKeyHint
+  ///
+  /// In en, this message translates to:
+  /// **'Made in the Claude Console (platform.claude.com). Kept on this device only: not in backups, not synced.'**
+  String get claudeKeyHint;
+
+  /// claudeWorkspace
+  ///
+  /// In en, this message translates to:
+  /// **'Workspace ID (optional)'**
+  String get claudeWorkspace;
+
+  /// claudeWorkspaceHint
+  ///
+  /// In en, this message translates to:
+  /// **'Only for a key that is not tied to one workspace (wrkspc_…). Leave empty otherwise.'**
+  String get claudeWorkspaceHint;
+
+  /// claudeModelInfo
+  ///
+  /// In en, this message translates to:
+  /// **'Per million tokens: \${input} in / \${output} out'**
+  String claudeModelInfo(String input, String output);
+
+  /// claudeThinkingHint
+  ///
+  /// In en, this message translates to:
+  /// **'Speed first answers without thinking (Opus always thinks a little). The more it thinks, the better the nuance, the longer each request and the higher the cost (thinking tokens are billed as output).'**
+  String get claudeThinkingHint;
+
+  /// claudeUsageRequests
+  ///
+  /// In en, this message translates to:
+  /// **'Requests {count}'**
+  String claudeUsageRequests(int count);
+
+  /// claudeUsageRefused
+  ///
+  /// In en, this message translates to:
+  /// **'Paragraphs declined {count}'**
+  String claudeUsageRefused(int count);
+
+  /// claudeCostToday
+  ///
+  /// In en, this message translates to:
+  /// **'Cost today about {cost}'**
+  String claudeCostToday(String cost);
+
+  /// claudeUsageOther
+  ///
+  /// In en, this message translates to:
+  /// **'{model}: {count} requests today, about {cost}'**
+  String claudeUsageOther(String model, int count, String cost);
+
+  /// claudeExhausted
+  ///
+  /// In en, this message translates to:
+  /// **'The account\'s credit is used up. Add credit in the Claude Console, then check the key again.'**
+  String get claudeExhausted;
+
+  /// claudeTestBadKey
+  ///
+  /// In en, this message translates to:
+  /// **'The key does not work: {error}'**
+  String claudeTestBadKey(String error);
+
+  /// claudePolishHint
+  ///
+  /// In en, this message translates to:
+  /// **'Only paragraphs that read word for word are sent to Claude once more to be smoothed. Costs a few more requests and tokens.'**
+  String get claudePolishHint;
+
+  /// claudeDeviceFallbackHint
+  ///
+  /// In en, this message translates to:
+  /// **'When the connection fails, the credit runs out or Claude declines a request, the model on this device translates those paragraphs.'**
+  String get claudeDeviceFallbackHint;
+
+  /// claudePrivacyNote
+  ///
+  /// In en, this message translates to:
+  /// **'The book\'s text is sent to Anthropic\'s API. What is used is charged to the account the key belongs to.'**
+  String get claudePrivacyNote;
 }
 
 class _AppLocalizationsDelegate

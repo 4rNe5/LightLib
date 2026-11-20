@@ -2357,4 +2357,72 @@ class AppLocalizationsJa extends AppLocalizations {
   String syncHeldDeleteConfirm(int count) {
     return '$count 冊をアカウントと他の端末からも削除します。元に戻せません。';
   }
+
+  @override
+  String get translationEngineClaude => 'Claude';
+
+  @override
+  String get translationEngineClaudeHint =>
+      'Anthropic の Claude が自分の API キーでインターネット経由で翻訳します。有料で、使った分がアカウントのクレジットから引かれます。';
+
+  @override
+  String get claudeKeyHint =>
+      'Claude Console (platform.claude.com) で作成します。この端末にだけ保存され、バックアップにも同期にも入りません。';
+
+  @override
+  String get claudeWorkspace => 'ワークスペース ID（任意）';
+
+  @override
+  String get claudeWorkspaceHint =>
+      'キーが特定のワークスペースに紐づいていない場合だけ入力します (wrkspc_…)。それ以外は空のままで。';
+
+  @override
+  String claudeModelInfo(String input, String output) {
+    return '100万トークンあたり 入力 \$$input / 出力 \$$output';
+  }
+
+  @override
+  String get claudeThinkingHint =>
+      '速度優先は考えずにすぐ答えます（Opus は常に少し考えます）。長く考えるほどニュアンスが良くなりますが、リクエストごとの時間と費用が増えます（思考トークンは出力料金）。';
+
+  @override
+  String claudeUsageRequests(int count) {
+    return 'リクエスト $count回';
+  }
+
+  @override
+  String claudeUsageRefused(int count) {
+    return '拒否された段落 $count';
+  }
+
+  @override
+  String claudeCostToday(String cost) {
+    return '今日の料金 約 $cost';
+  }
+
+  @override
+  String claudeUsageOther(String model, int count, String cost) {
+    return '$model: 今日のリクエスト $count回、約 $cost';
+  }
+
+  @override
+  String get claudeExhausted =>
+      'アカウントのクレジットを使い切りました。Claude Console でチャージしてから、キーをもう一度確認してください。';
+
+  @override
+  String claudeTestBadKey(String error) {
+    return 'キーが使えません: $error';
+  }
+
+  @override
+  String get claudePolishHint =>
+      '直訳調の強い段落だけを Claude にもう一度送り、自然に直します。リクエストとトークンが少し増えます。';
+
+  @override
+  String get claudeDeviceFallbackHint =>
+      '接続の問題、クレジット切れ、Claude がリクエストを断った場合、その段落だけ端末のモデルが翻訳します。';
+
+  @override
+  String get claudePrivacyNote =>
+      '本の本文が Anthropic の API に送信されます。使った分は、キーが属するアカウントに課金されます。';
 }

@@ -2447,4 +2447,72 @@ class AppLocalizationsDe extends AppLocalizations {
   String syncHeldDeleteConfirm(int count) {
     return '$count Bücher werden im Konto und auf deinen anderen Geräten gelöscht. Das lässt sich nicht rückgängig machen.';
   }
+
+  @override
+  String get translationEngineClaude => 'Claude';
+
+  @override
+  String get translationEngineClaudeHint =>
+      'Claude von Anthropic übersetzt über das Internet mit deinem eigenen API-Schlüssel. Kostenpflichtig: Der Verbrauch wird vom Guthaben des Kontos abgezogen.';
+
+  @override
+  String get claudeKeyHint =>
+      'Wird in der Claude Console (platform.claude.com) erstellt. Bleibt nur auf diesem Gerät: nicht in Backups, nicht synchronisiert.';
+
+  @override
+  String get claudeWorkspace => 'Workspace-ID (optional)';
+
+  @override
+  String get claudeWorkspaceHint =>
+      'Nur für einen Schlüssel, der an keinen Workspace gebunden ist (wrkspc_…). Sonst leer lassen.';
+
+  @override
+  String claudeModelInfo(String input, String output) {
+    return 'Pro Million Tokens: \$$input rein / \$$output raus';
+  }
+
+  @override
+  String get claudeThinkingHint =>
+      '„Tempo“ antwortet ohne Nachdenken (Opus denkt immer ein wenig). Je länger es nachdenkt, desto besser die Nuancen, desto länger dauert jede Anfrage und desto höher die Kosten (Denk-Tokens zählen als Ausgabe).';
+
+  @override
+  String claudeUsageRequests(int count) {
+    return 'Anfragen $count';
+  }
+
+  @override
+  String claudeUsageRefused(int count) {
+    return 'Abgelehnte Absätze $count';
+  }
+
+  @override
+  String claudeCostToday(String cost) {
+    return 'Kosten heute etwa $cost';
+  }
+
+  @override
+  String claudeUsageOther(String model, int count, String cost) {
+    return '$model: heute $count Anfragen, etwa $cost';
+  }
+
+  @override
+  String get claudeExhausted =>
+      'Das Guthaben des Kontos ist aufgebraucht. Lade es in der Claude Console auf und prüfe den Schlüssel erneut.';
+
+  @override
+  String claudeTestBadKey(String error) {
+    return 'Der Schlüssel funktioniert nicht: $error';
+  }
+
+  @override
+  String get claudePolishHint =>
+      'Nur wörtlich klingende Absätze gehen noch einmal an Claude und werden geglättet. Kostet ein paar Anfragen und Tokens mehr.';
+
+  @override
+  String get claudeDeviceFallbackHint =>
+      'Bei Verbindungsproblemen, aufgebrauchtem Guthaben oder wenn Claude eine Anfrage ablehnt, übersetzt das Modell auf dem Gerät diese Absätze.';
+
+  @override
+  String get claudePrivacyNote =>
+      'Der Text des Buchs wird an die API von Anthropic gesendet. Der Verbrauch wird dem Konto berechnet, zu dem der Schlüssel gehört.';
 }

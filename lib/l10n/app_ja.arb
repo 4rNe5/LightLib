@@ -703,5 +703,21 @@
   "syncUnreadable": "{count} 冊はファイルを開けないため同期から外しました: {names}。このアプリが作ったファイルではありません(他のアプリや以前のインストールが置いたもの)。もう一度ダウンロードするか、ライブラリの「EPUB / PDF を読み込む」で入れ直してください。",
   "syncHeldDelete": "アカウントからも削除",
   "syncHeldFetch": "この端末に戻す",
-  "syncHeldDeleteConfirm": "{count} 冊をアカウントと他の端末からも削除します。元に戻せません。"
+  "syncHeldDeleteConfirm": "{count} 冊をアカウントと他の端末からも削除します。元に戻せません。",
+  "translationEngineClaude": "Claude",
+  "translationEngineClaudeHint": "Anthropic の Claude が自分の API キーでインターネット経由で翻訳します。有料で、使った分がアカウントのクレジットから引かれます。",
+  "claudeKeyHint": "Claude Console (platform.claude.com) で作成します。この端末にだけ保存され、バックアップにも同期にも入りません。",
+  "claudeWorkspace": "ワークスペース ID（任意）",
+  "claudeWorkspaceHint": "キーが特定のワークスペースに紐づいていない場合だけ入力します (wrkspc_…)。それ以外は空のままで。",
+  "claudeModelInfo": "100万トークンあたり 入力 ${input} / 出力 ${output}",
+  "claudeThinkingHint": "速度優先は考えずにすぐ答えます（Opus は常に少し考えます）。長く考えるほどニュアンスが良くなりますが、リクエストごとの時間と費用が増えます（思考トークンは出力料金）。",
+  "claudeUsageRequests": "リクエスト {count}回",
+  "claudeUsageRefused": "拒否された段落 {count}",
+  "claudeCostToday": "今日の料金 約 {cost}",
+  "claudeUsageOther": "{model}: 今日のリクエスト {count}回、約 {cost}",
+  "claudeExhausted": "アカウントのクレジットを使い切りました。Claude Console でチャージしてから、キーをもう一度確認してください。",
+  "claudeTestBadKey": "キーが使えません: {error}",
+  "claudePolishHint": "直訳調の強い段落だけを Claude にもう一度送り、自然に直します。リクエストとトークンが少し増えます。",
+  "claudeDeviceFallbackHint": "接続の問題、クレジット切れ、Claude がリクエストを断った場合、その段落だけ端末のモデルが翻訳します。",
+  "claudePrivacyNote": "本の本文が Anthropic の API に送信されます。使った分は、キーが属するアカウントに課金されます。"
 }

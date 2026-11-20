@@ -709,5 +709,21 @@
   "syncUnreadable": "{count} livres n’ont pas pu être ouverts et n’ont pas été synchronisés : {names}. Leurs fichiers n’ont pas été créés par cette app (une autre app ou une installation précédente les a placés là). Téléchargez-les de nouveau ou ajoutez-les avec Importer EPUB / PDF.",
   "syncHeldDelete": "Supprimer aussi du compte",
   "syncHeldFetch": "Les récupérer ici",
-  "syncHeldDeleteConfirm": "{count} livres seront supprimés du compte et de vos autres appareils. Cette action est irréversible."
+  "syncHeldDeleteConfirm": "{count} livres seront supprimés du compte et de vos autres appareils. Cette action est irréversible.",
+  "translationEngineClaude": "Claude",
+  "translationEngineClaudeHint": "Claude d'Anthropic traduit par internet avec votre propre clé API. Payant : ce qu'un livre consomme est déduit du crédit du compte.",
+  "claudeKeyHint": "Créée dans la Claude Console (platform.claude.com). Conservée uniquement sur cet appareil : ni dans les sauvegardes ni dans la synchronisation.",
+  "claudeWorkspace": "ID de l'espace de travail (facultatif)",
+  "claudeWorkspaceHint": "Uniquement pour une clé qui n'est pas liée à un espace de travail (wrkspc_…). Sinon, laissez vide.",
+  "claudeModelInfo": "Par million de tokens : ${input} en entrée / ${output} en sortie",
+  "claudeThinkingHint": "« Vitesse » répond sans réfléchir (Opus réfléchit toujours un peu). Plus il réfléchit, meilleures sont les nuances, plus chaque requête est longue et coûteuse (les tokens de réflexion sont facturés en sortie).",
+  "claudeUsageRequests": "Requêtes {count}",
+  "claudeUsageRefused": "Paragraphes refusés {count}",
+  "claudeCostToday": "Coût aujourd'hui : environ {cost}",
+  "claudeUsageOther": "{model} : {count} requêtes aujourd'hui, environ {cost}",
+  "claudeExhausted": "Le crédit du compte est épuisé. Rechargez-le dans la Claude Console, puis vérifiez de nouveau la clé.",
+  "claudeTestBadKey": "La clé ne fonctionne pas : {error}",
+  "claudePolishHint": "Seuls les paragraphes trop littéraux sont renvoyés une fois à Claude pour être lissés. Coûte quelques requêtes et tokens de plus.",
+  "claudeDeviceFallbackHint": "En cas de problème de connexion, de crédit épuisé ou de refus de Claude, le modèle de l'appareil traduit ces paragraphes.",
+  "claudePrivacyNote": "Le texte du livre est envoyé à l'API d'Anthropic. Ce qui est utilisé est facturé au compte auquel appartient la clé."
 }

@@ -2454,4 +2454,72 @@ class AppLocalizationsFr extends AppLocalizations {
   String syncHeldDeleteConfirm(int count) {
     return '$count livres seront supprimés du compte et de vos autres appareils. Cette action est irréversible.';
   }
+
+  @override
+  String get translationEngineClaude => 'Claude';
+
+  @override
+  String get translationEngineClaudeHint =>
+      'Claude d\'Anthropic traduit par internet avec votre propre clé API. Payant : ce qu\'un livre consomme est déduit du crédit du compte.';
+
+  @override
+  String get claudeKeyHint =>
+      'Créée dans la Claude Console (platform.claude.com). Conservée uniquement sur cet appareil : ni dans les sauvegardes ni dans la synchronisation.';
+
+  @override
+  String get claudeWorkspace => 'ID de l\'espace de travail (facultatif)';
+
+  @override
+  String get claudeWorkspaceHint =>
+      'Uniquement pour une clé qui n\'est pas liée à un espace de travail (wrkspc_…). Sinon, laissez vide.';
+
+  @override
+  String claudeModelInfo(String input, String output) {
+    return 'Par million de tokens : \$$input en entrée / \$$output en sortie';
+  }
+
+  @override
+  String get claudeThinkingHint =>
+      '« Vitesse » répond sans réfléchir (Opus réfléchit toujours un peu). Plus il réfléchit, meilleures sont les nuances, plus chaque requête est longue et coûteuse (les tokens de réflexion sont facturés en sortie).';
+
+  @override
+  String claudeUsageRequests(int count) {
+    return 'Requêtes $count';
+  }
+
+  @override
+  String claudeUsageRefused(int count) {
+    return 'Paragraphes refusés $count';
+  }
+
+  @override
+  String claudeCostToday(String cost) {
+    return 'Coût aujourd\'hui : environ $cost';
+  }
+
+  @override
+  String claudeUsageOther(String model, int count, String cost) {
+    return '$model : $count requêtes aujourd\'hui, environ $cost';
+  }
+
+  @override
+  String get claudeExhausted =>
+      'Le crédit du compte est épuisé. Rechargez-le dans la Claude Console, puis vérifiez de nouveau la clé.';
+
+  @override
+  String claudeTestBadKey(String error) {
+    return 'La clé ne fonctionne pas : $error';
+  }
+
+  @override
+  String get claudePolishHint =>
+      'Seuls les paragraphes trop littéraux sont renvoyés une fois à Claude pour être lissés. Coûte quelques requêtes et tokens de plus.';
+
+  @override
+  String get claudeDeviceFallbackHint =>
+      'En cas de problème de connexion, de crédit épuisé ou de refus de Claude, le modèle de l\'appareil traduit ces paragraphes.';
+
+  @override
+  String get claudePrivacyNote =>
+      'Le texte du livre est envoyé à l\'API d\'Anthropic. Ce qui est utilisé est facturé au compte auquel appartient la clé.';
 }

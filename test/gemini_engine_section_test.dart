@@ -6,11 +6,16 @@ import 'package:flutter_test/flutter_test.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/translation/claude/claude_settings.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
 import 'package:openlib/ui/components/gemini_engine_section.dart';
 
 void main() {
+  // (The section looks at Claude's settings too: set, so that nothing
+  // is read from the database.)
+  setUp(() => ClaudeSettings.instance.debugSet(useClaude: false));
+
   Widget app() => MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,

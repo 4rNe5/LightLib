@@ -3406,5 +3406,108 @@
         "type": "int"
       }
     }
+  },
+  "translationEngineClaude": "Claude",
+  "@translationEngineClaude": {
+    "description": "translationEngineClaude"
+  },
+  "translationEngineClaudeHint": "Anthropic's Claude translates over the internet with your own API key. It is paid: what a book uses comes off the account's credit.",
+  "@translationEngineClaudeHint": {
+    "description": "translationEngineClaudeHint"
+  },
+  "claudeKeyHint": "Made in the Claude Console (platform.claude.com). Kept on this device only: not in backups, not synced.",
+  "@claudeKeyHint": {
+    "description": "claudeKeyHint"
+  },
+  "claudeWorkspace": "Workspace ID (optional)",
+  "@claudeWorkspace": {
+    "description": "claudeWorkspace"
+  },
+  "claudeWorkspaceHint": "Only for a key that is not tied to one workspace (wrkspc_…). Leave empty otherwise.",
+  "@claudeWorkspaceHint": {
+    "description": "claudeWorkspaceHint"
+  },
+  "claudeModelInfo": "Per million tokens: ${input} in / ${output} out",
+  "@claudeModelInfo": {
+    "description": "claudeModelInfo",
+    "placeholders": {
+      "input": {
+        "type": "String"
+      },
+      "output": {
+        "type": "String"
+      }
+    }
+  },
+  "claudeThinkingHint": "Speed first answers without thinking (Opus always thinks a little). The more it thinks, the better the nuance, the longer each request and the higher the cost (thinking tokens are billed as output).",
+  "@claudeThinkingHint": {
+    "description": "claudeThinkingHint"
+  },
+  "claudeUsageRequests": "Requests {count}",
+  "@claudeUsageRequests": {
+    "description": "claudeUsageRequests",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "claudeUsageRefused": "Paragraphs declined {count}",
+  "@claudeUsageRefused": {
+    "description": "claudeUsageRefused",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "claudeCostToday": "Cost today about {cost}",
+  "@claudeCostToday": {
+    "description": "claudeCostToday",
+    "placeholders": {
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "claudeUsageOther": "{model}: {count} requests today, about {cost}",
+  "@claudeUsageOther": {
+    "description": "claudeUsageOther",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "cost": {
+        "type": "String"
+      }
+    }
+  },
+  "claudeExhausted": "The account's credit is used up. Add credit in the Claude Console, then check the key again.",
+  "@claudeExhausted": {
+    "description": "claudeExhausted"
+  },
+  "claudeTestBadKey": "The key does not work: {error}",
+  "@claudeTestBadKey": {
+    "description": "claudeTestBadKey",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "claudePolishHint": "Only paragraphs that read word for word are sent to Claude once more to be smoothed. Costs a few more requests and tokens.",
+  "@claudePolishHint": {
+    "description": "claudePolishHint"
+  },
+  "claudeDeviceFallbackHint": "When the connection fails, the credit runs out or Claude declines a request, the model on this device translates those paragraphs.",
+  "@claudeDeviceFallbackHint": {
+    "description": "claudeDeviceFallbackHint"
+  },
+  "claudePrivacyNote": "The book's text is sent to Anthropic's API. What is used is charged to the account the key belongs to.",
+  "@claudePrivacyNote": {
+    "description": "claudePrivacyNote"
   }
 }

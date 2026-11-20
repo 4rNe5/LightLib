@@ -14,9 +14,11 @@ import 'package:path/path.dart' as p;
 // Project imports:
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/storage/app_files.dart';
+import 'package:openlib/services/translation/claude/claude_settings.dart';
+import 'package:openlib/services/translation/cloud_engine.dart';
 import 'package:openlib/services/translation/gemini/gemini_api.dart';
 
-/// Preference: `device` (the model on the phone) or `gemini`.
+/// Preference: `device` (the model on the phone), `gemini` or `claude`.
 const translationEnginePref = 'translationEngine';
 const geminiModelPref = 'geminiModel';
 const geminiSafetyPref = 'geminiSafety';
@@ -161,7 +163,7 @@ class GeminiUsage {
   }
 }
 
-class GeminiSettings extends ChangeNotifier {
+class GeminiSettings extends ChangeNotifier implements CloudSettings {
   GeminiSettings._();
   static final GeminiSettings instance = GeminiSettings._();
 
@@ -199,12 +201,29 @@ class GeminiSettings extends ChangeNotifier {
   String get apiKey => _key;
   GeminiModel get model => _model;
   Map<GeminiHarm, GeminiBlock> get safety => Map.unmodifiable(_safety);
+  @override
   int get concurrency => _concurrency;
   GeminiThinking get thinking => _thinking;
+  @override
   bool get deviceFallback => _deviceFallback;
 
   /// Whether stiff paragraphs are sent once more ([geminiPolishPref]).
+  @override
   bool get polish => _polish;
+
+  @override
+  String get engineLabel => 'Gemini';
+
+  /// The chosen model's day is used up.
+  @override
+  bool get exhausted => usage.exhausted;
+
+  /// Another engine was chosen ([gemini]: this one was).
+  void engineChosen({required bool gemini}) {
+    if (kIsWeb || _useGemini == gemini) return;
+    _useGemini = gemini;
+    notifyListeners();
+  }
 
   /// Today's use of the model chosen now.
   GeminiUsage get usage => usageOf(_model);
@@ -317,6 +336,8 @@ class GeminiSettings extends ChangeNotifier {
 
   Future<void> setUseGemini(bool on) async {
     _useGemini = on;
+    // One engine at a time.
+    ClaudeSettings.instance.engineChosen(claude: false);
     notifyListeners();
     await _save(translationEnginePref, on ? 'gemini' : 'device');
   }
@@ -403,6 +424,7 @@ class GeminiSettings extends ChangeNotifier {
             paragraphs: u.paragraphs + paragraphs));
   }
 
+  @override
   void recordBlocked(GeminiBlockKind kind, int paragraphs) => _update(
       _model,
       kind == GeminiBlockKind.safety
@@ -410,6 +432,7 @@ class GeminiSettings extends ChangeNotifier {
           : usage.copyWith(
               blockedProhibited: usage.blockedProhibited + paragraphs));
 
+  @override
   void recordOnDevice(int paragraphs) =>
       _update(_model, usage.copyWith(onDevice: usage.onDevice + paragraphs));
 

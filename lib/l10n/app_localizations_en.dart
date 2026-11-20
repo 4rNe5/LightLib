@@ -2422,4 +2422,72 @@ class AppLocalizationsEn extends AppLocalizations {
   String syncHeldDeleteConfirm(int count) {
     return '$count books will be deleted from the account and from your other devices. This cannot be undone.';
   }
+
+  @override
+  String get translationEngineClaude => 'Claude';
+
+  @override
+  String get translationEngineClaudeHint =>
+      'Anthropic\'s Claude translates over the internet with your own API key. It is paid: what a book uses comes off the account\'s credit.';
+
+  @override
+  String get claudeKeyHint =>
+      'Made in the Claude Console (platform.claude.com). Kept on this device only: not in backups, not synced.';
+
+  @override
+  String get claudeWorkspace => 'Workspace ID (optional)';
+
+  @override
+  String get claudeWorkspaceHint =>
+      'Only for a key that is not tied to one workspace (wrkspc_…). Leave empty otherwise.';
+
+  @override
+  String claudeModelInfo(String input, String output) {
+    return 'Per million tokens: \$$input in / \$$output out';
+  }
+
+  @override
+  String get claudeThinkingHint =>
+      'Speed first answers without thinking (Opus always thinks a little). The more it thinks, the better the nuance, the longer each request and the higher the cost (thinking tokens are billed as output).';
+
+  @override
+  String claudeUsageRequests(int count) {
+    return 'Requests $count';
+  }
+
+  @override
+  String claudeUsageRefused(int count) {
+    return 'Paragraphs declined $count';
+  }
+
+  @override
+  String claudeCostToday(String cost) {
+    return 'Cost today about $cost';
+  }
+
+  @override
+  String claudeUsageOther(String model, int count, String cost) {
+    return '$model: $count requests today, about $cost';
+  }
+
+  @override
+  String get claudeExhausted =>
+      'The account\'s credit is used up. Add credit in the Claude Console, then check the key again.';
+
+  @override
+  String claudeTestBadKey(String error) {
+    return 'The key does not work: $error';
+  }
+
+  @override
+  String get claudePolishHint =>
+      'Only paragraphs that read word for word are sent to Claude once more to be smoothed. Costs a few more requests and tokens.';
+
+  @override
+  String get claudeDeviceFallbackHint =>
+      'When the connection fails, the credit runs out or Claude declines a request, the model on this device translates those paragraphs.';
+
+  @override
+  String get claudePrivacyNote =>
+      'The book\'s text is sent to Anthropic\'s API. What is used is charged to the account the key belongs to.';
 }
