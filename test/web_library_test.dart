@@ -76,8 +76,10 @@ List<WebBook> merged({
   RemoteLibrary remote = const RemoteLibrary(),
   Map<String, double> fractions = const {},
   Map<String, DateTime> readAt = const {},
+  Map<String, String> series = const {},
 }) =>
     mergeLibrary(
+      series: series,
       local: local,
       remote: remote,
       md5Of: (book) => book.id.substring('local_'.length),
@@ -175,6 +177,29 @@ void main() {
         }),
       );
       expect(books.single.readAt, isNull);
+    });
+  });
+
+  group('series made on the devices', () {
+    test('a book carries its series by its MD5, here or only on the '
+        'account; volumes come in the order of their numbers', () {
+      final books = merged(
+        local: [here(a, 'Tale 2')],
+        remote: RemoteLibrary(books: [
+          there(a, 'Tale 2'),
+          there(b, 'Tale 1'),
+          there(c, 'Another'),
+        ]),
+        series: const {a: 'Tale', b: 'Tale'},
+      );
+      expect({for (final x in books) x.title: x.series},
+          {'Tale 2': 'Tale', 'Tale 1': 'Tale', 'Another': null});
+      final series = webSeries(books);
+      expect(series.single.name, 'Tale');
+      expect([for (final v in series.single.volumes) v.title],
+          ['Tale 1', 'Tale 2']);
+      expect(webSeries(merged(remote: RemoteLibrary(books: [there(c, 'X')]))),
+          isEmpty);
     });
   });
 
@@ -503,6 +528,51 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
     }
+
+    testWidgets('a series made on a device: one row for its volumes, in '
+        'order, and out of the grid - until something is searched',
+        (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final grouped = merged(
+        remote: RemoteLibrary(books: [
+          there(a, 'Tale 2'),
+          there(b, 'Tale 1'),
+          there(c, 'Another'),
+        ]),
+        series: const {a: 'Tale', b: 'Tale'},
+      );
+      await tester
+          .pumpWidget(app(WebLibraryPage(library: _Library(grouped))));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(tester.takeException(), isNull);
+      final row = find.byKey(const ValueKey('webSeries:Tale'));
+      expect(row, findsOneWidget);
+      expect(find.descendant(of: row, matching: find.text('2 volumes')),
+          findsOneWidget);
+      final first = find.descendant(
+          of: row, matching: find.byKey(const ValueKey('webBook:$b')));
+      final second = find.descendant(
+          of: row, matching: find.byKey(const ValueKey('webBook:$a')));
+      expect(tester.getTopLeft(first).dx,
+          lessThan(tester.getTopLeft(second).dx));
+      // Each book once: the other one is in the grid, not in the row.
+      expect(find.byKey(const ValueKey('webBook:$a')), findsOneWidget);
+      expect(find.byKey(const ValueKey('webBook:$c')), findsOneWidget);
+      expect(
+          find.descendant(
+              of: row, matching: find.byKey(const ValueKey('webBook:$c'))),
+          findsNothing);
+
+      await tester.enterText(find.byKey(const ValueKey('webSearch')), 'tale');
+      await tester.pump();
+      expect(find.byKey(const ValueKey('webSeries:Tale')), findsNothing);
+      expect(find.byKey(const ValueKey('webBook:$a')), findsOneWidget);
+      expect(find.byKey(const ValueKey('webBook:$b')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('a desktop window: side bar, search, the last book to go on',
         (tester) async {

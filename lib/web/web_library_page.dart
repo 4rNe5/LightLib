@@ -610,10 +610,20 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
         ),
       );
     }
-    final shown = _shown(all);
-    final resume = _filter == WebFilter.all && _query.trim().isEmpty
-        ? continueReading(all)
-        : null;
+    final everything = _filter == WebFilter.all && _query.trim().isEmpty;
+    final arranged = _shown(all);
+    // The series made on the devices, each in a row of its own; their
+    // books leave the grid - unless something is looked for.
+    final series = everything
+        ? webSeries(arranged)
+        : const <({String name, List<WebBook> volumes})>[];
+    final shown = series.isEmpty
+        ? arranged
+        : [
+            for (final b in arranged)
+              if (b.series == null || b.series!.isEmpty) b,
+          ];
+    final resume = everything ? continueReading(all) : null;
     return CustomScrollView(
       key: const ValueKey('webLibraryScroll'),
       slivers: [
@@ -633,7 +643,31 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
               ),
             ),
           ),
-        if (shown.isEmpty)
+        if (series.isNotEmpty)
+          SliverPadding(
+            padding: EdgeInsets.fromLTRB(side, 14, side, 0),
+            sliver: SliverList.list(children: [
+              for (final s in series)
+                _SeriesRow(
+                  key: ValueKey('webSeries:${s.name}'),
+                  name: s.name,
+                  count: l10n.seriesVolumes(s.volumes.length),
+                  tileWidth: wide ? 132 : 100,
+                  children: [
+                    for (final b in s.volumes)
+                      _BookTile(
+                        key: ValueKey('webBook:${b.key}'),
+                        book: b,
+                        onOpen: () => _details(b),
+                        onMenu: (at) => _menu(b, at),
+                      ),
+                  ],
+                ),
+            ]),
+          ),
+        if (shown.isEmpty && series.isNotEmpty)
+          const SliverToBoxAdapter(child: SizedBox(height: 48))
+        else if (shown.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
             child: Center(
@@ -672,6 +706,72 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
             }),
           ),
       ],
+    );
+  }
+}
+
+/// A series: its name, and its volumes in one row.
+class _SeriesRow extends StatelessWidget {
+  const _SeriesRow({
+    super.key,
+    required this.name,
+    required this.count,
+    required this.tileWidth,
+    required this.children,
+  });
+
+  final String name;
+  final String count;
+  final double tileWidth;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.fromLTRB(14, 12, 0, 4),
+      decoration: BoxDecoration(
+        color: scheme.onSurface.withAlpha(12),
+        borderRadius: BorderRadius.circular(18),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 14, bottom: 10),
+            child: Row(
+              children: [
+                Icon(Icons.collections_bookmark_outlined,
+                    size: 16, color: scheme.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w700)),
+                ),
+                Text(count,
+                    style: TextStyle(
+                        fontSize: 12, color: scheme.onSurface.withAlpha(150))),
+              ],
+            ),
+          ),
+          SizedBox(
+            // The cover, then two lines of title and one of author.
+            height: tileWidth / 0.7 + 68,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(right: 14),
+              itemCount: children.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 14),
+              itemBuilder: (context, i) =>
+                  SizedBox(width: tileWidth, child: children[i]),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

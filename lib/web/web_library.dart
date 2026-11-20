@@ -11,6 +11,8 @@ import 'package:flutter/foundation.dart';
 // Project imports:
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/local_book_import.dart' show md5FromBookId;
+import 'package:openlib/services/search_results.dart' show volumeOf;
+import 'package:openlib/services/sync/series_sync.dart';
 import 'package:openlib/services/sync/remote_library.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
 
@@ -26,6 +28,7 @@ class WebBook {
     this.completed = false,
     this.readAt,
     this.translated = const {},
+    this.series,
   });
 
   final String? md5;
@@ -41,6 +44,9 @@ class WebBook {
 
   /// Paragraphs translated, by language.
   final Map<String, int> translated;
+
+  /// The series the reader put it in on one of the devices, if any.
+  final String? series;
 
   String get key => md5 ?? local!.id;
   bool get downloaded => local != null;
@@ -99,8 +105,11 @@ class WebLibrary extends ChangeNotifier {
     final md5s = await _db.getSyncStates('md5:');
     final fractions = await _db.getSyncStates('frac:');
     final stamps = await _db.getSyncStates('pos:');
+    final series = sharedSeries(
+        '${await _db.getPreference(seriesSharedPref).catchError((_) => null) ?? ''}');
     if (_disposed || generation != _generation) return;
     _books = mergeLibrary(
+      series: series,
       local: local,
       remote: _remote.library,
       md5Of: (b) => md5FromBookId(b.id) ?? md5s['md5:${b.getFileName()}'],
@@ -133,6 +142,7 @@ List<WebBook> mergeLibrary({
   required String? Function(MyBook book) md5Of,
   required double? Function(MyBook book) fractionOf,
   required DateTime? Function(MyBook book) readAtOf,
+  Map<String, String> series = const {},
 }) {
   final rows = {for (final b in remote.books) b.md5: b};
   final out = <WebBook>[];
@@ -153,6 +163,7 @@ List<WebBook> mergeLibrary({
       completed: theirs?.completed ?? false,
       readAt: theirsNewer ? theirs.updatedAt : mine ?? _known(theirs),
       translated: remote.translated[md5] ?? const {},
+      series: md5 == null ? null : series[md5],
     ));
   }
   for (final row in remote.books) {
@@ -165,9 +176,33 @@ List<WebBook> mergeLibrary({
       completed: theirs?.completed ?? false,
       readAt: _known(theirs),
       translated: remote.translated[row.md5] ?? const {},
+      series: series[row.md5],
     ));
   }
   return out;
+}
+
+/// The series among [books], in the order their first volumes come in
+/// [books]; each one's volumes by the number in their titles.
+List<({String name, List<WebBook> volumes})> webSeries(List<WebBook> books) {
+  final groups = <String, List<WebBook>>{};
+  for (final b in books) {
+    final name = b.series;
+    if (name != null && name.isNotEmpty) (groups[name] ??= []).add(b);
+  }
+  return [
+    for (final MapEntry(key: name, value: volumes) in groups.entries)
+      (
+        name: name,
+        volumes: volumes
+          ..sort((x, y) {
+            final a = volumeOf(x.title).number, b = volumeOf(y.title).number;
+            if (a != null && b != null && a != b) return a.compareTo(b);
+            if ((a == null) != (b == null)) return a == null ? 1 : -1;
+            return x.title.compareTo(y.title);
+          }),
+      ),
+  ];
 }
 
 DateTime? _known(RemoteProgress? p) =>
