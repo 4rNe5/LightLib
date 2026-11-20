@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- What Android's own backup leaves out (Android 11 and older): the API
+     keys and the Z-Library session stay on the device they were typed on.
+     The files are in the app's files folder (AppFiles.supportPath). -->
+<full-backup-content>
+    <exclude domain="file" path="claude_api_key" />
+    <exclude domain="file" path="gemini_api_key" />
+    <exclude domain="file" path="zlibrary_session" />
+</full-backup-content>

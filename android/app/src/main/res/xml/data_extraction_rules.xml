@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The same for Android 12 and newer: neither Google's backup nor a
+     transfer to a new device carries the API keys or the Z-Library
+     session. -->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="claude_api_key" />
+        <exclude domain="file" path="gemini_api_key" />
+        <exclude domain="file" path="zlibrary_session" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="claude_api_key" />
+        <exclude domain="file" path="gemini_api_key" />
+        <exclude domain="file" path="zlibrary_session" />
+    </device-transfer>
+</data-extraction-rules>
