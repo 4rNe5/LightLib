@@ -126,6 +126,26 @@ so prices are compared on the tokens each one reports, not on its price list.
 To compare engines, give both the same `EVAL_GLOSSARY` file and the same
 `EVAL_STARTS`.
 
+## More context, on trial
+
+What the app does not send yet: how the characters speak to each other (the
+book read whole for it), and where the story is before each stretch (the 200
+paragraphs before it, summed up). Made once, then given to any engine after
+the instructions of its requests:
+
+```bash
+EVAL_CLAUDE_KEY=... EVAL_SOURCE=book.epub EVAL_STARTS=890,1923 \
+EVAL_GLOSSARY=glossary.json EVAL_CONTEXT_MAKE=context.json \
+/opt/flutter/bin/flutter test --no-pub tool/translation_eval/gemini_pipeline_test.dart
+EVAL_CLAUDE_KEY=... EVAL_SOURCE=book.epub EVAL_STARTS=890,1923 \
+EVAL_GLOSSARY=glossary.json EVAL_CONTEXT=context.json \
+[EVAL_CONTEXT_USE=speech|summary] EVAL_OUT=with.json \
+/opt/flutter/bin/flutter test --no-pub tool/translation_eval/gemini_pipeline_test.dart
+```
+
+Compare `with.json` and a run without it with the judge. What the trial on
+book 3 found is in CLAUDE.md.
+
 ## Which reads better
 
 ```bash

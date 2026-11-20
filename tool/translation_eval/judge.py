@@ -105,6 +105,10 @@ def ask_claude(model, key, user, effort):
                 time.sleep(20 * (attempt + 1))
                 continue
             sys.exit(f'{model}: HTTP {e.code} {detail[:300]}')
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            if attempt == 3:
+                sys.exit(f'{model}: {e}')
+            time.sleep(20 * (attempt + 1))
     sys.exit('no answer')
 
 
@@ -137,6 +141,11 @@ def ask(model, key, user):
                 time.sleep(20 * (attempt + 1))
                 continue
             sys.exit(f'{model}: HTTP {e.code} {detail[:300]}')
+        except (urllib.error.URLError, ConnectionError, TimeoutError) as e:
+            # A connection dropped on the way: asked again.
+            if attempt == 3:
+                sys.exit(f'{model}: {e}')
+            time.sleep(20 * (attempt + 1))
     sys.exit('no answer')
 
 

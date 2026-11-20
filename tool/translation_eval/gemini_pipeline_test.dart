@@ -153,6 +153,106 @@ class _Meter extends Interceptor {
   }
 }
 
+/// An engine told more than the app tells it: [notes] go after the
+/// instructions of every request (a trial of what the app could send).
+class _WithNotes implements CloudClient {
+  _WithNotes(this.inner);
+  final CloudClient inner;
+  String notes = '';
+
+  @override
+  Future<GeminiResult> generate({
+    required String system,
+    required String user,
+    Map<String, Object?>? schema,
+    int? maxOutputTokens,
+    int paragraphs = 0,
+  }) =>
+      inner.generate(
+          system: notes.isEmpty ? system : '$system\n\n$notes',
+          user: user,
+          schema: schema,
+          maxOutputTokens: maxOutputTokens,
+          paragraphs: paragraphs);
+}
+
+const _speechSystem = '''
+You are preparing notes for translating a Japanese light novel into Korean.
+Read this part of the book and list how its characters speak TO EACH OTHER in dialogue.
+For each pair that exchanges at least two lines here, one entry per direction:
+- from, to: the names exactly as the book mostly writes them (しずく, 神坂先輩's name without the honorific).
+- level: "반말" when from speaks to to in plain forms (だ, だよ, する), "존댓말" when in polite forms (です, ます), "섞임" when it changes.
+- calls: how from addresses to in the book, as written (先輩, しずくちゃん, お前); "" when never.
+The narrator counts as a character under the name the others call them. No pairs you are not sure of.''';
+
+const _speechSchema = <String, Object?>{
+  'type': 'object',
+  'properties': {
+    'pairs': {
+      'type': 'array',
+      'items': {
+        'type': 'object',
+        'properties': {
+          'from': {'type': 'string'},
+          'to': {'type': 'string'},
+          'level': {'type': 'string'},
+          'calls': {'type': 'string'},
+        },
+        'required': ['from', 'to', 'level', 'calls'],
+      },
+    },
+  },
+  'required': ['pairs'],
+};
+
+const _summarySystem = '''
+You are helping a translator who will translate the paragraphs that come right after this stretch of a Japanese light novel.
+In at most six plain English sentences say: what has happened in this stretch, and the scene at its end - where it is, who is present, who is talking to whom, and who tells the story.
+Write every name exactly as the book writes it, in Japanese. Nothing the text does not say.''';
+
+/// What a trial of "more context" sends: how the characters speak to
+/// each other (the book read whole), and where the story is before each
+/// stretch (the 200 paragraphs before it, summed up).
+Future<Map<String, Object?>> _makeContext(
+    CloudClient client, List<String> paragraphs, List<int> starts) async {
+  final levels = <String, Map<String, int>>{};
+  final calls = <String, String>{};
+  for (final chunk in bookAnalysisChunks(paragraphs.join('\n'))) {
+    final r = await client.generate(
+        system: _speechSystem,
+        user: chunk,
+        schema: _speechSchema,
+        maxOutputTokens: 4096);
+    try {
+      for (final raw in (jsonDecode(r.text) as Map)['pairs'] as List) {
+        final pair = raw as Map;
+        final from = '${pair['from']}'.trim(), to = '${pair['to']}'.trim();
+        if (from.isEmpty || to.isEmpty || from == to) continue;
+        final key = '$from → $to';
+        final level = '${pair['level']}'.trim();
+        (levels[key] ??= {})[level] = (levels[key]![level] ?? 0) + 1;
+        final how = '${pair['calls']}'.trim();
+        if (how.isNotEmpty) calls.putIfAbsent(key, () => how);
+      }
+    } catch (_) {}
+  }
+  final speech = [
+    for (final MapEntry(key: pair, value: seen) in levels.entries)
+      '$pair: ${(seen.entries.toList()..sort((a, b) => b.value - a.value)).first.key}'
+          '${calls[pair] == null ? '' : ', calls them ${calls[pair]}'}',
+  ];
+  final summaries = <String, String>{};
+  for (final start in starts) {
+    if (start < 20) continue;
+    final r = await client.generate(
+        system: _summarySystem,
+        user: paragraphs.sublist((start - 200).clamp(0, start), start).join('\n'),
+        maxOutputTokens: 1024);
+    summaries['$start'] = r.text.trim();
+  }
+  return {'speech': speech, 'summaries': summaries};
+}
+
 void main() {
   final claudeKey = env('EVAL_CLAUDE_KEY');
   final key = claudeKey ?? env('EVAL_GEMINI_KEY');
@@ -225,8 +325,9 @@ void main() {
       }
     }
     final style = env('EVAL_STYLE') != '0';
+    final noted = _WithNotes(client);
     final translator = CloudTranslator(
-        client: client,
+        client: noted,
         settings: settings,
         fixTense: style,
         fixPronouns: style,
@@ -239,6 +340,39 @@ void main() {
     final size = int.parse(env('EVAL_COUNT') ?? '80');
     final starts = env('EVAL_STARTS')?.split(',').map(int.parse).toList() ??
         [for (var k = 1; k <= 3; k++) paragraphs.length * k ~/ 4];
+
+    // More context, on trial: made once (EVAL_CONTEXT_MAKE=file, with
+    // this run's engine; nothing is translated), then given to any
+    // engine (EVAL_CONTEXT=file; EVAL_CONTEXT_USE=speech,summary).
+    final makeContext = env('EVAL_CONTEXT_MAKE');
+    if (makeContext != null) {
+      final made = await _makeContext(client, paragraphs, starts);
+      File(makeContext)
+          .writeAsStringSync(const JsonEncoder.withIndent(' ').convert(made));
+      // ignore: avoid_print
+      print('context: ${(made['speech'] as List).length} pairs, '
+          '${(made['summaries'] as Map).length} summaries');
+      return;
+    }
+    final contextFile = env('EVAL_CONTEXT');
+    final context = contextFile == null
+        ? null
+        : jsonDecode(File(contextFile).readAsStringSync()) as Map;
+    final contextUse = (env('EVAL_CONTEXT_USE') ?? 'speech,summary').split(',');
+    String notesFor(int start) {
+      if (context == null) return '';
+      final speech = (context['speech'] as List).cast<String>();
+      final summary = (context['summaries'] as Map)['$start'];
+      return [
+        if (contextUse.contains('speech') && speech.isNotEmpty)
+          'How the characters of this book speak to each other (반말 = '
+              'plain speech, 존댓말 = polite speech) - keep each pair the '
+              'same unless the scene itself changes it:\n${speech.join('\n')}',
+        if (contextUse.contains('summary') && summary != null)
+          'Where the story is when these paragraphs begin (to understand '
+              'them; never translate or repeat this):\n$summary',
+      ].join('\n\n');
+    }
 
     final which = env('EVAL_GLOSSARY') ?? 'make';
     final BookGlossary glossary;
@@ -271,6 +405,7 @@ void main() {
       final at = all.length;
       all.addAll(texts);
       out.addAll([for (final _ in texts) '']);
+      noted.notes = notesFor(start);
       // (What is handed over later - a correction sent with others'
       // - comes the same way.)
       await translator.translateBatch(texts,

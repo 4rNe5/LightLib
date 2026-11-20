@@ -65,6 +65,9 @@ debug key (only CI signs releases).
   book) and kept for the others. The first frame waits for nothing
   (`main_web.dart`); `web/index.html` shows the app's name until then.
   A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
+  Series made on a device show as rows there too (`webSeries`, by the
+  shared map: the web has no rows of its own for most books); the web
+  does not make series.
 - Cloudflare, for a network that does not reach `*.supabase.co` (nor
   Vercel): the Workers project `lightlib`
   (https://lightlib.4rnne5.workers.dev), root `cloudflare`, build
@@ -108,8 +111,19 @@ debug key (only CI signs releases).
   app). How far a book was read travels as
   `progress.fraction` (`frac:<file>` here; `put_reading`; the old
   `put_progress` clears it). Shared settings (`settings` table,
-  `put_setting`, newest wins): the Gemini key, unless `syncGeminiKey`
-  is 0. Progress/result notifications: `sync_notifier*.dart`. Only
+  `put_setting`, newest wins; a value up to 262,144 characters): the
+  Gemini key, unless `syncGeminiKey` is 0; the Claude key with its
+  workspace, unless `syncClaudeKey` is 0 (devices only - the web
+  neither takes nor sends it); the series (`series_sync.dart`: each
+  book's MD5 under its series' name, under "" the books taken out).
+  The series are a setting both sides add to: a device keeps the whole
+  map (books that are not here too, `seriesShared`), writes into it
+  what the reader changed here (`ser:<bookId>` marks, set by
+  `MyLibraryDb.setSeries`), lets what arrives stand for every book it
+  speaks of, and sends back what only it knew in the same run
+  (`_settings`: after taking, what is here besides goes up). Two
+  devices that both changed series while apart: the later one's map
+  stands for the books both speak of. Progress/result notifications: `sync_notifier*.dart`. Only
   emails in `public.owners` can read or write (RLS). Engine rules and
   tests: `sync_engine.dart`, `test/sync_engine_test.dart`.
 
@@ -129,15 +143,15 @@ debug key (only CI signs releases).
 | Device translation | `translator.dart` (`LocalLlmTranslator`, scheduler, `SharedTranslationEngine`), `third_party/llamadart` (see `PATCHES.md`) |
 | Gemini | `lib/services/translation/gemini/` (`gemini_api`, `gemini_client`, `gemini_settings`: today's use kept per model, `usageOf`); settings UI `lib/ui/components/gemini_engine_section.dart` (the engine choice is there too) |
 | What every engine off the phone shares | `cloud_engine.dart` (`CloudClient`, `CloudSettings`: results and errors are Gemini's types), `gemini/cloud_translator.dart` (prompts, checks, corrections - `gatherCorrections` for a book on its own: held, sent 24 together, an answer with one out of place not used, `misplacedCorrections`) |
-| Claude (devices only; key in `claude_api_key`, on the device only) | `lib/services/translation/claude/` (`claude_api`: models and prices, `claudeRequest`, `claudeSchema`, `claudeError`; `claude_client`; `claude_settings`: cost per model); settings UI `lib/ui/components/claude_engine_section.dart` |
+| Claude (devices only; key in `claude_api_key`, shared with the owner's devices like Gemini's) | `lib/services/translation/claude/` (`claude_api`: models and prices, `claudeRequest`, `claudeSchema`, `claudeError`; `claude_client`; `claude_settings`: cost per model); settings UI `lib/ui/components/claude_engine_section.dart` |
 | Prompts, styles | `translation_models.dart` (`batchPromptHead`, Korean light-novel style) |
 | Checks and fixes | `translation_qa.dart` (`checkTranslation`, `finishTranslation`; names written as the glossary has them: `enforceGlossary`), `translation_style.dart` (how narration ends, read off the last syllables: `tenseSlips`, `leansOnShe`, `readsStiff`), `paragraph_text.dart` (`cleanTranslation`, `polishTranslation`) |
 | Translations on real books, counted | `tool/translation_eval/` (its README): a book and its exported translation, the phone's steps against a `llama-server`, or `GlossaryService` and `CloudTranslator` against the API with a key |
-| Paragraph split (shared by reader and library) | `paragraph_text.dart` (`readerParagraphs`, `epubReaderParagraphs`) |
-| Saved translations | `translation_cache.dart` — one set per book × language × style (`shared`, `shared+plain`), JSON under `<books>/.translations/` |
+| Paragraph split (shared by reader and library) | `paragraph_text.dart` (`readerParagraphs`, `epubReaderParagraphs`; `containsImage`, `glyphOf`: a glyph set as a picture is text), the page's own `reader_web/src/paragraphs.js` - the two must read every book alike |
+| Saved translations | `translation_cache.dart` — one set per book × language × style (`shared`, `shared+plain`), JSON under `<books>/.translations/`; paragraphs to make again are marked beside it (`<set>.redo`, `redo`, `lookup` null while marked; `translation_repair.dart` `redoTranslationsWith`) |
 | Glossary per book | `book_glossary.dart` (candidates, `BookSurvey`, `parseGlossaryAnswer`, `tidyNames`, `upgradeGlossary`; Gemini reading the whole book: `bookAnalysis*`), `japanese_names.dart` (the noun a name ends in, well-known places), `glossary_service.dart`, `series_glossary.dart` (the other volumes' names), `translation_repair.dart` (saved translations set right after a glossary is) |
 | Library/background and "translate this whole book" | `book_translation_service.dart`, `lib/ui/components/priority_translation_card.dart` |
-| Series the reader makes | table `bookseries` (`MyLibraryDb.setSeries`), `library_organization.dart` (`librarySeries`: volumes by the number in their titles; `suggestedSeriesName`), `lib/ui/mylibrary_page.dart` (a long press chooses books, the bar over the foot of the list, a row per series; its books leave the grid unless something is searched), `series_glossary.dart` (`sameSeries`: titles and the reader's grouping, which has the last word; `passOnToSeries` an edit to the other volumes, `shareWithinSeries` on grouping; pref `seriesGlossaryShare`, on unless turned off) |
+| Series the reader makes | table `bookseries` (`MyLibraryDb.setSeries`), `library_organization.dart` (`librarySeries`: volumes by the number in their titles; `suggestedSeriesName`), `lib/ui/mylibrary_page.dart` (a long press chooses books, the bar over the foot of the list, a row per series; its books leave the grid unless something is searched), `series_glossary.dart` (`sameSeries`: titles and the reader's grouping, which has the last word; `passOnToSeries` an edit to the other volumes, `shareWithinSeries` on grouping; pref `seriesGlossaryShare`, on unless turned off); between devices `lib/services/sync/series_sync.dart` and `LibrarySyncLocal._reconcileSeries` |
 | Translated EPUB export | `translated_epub.dart` |
 | Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
 | Hidden covers | `lib/services/hidden_covers.dart` |
@@ -180,6 +194,36 @@ debug key (only CI signs releases).
   full name the given name follows that; the reader's entries are
   followed and never changed. When names flip in a translation, read the
   glossary for two spellings of one person before blaming the engine.
+- What someone is, is not who (glossary version 4): an engine reading
+  崩壊世界の魔法杖職人 listed 魔女 as a person, with the heroine's title
+  as its Korean (푸른마녀); the names check then wrote that for every
+  witch of the book (花の魔女 → 꽃의 푸른마녀, 魔女集会 → 푸른마녀 집회,
+  254 paragraphs). A role noun or a way of addressing is no entry
+  (`_notNames`: 魔女, 勇者, 騎士…; `_notHiraganaNames`: ちゃん, さん…;
+  `_neverAName` at upgrade and from the series), nor is an entry written
+  exactly as a longer one that ends with it. A description someone goes
+  by (`isTitle`: 青の魔女, 八王子の魔女, オコジョ教授) is words: the
+  engine's Korean with its spaces, never spelled from the reading
+  (하치오지노마조) or joined as a given name is (푸른마녀).
+- The reader set a name right and the book kept the old one: an edit
+  changed the glossary and nothing already saved (the repair after it
+  only sets near-misses of the new form right). Deleting saved
+  translations does not work either - sync is a union and the account
+  gives them back. So they are marked to be made again (`<set>.redo`,
+  on the device only; `TranslationCache.lookup` answers null until a new
+  one is stored): on an edit, the paragraphs with the word whose
+  translation has the form it had (`GlossaryService.onEdited` with the
+  entry as it was; the series' other volumes in `passOnToSeries`), and
+  every paragraph with the word when the reader ticks that in the edit
+  dialog (`glossaryRedoAll`).
+- A glyph set as a picture: the Japanese publishers' EPUBs write what
+  the fonts lack as `<img class="gaiji" alt="…">`, and one book wrote
+  every "!!?" so. The rule that leaves a block with a picture alone (an
+  illustration with its caption) left those lines untranslated, 51 in
+  that book. `glyphOf` tells the two apart (a `gaiji…` class, or an
+  `alt` of marks only) and the line is read with the glyph in it; what
+  an illustration is called (`alt="絵"`) is not a glyph. Such pictures
+  are black on nothing: inverted in dark themes (`styles.js`).
 - A glossary's rules changed: `BookGlossary.version`. An older one is set
   right from the book without a model (`upgradeGlossary`), and the saved
   translations after it (`translation_repair.dart`).
@@ -261,6 +305,21 @@ debug key (only CI signs releases).
   book 2, Flash-Lite with today's steps not over them in either
   (67 : 75 / 55 : 82, 74 : 100 / 44 : 90): the steps set names and
   slips right, the prose is the model's.
+- More context, tried (`tool/translation_eval` README; book 3, 480
+  paragraphs, Claude's judge only - Gemini's answered 503 that day): a
+  table of who speaks how to whom, after the instructions, read better
+  than none on Sonnet (42 : 24) and cost nothing to speak of; a summary
+  of the story so far did not (31 : 39, more mistranslations pointed
+  out), nor both together. Given to Flash-Lite the notes did harm: the
+  Japanese name forms in them (歌原さん) came out in its Korean (さんは
+  left in the drafts, 53 paragraphs sent back, not 18). If the table is
+  built in: names as the glossary writes them, never with an honorific.
+  The polish option: 14 of 1,920 paragraphs were sent back as stiff,
+  and the rewritten ones were not preferred (4 : 7).
+- Sync keeps a setting's time to the millisecond; a finer time sent to
+  the account looks newer there at the next run and is taken again.
+  A setting's value was limited to 4,096 characters on the account:
+  raised for the series (`20261120000000_series_setting.sql`).
 - The library's bar of chosen books: a button with an icon does not let
   its label give way (it overflowed in English at 360 dp), and a
   snackbar still showing lies over it (`hideCurrentSnackBar` when a
@@ -375,9 +434,8 @@ debug key (only CI signs releases).
    honorifics
    (kanji pairs that always go together), on the phone a draft whose
    flagged paragraphs go to Gemini when online, a no-kanji grammar for
-   GGUF models. Claude: on the web (a key in a page), its key between
-   devices, older models on the list. Series: between devices and on
-   the web (the grouping is kept in this device's database only).
+   GGUF models. Claude: on the web (a key in a page), older models on
+   the list. Series: making them on the web.
 4. Study, later: a bundled pre-translated dictionary (JMdict + Korean
    meanings) as an extension; the word sheet would show it before the
    engine's contextual meaning.
