@@ -129,10 +129,11 @@ debug key (only CI signs releases).
 | Device translation | `translator.dart` (`LocalLlmTranslator`, scheduler, `SharedTranslationEngine`), `third_party/llamadart` (see `PATCHES.md`) |
 | Gemini | `lib/services/translation/gemini/` (`gemini_api`, `gemini_client`, `gemini_settings`, `cloud_translator`); settings UI `lib/ui/components/gemini_engine_section.dart` |
 | Prompts, styles | `translation_models.dart` (`batchPromptHead`, Korean light-novel style) |
-| Checks and fixes | `translation_qa.dart`, `paragraph_text.dart` (`cleanTranslation`, `polishTranslation`) |
+| Checks and fixes | `translation_qa.dart` (`checkTranslation`, `finishTranslation`; names written as the glossary has them: `enforceGlossary`), `translation_style.dart` (how narration ends, read off the last syllables: `tenseSlips`, `leansOnShe`, `readsStiff`), `paragraph_text.dart` (`cleanTranslation`, `polishTranslation`) |
+| Translations on real books, counted | `tool/translation_eval/` (its README): a book and its exported translation, the phone's steps against a `llama-server`, or `GlossaryService` and `CloudTranslator` against the API with a key |
 | Paragraph split (shared by reader and library) | `paragraph_text.dart` (`readerParagraphs`, `epubReaderParagraphs`) |
 | Saved translations | `translation_cache.dart` — one set per book × language × style (`shared`, `shared+plain`), JSON under `<books>/.translations/` |
-| Glossary per book | `book_glossary.dart`, `glossary_service.dart` |
+| Glossary per book | `book_glossary.dart` (candidates, `BookSurvey`, `parseGlossaryAnswer`, `tidyNames`, `upgradeGlossary`; Gemini reading the whole book: `bookAnalysis*`), `japanese_names.dart` (the noun a name ends in, well-known places), `glossary_service.dart`, `series_glossary.dart` (the other volumes' names), `translation_repair.dart` (saved translations set right after a glossary is) |
 | Library/background and "translate this whole book" | `book_translation_service.dart`, `lib/ui/components/priority_translation_card.dart` |
 | Translated EPUB export | `translated_epub.dart` |
 | Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
@@ -149,6 +150,78 @@ debug key (only CI signs releases).
   apart, and `slippedAt` rejects a slipped answer.
 - Gemini: thinking tokens count toward `maxOutputTokens` and are billed as
   output; 3.8 Flash refuses `thinkingLevel: minimal`.
+- A glossary in the prompt is a hint, not a rule: both engines wrote
+  준 타로, 유우나, 시즈크 beside the glossary's own form. Names are set
+  right after the answer (`enforceGlossary`: a space, a long vowel, one
+  letter off, kanji left whole or in part - only names the paragraph's
+  source has, never another entry's word) and checked letter for letter
+  (`missedNames`).
+- 준 타로 was the app's own doing: `tidyNames` cut 純太郎 after 純, the
+  hero's short name. A person's name is one word unless the book shows a
+  family name (`GlossaryEntry.family`: the rest stands alone, or the
+  first part takes さん/先生 and never くん/ちゃん). A name the book
+  spells (furigana, hiragana) is written from that, whatever the model
+  answered; hiragana names (しずく) are candidates too. What kind of
+  word it is, the book says as well: E4B spelled しずく right and called
+  it a term ("a drop"), and the heroine was dropped with the ordinary
+  words - a word the book calls 〜ちゃん is a person
+  (`_addressedAsPerson`), and `hiraganaNames` puts such names in even
+  when no answer comes.
+- A glossary's rules changed: `BookGlossary.version`. An older one is set
+  right from the book without a model (`upgradeGlossary`), and the saved
+  translations after it (`translation_repair.dart`).
+- Narration in the present is the book's own, not an engine's slip: in
+  three books translated by Gemini, a sentence the book has in the past
+  (〜た) came out in the present 0, 1 and 0 times; every -ㄴ다 sentence
+  was a Japanese present. So the past is asked only of what happens in
+  the scene (`tellsEventInPresent`, `tenseSlips`: one such sentence
+  between past ones, sent back once). A habit, a general fact, a feeling
+  or a guess stays as the book has it (자주 놀리곤 한다, 좋아한다, -ㄹ지도
+  모른다): the first version sent those back too, and of 30 paragraphs
+  it "fixed" 28 were the book's own present, 좋아한다 turned 좋아했다.
+  A number that falls is not yet a translation that is better: read
+  what a check changed before believing it.
+- How far the style instructions carry depends on the model (book 3,
+  narration told in the present): Gemini 3.5 Flash 34% → 9-15% with the
+  instructions alone and 그녀 15 → 0-1; 3.5 Flash-Lite 34% → 32% and
+  그녀 as before, so there the check does the work; E2B 16% → 7%, E4B
+  about 5% either way. 그녀 and stiff paragraphs are sent back by Gemini
+  only (stiff by the reader's choice, `geminiPolish`).
+- An engine that reads the whole book lists what a list of names should
+  not have, and answers well where the parser must not "correct" it
+  (`parseBookAnalysis`): names with how they are addressed (純くん,
+  玲子さん - skipped, the name alone is the entry; spelling the reading
+  made 준쿤, 레이코산 and the check then forced them on the text), an
+  ordinary place by its meaning (宿直室 → 숙직실: a reading is spelled
+  only where the engine's own Korean is that sound, or for a person), a
+  full name in two words (kept where the parts are names of their own,
+  or the name has four letters or more: `family`). After such a
+  reading, a katakana word nobody is addressed by is not asked about
+  one line at a time (`unnamedCandidates`): イルカ at a dolphin show
+  came back a person. A reading cut short with nobody to ask about the
+  rest leaves the glossary not `complete`, to be made again.
+- Gemini's free tier counts requests a day by model: 20 for
+  `gemini-3.5-flash` (a book is 45 and more), and a 429 that names a
+  per-day quota ends the day for that key (`usage.exhausted`). 3.5
+  Flash is on the list (`geminiModels`) with that figure; 3.5 Flash-Lite
+  stays the one a reader starts with. A book costs about two requests
+  for each 80 paragraphs - the translation, and the paragraphs sent back
+  (a fixed 2,000 tokens of instructions for three or four paragraphs) -
+  and one for each 30,000 characters when its glossary is first made.
+  "Balanced" thinking on Flash-Lite thought nothing (0 thinking tokens,
+  the same answers within the noise of a second run).
+- Whether a translation reads better is asked of a reader, or failing
+  that of a stronger model that does not know which is which
+  (`tool/translation_eval/judge.py`). Two runs of one model with one
+  prompt came out 64 : 47 there: a difference that size is noise.
+- `map[k] ??= work().whenComplete(() => map.remove(k))` never ends:
+  `remove` returns that very future and `whenComplete` waits for it. Use
+  a block body.
+- A book against its exported translation: the reader's splitter does not
+  count a translation without a letter (“……”) as a paragraph, so the two
+  drift apart by index. `tool/translation_eval` pairs within chapters and
+  steps over those lines; hundreds of `tooShort` mean a bad pairing, not
+  a bad translation.
 - Paragraphs Gemini refuses under its own policy (`PROHIBITED_CONTENT`) stay
   in the original; they are not routed to the device model.
 - GPU conversation clone (KV reuse) is slower on Adreno; it is judged per
@@ -239,6 +312,14 @@ debug key (only CI signs releases).
 3. Smaller: `[n]`→`n.` numbering, token-budget batches, translator-note
    stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
    two-page spread on unfolded screens.
+   Translation quality, not done yet (project doc
+   `claude/translation-quality-status.md`): Gemini measured on more than
+   one book (book 3 only so far), runs of present-tense narration on
+   Flash-Lite (left as the book has them), names the device finds without
+   honorifics
+   (kanji pairs that always go together), on the phone a draft whose
+   flagged paragraphs go to Gemini when online, a no-kanji grammar for
+   GGUF models.
 4. Study, later: a bundled pre-translated dictionary (JMdict + Korean
    meanings) as an extension; the word sheet would show it before the
    engine's contextual meaning.
