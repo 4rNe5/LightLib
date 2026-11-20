@@ -45,9 +45,9 @@ class GeminiClient {
   /// Requests a minute to stay under: the limit the API named, else the
   /// free tier's for [model] (a paid key goes faster once one is seen).
   int _perMinute(GeminiModel model) {
-    final u = _settings.usage;
+    final u = _settings.usageOf(model);
     if (u.minuteLimit != null && u.minuteLimit! > 0) return u.minuteLimit!;
-    return u.freeTier == false ? 60 : model.freeRpm;
+    return _settings.freeTier == false ? 60 : model.freeRpm;
   }
 
   Future<void> _pace(GeminiModel model) async {
@@ -116,7 +116,7 @@ class GeminiClient {
         if (status == 200 && response.data is Map) {
           final result = GeminiResult.fromJson(
               Map<String, Object?>.from(response.data as Map));
-          _settings.recordRequest(result, paragraphs: paragraphs);
+          _settings.recordRequest(result, paragraphs: paragraphs, model: m);
           _logger.info('Gemini request', tag: 'Gemini', metadata: {
             'model': m.id,
             'paragraphs': paragraphs,
@@ -138,13 +138,13 @@ class GeminiClient {
 
       switch (error.kind) {
         case GeminiErrorKind.quotaExhausted:
-          _settings.recordLimit(error);
+          _settings.recordLimit(error, model: m);
           _logger.warning('Gemini quota used up for today',
               tag: 'Gemini',
               metadata: {'quota': error.quotaId, 'limit': error.quotaLimit});
           throw error;
         case GeminiErrorKind.rateLimited:
-          _settings.recordLimit(error);
+          _settings.recordLimit(error, model: m);
           if (attempt > 6) throw error;
           final wait =
               error.retryAfter ?? Duration(seconds: math.min(60, 5 * attempt));

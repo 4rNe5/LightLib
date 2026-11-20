@@ -70,4 +70,37 @@ void main() {
     expect(settings.polish, isTrue);
     expect(tester.widget<SwitchListTile>(toggle).value, isTrue);
   });
+
+  testWidgets('today\'s use is the chosen model\'s: its own requests '
+      'against its own limit', (tester) async {
+    final settings = GeminiSettings.instance;
+    final lite = geminiModelFor('gemini-3.5-flash-lite');
+    final flash = geminiModelFor('gemini-3.5-flash');
+    final day = quotaDay(DateTime.now());
+    settings.debugSet(
+        useGemini: true,
+        key: 'AIzaTESTKEY1234',
+        model: lite,
+        usageBy: {
+          lite.id: GeminiUsage(day: day, requests: 90, paragraphs: 3500),
+          flash.id: GeminiUsage(
+              day: day, requests: 7, promptTokens: 40000, outputTokens: 9000),
+        });
+    addTearDown(() => settings.debugSet(model: lite, usageBy: const {}));
+    await tester.pumpWidget(app());
+    expect(find.text('오늘 사용량 · Gemini 3.5 Flash-Lite'), findsOneWidget);
+    expect(find.text('요청 90회 (무료 한도 약 500회)'), findsOneWidget);
+    expect(find.text('Gemini 3.5 Flash: 오늘 요청 7 / 20회'), findsOneWidget);
+
+    // 3.5 Flash chosen: what it used of its own twenty.
+    settings.debugSet(model: flash);
+    await tester.pump();
+    expect(find.text('오늘 사용량 · Gemini 3.5 Flash'), findsOneWidget);
+    expect(find.text('요청 7회 (무료 한도 약 20회)'), findsOneWidget);
+    expect(find.text('Gemini 3.5 Flash-Lite: 오늘 요청 90 / 500회'),
+        findsOneWidget);
+    final bar = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator));
+    expect(bar.value, closeTo(7 / 20, 1e-9));
+  });
 }

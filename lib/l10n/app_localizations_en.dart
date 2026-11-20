@@ -1562,6 +1562,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String geminiUsageOther(String model, int count, int limit) {
+    return '$model: $count / $limit requests today';
+  }
+
+  @override
   String geminiUsageTokens(String input, String output) {
     return 'Tokens in $input · out $output';
   }

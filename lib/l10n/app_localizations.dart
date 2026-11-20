@@ -2872,6 +2872,12 @@ abstract class AppLocalizations {
   /// **'Requests {count} (free limit about {limit})'**
   String geminiUsageRequestsEstimate(int count, int limit);
 
+  /// geminiUsageOther
+  ///
+  /// In en, this message translates to:
+  /// **'{model}: {count} / {limit} requests today'**
+  String geminiUsageOther(String model, int count, int limit);
+
   /// geminiUsageTokens
   ///
   /// In en, this message translates to:

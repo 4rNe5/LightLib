@@ -2127,6 +2127,21 @@
       }
     }
   },
+  "geminiUsageOther": "{model}: {count} / {limit} requests today",
+  "@geminiUsageOther": {
+    "description": "geminiUsageOther",
+    "placeholders": {
+      "model": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "geminiUsageTokens": "Tokens in {input} · out {output}",
   "@geminiUsageTokens": {
     "description": "geminiUsageTokens",

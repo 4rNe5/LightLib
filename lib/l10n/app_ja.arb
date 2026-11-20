@@ -461,6 +461,7 @@
   "geminiUsageResets": "{time}にリセット（米国太平洋時間の0時）",
   "geminiUsageRequests": "リクエスト {count} / {limit}回",
   "geminiUsageRequestsEstimate": "リクエスト {count}回（無料枠は約{limit}回）",
+  "geminiUsageOther": "{model}: 今日のリクエスト {count} / {limit}回",
   "geminiUsageTokens": "トークン 入力 {input} · 出力 {output}",
   "geminiUsageParagraphs": "翻訳した段落 {count}",
   "geminiUsageBlocked": "フィルターでブロック {safety} · ポリシーで拒否 {prohibited}",

@@ -351,7 +351,7 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
     final reset = quotaResetAt(DateTime.now());
     final time = MaterialLocalizations.of(context)
         .formatTimeOfDay(TimeOfDay.fromDateTime(reset));
-    final tier = switch (u.freeTier) {
+    final tier = switch (_settings.freeTier) {
       true => l10n.geminiTierFree,
       false => l10n.geminiTierPaid,
       null => l10n.geminiTierUnknown,
@@ -374,8 +374,11 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
         children: [
           Row(
             children: [
+              // Whose use this is: each model has its own count and its
+              // own limit, and choosing another shows that one's.
               Expanded(
-                  child: Text(l10n.geminiUsageTitle,
+                  child: Text('${l10n.geminiUsageTitle} · ${m.label}',
+                      key: const ValueKey('geminiUsageModel'),
                       style: const TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w700))),
               Text(tier, style: small),
@@ -414,6 +417,17 @@ class _GeminiEngineSectionState extends State<GeminiEngineSection> {
               child: Text(l10n.geminiExhausted,
                   key: const ValueKey('geminiExhausted'),
                   style: TextStyle(fontSize: 12, color: scheme.error)),
+            ),
+          // What the other models used today: theirs, not this model's.
+          for (final MapEntry(key: other, value: used)
+              in _settings.otherModelsToday.entries)
+            Padding(
+              padding: const EdgeInsets.only(top: 6),
+              child: Text(
+                  l10n.geminiUsageOther(other.label, used.requests,
+                      used.dailyLimit ?? other.freeRpd),
+                  key: ValueKey('geminiUsageOther-${other.id}'),
+                  style: small),
             ),
         ],
       ),

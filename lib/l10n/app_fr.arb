@@ -467,6 +467,7 @@
   "geminiUsageResets": "Remise à zéro à {time} (minuit, heure du Pacifique)",
   "geminiUsageRequests": "Requêtes {count} / {limit}",
   "geminiUsageRequestsEstimate": "Requêtes {count} (limite gratuite environ {limit})",
+  "geminiUsageOther": "{model} : {count} / {limit} requêtes aujourd'hui",
   "geminiUsageTokens": "Jetons entrée {input} · sortie {output}",
   "geminiUsageParagraphs": "Paragraphes traduits {count}",
   "geminiUsageBlocked": "Bloqués par les filtres {safety} · refusés par la politique {prohibited}",

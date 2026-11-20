@@ -1515,6 +1515,11 @@ class AppLocalizationsKo extends AppLocalizations {
   }
 
   @override
+  String geminiUsageOther(String model, int count, int limit) {
+    return '$model: 오늘 요청 $count / $limit회';
+  }
+
+  @override
   String geminiUsageTokens(String input, String output) {
     return '토큰 입력 $input · 출력 $output';
   }

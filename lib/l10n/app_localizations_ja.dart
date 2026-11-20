@@ -1513,6 +1513,11 @@ class AppLocalizationsJa extends AppLocalizations {
   }
 
   @override
+  String geminiUsageOther(String model, int count, int limit) {
+    return '$model: 今日のリクエスト $count / $limit回';
+  }
+
+  @override
   String geminiUsageTokens(String input, String output) {
     return 'トークン 入力 $input · 出力 $output';
   }

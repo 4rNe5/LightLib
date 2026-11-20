@@ -467,6 +467,7 @@
   "geminiUsageResets": "Zurückgesetzt um {time} (Mitternacht US-Pazifik)",
   "geminiUsageRequests": "Anfragen {count} / {limit}",
   "geminiUsageRequestsEstimate": "Anfragen {count} (kostenloses Limit etwa {limit})",
+  "geminiUsageOther": "{model}: heute {count} / {limit} Anfragen",
   "geminiUsageTokens": "Tokens rein {input} · raus {output}",
   "geminiUsageParagraphs": "Übersetzte Absätze {count}",
   "geminiUsageBlocked": "Von Filtern blockiert {safety} · laut Richtlinie abgelehnt {prohibited}",

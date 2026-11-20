@@ -467,6 +467,7 @@
   "geminiUsageResets": "Se reinicia a las {time} (medianoche del Pacífico de EE. UU.)",
   "geminiUsageRequests": "Solicitudes {count} / {limit}",
   "geminiUsageRequestsEstimate": "Solicitudes {count} (límite gratis unas {limit})",
+  "geminiUsageOther": "{model}: hoy {count} / {limit} solicitudes",
   "geminiUsageTokens": "Tokens entrada {input} · salida {output}",
   "geminiUsageParagraphs": "Párrafos traducidos {count}",
   "geminiUsageBlocked": "Bloqueados por filtros {safety} · rechazados por política {prohibited}",

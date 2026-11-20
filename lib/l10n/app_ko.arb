@@ -461,6 +461,7 @@
   "geminiUsageResets": "{time}에 초기화 (미국 태평양 자정)",
   "geminiUsageRequests": "요청 {count} / {limit}회",
   "geminiUsageRequestsEstimate": "요청 {count}회 (무료 한도 약 {limit}회)",
+  "geminiUsageOther": "{model}: 오늘 요청 {count} / {limit}회",
   "geminiUsageTokens": "토큰 입력 {input} · 출력 {output}",
   "geminiUsageParagraphs": "번역 문단 {count}",
   "geminiUsageBlocked": "필터 막힘 {safety} · 정책 차단 {prohibited}",

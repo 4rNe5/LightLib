@@ -33,7 +33,9 @@ const geminiUsagePref = 'geminiUsage';
 /// be said in natural Korean (1; off by default - more requests).
 const geminiPolishPref = 'geminiPolish';
 
-/// Today's use, by the API's quota day (Pacific time).
+/// Today's use of one model, by the API's quota day (Pacific time). The
+/// API counts each model's requests apart (3.5 Flash-Lite's are not 3.5
+/// Flash's), so the settings keep one of these for each model used.
 @immutable
 class GeminiUsage {
   const GeminiUsage({
@@ -184,7 +186,9 @@ class GeminiSettings extends ChangeNotifier {
   GeminiThinking _thinking = GeminiThinking.speed;
   bool _deviceFallback = true;
   bool _polish = false;
-  GeminiUsage? _usage;
+
+  /// Today's use by model id.
+  Map<String, GeminiUsage> _usageBy = {};
   Future<void>? _loading;
 
   bool get useGemini => _useGemini;
@@ -202,13 +206,69 @@ class GeminiSettings extends ChangeNotifier {
   /// Whether stiff paragraphs are sent once more ([geminiPolishPref]).
   bool get polish => _polish;
 
-  GeminiUsage get usage {
+  /// Today's use of the model chosen now.
+  GeminiUsage get usage => usageOf(_model);
+
+  /// Today's use of [model]: its own requests and tokens, and the limits
+  /// the API named for it. Choosing another model shows that model's.
+  GeminiUsage usageOf(GeminiModel model) {
     final today = quotaDay(clock());
-    final u = _usage;
+    final u = _usageBy[model.id];
     if (u == null || u.day != today) {
-      return _usage = GeminiUsage.fromJson(u?.toJson(), today);
+      return _usageBy[model.id] = GeminiUsage.fromJson(u?.toJson(), today);
     }
     return u;
+  }
+
+  /// Whether the key is on the free tier, as far as any model's limit
+  /// told (it is the key's, not a model's). Null: not seen.
+  bool? get freeTier {
+    final own = usage.freeTier;
+    if (own != null) return own;
+    for (final u in _usageBy.values) {
+      if (u.freeTier != null) return u.freeTier;
+    }
+    return null;
+  }
+
+  /// The other models used today, with what each used.
+  Map<GeminiModel, GeminiUsage> get otherModelsToday => {
+        for (final m in geminiModels)
+          if (m.id != _model.id &&
+              _usageBy.containsKey(m.id) &&
+              usageOf(m).requests > 0)
+            m: usageOf(m),
+      };
+
+  /// Each model's use as it is saved.
+  String _encodeUsage() => jsonEncode({
+        'v': 2,
+        'models': {
+          for (final e in _usageBy.entries) e.key: e.value.toJson(),
+        },
+      });
+
+  /// What was saved ([saved]), by model. A version before this one kept
+  /// one count for whatever model was in use: it is taken for [chosen]'s.
+  static Map<String, GeminiUsage> decodeUsage(
+      Object? saved, String today, GeminiModel chosen) {
+    Object? json = saved;
+    if (json is String) {
+      try {
+        json = jsonDecode(json);
+      } catch (_) {
+        json = null;
+      }
+    }
+    if (json is! Map) return {};
+    final models = json['models'];
+    if (models is Map) {
+      return {
+        for (final e in models.entries)
+          '${e.key}': GeminiUsage.fromJson(e.value, today),
+      };
+    }
+    return {chosen.id: GeminiUsage.fromJson(json, today)};
   }
 
   /// The key's last characters, for showing which one is set.
@@ -230,8 +290,8 @@ class GeminiSettings extends ChangeNotifier {
     _deviceFallback = !kIsWeb && await pref(geminiDeviceFallbackPref) != 0;
     _thinking = GeminiThinking.parse(await pref(geminiThinkingPref));
     _polish = await pref(geminiPolishPref) == 1;
-    _usage =
-        GeminiUsage.fromJson(await pref(geminiUsagePref), quotaDay(clock()));
+    _usageBy =
+        decodeUsage(await pref(geminiUsagePref), quotaDay(clock()), _model);
     try {
       _key =
           (await AppFiles.instance.readString(await keyPath()))?.trim() ?? '';
@@ -329,26 +389,35 @@ class GeminiSettings extends ChangeNotifier {
     await _save(geminiPolishPref, on ? 1 : 0);
   }
 
-  /// Counts one answered request.
-  void recordRequest(GeminiResult r, {int paragraphs = 0}) =>
-      _update(usage.copyWith(
-          requests: usage.requests + 1,
-          promptTokens: usage.promptTokens + r.promptTokens,
-          outputTokens: usage.outputTokens + r.billedOutput,
-          paragraphs: usage.paragraphs + paragraphs));
+  /// Counts one request [model] answered (the model chosen now when not
+  /// said).
+  void recordRequest(GeminiResult r, {int paragraphs = 0, GeminiModel? model}) {
+    final m = model ?? _model;
+    final u = usageOf(m);
+    _update(
+        m,
+        u.copyWith(
+            requests: u.requests + 1,
+            promptTokens: u.promptTokens + r.promptTokens,
+            outputTokens: u.outputTokens + r.billedOutput,
+            paragraphs: u.paragraphs + paragraphs));
+  }
 
-  void recordBlocked(GeminiBlockKind kind, int paragraphs) =>
-      _update(kind == GeminiBlockKind.safety
+  void recordBlocked(GeminiBlockKind kind, int paragraphs) => _update(
+      _model,
+      kind == GeminiBlockKind.safety
           ? usage.copyWith(blockedSafety: usage.blockedSafety + paragraphs)
           : usage.copyWith(
               blockedProhibited: usage.blockedProhibited + paragraphs));
 
   void recordOnDevice(int paragraphs) =>
-      _update(usage.copyWith(onDevice: usage.onDevice + paragraphs));
+      _update(_model, usage.copyWith(onDevice: usage.onDevice + paragraphs));
 
-  /// What a limit error said: the limit, the tier, a used-up day.
-  void recordLimit(GeminiError e) {
-    var u = usage;
+  /// What a limit error said of [model]: the limit, the tier, a used-up
+  /// day. Another model's day goes on.
+  void recordLimit(GeminiError e, {GeminiModel? model}) {
+    final m = model ?? _model;
+    var u = usageOf(m);
     if (e.freeTier != null) u = u.copyWith(freeTier: e.freeTier);
     // Request limits only (a token limit is another number).
     final requests = e.quotaId?.contains('Requests') ?? false;
@@ -361,19 +430,19 @@ class GeminiSettings extends ChangeNotifier {
     if (e.kind == GeminiErrorKind.quotaExhausted) {
       u = u.copyWith(exhausted: true);
     }
-    _update(u);
+    _update(m, u);
   }
 
   DateTime _savedAt = DateTime.fromMillisecondsSinceEpoch(0);
 
-  void _update(GeminiUsage u) {
-    _usage = u;
+  void _update(GeminiModel model, GeminiUsage u) {
+    _usageBy[model.id] = u;
     notifyListeners();
     // At most every few seconds while a book goes through.
     final now = clock();
     if (now.difference(_savedAt) > const Duration(seconds: 3)) {
       _savedAt = now;
-      _save(geminiUsagePref, jsonEncode(u.toJson()));
+      _save(geminiUsagePref, _encodeUsage());
     }
   }
 
@@ -388,11 +457,14 @@ class GeminiSettings extends ChangeNotifier {
     int? concurrency,
     GeminiThinking? thinking,
     bool? polish,
+    Map<String, GeminiUsage>? usageBy,
   }) {
     if (useGemini != null) _useGemini = useGemini;
     if (key != null) _key = key;
     if (model != null) _model = model;
-    if (usage != null) _usage = usage;
+    if (usageBy != null) _usageBy = {...usageBy};
+    // (The chosen model's.)
+    if (usage != null) _usageBy[_model.id] = usage;
     if (deviceFallback != null) _deviceFallback = deviceFallback;
     if (concurrency != null) _concurrency = concurrency;
     if (thinking != null) _thinking = thinking;
