@@ -4511,6 +4511,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your other devices use the same key and workspace. Off: kept on this device and removed from your project.'**
   String get syncClaudeKeyHint;
+
+  /// glossaryRedoAll
+  ///
+  /// In en, this message translates to:
+  /// **'Translate again every paragraph with this word'**
+  String get glossaryRedoAll;
+
+  /// glossaryRedoAllHint
+  ///
+  /// In en, this message translates to:
+  /// **'Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.'**
+  String get glossaryRedoAllHint;
+
+  /// glossaryRedone
+  ///
+  /// In en, this message translates to:
+  /// **'{count} paragraphs will be translated again'**
+  String glossaryRedone(int count);
 }
 
 class _AppLocalizationsDelegate

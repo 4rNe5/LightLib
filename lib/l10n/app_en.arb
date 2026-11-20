@@ -3579,5 +3579,22 @@
   "syncClaudeKeyHint": "Your other devices use the same key and workspace. Off: kept on this device and removed from your project.",
   "@syncClaudeKeyHint": {
     "description": "syncClaudeKeyHint"
+  },
+  "glossaryRedoAll": "Translate again every paragraph with this word",
+  "@glossaryRedoAll": {
+    "description": "glossaryRedoAll"
+  },
+  "glossaryRedoAllHint": "Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.",
+  "@glossaryRedoAllHint": {
+    "description": "glossaryRedoAllHint"
+  },
+  "glossaryRedone": "{count} paragraphs will be translated again",
+  "@glossaryRedone": {
+    "description": "glossaryRedone",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

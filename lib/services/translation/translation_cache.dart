@@ -23,7 +23,8 @@ import 'package:openlib/services/translation/translation_models.dart';
 /// the paragraph index, so a re-paginated book or a repeated line reuses
 /// what was already translated. Writes are batched.
 class TranslationCache {
-  TranslationCache._(this._path, this._entries);
+  TranslationCache._(this._path, this._entries, [Set<String>? redo])
+      : _redo = redo ?? {};
 
   /// Where this set is kept (a file; an IndexedDB record on the web).
   final String _path;
@@ -31,6 +32,14 @@ class TranslationCache {
   final Map<String, String> _entries;
   Timer? _saveTimer;
   bool _dirty = false;
+
+  /// Saved translations that are to be made again (by [keyFor]): the
+  /// reader changed the name they were written with. They count as not
+  /// translated until a new one is stored; kept beside the set
+  /// (`<set>.redo`), on this device only.
+  final Set<String> _redo;
+  bool _redoDirty = false;
+  String get _redoPath => '$_path.redo';
 
   static final Map<String, TranslationCache> _open = {};
 
@@ -131,7 +140,14 @@ class TranslationCache {
         } catch (_) {}
       }
     }
-    final cache = _open[path] ??= TranslationCache._(path, entries);
+    var redo = <String>{};
+    try {
+      final marks = await _files.readString('$path.redo');
+      if (marks != null) {
+        redo = {for (final k in jsonDecode(marks) as List) '$k'};
+      }
+    } catch (_) {}
+    final cache = _open[path] ??= TranslationCache._(path, entries, redo);
     if (saved == null && entries.isNotEmpty) {
       cache._dirty = true;
       await cache.flush();
@@ -154,6 +170,7 @@ class TranslationCache {
             p.join(base, '${fileIdFor(bookFileName, language, model)}.json');
         _open.remove(path);
         await _files.delete(path);
+        await _files.delete('$path.redo');
       }
     }
   }
@@ -163,10 +180,42 @@ class TranslationCache {
   /// Every translation, by [keyFor] of its source text.
   Map<String, String> get entries => Map.unmodifiable(_entries);
 
-  String? lookup(String text) => _entries[keyFor(text)];
+  /// The translation of [text]; none while it is to be made again
+  /// ([redo]).
+  String? lookup(String text) {
+    final key = keyFor(text);
+    return _redo.contains(key) ? null : _entries[key];
+  }
+
+  /// What is saved for [text], also when it is to be made again.
+  String? saved(String text) => _entries[keyFor(text)];
+
+  /// How many saved translations wait to be made again.
+  int get toRedo => _redo.length;
+
+  /// Has the saved translations of [texts] made again: until then they
+  /// count as not translated here and in the reader. How many were
+  /// marked now.
+  int redo(Iterable<String> texts) {
+    var marked = 0;
+    for (final text in texts) {
+      final key = keyFor(text);
+      if (_entries.containsKey(key) && _redo.add(key)) marked++;
+    }
+    if (marked > 0) {
+      _redoDirty = true;
+      _saveTimer ??= Timer(const Duration(seconds: 3), () {
+        _saveTimer = null;
+        flush();
+      });
+    }
+    return marked;
+  }
 
   void store(String text, String translation) {
-    _entries[keyFor(text)] = translation;
+    final key = keyFor(text);
+    _entries[key] = translation;
+    if (_redo.remove(key)) _redoDirty = true;
     _dirty = true;
     _saveTimer ??= Timer(const Duration(seconds: 3), () {
       _saveTimer = null;
@@ -179,6 +228,16 @@ class TranslationCache {
   Future<void> flush({bool quiet = false}) async {
     _saveTimer?.cancel();
     _saveTimer = null;
+    if (_redoDirty) {
+      _redoDirty = false;
+      try {
+        if (_redo.isEmpty) {
+          await _files.delete(_redoPath);
+        } else {
+          await _files.writeString(_redoPath, jsonEncode(_redo.toList()));
+        }
+      } catch (_) {}
+    }
     if (!_dirty) return;
     _dirty = false;
     await _files.writeString(_path, jsonEncode(_entries));
@@ -209,6 +268,9 @@ class TranslationCache {
   Future<void> clear() async {
     _open.remove(_path);
     _entries.clear();
+    _redo.clear();
+    _redoDirty = false;
+    await _files.delete(_redoPath).catchError((_) {});
     _dirty = false;
     _saveTimer?.cancel();
     _saveTimer = null;

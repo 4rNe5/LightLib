@@ -166,6 +166,15 @@ Future<List<String>> passOnToSeries(String bookFile, GlossaryEntry entry,
     changed.add(file);
     try {
       final path = await (pathOf ?? getFilePath)(file);
+      // What that volume has translated with its old form is made again.
+      final was = glossary.entries
+          .where((e) => e.source == entry.source)
+          .firstOrNull
+          ?.target;
+      if (was != null && was.isNotEmpty && was != entry.target) {
+        await redoTranslationsWith(
+            bookFile: file, bookPath: path, source: entry.source, written: was);
+      }
       await repairTranslatedNames(
           bookFile: file, bookPath: path, glossary: next);
     } catch (e) {

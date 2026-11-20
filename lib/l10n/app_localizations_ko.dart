@@ -2477,4 +2477,16 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get syncClaudeKeyHint =>
       '내 다른 기기에서도 같은 키와 워크스페이스를 씁니다. 끄면 이 기기에만 두고 프로젝트에 올린 키는 지웁니다.';
+
+  @override
+  String get glossaryRedoAll => '이 단어가 나온 문단을 모두 다시 번역';
+
+  @override
+  String get glossaryRedoAllHint =>
+      '표기를 바꾸면 예전 표기로 번역된 문단은 자동으로 다시 번역됩니다. 그래도 이 단어가 나온 문단이 잘못돼 있으면 체크하세요.';
+
+  @override
+  String glossaryRedone(int count) {
+    return '$count문단을 다시 번역합니다';
+  }
 }

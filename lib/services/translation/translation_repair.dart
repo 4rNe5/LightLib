@@ -7,6 +7,7 @@
 import 'dart:io';
 
 // Project imports:
+import 'package:openlib/services/files.dart' show getFilePath;
 import 'package:openlib/services/heavy_work.dart';
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/storage/app_files.dart';
@@ -62,13 +63,78 @@ Future<int> repairTranslatedNames({
   return changed;
 }
 
+/// Called after saved translations were marked to be made again: the
+/// library's translator looks for work.
+void Function()? onTranslationsToRedo;
+
+/// Marks the Korean translations saved of [bookFile]'s paragraphs that
+/// have [source] to be made again - all of them, or only the ones written
+/// with [written] (the form the glossary had before the reader changed
+/// it). A wrong name in the glossary is in every paragraph translated
+/// with it: 魔女 = 푸른마녀 made 花の魔女 "꽃의 푸른마녀", and setting the
+/// entry right changed nothing that was already saved. How many were
+/// marked.
+Future<int> redoTranslationsWith({
+  required String bookFile,
+  required String bookPath,
+  required String source,
+  String? written,
+  Directory? directory,
+}) async {
+  if (source.isEmpty || (written != null && written.isEmpty)) return 0;
+  final bytes = await AppFiles.instance.readBytes(bookPath);
+  if (bytes == null) return 0;
+  final paragraphs = await runHeavy(() => epubReaderParagraphs(bytes));
+  if (paragraphs == null || paragraphs.isEmpty) return 0;
+  final with_ = {
+    for (final p in paragraphs)
+      if (p.contains(source)) p,
+  };
+  var marked = 0;
+  for (final lightNovel in const [true, false]) {
+    final cache = await TranslationCache.open(
+      bookFileName: bookFile,
+      targetLanguage: 'Korean',
+      modelId: TranslationCache.sharedModelId(lightNovel: lightNovel),
+      directory: directory,
+    );
+    if (cache.length == 0) continue;
+    marked += cache.redo([
+      for (final p in with_)
+        if (written == null || (cache.saved(p)?.contains(written) ?? false)) p,
+    ]);
+    await cache.flush();
+  }
+  if (marked > 0) {
+    AppLogger().info('Translations to make again',
+        tag: 'Glossary',
+        metadata: {'book': bookFile, 'paragraphs': marked});
+    onTranslationsToRedo?.call();
+  }
+  return marked;
+}
+
 /// Has a glossary that was set right set the book's translations right
 /// too, a book's glossary take what its series' other volumes settled,
 /// and what the reader sets in one volume go to the others. Safe to call
 /// more than once.
 void installTranslationRepair() {
   GlossaryService.seriesOf = seriesGlossaries;
-  GlossaryService.onEdited = (bookFile, entry) async {
+  GlossaryService.onEdited = (bookFile, entry, before) async {
+    // What was translated with the form the entry had: made again.
+    final was = before?.target ?? '';
+    if (was.isNotEmpty && was != entry.target) {
+      try {
+        await redoTranslationsWith(
+            bookFile: bookFile,
+            bookPath: await getFilePath(bookFile),
+            source: entry.source,
+            written: was);
+      } catch (e) {
+        AppLogger().warning('Translations not marked to be made again',
+            tag: 'Glossary', error: e);
+      }
+    }
     await passOnToSeries(bookFile, entry);
   };
   GlossaryService.onUpgraded = (bookFile, bookPath, glossary) {

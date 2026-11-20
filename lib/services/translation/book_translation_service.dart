@@ -270,6 +270,7 @@ class BookTranslationService extends ChangeNotifier
     if (_started) return;
     _started = true;
     installTranslationRepair();
+    onTranslationsToRedo = scanSoon;
     WidgetsBinding.instance.addObserver(this);
     final db = MyLibraryDb.instance;
     Future<Object?> pref(String key) =>

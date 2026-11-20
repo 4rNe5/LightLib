@@ -2563,4 +2563,16 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get syncClaudeKeyHint =>
       'Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht.';
+
+  @override
+  String get glossaryRedoAll => 'Alle Absätze mit diesem Wort neu übersetzen';
+
+  @override
+  String get glossaryRedoAllHint =>
+      'Eine neue Schreibweise übersetzt die Absätze mit der alten bereits neu. Ankreuzen, wenn Absätze mit dem Wort trotzdem falsch sind.';
+
+  @override
+  String glossaryRedone(int count) {
+    return '$count Absätze werden neu übersetzt';
+  }
 }

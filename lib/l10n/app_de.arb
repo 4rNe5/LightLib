@@ -738,5 +738,8 @@
   "seriesGlossaryShare": "Glossare innerhalb einer Reihe teilen",
   "seriesGlossaryShareHint": "Das Glossar eines neuen Bands übernimmt die Namen der anderen Bände der Reihe, und ein in einem Band korrigierter Name wird in den anderen korrigiert. Aus: Jeder Band behält sein eigenes.",
   "syncClaudeKey": "Claude-Schlüssel teilen",
-  "syncClaudeKeyHint": "Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht."
+  "syncClaudeKeyHint": "Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht.",
+  "glossaryRedoAll": "Alle Absätze mit diesem Wort neu übersetzen",
+  "glossaryRedoAllHint": "Eine neue Schreibweise übersetzt die Absätze mit der alten bereits neu. Ankreuzen, wenn Absätze mit dem Wort trotzdem falsch sind.",
+  "glossaryRedone": "{count} Absätze werden neu übersetzt"
 }

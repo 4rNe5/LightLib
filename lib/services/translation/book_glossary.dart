@@ -176,9 +176,12 @@ class BookGlossary {
   /// given name cut in two (준 타로), a school spelled by its reading
   /// (에이가코코) and no name written in hiragana; one of version 2 a
   /// full name or a pet form spelled another way than the name it holds
-  /// (結奈 유나, 高森結奈 타카모리 유이나): [upgradeGlossary] sets that
-  /// right from the book, without the model.
-  static const currentVersion = 3;
+  /// (結奈 유나, 高森結奈 타카모리 유이나); one of version 3 what
+  /// someone is, or is called, as if it were who (魔女 = 푸른마녀, the
+  /// heroine's title, and every witch of the book written so; ちゃん =
+  /// 찬): [upgradeGlossary] sets that right from the book, without the
+  /// model.
+  static const currentVersion = 4;
 
   /// The version this glossary was made as.
   final int version;
@@ -363,6 +366,9 @@ const _notHiraganaNames = {
   'れた', 'った', 'ない', 'いる', 'ある', 'する', 'なる', 'という', 'こちら',
   'そちら', 'あちら', 'どちら', 'ごくろう', 'おつかれ', 'おせわ', 'ひと',
   'こども', 'あか', 'ぼっ', 'おぼっ', 'いも', 'あね', 'あに', 'はは', 'ちち',
+  // How someone is addressed, not who: ちゃん = 찬 was listed as a person.
+  'ちゃん', 'くん', 'さん', 'さま', 'たん', 'ちん', 'りん', 'せんぱい',
+  'せんせい',
 };
 
 /// How one is addressed by family name, or as someone's senior.
@@ -403,6 +409,11 @@ const _commonLoanwords = {
   'ウットリ', 'スッキリ', 'ゆっくり',
 };
 
+/// Whether [source] is a word no glossary lists: what someone is (魔女,
+/// 先生) or how someone is addressed (ちゃん), not who.
+bool _neverAName(String source) =>
+    _notNames.contains(source) || _notHiraganaNames.contains(source);
+
 /// Words that stand before an honorific without being anyone's name
 /// (彼女さん, お母さん, 天使様).
 const _notNames = {
@@ -412,6 +423,14 @@ const _notNames = {
   '友達', '奥', '旦那', 'お客', '客', '皆々', 'みな', 'お医者', '嬢', '坊', '婆',
   '爺', '娘', '叔', '伯', '様', '諸', '貴', '探偵', '助手', '変態', '刑事', '隣',
   'お隣',
+  // What someone is, said as what they are called (魔女さん, 勇者様): a
+  // book has many of them (青の魔女, 花の魔女, 魔女集会), and an engine
+  // asked for "the" 魔女 answered with one of them - 푸른마녀 - which was
+  // then written for every witch of the book. The word is the
+  // translation's to translate.
+  '魔女', '魔王', '勇者', '聖女', '賢者', '魔法使い', '女神', '悪魔', '魔物', '竜',
+  '龍', 'ドラゴン', '騎士', '王女', '令嬢', 'お嬢様', '主人', 'ご主人', '師匠',
+  '団長', '隊長', '会長', '社長', '部長', '店長', '陛下', '殿下', '閣下',
   // Pronouns a character says in katakana (an accent): ワタシ, アナタ.
   'ワタシ', 'アタシ', 'アナタ', 'アンタ', 'ボク', 'オレ', 'キミ', 'オマエ',
   'ワタクシ', 'ワシ',
@@ -883,7 +902,11 @@ List<GlossaryEntry> parseBookAnalysis(
       final usable =
           ko.isNotEmpty && _hangul.hasMatch(ko) && !_foreign.hasMatch(ko);
       String? target;
-      if (kind != GlossaryKind.term) {
+      final title = isTitle(src);
+      if (title) {
+        // (Its Korean is a translation; the reading tells nothing.)
+        target = usable ? ko.replaceAll(RegExp(r'\s+'), ' ') : null;
+      } else if (kind != GlossaryKind.term) {
         final written = c == null ? null : _nameFromBook(c);
         if (written != null) {
           target = written;
@@ -948,7 +971,7 @@ List<GlossaryEntry> parseBookAnalysis(
                     .hasMatch(speechText)
             ? speechText.toLowerCase()
             : null,
-        family: c == null ? null : _familyOf(c),
+        family: c == null || title ? null : _familyOf(c),
       );
     }
   }
@@ -961,7 +984,7 @@ List<GlossaryEntry> parseBookAnalysis(
       if (e.kind == GlossaryKind.person) e.source: e,
   };
   for (final e in people.values) {
-    if (e.family != null) continue;
+    if (e.family != null || isTitle(e.source)) continue;
     String? family;
     final bare = e.target.replaceAll(' ', '');
     for (var k = e.source.length - 1; k >= 1 && family == null; k--) {
@@ -982,6 +1005,21 @@ List<GlossaryEntry> parseBookAnalysis(
   _onePersonOneSpelling(out, candidates);
   return out.values.toList();
 }
+
+/// What someone is, which a description ends in: オコジョ教授, 入間の魔法使い.
+const _roleEndings = [
+  '教授', '博士', '魔女', '魔法使い', '魔術師', '魔王', '勇者', '聖女', '賢者',
+  '騎士', '団長', '隊長', '会長', '社長', '部長', '店長', '師匠', '女王', '王女',
+];
+final _ofPhrase = RegExp(r'[一-龯々ァ-ヶー]の[一-龯々ァ-ヶー]');
+
+/// Whether [source] is a description someone goes by - 青の魔女,
+/// オコジョ教授, 八王子の魔女 - and not a name. It is words: written as
+/// the engine translated it, with its spaces, never spelled from its
+/// reading (하치오지노마조) and never joined into one (푸른마녀).
+bool isTitle(String source) =>
+    _ofPhrase.hasMatch(source) ||
+    _roleEndings.any((r) => source.length > r.length && source.endsWith(r));
 
 /// What a name is called for short or for fun: 結奈りん, 沙羅ちん.
 final _petSuffix = RegExp(r'(りん|ちん|っち|ぴょん|ぴ|ぽん|にゃん|たそ|やん|はん)$');
@@ -1009,9 +1047,25 @@ void _onePersonOneSpelling(
         : null;
   }
 
+  // A word written exactly as a longer entry that ends with it is that
+  // entry's translation, not its own (魔女 = 푸른 마녀 beside 青の魔女 =
+  // 푸른 마녀): the longer one stays.
+  for (final e in out.values.toList()) {
+    if (e.edited) continue;
+    final bare = e.target.replaceAll(' ', '');
+    if (out.values.any((o) =>
+        o.source != e.source &&
+        o.source.endsWith(e.source) &&
+        o.target.replaceAll(' ', '') == bare)) {
+      out.remove(e.source);
+    }
+  }
   for (final e in out.values.toList()) {
     // (What the reader set stands, and is what the others follow.)
-    if (e.kind != GlossaryKind.person || e.edited || fromBook(e.source)) {
+    if (e.kind != GlossaryKind.person ||
+        e.edited ||
+        isTitle(e.source) ||
+        fromBook(e.source)) {
       continue;
     }
     // 結奈りん: the name, and how its tail sounds. (神坂しずく is a full
@@ -1128,6 +1182,8 @@ BookGlossary inheritSeries(
   for (final other in earlier) {
     for (final e in other.entries) {
       if (e.target.isEmpty || !e.isName || !text.contains(e.source)) continue;
+      // (A volume not gone through again yet may still list ちゃん.)
+      if (!e.edited && _neverAName(e.source)) continue;
       final mine = entries[e.source];
       if (mine == null) {
         entries[e.source] = e.copyWith(edited: false);
@@ -1402,6 +1458,10 @@ GlossaryEntry _familyGender(GlossaryEntry e, List<GlossaryEntry> people) {
 }
 
 GlossaryEntry _spaced(GlossaryEntry e, Map<String, String> names) {
+  // A description is words (푸른 마녀), not one name.
+  if (isTitle(e.source)) {
+    return e.copyWith(target: e.target.trim().replaceAll(RegExp(r'\s+'), ' '));
+  }
   final bare = e.target.replaceAll(' ', '');
   final family = e.family;
   if (family == null || bare.isEmpty) return e.copyWith(target: bare);
@@ -1427,6 +1487,8 @@ BookGlossary upgradeGlossary(BookGlossary old, BookSurvey survey) {
   final bySource = {for (final c in survey.candidates) c.source: c};
   final entries = <String, GlossaryEntry>{};
   for (final e in old.entries) {
+    // (What the reader set stands, whatever the word.)
+    if (!e.edited && _neverAName(e.source)) continue;
     final c = bySource[e.source];
     if (e.edited || c == null || e.target.isEmpty) {
       entries[e.source] = e;

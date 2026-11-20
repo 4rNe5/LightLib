@@ -235,6 +235,155 @@ void main() {
         kept.entries.firstWhere((e) => e.source == '高森結奈').target, '다카모리 유이나');
   });
 
+  test('what someone is, is not who: a title many share is no name, nor '
+      'is a way of addressing', () {
+    final text = [
+      for (var i = 0; i < 3; i++) ...[
+        '青の魔女は笑った。「魔女さん」と呼ばれて魔女は振り向く。',
+        '花の魔女と地獄の魔女が魔女集会に来た。',
+        '「しずくちゃん」「ちゃん付けはやめて」としずくは言った。',
+        '青の騎士団が来た。騎士団は強い。',
+      ],
+    ].join('\n');
+    final BookSurvey survey = (
+      candidates: const [
+        GlossaryCandidate(source: '魔女', count: 12, example: '', girlHonorifics: 3),
+        GlossaryCandidate(source: 'しずく', count: 6, example: '', girlHonorifics: 3),
+      ],
+      places: const [],
+      narration: Narration.firstPerson,
+      hero: null,
+      text: text,
+    );
+    final entries = parseBookAnalysis([
+      jsonEncode({
+        'entries': [
+          // "The" witch, to the engine: one of the book's many.
+          {'src': '魔女', 'reading': '', 'kind': 'person', 'ko': '푸른 마녀', 'gender': 'female'},
+          {'src': '青の魔女', 'reading': '', 'kind': 'nickname', 'ko': '푸른 마녀', 'gender': 'female'},
+          {'src': 'ちゃん', 'reading': '', 'kind': 'person', 'ko': '찬'},
+          {'src': 'しずく', 'reading': 'しずく', 'kind': 'person', 'ko': '시즈쿠'},
+          // Written as the longer entry is: that one's translation.
+          {'src': '騎士団', 'reading': '', 'kind': 'organisation', 'ko': '푸른 기사단'},
+          {'src': '青の騎士団', 'reading': '', 'kind': 'organisation', 'ko': '푸른 기사단'},
+        ]
+      }),
+    ], survey);
+    final by = {
+      for (final e in mergeGlossary(BookGlossary.empty, entries).entries)
+        e.source: e.target,
+    };
+    expect(by.containsKey('魔女'), isFalse);
+    expect(by.containsKey('ちゃん'), isFalse);
+    expect(by.containsKey('騎士団'), isFalse);
+    expect(by.keys.toSet(), {'青の魔女', 'しずく', '青の騎士団'});
+  });
+
+  test('a glossary that lists what someone is as who: set right without '
+      'a model, the reader\'s own word kept, nothing brought back by the '
+      'series', () {
+    final text = [
+      for (var i = 0; i < 3; i++)
+        '青の魔女は笑った。魔女は振り向く。「しずくちゃん」としずくは言った。',
+    ].join('\n');
+    final BookSurvey survey = (
+      candidates: const [
+        GlossaryCandidate(source: '魔女', count: 6, example: ''),
+        GlossaryCandidate(source: 'しずく', count: 6, example: '', girlHonorifics: 3),
+      ],
+      places: const [],
+      narration: Narration.firstPerson,
+      hero: null,
+      text: text,
+    );
+    GlossaryEntry name(String source, String target, {bool edited = false}) =>
+        GlossaryEntry(
+            source: source,
+            target: target,
+            kind: GlossaryKind.person,
+            edited: edited);
+    final now = upgradeGlossary(
+        BookGlossary(entries: [
+          name('魔女', '푸른마녀'),
+          name('ちゃん', '찬'),
+          name('しずく', '시즈쿠'),
+        ], complete: true, version: 3),
+        survey);
+    expect(now.version, BookGlossary.currentVersion);
+    expect(now.entries.map((e) => e.source), ['しずく']);
+
+    final set = upgradeGlossary(
+        BookGlossary(entries: [
+          name('魔女', '마녀', edited: true),
+          name('しずく', '시즈쿠'),
+        ], complete: true, version: 3),
+        survey);
+    expect(set.entries.firstWhere((e) => e.source == '魔女').target, '마녀');
+
+    // Another volume, not gone through again yet, still lists them.
+    final other = BookGlossary(entries: [
+      name('魔女', '푸른마녀'),
+      name('ちゃん', '찬'),
+    ], complete: true, version: 3);
+    expect(inheritSeries(now, [other], text).entries.map((e) => e.source),
+        ['しずく']);
+    // What the reader set there is taken as before.
+    final theirs = BookGlossary(
+        entries: [name('魔女', '마녀', edited: true)],
+        complete: true,
+        version: 3);
+    expect(
+        inheritSeries(now, [theirs], text)
+            .entries
+            .firstWhere((e) => e.source == '魔女')
+            .target,
+        '마녀');
+  });
+
+  test('a description someone goes by is words: as the engine translated '
+      'it, not spelled from its reading and not joined', () {
+    final text = [
+      for (var i = 0; i < 3; i++)
+        '青の魔女と八王子の魔女が来た。オコジョ教授は入間の魔法使いに会う。'
+            '神坂しずくも来た。神坂は笑い、しずくは頷く。',
+    ].join('\n');
+    final BookSurvey survey = (
+      candidates: const [
+        GlossaryCandidate(source: 'しずく', count: 6, example: '', girlHonorifics: 3),
+      ],
+      places: const [],
+      narration: Narration.firstPerson,
+      hero: null,
+      text: text,
+    );
+    final entries = parseBookAnalysis([
+      jsonEncode({
+        'entries': [
+          {'src': '青の魔女', 'reading': 'あおのまじょ', 'kind': 'nickname', 'ko': '푸른 마녀', 'gender': 'female'},
+          {'src': '八王子の魔女', 'reading': 'はちおうじのまじょ', 'kind': 'person', 'ko': '하치오지의 마녀'},
+          {'src': 'オコジョ教授', 'reading': 'おこじょきょうじゅ', 'kind': 'person', 'ko': '오코조 교수'},
+          {'src': '入間の魔法使い', 'reading': 'いるまのまほうつかい', 'kind': 'nickname', 'ko': '이루마의  마법사'},
+          // A real full name is still two names, by its parts.
+          {'src': '神坂しずく', 'reading': 'かみさかしずく', 'kind': 'person', 'ko': '카미사카 시즈쿠'},
+          {'src': '神坂', 'reading': 'かみさか', 'kind': 'person', 'ko': '카미사카'},
+          {'src': 'しずく', 'reading': 'しずく', 'kind': 'person', 'ko': '시즈쿠'},
+        ]
+      }),
+    ], survey);
+    final by = {
+      for (final e in mergeGlossary(BookGlossary.empty, entries).entries)
+        e.source: e,
+    };
+    expect(by['青の魔女']!.target, '푸른 마녀');
+    expect(by['青の魔女']!.gender, GlossaryGender.female);
+    expect(by['八王子の魔女']!.target, '하치오지의 마녀');
+    expect(by['オコジョ教授']!.target, '오코조 교수');
+    expect(by['入間の魔法使い']!.target, '이루마의 마법사');
+    expect(by['神坂しずく']!.target, '카미사카 시즈쿠');
+    expect(isTitle('純太郎'), isFalse);
+    expect(isTitle('ののか'), isFalse);
+  });
+
   test('names as an engine lists them, kept as names are kept here', () {
     final text = [
       for (var i = 0; i < 3; i++) ...[

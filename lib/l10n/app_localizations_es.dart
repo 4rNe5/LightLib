@@ -2558,4 +2558,17 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get syncClaudeKeyHint =>
       'Tus otros dispositivos usan la misma clave y el mismo espacio de trabajo. Desactivado: solo en este dispositivo y se borra del proyecto.';
+
+  @override
+  String get glossaryRedoAll =>
+      'Volver a traducir todos los párrafos con esta palabra';
+
+  @override
+  String get glossaryRedoAllHint =>
+      'Al cambiar cómo se escribe ya se rehacen los párrafos con la forma antigua. Márcalo si los párrafos con la palabra siguen mal.';
+
+  @override
+  String glossaryRedone(int count) {
+    return 'Se volverán a traducir $count párrafos';
+  }
 }

@@ -2571,4 +2571,17 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get syncClaudeKeyHint =>
       'Vos autres appareils utilisent la même clé et le même espace de travail. Désactivé : conservée sur cet appareil et retirée du projet.';
+
+  @override
+  String get glossaryRedoAll =>
+      'Retraduire tous les paragraphes contenant ce mot';
+
+  @override
+  String get glossaryRedoAllHint =>
+      'Changer la graphie refait déjà les paragraphes écrits à l\'ancienne. Cochez si des paragraphes contenant ce mot restent faux.';
+
+  @override
+  String glossaryRedone(int count) {
+    return '$count paragraphes seront retraduits';
+  }
 }

@@ -9,6 +9,8 @@ import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/translation/book_glossary.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
+import 'package:openlib/services/files.dart' show getFilePath;
+import 'package:openlib/services/translation/translation_repair.dart';
 import 'package:openlib/ui/components/library_tiles.dart'
     show modernSurfaceTheme;
 
@@ -191,16 +193,30 @@ class GlossarySheet extends StatelessWidget {
   }
 
   Future<void> _edit(BuildContext context, GlossaryEntry entry) async {
-    final edited = await showDialog<GlossaryEntry?>(
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.maybeOf(context);
+    final result = await showDialog<_Edited?>(
       context: context,
       builder: (_) => _EditDialog(entry: entry),
     );
-    if (edited == null) return;
+    if (result == null) return;
+    final edited = result.entry;
+    // (Paragraphs written with the form it had are made again by the
+    // service itself: `GlossaryService.onEdited`.)
     if (edited.target.trim().isEmpty) {
       await _service.removeEntry(bookFile, entry.source);
     } else {
       await _service.updateEntry(bookFile, edited);
     }
+    if (!result.redoAll) return;
+    try {
+      final marked = await redoTranslationsWith(
+          bookFile: bookFile,
+          bookPath: await getFilePath(bookFile),
+          source: entry.source);
+      messenger?.showSnackBar(
+          SnackBar(content: Text(l10n.glossaryRedone(marked))));
+    } catch (_) {}
   }
 }
 
@@ -226,6 +242,15 @@ class _Chip extends StatelessWidget {
   }
 }
 
+/// What the reader set in the dialog.
+class _Edited {
+  const _Edited(this.entry, {this.redoAll = false});
+  final GlossaryEntry entry;
+
+  /// Every paragraph with the word is to be translated again.
+  final bool redoAll;
+}
+
 class _EditDialog extends StatefulWidget {
   const _EditDialog({required this.entry});
   final GlossaryEntry entry;
@@ -239,6 +264,7 @@ class _EditDialogState extends State<_EditDialog> {
       TextEditingController(text: widget.entry.target);
   late GlossaryKind _kind = widget.entry.kind;
   late GlossaryGender _gender = widget.entry.gender;
+  bool _redoAll = false;
 
   @override
   void dispose() {
@@ -288,14 +314,26 @@ class _EditDialogState extends State<_EditDialog> {
                 onSelectionChanged: (v) => setState(() => _gender = v.first),
               ),
             ],
+            const SizedBox(height: 6),
+            CheckboxListTile(
+              key: const ValueKey('glossaryRedoAll'),
+              contentPadding: EdgeInsets.zero,
+              controlAffinity: ListTileControlAffinity.leading,
+              dense: true,
+              title: Text(l10n.glossaryRedoAll),
+              subtitle: Text(l10n.glossaryRedoAllHint,
+                  style: const TextStyle(fontSize: 11)),
+              value: _redoAll,
+              onChanged: (v) => setState(() => _redoAll = v ?? false),
+            ),
           ],
         ),
       ),
       actions: [
         TextButton(
           key: const ValueKey('glossaryDelete'),
-          onPressed: () =>
-              Navigator.of(context).pop(e.copyWith(target: '')),
+          onPressed: () => Navigator.of(context)
+              .pop(_Edited(e.copyWith(target: ''), redoAll: _redoAll)),
           child: Text(l10n.delete),
         ),
         TextButton(
@@ -304,13 +342,15 @@ class _EditDialogState extends State<_EditDialog> {
         ),
         FilledButton(
           key: const ValueKey('glossarySave'),
-          onPressed: () => Navigator.of(context).pop(e.copyWith(
-            target: _target.text.trim(),
-            kind: _kind,
-            gender: _kind == GlossaryKind.person
-                ? _gender
-                : GlossaryGender.unknown,
-          )),
+          onPressed: () => Navigator.of(context).pop(_Edited(
+              e.copyWith(
+                target: _target.text.trim(),
+                kind: _kind,
+                gender: _kind == GlossaryKind.person
+                    ? _gender
+                    : GlossaryGender.unknown,
+              ),
+              redoAll: _redoAll)),
           child: Text(l10n.save),
         ),
       ],

@@ -738,5 +738,8 @@
   "seriesGlossaryShare": "Compartir glosarios dentro de una serie",
   "seriesGlossaryShareHint": "El glosario de un volumen nuevo toma los nombres fijados en los demás volúmenes de la serie, y un nombre que corriges en uno se corrige en los otros. Desactivado: cada volumen conserva el suyo.",
   "syncClaudeKey": "Compartir la clave de Claude",
-  "syncClaudeKeyHint": "Tus otros dispositivos usan la misma clave y el mismo espacio de trabajo. Desactivado: solo en este dispositivo y se borra del proyecto."
+  "syncClaudeKeyHint": "Tus otros dispositivos usan la misma clave y el mismo espacio de trabajo. Desactivado: solo en este dispositivo y se borra del proyecto.",
+  "glossaryRedoAll": "Volver a traducir todos los párrafos con esta palabra",
+  "glossaryRedoAllHint": "Al cambiar cómo se escribe ya se rehacen los párrafos con la forma antigua. Márcalo si los párrafos con la palabra siguen mal.",
+  "glossaryRedone": "Se volverán a traducir {count} párrafos"
 }

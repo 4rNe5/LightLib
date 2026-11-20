@@ -2473,4 +2473,16 @@ class AppLocalizationsJa extends AppLocalizations {
   @override
   String get syncClaudeKeyHint =>
       'ほかの端末でも同じキーとワークスペースを使います。オフにするとこの端末だけに保存し、プロジェクトのキーは削除します。';
+
+  @override
+  String get glossaryRedoAll => 'この語が出てくる段落をすべて翻訳し直す';
+
+  @override
+  String get glossaryRedoAllHint =>
+      '表記を変えると、以前の表記で訳された段落は自動で訳し直されます。それでもこの語の段落が誤っているときにチェックしてください。';
+
+  @override
+  String glossaryRedone(int count) {
+    return '$count段落を翻訳し直します';
+  }
 }

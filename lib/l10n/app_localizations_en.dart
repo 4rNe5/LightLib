@@ -2538,4 +2538,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get syncClaudeKeyHint =>
       'Your other devices use the same key and workspace. Off: kept on this device and removed from your project.';
+
+  @override
+  String get glossaryRedoAll =>
+      'Translate again every paragraph with this word';
+
+  @override
+  String get glossaryRedoAllHint =>
+      'Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.';
+
+  @override
+  String glossaryRedone(int count) {
+    return '$count paragraphs will be translated again';
+  }
 }
