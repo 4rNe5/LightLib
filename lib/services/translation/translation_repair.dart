@@ -139,6 +139,21 @@ Future<int> redoTranslationsWith({
   return marked;
 }
 
+/// How many of [bookFile]'s saved translations wait to be made again.
+Future<int> translationsToRedo(String bookFile, {Directory? directory}) async {
+  var waiting = 0;
+  for (final lightNovel in const [true, false]) {
+    final cache = await TranslationCache.open(
+      bookFileName: bookFile,
+      targetLanguage: _korean,
+      modelId: TranslationCache.sharedModelId(lightNovel: lightNovel),
+      directory: directory,
+    );
+    waiting += cache.toRedo;
+  }
+  return waiting;
+}
+
 /// Has a glossary that was set right set the book's translations right
 /// too, a book's glossary take what its series' other volumes settled,
 /// and what the reader sets in one volume go to the others. Safe to call

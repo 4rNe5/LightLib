@@ -225,6 +225,12 @@ void main() {
     expect(find.byKey(const ValueKey('librarySelectionBar')), findsNothing);
     expect(find.text('Series'), findsOneWidget);
     final row = find.byKey(const ValueKey('librarySeries-A Tale'));
+    // The series' glossary, without opening a volume.
+    expect(
+        find.descendant(
+            of: row,
+            matching: find.byKey(const ValueKey('seriesGlossary-A Tale'))),
+        findsOneWidget);
     expect(row, findsOneWidget);
     expect(find.descendant(of: row, matching: find.text('2 volumes')),
         findsOneWidget);

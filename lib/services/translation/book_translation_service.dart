@@ -2,12 +2,13 @@
 
 // Dart imports:
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:isolate';
 import 'dart:typed_data';
 
 // Flutter imports:
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show kIsWeb, visibleForTesting;
 import 'package:flutter/widgets.dart';
 
 // Package imports:
@@ -23,6 +24,7 @@ import 'package:openlib/services/translation/glossary_service.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/epub_package.dart';
+import 'package:openlib/services/files.dart' show getFilePath;
 import 'package:openlib/services/logger.dart';
 import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/translation/background_translation_notice.dart';
@@ -37,6 +39,10 @@ import 'package:openlib/services/translation/gemini/gemini_api.dart'
 import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/services/translation/translation_repair.dart';
 import 'package:openlib/services/translation/translator.dart';
+
+/// Preference: the books whose marked paragraphs are being made again
+/// (file names, JSON), kept so the work goes on after the app is closed.
+const redoTranslationBooksPref = 'redoTranslationBooks';
 
 /// Preference: translate library books in the background (off unless
 /// turned on).
@@ -284,6 +290,16 @@ class BookTranslationService extends ChangeNotifier
   String? _priorityDoneTitle;
   bool _cooling = false;
 
+  /// The books whose marked paragraphs are being made again ([redo]),
+  /// in the order asked; [_redoing] while one of them is worked on.
+  final List<String> _redoFiles = [];
+  final Map<String, BookTranslationProgress> _redoProgress = {};
+  bool _redoing = false;
+
+  /// What translates, in place of the engines (tests).
+  @visibleForTesting
+  Future<Translator?> Function()? translatorOverride;
+
   Map<String, BookTranslationProgress> get progress =>
       Map.unmodifiable(_progress);
   bool get enabled => _enabled;
@@ -292,6 +308,14 @@ class BookTranslationService extends ChangeNotifier
 
   /// The book being translated first, to the end (its file name).
   String? get priorityFile => _priorityFile;
+
+  /// The books whose marked paragraphs wait to be made again.
+  List<String> get redoFiles => List.unmodifiable(_redoFiles);
+
+  /// How far that is, by book: of the paragraphs that were marked when
+  /// its turn came, how many are made again.
+  Map<String, BookTranslationProgress> get redoProgress =>
+      Map.unmodifiable(_redoProgress);
 
   /// The book being worked on now.
   String? get currentFile => _currentFile;
@@ -313,6 +337,14 @@ class BookTranslationService extends ChangeNotifier
     _chargingOnly = await pref(translateLibraryChargingOnlyPref) == 1;
     final priority = await pref(priorityTranslationBookPref);
     _priorityFile = priority is String && priority.isNotEmpty ? priority : null;
+    try {
+      final waiting = await pref(redoTranslationBooksPref);
+      if (waiting is String && waiting.isNotEmpty) {
+        for (final f in jsonDecode(waiting) as List) {
+          if (!_redoFiles.contains('$f')) _redoFiles.add('$f');
+        }
+      }
+    } catch (_) {}
     TranslationStyle.lightNovel =
         await pref(translationLightNovelStylePref) != 0;
     SharedTranslationEngine.cpuOnly =
@@ -322,6 +354,7 @@ class BookTranslationService extends ChangeNotifier
         TranslationPromptFormats.decode(formats is String ? formats : null);
     _notice.onStopRequested = () {
       unawaited(cancelPriority());
+      unawaited(cancelRedo());
       unawaited(setEnabled(false));
     };
     _notice.onTimedOut = () => _serviceTimedOut = true;
@@ -364,7 +397,67 @@ class BookTranslationService extends ChangeNotifier
     scanSoon();
   }
 
-  bool get _active => _enabled || _priorityFile != null;
+  bool get _active =>
+      _enabled || _priorityFile != null || _redoFiles.isNotEmpty;
+
+  Future<void> _saveRedo() => MyLibraryDb.instance
+      .savePreference(redoTranslationBooksPref, jsonEncode(_redoFiles))
+      .catchError((_) {});
+
+  /// Has the paragraphs of [files] that are marked to be made again (a
+  /// name was set right: `redoTranslationsWith`) translated now and to
+  /// the end, before anything else and without the book being opened -
+  /// those paragraphs only: what a book has not translated yet stays so.
+  Future<void> redo(Iterable<String> files) async {
+    var added = false;
+    for (final file in files) {
+      if (_redoFiles.contains(file)) continue;
+      _redoFiles.add(file);
+      _redoProgress.remove(file);
+      added = true;
+    }
+    if (!added && _running) return;
+    await _saveRedo();
+    notifyListeners();
+    scanSoon();
+  }
+
+  /// Marks every paragraph of [files] that has [source] and has them made
+  /// again now ([redo]): the word was wrong in the glossary, and so is
+  /// every paragraph translated with it - in one book, or in every
+  /// volume of its series. How many paragraphs wait to be made again
+  /// (a volume that is not on this device is passed over).
+  Future<int> redoWord(
+      {required Iterable<String> files, required String source}) async {
+    var waiting = 0;
+    final books = <String>[];
+    for (final file in files) {
+      try {
+        await redoTranslationsWith(
+            bookFile: file, bookPath: await getFilePath(file), source: source);
+        final n = await translationsToRedo(file);
+        if (n > 0) {
+          books.add(file);
+          waiting += n;
+        }
+      } catch (e) {
+        _logger.info('Not marked to be made again',
+            tag: 'BookTranslation', metadata: {'book': file, 'why': '$e'});
+      }
+    }
+    if (books.isNotEmpty) await redo(books);
+    return waiting;
+  }
+
+  /// Leaves the marked paragraphs for the reader (they are made again
+  /// when they come on screen).
+  Future<void> cancelRedo() async {
+    if (_redoFiles.isEmpty) return;
+    _redoFiles.clear();
+    await _saveRedo();
+    notifyListeners();
+    scanSoon();
+  }
 
   /// [fileName]'s translations were deleted: its progress goes, and the
   /// library is looked at again.
@@ -419,8 +512,10 @@ class BookTranslationService extends ChangeNotifier
 
   bool get _stopRequested => !_active || _rescan;
 
-  /// The book in progress is the one to finish first.
-  bool get _urgent => _currentFile != null && _currentFile == _priorityFile;
+  /// The book in progress is the one to finish first, or one whose
+  /// paragraphs are being made again.
+  bool get _urgent =>
+      _currentFile != null && (_redoing || _currentFile == _priorityFile);
 
   /// The book to finish first, with the app open: as fast as reading.
   bool get _fullSpeed => _urgent && _foreground;
@@ -468,10 +563,64 @@ class BookTranslationService extends ChangeNotifier
               for (final b in books)
                 if (b.getFileName() != first) b
           ];
+        } else if (!_enabled) {
+          // (Only paragraphs to be made again were asked for: the
+          // library is not translated on that account.)
+          books = [];
         }
         final storage =
             (await MyLibraryDb.instance.getPreference('bookStorageDirectory'))
                 .toString();
+
+        // First the paragraphs to be made again (a name was set right),
+        // of each book asked for - those only.
+        final all = (await MyLibraryDb.instance.getAll())
+            .where((b) => (b.format ?? '').toLowerCase() == 'epub')
+            .toList();
+        for (final fileName in List.of(_redoFiles)) {
+          if (_stopRequested) break;
+          final book = [
+            for (final b in all)
+              if (b.getFileName() == fileName) b
+          ].firstOrNull;
+          final path = p.join(storage, fileName);
+          var over = book == null ||
+              !await (kIsWeb
+                  ? AppFiles.instance.exists(path)
+                  : File(path).exists());
+          if (!over) {
+            translator ??= await (translatorOverride?.call() ??
+                TranslationEngines.forLibrary());
+            if (translator == null) break;
+            _redoing = true;
+            _bookNumber = 1;
+            _bookCount = _redoFiles.length;
+            try {
+              over = await _translateBook(
+                translator: translator,
+                path: path,
+                fileName: fileName,
+                title: book.title,
+                modelId: modelId,
+                targetLanguage: target,
+                redoOnly: true,
+              );
+            } finally {
+              _redoing = false;
+            }
+          }
+          // (Stopped half way - the app left, a rescan - it stays asked
+          // for, and goes on at the next run.)
+          if (over) {
+            _redoFiles.remove(fileName);
+            await _saveRedo();
+            notifyListeners();
+          }
+        }
+        if (_stopRequested) {
+          finished = false;
+          continue;
+        }
 
         _bookCount = books.length;
         for (var n = 0; n < books.length; n++) {
@@ -492,7 +641,8 @@ class BookTranslationService extends ChangeNotifier
             }
             continue;
           }
-          translator ??= await TranslationEngines.forLibrary();
+          translator ??= await (translatorOverride?.call() ??
+              TranslationEngines.forLibrary());
           if (translator == null) break;
           await _translateBook(
             translator: translator,
@@ -616,7 +766,7 @@ class BookTranslationService extends ChangeNotifier
       return;
     }
     _noticeAt = now;
-    final book = _progress[file];
+    final book = _redoing ? _redoProgress[file] : _progress[file];
     if (book == null) return;
     final percent = (book.fraction * 100).floor();
     // Started from the foreground only; Android refuses it from the
@@ -625,7 +775,11 @@ class BookTranslationService extends ChangeNotifier
     await _notice.show(
       channelName: l10n.translationNoticeChannel,
       title: waitText(l10n) ??
-          (_urgent ? l10n.priorityTranslating : l10n.translationNoticeTitle),
+          (_redoing
+              ? l10n.redoTranslating
+              : _urgent
+                  ? l10n.priorityTranslating
+                  : l10n.translationNoticeTitle),
       text: l10n.translationNoticeProgress(book.title, percent),
       subText: l10n.translationNoticeCount(
           book.done, book.total, _bookNumber, _bookCount),
@@ -635,30 +789,37 @@ class BookTranslationService extends ChangeNotifier
     );
   }
 
-  Future<void> _translateBook({
+  /// Translates what [fileName] has left - or, [redoOnly], only its
+  /// paragraphs marked to be made again. True when that is over (done,
+  /// or nothing could be done about it); false when it was stopped half
+  /// way and is to go on later.
+  Future<bool> _translateBook({
     required Translator translator,
     required String path,
     required String fileName,
     required String title,
     required String modelId,
     required TranslationLanguage targetLanguage,
+    bool redoOnly = false,
   }) async {
     final cache = await TranslationEngines.openCache(
       bookFileName: fileName,
       targetLanguage: targetLanguage.code,
     );
+    if (redoOnly && cache.toRedo == 0) return true;
     final List<String?> texts;
     try {
       texts = await epubParagraphTexts(path);
     } catch (e) {
-      _progress[fileName] = BookTranslationProgress(
-          fileName: fileName,
-          title: title,
-          done: 0,
-          total: 0,
-          state: BookTranslationState.failed);
+      (redoOnly ? _redoProgress : _progress)[fileName] =
+          BookTranslationProgress(
+              fileName: fileName,
+              title: title,
+              done: 0,
+              total: 0,
+              state: BookTranslationState.failed);
       notifyListeners();
-      return;
+      return true;
     }
     final unique = <String>{
       for (final t in texts)
@@ -666,20 +827,35 @@ class BookTranslationService extends ChangeNotifier
     };
     int done() => unique.where((t) => cache.lookup(t) != null).length;
 
+    /// Marked to be made again: kept, and not counted as translated.
+    bool marked(String t) => cache.saved(t) != null && cache.lookup(t) == null;
+    final toRedo = redoOnly ? unique.where(marked).length : 0;
+
     void report(BookTranslationState state) {
-      _progress[fileName] = BookTranslationProgress(
-        fileName: fileName,
-        title: title,
-        done: done(),
-        total: unique.length,
-        state: state,
-      );
+      if (redoOnly) {
+        _redoProgress[fileName] = BookTranslationProgress(
+          fileName: fileName,
+          title: title,
+          done: toRedo - unique.where(marked).length,
+          total: toRedo,
+          state: state,
+        );
+      } else {
+        _progress[fileName] = BookTranslationProgress(
+          fileName: fileName,
+          title: title,
+          done: done(),
+          total: unique.length,
+          state: state,
+        );
+      }
       notifyListeners();
     }
 
-    if (done() == unique.length) {
-      report(BookTranslationState.done);
-      return;
+    if (redoOnly ? toRedo == 0 : done() == unique.length) {
+      // (Marks of paragraphs this book no longer has: nothing to make.)
+      if (!redoOnly) report(BookTranslationState.done);
+      return true;
     }
     _currentFile = fileName;
     report(BookTranslationState.translating);
@@ -698,7 +874,9 @@ class BookTranslationService extends ChangeNotifier
         .catchError((_) => BookGlossary.empty);
     final seen = <String>{};
     bool pending(String? t) =>
-        t != null && !seen.contains(t) && cache.lookup(t) == null;
+        t != null &&
+        !seen.contains(t) &&
+        (redoOnly ? marked(t) : cache.lookup(t) == null);
     // Gemini takes several requests at once; the phone one at a time.
     final parallel = translator is CloudTranslator ? translator.concurrency : 1;
     final inFlight = <Future<void>>{};
@@ -774,17 +952,29 @@ class BookTranslationService extends ChangeNotifier
         await corrections();
         report(BookTranslationState.waiting);
         await cache.flush();
-        return;
+        return false;
       }
       // This paragraph and the next ones, as many as one request takes
       // (on the phone a line-broken paragraph goes alone).
       final alone = parallel == 1 && text!.contains('\n');
       final batch = <int>[i];
-      final size = alone ? 1 : translator.batchSize;
+      // Paragraphs to be made again lie apart: an engine off the phone
+      // takes them together all the same, as it takes the ones sent back
+      // (24 to a request); the phone's keeps to ones that follow on.
+      final apart = redoOnly && parallel > 1;
+      final size = alone
+          ? 1
+          : apart
+              ? translator.batchSize.clamp(1, 24)
+              : translator.batchSize;
       for (var k = i + 1; k < texts.length && batch.length < size; k++) {
         final t = texts[k];
         if (t == null) continue;
-        if (!pending(t) || (parallel == 1 && t.contains('\n'))) break;
+        if (!pending(t)) {
+          if (apart) continue;
+          break;
+        }
+        if (parallel == 1 && t.contains('\n')) break;
         batch.add(k);
       }
       for (final k in batch) {
@@ -813,9 +1003,16 @@ class BookTranslationService extends ChangeNotifier
     }
     await corrections();
     await cache.flush();
+    if (redoOnly) {
+      // What would not come stays marked, and is the reader's to make
+      // when it comes on screen: this pass is over either way.
+      report(BookTranslationState.done);
+      return true;
+    }
     report(done() == unique.length
         ? BookTranslationState.done
         : BookTranslationState.waiting);
+    return true;
   }
 
   Future<String?> _bookLanguage(String path) async {

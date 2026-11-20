@@ -14,6 +14,7 @@ import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/sync/sync_service.dart';
 import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/services/translation/translation_engine.dart';
+import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/web/web_library.dart';
 
 class WebBookTranslation extends StatefulWidget {
@@ -157,6 +158,19 @@ class _WebBookTranslationState extends State<WebBookTranslation> {
                 ),
               ),
             ),
+            // The book's glossary, once the book is in this browser (it
+            // comes with the file).
+            if (file != null)
+              Align(
+                alignment: AlignmentDirectional.centerStart,
+                child: TextButton.icon(
+                  key: const ValueKey('webBookGlossary'),
+                  onPressed: () =>
+                      showGlossarySheet(context, bookFile: file),
+                  icon: const Icon(Icons.menu_book_outlined, size: 17),
+                  label: Text(l10n.glossaryTitle),
+                ),
+              ),
             const SizedBox(height: 6),
             Text(problem ?? l10n.webTranslateWholeHint,
                 key: const ValueKey('webTranslateNote'),

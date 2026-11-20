@@ -2573,14 +2573,6 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vos autres appareils utilisent la même clé et le même espace de travail. Désactivé : conservée sur cet appareil et retirée du projet.';
 
   @override
-  String get glossaryRedoAll =>
-      'Retraduire tous les paragraphes contenant ce mot';
-
-  @override
-  String get glossaryRedoAllHint =>
-      'Changer la graphie refait déjà les paragraphes écrits à l\'ancienne. Cochez si des paragraphes contenant ce mot restent faux.';
-
-  @override
   String glossaryRedone(int count) {
     return '$count paragraphes seront retraduits';
   }
@@ -2606,4 +2598,44 @@ class AppLocalizationsFr extends AppLocalizations {
   String webTranslateStopped(String reason) {
     return 'Traduction arrêtée : $reason';
   }
+
+  @override
+  String get redoTranslating => 'Retraduction avec le terme corrigé';
+
+  @override
+  String get glossaryRedoScope => 'Retraduire les paragraphes contenant ce mot';
+
+  @override
+  String get glossaryRedoNone => 'Non';
+
+  @override
+  String get glossaryRedoBook => 'Ce livre';
+
+  @override
+  String get glossaryRedoSeries => 'Toute la série';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'Seulement ces paragraphes, tout de suite et jusqu’au bout, sans ouvrir le livre. Ce qui n’est pas encore traduit reste tel quel.';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return 'Retraduction · $done/$total paragraphes';
+  }
+
+  @override
+  String get glossaryRedoWaiting => 'En attente de retraduction';
+
+  @override
+  String get glossaryRedoNothing =>
+      'Rien à retraduire : aucun paragraphe traduit ne contient ce mot.';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return 'Glossaire de $name';
+  }
+
+  @override
+  String get webGlossaryNoBooks =>
+      'Aucun volume de cette série n’est dans ce navigateur. Ouvrez-en un d’abord.';
 }

@@ -3580,14 +3580,6 @@
   "@syncClaudeKeyHint": {
     "description": "syncClaudeKeyHint"
   },
-  "glossaryRedoAll": "Translate again every paragraph with this word",
-  "@glossaryRedoAll": {
-    "description": "glossaryRedoAll"
-  },
-  "glossaryRedoAllHint": "Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.",
-  "@glossaryRedoAllHint": {
-    "description": "glossaryRedoAllHint"
-  },
   "glossaryRedone": "{count} paragraphs will be translated again",
   "@glossaryRedone": {
     "description": "glossaryRedone",
@@ -3625,5 +3617,62 @@
         "type": "String"
       }
     }
+  },
+  "redoTranslating": "Translating again with the corrected term",
+  "@redoTranslating": {
+    "description": "redoTranslating"
+  },
+  "glossaryRedoScope": "Translate again the paragraphs with this word",
+  "@glossaryRedoScope": {
+    "description": "glossaryRedoScope"
+  },
+  "glossaryRedoNone": "No",
+  "@glossaryRedoNone": {
+    "description": "glossaryRedoNone"
+  },
+  "glossaryRedoBook": "This book",
+  "@glossaryRedoBook": {
+    "description": "glossaryRedoBook"
+  },
+  "glossaryRedoSeries": "Whole series",
+  "@glossaryRedoSeries": {
+    "description": "glossaryRedoSeries"
+  },
+  "glossaryRedoScopeHint": "Only those paragraphs, now and to the end, without opening the book. What is not translated yet is left alone.",
+  "@glossaryRedoScopeHint": {
+    "description": "glossaryRedoScopeHint"
+  },
+  "glossaryRedoProgress": "Translating again · {done}/{total} paragraphs",
+  "@glossaryRedoProgress": {
+    "description": "glossaryRedoProgress",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "glossaryRedoWaiting": "Waiting to translate again",
+  "@glossaryRedoWaiting": {
+    "description": "glossaryRedoWaiting"
+  },
+  "glossaryRedoNothing": "Nothing to translate again: no translated paragraph has this word.",
+  "@glossaryRedoNothing": {
+    "description": "glossaryRedoNothing"
+  },
+  "glossarySeriesTitle": "{name} glossary",
+  "@glossarySeriesTitle": {
+    "description": "glossarySeriesTitle",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "webGlossaryNoBooks": "No volume of this series is in this browser yet. Open one first.",
+  "@webGlossaryNoBooks": {
+    "description": "webGlossaryNoBooks"
   }
 }

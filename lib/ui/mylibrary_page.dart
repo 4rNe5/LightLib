@@ -20,6 +20,7 @@ import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
 import 'package:openlib/ui/components/error_widget.dart';
+import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/ui/components/hide_cover_controls.dart';
 import 'package:openlib/services/reading_recap.dart';
 import 'package:openlib/ui/components/library_recap.dart';
@@ -571,6 +572,26 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                 Text(l10n.seriesVolumes(series.volumes.length),
                     style: TextStyle(
                         fontSize: 12, color: scheme.onSurfaceVariant)),
+                // The series' glossary (its volumes share one): a word
+                // set right there is translated again in every volume.
+                IconButton(
+                  key: ValueKey('seriesGlossary-${series.name}'),
+                  tooltip: l10n.glossaryTitle,
+                  visualDensity: VisualDensity.compact,
+                  padding: EdgeInsets.zero,
+                  constraints:
+                      const BoxConstraints(minWidth: 36, minHeight: 32),
+                  iconSize: 18,
+                  icon: const Icon(Icons.menu_book_outlined),
+                  onPressed: () => showGlossarySheet(
+                    context,
+                    bookFile: series.volumes.first.book.getFileName(),
+                    series: [
+                      for (final v in series.volumes) v.book.getFileName(),
+                    ],
+                    seriesName: series.name,
+                  ),
+                ),
               ],
             ),
           ),

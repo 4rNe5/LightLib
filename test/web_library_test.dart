@@ -660,6 +660,16 @@ void main() {
       expect(library.grouped.last.$1, ['Saga 1']);
       expect(library.grouped.last.$2, 'Saga of the North');
 
+      // Its glossary comes with its books' files: none is in this
+      // browser, and that is said.
+      await tester.tap(find.byKey(const ValueKey('webSeriesMenu:Saga')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Glossary'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('No volume of this series is in this browser'),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('glossarySheet')), findsNothing);
+
       await tester.tap(find.byKey(const ValueKey('webSeriesMenu:Saga')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Ungroup series'));

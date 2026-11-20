@@ -2540,14 +2540,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your other devices use the same key and workspace. Off: kept on this device and removed from your project.';
 
   @override
-  String get glossaryRedoAll =>
-      'Translate again every paragraph with this word';
-
-  @override
-  String get glossaryRedoAllHint =>
-      'Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.';
-
-  @override
   String glossaryRedone(int count) {
     return '$count paragraphs will be translated again';
   }
@@ -2573,4 +2565,45 @@ class AppLocalizationsEn extends AppLocalizations {
   String webTranslateStopped(String reason) {
     return 'Translation stopped: $reason';
   }
+
+  @override
+  String get redoTranslating => 'Translating again with the corrected term';
+
+  @override
+  String get glossaryRedoScope =>
+      'Translate again the paragraphs with this word';
+
+  @override
+  String get glossaryRedoNone => 'No';
+
+  @override
+  String get glossaryRedoBook => 'This book';
+
+  @override
+  String get glossaryRedoSeries => 'Whole series';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'Only those paragraphs, now and to the end, without opening the book. What is not translated yet is left alone.';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return 'Translating again · $done/$total paragraphs';
+  }
+
+  @override
+  String get glossaryRedoWaiting => 'Waiting to translate again';
+
+  @override
+  String get glossaryRedoNothing =>
+      'Nothing to translate again: no translated paragraph has this word.';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return '$name glossary';
+  }
+
+  @override
+  String get webGlossaryNoBooks =>
+      'No volume of this series is in this browser yet. Open one first.';
 }

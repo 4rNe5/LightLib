@@ -2475,13 +2475,6 @@ class AppLocalizationsJa extends AppLocalizations {
       'ほかの端末でも同じキーとワークスペースを使います。オフにするとこの端末だけに保存し、プロジェクトのキーは削除します。';
 
   @override
-  String get glossaryRedoAll => 'この語が出てくる段落をすべて翻訳し直す';
-
-  @override
-  String get glossaryRedoAllHint =>
-      '表記を変えると、以前の表記で訳された段落は自動で訳し直されます。それでもこの語の段落が誤っているときにチェックしてください。';
-
-  @override
   String glossaryRedone(int count) {
     return '$count段落を翻訳し直します';
   }
@@ -2505,4 +2498,42 @@ class AppLocalizationsJa extends AppLocalizations {
   String webTranslateStopped(String reason) {
     return '翻訳が止まりました: $reason';
   }
+
+  @override
+  String get redoTranslating => '修正した用語で再翻訳中';
+
+  @override
+  String get glossaryRedoScope => 'この語がある段落を再翻訳';
+
+  @override
+  String get glossaryRedoNone => 'しない';
+
+  @override
+  String get glossaryRedoBook => 'この本';
+
+  @override
+  String get glossaryRedoSeries => 'シリーズ全体';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'その段落だけを今すぐ、本を開かなくても最後まで再翻訳します。未翻訳の段落はそのままです。';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return '再翻訳中 · $done/$total 段落';
+  }
+
+  @override
+  String get glossaryRedoWaiting => '再翻訳待ち';
+
+  @override
+  String get glossaryRedoNothing => '再翻訳する段落がありません。この語がある翻訳済みの段落がありません。';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return '$name の用語集';
+  }
+
+  @override
+  String get webGlossaryNoBooks => 'このブラウザーにはこのシリーズの本がまだありません。先に開いてください。';
 }

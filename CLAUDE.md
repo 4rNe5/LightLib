@@ -167,7 +167,8 @@ debug key (only CI signs releases).
 | Paragraph split (shared by reader and library) | `paragraph_text.dart` (`readerParagraphs`, `epubReaderParagraphs`; `containsImage`, `glyphOf`: a glyph set as a picture is text), the page's own `reader_web/src/paragraphs.js` - the two must read every book alike |
 | Saved translations | `translation_cache.dart` — one set per book × language × style (`shared`, `shared+plain`), JSON under `<books>/.translations/`; paragraphs to make again are marked beside it (`<set>.redo`, `redo`, `lookup` null while marked; `translation_repair.dart` `redoTranslationsWith`) |
 | Glossary per book | `book_glossary.dart` (candidates, `BookSurvey`, `parseGlossaryAnswer`, `tidyNames`, `upgradeGlossary`; Gemini reading the whole book: `bookAnalysis*`), `japanese_names.dart` (the noun a name ends in, well-known places), `glossary_service.dart`, `series_glossary.dart` (the other volumes' names), `translation_repair.dart` (saved translations set right after a glossary is) |
-| Library/background and "translate this whole book" | `book_translation_service.dart`, `lib/ui/components/priority_translation_card.dart` |
+| Library/background and "translate this whole book" | `book_translation_service.dart` (also the paragraphs marked to be made again, at once: `redo`, `redoWord`, a pass of those only), `lib/ui/components/priority_translation_card.dart` |
+| A glossary outside the reader | `lib/ui/components/glossary_sheet.dart` (`showGlossarySheet`: a book's, or with `series` what its volumes have between them; a word set right asks which paragraphs to translate again - none, this book, the whole series): from a book's page (`mybook_page.dart`), a series' row in the library (`mylibrary_page.dart`), and on the web a book's card and a series' row menu |
 | Series the reader makes | table `bookseries` (`MyLibraryDb.setSeries`), `library_organization.dart` (`librarySeries`: volumes by the number in their titles; `suggestedSeriesName`), `lib/ui/mylibrary_page.dart` (a long press chooses books, the bar over the foot of the list, a row per series; its books leave the grid unless something is searched), `series_glossary.dart` (`sameSeries`: titles and the reader's grouping, which has the last word; `passOnToSeries` an edit to the other volumes, `shareWithinSeries` on grouping; pref `seriesGlossaryShare`, on unless turned off); between devices `lib/services/sync/series_sync.dart` and `LibrarySyncLocal._reconcileSeries` |
 | Translated EPUB export | `translated_epub.dart` |
 | Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
@@ -244,6 +245,19 @@ debug key (only CI signs releases).
   under test happens to. Marks alone do not change an open page either:
   the reader sends the page each paragraph once (`_sent`), so it starts
   its page over when it hears of them (`redoMarks`, `_onRedoMarked`).
+- Paragraphs marked to be made again waited for the reader to come to
+  them: a word wrong in a series was put right one screen at a time,
+  each screen translating while it was read. `BookTranslationService.redo`
+  makes them at once and to the end without a book being opened - the
+  marked ones only (a book half translated is not finished on that
+  account), an engine off the phone taking 24 that lie apart in one
+  request, as it takes the ones sent back. The glossary is reached
+  without opening a book for that, and for a series as one.
+- A write to a real file begun inside `testWidgets` never comes back,
+  and what waits for it stops there without a word: the glossary
+  sheet's first test passed because the service changes what it holds
+  in memory before it writes. A widget test that goes on after a write
+  keeps the files in memory (`IdbAppFiles(newIdbFactoryMemory())`).
 - A glyph set as a picture: the Japanese publishers' EPUBs write what
   the fonts lack as `<img class="gaiji" alt="…">`, and one book wrote
   every "!!?" so. The rule that leaves a block with a picture alone (an

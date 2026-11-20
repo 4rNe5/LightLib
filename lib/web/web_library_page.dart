@@ -27,6 +27,7 @@ import 'package:openlib/services/sync/library_sync_local.dart';
 import 'package:openlib/services/sync/remote_library.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/sync/sync_service.dart';
+import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/ui/components/series_name_dialog.dart';
 import 'package:openlib/web/browser.dart';
 import 'package:openlib/web/web_book_dialog.dart';
@@ -362,6 +363,21 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
     );
     if (name == null || name.trim().isEmpty || name.trim() == series) return;
     await _library.setSeries(volumes, name.trim());
+  }
+
+  /// The glossary of a series: of its volumes that are in this browser
+  /// (a glossary comes with its book's file).
+  void _seriesGlossary(String name, List<WebBook> volumes) {
+    final files = [
+      for (final b in volumes)
+        if (b.local != null) b.local!.getFileName(),
+    ];
+    if (files.isEmpty) {
+      _say(AppLocalizations.of(context).webGlossaryNoBooks);
+      return;
+    }
+    unawaited(showGlossarySheet(context,
+        bookFile: files.first, series: files, seriesName: name));
   }
 
   /// The bar of the chosen books: how many, into a series, out of
@@ -837,6 +853,7 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
                   tileWidth: wide ? 132 : 100,
                   onRename: () => _rename(s.name, s.volumes),
                   onDissolve: () => _ungroup(s.volumes),
+                  onGlossary: () => _seriesGlossary(s.name, s.volumes),
                   children: [
                     for (final b in s.volumes)
                       _BookTile(
@@ -910,6 +927,7 @@ class _SeriesRow extends StatelessWidget {
     required this.children,
     this.onRename,
     this.onDissolve,
+    this.onGlossary,
   });
 
   final String name;
@@ -920,6 +938,9 @@ class _SeriesRow extends StatelessWidget {
   /// Another name for the series; its books out of it.
   final VoidCallback? onRename;
   final VoidCallback? onDissolve;
+
+  /// The glossary its volumes share.
+  final VoidCallback? onGlossary;
 
   @override
   Widget build(BuildContext context) {
@@ -958,10 +979,14 @@ class _SeriesRow extends StatelessWidget {
                     padding: EdgeInsets.zero,
                     iconSize: 18,
                     icon: const Icon(Icons.more_horiz),
-                    onSelected: (v) => (v == 0 ? onRename : onDissolve)?.call(),
+                    onSelected: (v) =>
+                        [onRename, onDissolve, onGlossary][v]?.call(),
                     itemBuilder: (context) {
                       final l10n = AppLocalizations.of(context);
                       return [
+                        if (onGlossary != null)
+                          PopupMenuItem(
+                              value: 2, child: Text(l10n.glossaryTitle)),
                         if (onRename != null)
                           PopupMenuItem(
                               value: 0, child: Text(l10n.seriesRename)),

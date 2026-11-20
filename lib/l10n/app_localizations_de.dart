@@ -2565,13 +2565,6 @@ class AppLocalizationsDe extends AppLocalizations {
       'Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht.';
 
   @override
-  String get glossaryRedoAll => 'Alle Absätze mit diesem Wort neu übersetzen';
-
-  @override
-  String get glossaryRedoAllHint =>
-      'Eine neue Schreibweise übersetzt die Absätze mit der alten bereits neu. Ankreuzen, wenn Absätze mit dem Wort trotzdem falsch sind.';
-
-  @override
   String glossaryRedone(int count) {
     return '$count Absätze werden neu übersetzt';
   }
@@ -2597,4 +2590,44 @@ class AppLocalizationsDe extends AppLocalizations {
   String webTranslateStopped(String reason) {
     return 'Übersetzung angehalten: $reason';
   }
+
+  @override
+  String get redoTranslating => 'Neuübersetzung mit korrigiertem Begriff';
+
+  @override
+  String get glossaryRedoScope => 'Absätze mit diesem Wort neu übersetzen';
+
+  @override
+  String get glossaryRedoNone => 'Nein';
+
+  @override
+  String get glossaryRedoBook => 'Dieses Buch';
+
+  @override
+  String get glossaryRedoSeries => 'Ganze Reihe';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'Nur diese Absätze, sofort und bis zum Ende, ohne das Buch zu öffnen. Noch nicht Übersetztes bleibt unberührt.';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return 'Neuübersetzung · $done/$total Absätze';
+  }
+
+  @override
+  String get glossaryRedoWaiting => 'Wartet auf Neuübersetzung';
+
+  @override
+  String get glossaryRedoNothing =>
+      'Nichts neu zu übersetzen: kein übersetzter Absatz enthält dieses Wort.';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return 'Glossar: $name';
+  }
+
+  @override
+  String get webGlossaryNoBooks =>
+      'Kein Band dieser Reihe ist in diesem Browser. Zuerst einen öffnen.';
 }

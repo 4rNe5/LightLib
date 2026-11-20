@@ -11,6 +11,7 @@ import 'package:openlib/services/share_book.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
 import 'package:openlib/ui/components/book_info_widget.dart';
 import 'package:openlib/ui/components/file_buttons_widget.dart';
+import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/ui/components/hide_cover_controls.dart';
 import 'package:openlib/ui/components/priority_translation_card.dart';
 
@@ -83,10 +84,31 @@ class BookPage extends StatelessWidget {
                               Navigator.of(context).pop();
                             },
                           ),
-                          if ((book.format ?? '').toLowerCase() == 'epub')
+                          if ((book.format ?? '').toLowerCase() == 'epub') ...[
                             PriorityTranslationCard(
                                 fileName: book.getFileName(),
                                 title: book.title),
+                            // The glossary without opening the book: a
+                            // word set right there has its paragraphs
+                            // translated again, in this book or in the
+                            // whole series.
+                            Padding(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 4, 16, 8),
+                              child: Align(
+                                alignment: AlignmentDirectional.centerStart,
+                                child: OutlinedButton.icon(
+                                  key: const ValueKey('bookGlossary'),
+                                  onPressed: () => showGlossarySheet(context,
+                                      bookFile: book.getFileName()),
+                                  icon: const Icon(Icons.menu_book_outlined,
+                                      size: 18),
+                                  label: Text(AppLocalizations.of(context)
+                                      .glossaryTitle),
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ));
                 } else if (snapshot.hasError) {

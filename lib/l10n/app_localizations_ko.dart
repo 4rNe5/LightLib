@@ -2479,13 +2479,6 @@ class AppLocalizationsKo extends AppLocalizations {
       '내 다른 기기에서도 같은 키와 워크스페이스를 씁니다. 끄면 이 기기에만 두고 프로젝트에 올린 키는 지웁니다.';
 
   @override
-  String get glossaryRedoAll => '이 단어가 나온 문단을 모두 다시 번역';
-
-  @override
-  String get glossaryRedoAllHint =>
-      '표기를 바꾸면 예전 표기로 번역된 문단은 자동으로 다시 번역됩니다. 그래도 이 단어가 나온 문단이 잘못돼 있으면 체크하세요.';
-
-  @override
   String glossaryRedone(int count) {
     return '$count문단을 다시 번역합니다';
   }
@@ -2510,4 +2503,43 @@ class AppLocalizationsKo extends AppLocalizations {
   String webTranslateStopped(String reason) {
     return '번역이 멈췄습니다: $reason';
   }
+
+  @override
+  String get redoTranslating => '고친 용어로 다시 번역 중';
+
+  @override
+  String get glossaryRedoScope => '이 단어가 나온 문단 다시 번역';
+
+  @override
+  String get glossaryRedoNone => '안 함';
+
+  @override
+  String get glossaryRedoBook => '이 책';
+
+  @override
+  String get glossaryRedoSeries => '시리즈 전체';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      '그 문단만 지금 바로, 책을 열지 않아도 끝까지 다시 번역합니다. 아직 번역하지 않은 문단은 그대로 둡니다.';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return '다시 번역 중 · $done/$total문단';
+  }
+
+  @override
+  String get glossaryRedoWaiting => '다시 번역 대기 중';
+
+  @override
+  String get glossaryRedoNothing => '다시 번역할 문단이 없습니다: 이 단어가 나온 번역된 문단이 없어요.';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return '$name 용어집';
+  }
+
+  @override
+  String get webGlossaryNoBooks =>
+      '이 브라우저에 받은 권이 없어 용어집을 열 수 없습니다. 책을 한 번 열어 주세요.';
 }

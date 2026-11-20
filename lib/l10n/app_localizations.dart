@@ -4512,18 +4512,6 @@ abstract class AppLocalizations {
   /// **'Your other devices use the same key and workspace. Off: kept on this device and removed from your project.'**
   String get syncClaudeKeyHint;
 
-  /// glossaryRedoAll
-  ///
-  /// In en, this message translates to:
-  /// **'Translate again every paragraph with this word'**
-  String get glossaryRedoAll;
-
-  /// glossaryRedoAllHint
-  ///
-  /// In en, this message translates to:
-  /// **'Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.'**
-  String get glossaryRedoAllHint;
-
   /// glossaryRedone
   ///
   /// In en, this message translates to:
@@ -4565,6 +4553,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Translation stopped: {reason}'**
   String webTranslateStopped(String reason);
+
+  /// redoTranslating
+  ///
+  /// In en, this message translates to:
+  /// **'Translating again with the corrected term'**
+  String get redoTranslating;
+
+  /// glossaryRedoScope
+  ///
+  /// In en, this message translates to:
+  /// **'Translate again the paragraphs with this word'**
+  String get glossaryRedoScope;
+
+  /// glossaryRedoNone
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get glossaryRedoNone;
+
+  /// glossaryRedoBook
+  ///
+  /// In en, this message translates to:
+  /// **'This book'**
+  String get glossaryRedoBook;
+
+  /// glossaryRedoSeries
+  ///
+  /// In en, this message translates to:
+  /// **'Whole series'**
+  String get glossaryRedoSeries;
+
+  /// glossaryRedoScopeHint
+  ///
+  /// In en, this message translates to:
+  /// **'Only those paragraphs, now and to the end, without opening the book. What is not translated yet is left alone.'**
+  String get glossaryRedoScopeHint;
+
+  /// glossaryRedoProgress
+  ///
+  /// In en, this message translates to:
+  /// **'Translating again · {done}/{total} paragraphs'**
+  String glossaryRedoProgress(int done, int total);
+
+  /// glossaryRedoWaiting
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to translate again'**
+  String get glossaryRedoWaiting;
+
+  /// glossaryRedoNothing
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to translate again: no translated paragraph has this word.'**
+  String get glossaryRedoNothing;
+
+  /// glossarySeriesTitle
+  ///
+  /// In en, this message translates to:
+  /// **'{name} glossary'**
+  String glossarySeriesTitle(String name);
+
+  /// webGlossaryNoBooks
+  ///
+  /// In en, this message translates to:
+  /// **'No volume of this series is in this browser yet. Open one first.'**
+  String get webGlossaryNoBooks;
 }
 
 class _AppLocalizationsDelegate
