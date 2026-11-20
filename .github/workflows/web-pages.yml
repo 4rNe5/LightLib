@@ -16,6 +16,7 @@ on:
       - "pubspec.lock"
       - "vercel.json"
       - "tool/vercel_build.sh"
+      - "tool/stamp_page.py"
       - "tool/pages_csp.py"
       - ".github/workflows/web-pages.yml"
   workflow_dispatch:

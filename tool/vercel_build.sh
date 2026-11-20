@@ -24,3 +24,6 @@ flutter pub get
 flutter build web --release -t lib/main_web.dart --no-wasm-dry-run \
   ${BASE_HREF:+--base-href "$BASE_HREF"} \
   ${SYNC_RELAY:+--dart-define=SYNC_RELAY="$SYNC_RELAY"}
+# The page changes whenever its headers do (a browser that has the page
+# is otherwise told "not changed" and keeps the policy it had).
+python3 tool/stamp_page.py vercel.json build/web/index.html

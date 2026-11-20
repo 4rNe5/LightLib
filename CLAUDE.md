@@ -66,9 +66,16 @@ debug key (only CI signs releases).
   book) and kept for the others. The first frame waits for nothing
   (`main_web.dart`); `web/index.html` shows the app's name until then.
   A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
-  Series made on a device show as rows there too (`webSeries`, by the
-  shared map: the web has no rows of its own for most books); the web
-  does not make series.
+  Series show as rows there too (`webSeries`, by the shared map: the
+  web has no rows of its own for most books) and are made there as on a
+  phone - books chosen from a tile's menu or with Ctrl/⌘, the bar, a
+  name; a row's menu renames or undoes one. The web writes the shared
+  map itself, by MD5 (`WebLibrary.setSeries`), and sync sends it.
+  "Translate this whole book" is on a book's card
+  (`web_book_translation.dart`): the library's translator
+  (`BookTranslationService`, started in `main_web.dart`) works on that
+  book while the tab is open, fetching it first if it is only on the
+  account.
 - Cloudflare, for a network that does not reach `*.supabase.co` (nor
   Vercel): the Workers project `lightlib`
   (https://lightlib.4rnne5.workers.dev), root `cloudflare`, build
@@ -93,6 +100,16 @@ debug key (only CI signs releases).
   in the page). `[skip ci]` skips it: run the workflow by hand then. The
   sign-in returns to `SyncConfig.webRedirect` (the app's own address); a
   new host's address must be in the project's Auth redirect URLs.
+- A page's headers can change while the page does not: the browser
+  that has it asks "changed?", Vercel answers 304 without the policy,
+  and the browser keeps the policy it first got. `api.anthropic.com`
+  was let out by a new `connect-src` that way and the owner's browser
+  went on refusing it ("XMLHttpRequest onError" in the app, the policy
+  named in the console). `tool/stamp_page.py` (run by
+  `tool/vercel_build.sh`) puts a line in the built page that changes
+  with the commit and with `vercel.json`. A deployment is checked as a
+  browser that has the page sees it too: `curl -H 'If-None-Match:
+  <the etag before>'` must come back 200 with the new header.
 - Web checks: `tool/web_check/` (its README) - the built app in headless
   Chrome with real clicks and touches, against a stand-in for the sync
   project (no live account).
@@ -434,8 +451,8 @@ debug key (only CI signs releases).
    allows (MLX or llama-server, OpenAI-compatible), reachable only by the
    owner (Tailscale preferred, or a tunnel with an API key); an app engine
    "내 서버" (URL + key) reusing `CloudTranslator`'s structure.
-2. Web + sync (built, see "Web and sync"): next - whole-book translation
-   on the web, the reader's fonts and word tools on the web, a smaller
+2. Web + sync (built, see "Web and sync"): next - the reader's fonts
+   and word tools on the web, a smaller
    start (llamadart is still in the web bundle, ~0.4 MB; a WebAssembly
    build compiles but saved only ~10% of the download). No public relay
    for shadow-library search/downloads.
@@ -451,7 +468,7 @@ debug key (only CI signs releases).
    (kanji pairs that always go together), on the phone a draft whose
    flagged paragraphs go to Gemini when online, a no-kanji grammar for
    GGUF models. Claude: older models on
-   the list. Series: making them on the web.
+   the list.
 4. Study, later: a bundled pre-translated dictionary (JMdict + Korean
    meanings) as an extension; the word sheet would show it before the
    engine's contextual meaning.
