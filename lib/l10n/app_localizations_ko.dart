@@ -2489,4 +2489,25 @@ class AppLocalizationsKo extends AppLocalizations {
   String glossaryRedone(int count) {
     return '$count문단을 다시 번역합니다';
   }
+
+  @override
+  String get webSelect => '선택';
+
+  @override
+  String get seriesRename => '시리즈 이름 바꾸기';
+
+  @override
+  String get seriesDissolve => '시리즈 풀기';
+
+  @override
+  String get webTranslateWholeHint =>
+      '이 탭이 열려 있는 동안 끝까지 번역합니다. 책을 읽는 중에도 계속됩니다.';
+
+  @override
+  String get webTranslateNoEngine => '번역하려면 설정에서 Gemini나 Claude 키를 넣어 주세요.';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return '번역이 멈췄습니다: $reason';
+  }
 }

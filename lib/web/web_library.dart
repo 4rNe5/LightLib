@@ -126,6 +126,47 @@ class WebLibrary extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Puts [books] in [series], or takes them out of theirs (null).
+  ///
+  /// The web lists the account's books, and most have no row here: the
+  /// map the devices share is written itself - each book's MD5 with its
+  /// series, "" for one taken out - and counts as changed now, so the
+  /// next run of sync sends it ([MyLibraryDb.onSeriesChanged] asks for
+  /// one). A book that is in this browser has its row follow.
+  Future<void> setSeries(Iterable<WebBook> books, String? series) async {
+    final name = series?.trim() ?? '';
+    final map = decodeSeries(
+        '${await _db.getPreference(seriesSharedPref).catchError((_) => null) ?? ''}');
+    final was = encodeSeries(map);
+    final rows = <String>[], unknown = <String>[];
+    for (final book in books) {
+      final md5 = book.md5;
+      if (md5 == null) {
+        // Added here and not yet on the account: marked as a phone marks
+        // its own, and written into the map when its MD5 is known.
+        if (book.local != null) unknown.add(book.local!.id);
+        continue;
+      }
+      // (A book that was never in a series is not "taken out" of one.)
+      if (name.isNotEmpty || map.containsKey(md5)) map[md5] = name;
+      if (book.local != null) rows.add(book.local!.id);
+    }
+    final now = encodeSeries(map);
+    if (now != was) {
+      await _db.savePreference(seriesSharedPref, now);
+      await _db.setSyncState(
+          'set:$seriesSetting', '${DateTime.now().millisecondsSinceEpoch}');
+    }
+    if (rows.isNotEmpty) {
+      await _db.setSeries(rows, name.isEmpty ? null : name, fromSync: true);
+    }
+    if (unknown.isNotEmpty) {
+      await _db.setSeries(unknown, name.isEmpty ? null : name);
+    }
+    await reload();
+    if (now != was) MyLibraryDb.onSeriesChanged?.call();
+  }
+
   @override
   void dispose() {
     _disposed = true;

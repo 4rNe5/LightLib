@@ -3596,5 +3596,34 @@
         "type": "int"
       }
     }
+  },
+  "webSelect": "Select",
+  "@webSelect": {
+    "description": "webSelect"
+  },
+  "seriesRename": "Rename series",
+  "@seriesRename": {
+    "description": "seriesRename"
+  },
+  "seriesDissolve": "Ungroup series",
+  "@seriesDissolve": {
+    "description": "seriesDissolve"
+  },
+  "webTranslateWholeHint": "Translates to the end while this tab is open, also while you read.",
+  "@webTranslateWholeHint": {
+    "description": "webTranslateWholeHint"
+  },
+  "webTranslateNoEngine": "Add a Gemini or Claude key in Settings to translate.",
+  "@webTranslateNoEngine": {
+    "description": "webTranslateNoEngine"
+  },
+  "webTranslateStopped": "Translation stopped: {reason}",
+  "@webTranslateStopped": {
+    "description": "webTranslateStopped",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
   }
 }

@@ -2551,4 +2551,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String glossaryRedone(int count) {
     return '$count paragraphs will be translated again';
   }
+
+  @override
+  String get webSelect => 'Select';
+
+  @override
+  String get seriesRename => 'Rename series';
+
+  @override
+  String get seriesDissolve => 'Ungroup series';
+
+  @override
+  String get webTranslateWholeHint =>
+      'Translates to the end while this tab is open, also while you read.';
+
+  @override
+  String get webTranslateNoEngine =>
+      'Add a Gemini or Claude key in Settings to translate.';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return 'Translation stopped: $reason';
+  }
 }

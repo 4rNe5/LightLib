@@ -2575,4 +2575,26 @@ class AppLocalizationsDe extends AppLocalizations {
   String glossaryRedone(int count) {
     return '$count Absätze werden neu übersetzt';
   }
+
+  @override
+  String get webSelect => 'Auswählen';
+
+  @override
+  String get seriesRename => 'Reihe umbenennen';
+
+  @override
+  String get seriesDissolve => 'Reihe auflösen';
+
+  @override
+  String get webTranslateWholeHint =>
+      'Übersetzt bis zum Ende, solange dieser Tab offen ist – auch beim Lesen.';
+
+  @override
+  String get webTranslateNoEngine =>
+      'Zum Übersetzen in den Einstellungen einen Gemini- oder Claude-Schlüssel eintragen.';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return 'Übersetzung angehalten: $reason';
+  }
 }

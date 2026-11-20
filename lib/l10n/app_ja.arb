@@ -735,5 +735,11 @@
   "syncClaudeKeyHint": "ほかの端末でも同じキーとワークスペースを使います。オフにするとこの端末だけに保存し、プロジェクトのキーは削除します。",
   "glossaryRedoAll": "この語が出てくる段落をすべて翻訳し直す",
   "glossaryRedoAllHint": "表記を変えると、以前の表記で訳された段落は自動で訳し直されます。それでもこの語の段落が誤っているときにチェックしてください。",
-  "glossaryRedone": "{count}段落を翻訳し直します"
+  "glossaryRedone": "{count}段落を翻訳し直します",
+  "webSelect": "選択",
+  "seriesRename": "シリーズ名を変更",
+  "seriesDissolve": "シリーズを解除",
+  "webTranslateWholeHint": "このタブを開いている間、最後まで翻訳します。読書中も続きます。",
+  "webTranslateNoEngine": "翻訳するには設定で Gemini か Claude のキーを入れてください。",
+  "webTranslateStopped": "翻訳が止まりました: {reason}"
 }

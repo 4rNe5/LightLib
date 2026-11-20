@@ -2571,4 +2571,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String glossaryRedone(int count) {
     return 'Se volverán a traducir $count párrafos';
   }
+
+  @override
+  String get webSelect => 'Seleccionar';
+
+  @override
+  String get seriesRename => 'Renombrar serie';
+
+  @override
+  String get seriesDissolve => 'Deshacer serie';
+
+  @override
+  String get webTranslateWholeHint =>
+      'Traduce hasta el final mientras esta pestaña esté abierta, también mientras lees.';
+
+  @override
+  String get webTranslateNoEngine =>
+      'Para traducir, añade una clave de Gemini o Claude en Ajustes.';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return 'La traducción se detuvo: $reason';
+  }
 }

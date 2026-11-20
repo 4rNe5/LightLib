@@ -741,5 +741,11 @@
   "syncClaudeKeyHint": "Vos autres appareils utilisent la même clé et le même espace de travail. Désactivé : conservée sur cet appareil et retirée du projet.",
   "glossaryRedoAll": "Retraduire tous les paragraphes contenant ce mot",
   "glossaryRedoAllHint": "Changer la graphie refait déjà les paragraphes écrits à l'ancienne. Cochez si des paragraphes contenant ce mot restent faux.",
-  "glossaryRedone": "{count} paragraphes seront retraduits"
+  "glossaryRedone": "{count} paragraphes seront retraduits",
+  "webSelect": "Sélectionner",
+  "seriesRename": "Renommer la série",
+  "seriesDissolve": "Dissoudre la série",
+  "webTranslateWholeHint": "Traduit jusqu’à la fin tant que cet onglet est ouvert, même pendant la lecture.",
+  "webTranslateNoEngine": "Pour traduire, ajoutez une clé Gemini ou Claude dans les réglages.",
+  "webTranslateStopped": "Traduction arrêtée : {reason}"
 }

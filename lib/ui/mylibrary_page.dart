@@ -24,6 +24,7 @@ import 'package:openlib/ui/components/hide_cover_controls.dart';
 import 'package:openlib/services/reading_recap.dart';
 import 'package:openlib/ui/components/library_recap.dart';
 import 'package:openlib/ui/components/library_tiles.dart';
+import 'package:openlib/ui/components/series_name_dialog.dart';
 import 'package:openlib/ui/mybook_page.dart';
 import 'package:openlib/ui/study_page.dart';
 
@@ -423,7 +424,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     final theirs = {for (final b in chosen) b.series}.whereType<String>();
     final name = await showDialog<String>(
       context: context,
-      builder: (_) => _SeriesNameDialog(
+      builder: (_) => SeriesNameDialog(
         // The series they are in already, or what their titles say.
         initial: theirs.length == 1
             ? theirs.first
@@ -1051,78 +1052,6 @@ class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
           ),
         );
       },
-    );
-  }
-}
-
-/// Asks what the series is called; an existing series' name can be
-/// picked, and the books then join it.
-class _SeriesNameDialog extends StatefulWidget {
-  const _SeriesNameDialog({required this.initial, required this.existing});
-  final String initial;
-  final List<String> existing;
-
-  @override
-  State<_SeriesNameDialog> createState() => _SeriesNameDialogState();
-}
-
-class _SeriesNameDialogState extends State<_SeriesNameDialog> {
-  late final _name = TextEditingController(text: widget.initial);
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final scheme = Theme.of(context).colorScheme;
-    return AlertDialog(
-      title: Text(l10n.seriesGroup),
-      content: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            TextField(
-              key: const ValueKey('seriesName'),
-              controller: _name,
-              autofocus: true,
-              textInputAction: TextInputAction.done,
-              decoration: InputDecoration(labelText: l10n.seriesName),
-              onSubmitted: (v) => Navigator.pop(context, v),
-            ),
-            const SizedBox(height: 8),
-            Text(l10n.seriesNameHint,
-                style: TextStyle(fontSize: 12, color: scheme.onSurfaceVariant)),
-            if (widget.existing.isNotEmpty) ...[
-              const SizedBox(height: 10),
-              Wrap(
-                spacing: 6,
-                runSpacing: 4,
-                children: [
-                  for (final name in widget.existing)
-                    ActionChip(
-                      key: ValueKey('seriesPick-$name'),
-                      label: Text(name, style: const TextStyle(fontSize: 12)),
-                      onPressed: () => setState(() => _name.text = name),
-                    ),
-                ],
-              ),
-            ],
-          ],
-        ),
-      ),
-      actions: [
-        TextButton(
-            onPressed: () => Navigator.pop(context), child: Text(l10n.cancel)),
-        FilledButton(
-            key: const ValueKey('seriesNameSave'),
-            onPressed: () => Navigator.pop(context, _name.text),
-            child: Text(l10n.save)),
-      ],
     );
   }
 }

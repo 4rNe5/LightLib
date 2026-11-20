@@ -741,5 +741,11 @@
   "syncClaudeKeyHint": "Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht.",
   "glossaryRedoAll": "Alle Absätze mit diesem Wort neu übersetzen",
   "glossaryRedoAllHint": "Eine neue Schreibweise übersetzt die Absätze mit der alten bereits neu. Ankreuzen, wenn Absätze mit dem Wort trotzdem falsch sind.",
-  "glossaryRedone": "{count} Absätze werden neu übersetzt"
+  "glossaryRedone": "{count} Absätze werden neu übersetzt",
+  "webSelect": "Auswählen",
+  "seriesRename": "Reihe umbenennen",
+  "seriesDissolve": "Reihe auflösen",
+  "webTranslateWholeHint": "Übersetzt bis zum Ende, solange dieser Tab offen ist – auch beim Lesen.",
+  "webTranslateNoEngine": "Zum Übersetzen in den Einstellungen einen Gemini- oder Claude-Schlüssel eintragen.",
+  "webTranslateStopped": "Übersetzung angehalten: {reason}"
 }

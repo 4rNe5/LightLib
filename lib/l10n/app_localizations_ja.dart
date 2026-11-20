@@ -2485,4 +2485,24 @@ class AppLocalizationsJa extends AppLocalizations {
   String glossaryRedone(int count) {
     return '$count段落を翻訳し直します';
   }
+
+  @override
+  String get webSelect => '選択';
+
+  @override
+  String get seriesRename => 'シリーズ名を変更';
+
+  @override
+  String get seriesDissolve => 'シリーズを解除';
+
+  @override
+  String get webTranslateWholeHint => 'このタブを開いている間、最後まで翻訳します。読書中も続きます。';
+
+  @override
+  String get webTranslateNoEngine => '翻訳するには設定で Gemini か Claude のキーを入れてください。';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return '翻訳が止まりました: $reason';
+  }
 }

@@ -16,7 +16,7 @@ import 'package:openlib/web/web_cover.dart';
 import 'package:openlib/web/web_library.dart';
 
 /// What the reader asked for on a book's card.
-enum WebBookAction { read, removeCopy, delete }
+enum WebBookAction { read, removeCopy, delete, select, ungroup }
 
 Future<WebBookAction?> showWebBookDialog(BuildContext context, WebBook book) =>
     showGeneralDialog<WebBookAction>(

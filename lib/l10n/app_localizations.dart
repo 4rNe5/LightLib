@@ -4529,6 +4529,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count} paragraphs will be translated again'**
   String glossaryRedone(int count);
+
+  /// webSelect
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get webSelect;
+
+  /// seriesRename
+  ///
+  /// In en, this message translates to:
+  /// **'Rename series'**
+  String get seriesRename;
+
+  /// seriesDissolve
+  ///
+  /// In en, this message translates to:
+  /// **'Ungroup series'**
+  String get seriesDissolve;
+
+  /// webTranslateWholeHint
+  ///
+  /// In en, this message translates to:
+  /// **'Translates to the end while this tab is open, also while you read.'**
+  String get webTranslateWholeHint;
+
+  /// webTranslateNoEngine
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Gemini or Claude key in Settings to translate.'**
+  String get webTranslateNoEngine;
+
+  /// webTranslateStopped
+  ///
+  /// In en, this message translates to:
+  /// **'Translation stopped: {reason}'**
+  String webTranslateStopped(String reason);
 }
 
 class _AppLocalizationsDelegate
