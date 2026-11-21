@@ -231,6 +231,82 @@ void main() {
       expect(opened?.id, 'new');
     });
 
+    // The pane beside the shelf on an unfolded phone: a column 261 dp
+    // wide. The book read last is a poster as wide as the column; what
+    // is under it stands on equal columns, whatever the number of books
+    // being read.
+    for (final others in [0, 1, 2, 3]) {
+      testWidgets('what is being read, in a narrow column: $others more',
+          (tester) async {
+        LibraryBook? opened;
+        LibraryBook? continued;
+        await tester.pumpWidget(_app(
+            Center(
+              child: SizedBox(
+                width: 261,
+                child: SingleChildScrollView(
+                  child: LibraryNowReading(
+                    books: [
+                      _book('new', 'Newest'),
+                      _book('first', 'Read last',
+                          status: ReadingStatus.inProgress),
+                      for (var i = 0; i < others; i++)
+                        _book('more$i', 'More $i',
+                            status: ReadingStatus.inProgress),
+                      _book('done', 'Done', status: ReadingStatus.completed),
+                    ],
+                    onOpen: (b) => opened = b,
+                    onContinue: (b) => continued = b,
+                  ),
+                ),
+              ),
+            ),
+            disableAnimations: true));
+        await tester.pump();
+        expect(tester.takeException(), isNull);
+
+        final poster = find.byKey(const ValueKey('bentoHero'));
+        expect(tester.getSize(poster).width, 261);
+        // Most of a cover is seen: the card is nearly a cover's shape.
+        expect(tester.getSize(poster).height, greaterThan(300));
+        // (A placeholder cover carries the title too.)
+        expect(find.descendant(of: poster, matching: find.text('Read last')),
+            findsWidgets);
+        await tester.tap(find.byKey(const ValueKey('bentoContinue')));
+        expect(continued?.id, 'first');
+
+        // The others, each as wide as the next, the row as wide as the
+        // poster.
+        final widths = [
+          for (var i = 0; i < others; i++)
+            tester.getSize(find.byKey(ValueKey('nowReading-more$i'))).width,
+        ];
+        expect(widths.toSet().length, others == 0 ? 0 : 1);
+        if (others == 1) {
+          expect(widths.single, closeTo((261 - 10) / 2, 0.01));
+        } else if (others > 1) {
+          expect(widths.first, closeTo((261 - 10 * (others - 1)) / others, 0.01));
+          await tester.tap(find.byKey(const ValueKey('nowReading-more1')));
+          expect(opened?.id, 'more1');
+        }
+        // The library in two numbers.
+        expect(find.text('${others + 3}'), findsOneWidget);
+        expect(find.text('All books'), findsOneWidget);
+        expect(find.text('Completed'), findsOneWidget);
+      });
+    }
+
+    test('a cover is decoded at one of a few widths, not at every width', () {
+      // A cover on its way from a tile to a page is a little wider each
+      // frame: the same decoded picture all the way, or two.
+      expect({for (var w = 290.0; w <= 320; w += 3) coverDecodeWidth(w)},
+          {320});
+      expect({for (var w = 290.0; w <= 450; w += 3) coverDecodeWidth(w)},
+          {320, 480});
+      expect(coverDecodeWidth(40), 160);
+      expect(coverDecodeWidth(5000), 1600);
+    });
+
     testWidgets('grid tile shows title, author, genre and progress',
         (tester) async {
       var taps = 0;

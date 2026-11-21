@@ -735,7 +735,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                     continueReading(data).isEmpty
                         ? l10n.libraryRecentlyAdded
                         : l10n.libraryNowReading),
-                LibraryBentoPanel(
+                LibraryNowReading(
                   key: const ValueKey('libraryBento'),
                   books: data,
                   onOpen: _openBook,
@@ -743,7 +743,7 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
                   onContinue:
                       continueReading(data).isEmpty ? null : _continueBook,
                 ),
-                const LibraryRecapSection(),
+                const LibraryRecapSection(narrow: true),
               ],
             ),
           );

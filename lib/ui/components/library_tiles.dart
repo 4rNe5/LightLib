@@ -802,6 +802,316 @@ class LibraryBentoPanel extends StatelessWidget {
   }
 }
 
+/// What is being read, for the pane beside the shelf (a column of about
+/// 260 dp on an unfolded phone): the book read last as a poster - its
+/// cover filling the card, to go straight on with - the others being
+/// read under it, and the library in two numbers. Everything on the same
+/// two (or three) equal columns. Without anything being read: the books
+/// added last.
+class LibraryNowReading extends StatelessWidget {
+  const LibraryNowReading({
+    super.key,
+    required this.books,
+    required this.onOpen,
+    this.onLongPress,
+    this.onContinue,
+  });
+
+  /// The whole library, newest first.
+  final List<LibraryBook> books;
+  final ValueChanged<LibraryBook> onOpen;
+  final ValueChanged<LibraryBook>? onLongPress;
+  final ValueChanged<LibraryBook>? onContinue;
+
+  static const _gap = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final reading = continueReading(books);
+    final continuing = reading.isNotEmpty;
+    final featured = continuing ? reading : books;
+    if (featured.isEmpty) return const SizedBox.shrink();
+    final first = featured.first;
+    final others = featured.skip(1).take(3).toList();
+    final finished =
+        books.where((b) => b.status == ReadingStatus.completed).length;
+
+    Widget small(LibraryBook book) => _SmallCoverCard(
+          key: ValueKey('nowReading-${book.id}'),
+          book: book,
+          onTap: () => onOpen(book),
+          onLongPress: onLongPress == null ? null : () => onLongPress!(book),
+        );
+    final total = _StatTile(
+      icon: Icons.local_library_outlined,
+      big: books.length,
+      caption: l10n.libraryAllBooks,
+    );
+    final done = _StatTile(
+      icon: Icons.task_alt_rounded,
+      big: finished,
+      caption: l10n.statusCompleted,
+      tonal: true,
+    );
+    Widget columns(List<Widget> children, double height) => SizedBox(
+          height: height,
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var i = 0; i < children.length; i++) ...[
+                if (i > 0) const SizedBox(width: _gap),
+                Expanded(child: children[i]),
+              ],
+            ],
+          ),
+        );
+
+    return LayoutBuilder(builder: (context, constraints) {
+      final width = constraints.maxWidth;
+      // The poster: nearly a cover's own shape (most of the picture is
+      // seen), never taller than a wide pane has use for.
+      final poster = (width / 0.78).clamp(240.0, 400.0);
+      // A cover in a half of the width, in a third.
+      final half = ((width - _gap) / 2 / 0.78).clamp(120.0, 220.0);
+      final third = ((width - 2 * _gap) / 3 / 0.68).clamp(110.0, 200.0);
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          SizedBox(
+            height: poster,
+            child: _PosterCard(
+              key: const ValueKey('bentoHero'),
+              book: first,
+              label: continuing
+                  ? l10n.libraryContinueReading
+                  : l10n.libraryRecentlyAdded,
+              onTap: () => onOpen(first),
+              onLongPress:
+                  onLongPress == null ? null : () => onLongPress!(first),
+              onContinue:
+                  onContinue == null ? null : () => onContinue!(first),
+            ),
+          ),
+          const SizedBox(height: _gap),
+          if (others.isEmpty)
+            columns([total, done], 76)
+          else if (others.length == 1)
+            // One more book: beside it, the two numbers one over the
+            // other.
+            columns([
+              small(others.first),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: total),
+                  const SizedBox(height: _gap),
+                  Expanded(child: done),
+                ],
+              ),
+            ], half)
+          else ...[
+            columns([for (final b in others) small(b)],
+                others.length == 2 ? half : third),
+            const SizedBox(height: _gap),
+            columns([total, done], 76),
+          ],
+        ],
+      );
+    });
+  }
+}
+
+/// A book as a poster: its cover over the whole card, its name and how
+/// far it was read over the foot of the picture, a round button to go
+/// straight on.
+class _PosterCard extends StatelessWidget {
+  const _PosterCard({
+    super.key,
+    required this.book,
+    required this.label,
+    required this.onTap,
+    this.onLongPress,
+    this.onContinue,
+  });
+
+  final LibraryBook book;
+  final String label;
+  final VoidCallback onTap;
+  final VoidCallback? onLongPress;
+  final VoidCallback? onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    return Pressable(
+      onTap: onTap,
+      onLongPress: onLongPress,
+      scale: 0.98,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(22),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            BookCover(book: book),
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0x00000000),
+                    Color(0x00000000),
+                    Color(0xB3000000),
+                    Color(0xF2000000),
+                  ],
+                  stops: [0, 0.42, 0.74, 1],
+                ),
+              ),
+            ),
+            Positioned(
+              left: 14,
+              right: 14,
+              bottom: 14,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w800,
+                                  letterSpacing: 0.3,
+                                  color: Color(0xFFFF9EBD)),
+                            ),
+                            const SizedBox(height: 4),
+                            MarqueeText(
+                              book.title,
+                              style: const TextStyle(
+                                  fontSize: 17,
+                                  height: 1.25,
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.white),
+                            ),
+                            if (book.author.isNotEmpty)
+                              Text(
+                                book.author,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12.5, color: Color(0xCCFFFFFF)),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (onContinue != null) ...[
+                        const SizedBox(width: 10),
+                        _PlayButton(
+                            key: const ValueKey('bentoContinue'),
+                            size: 48,
+                            onTap: onContinue!),
+                      ],
+                    ],
+                  ),
+                  if (book.status != ReadingStatus.unread) ...[
+                    const SizedBox(height: 11),
+                    SizedBox(
+                        height: 13,
+                        child: ReadingLine(book: book, onDark: true)),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// A number about the library with what it counts beside it.
+class _StatTile extends StatelessWidget {
+  const _StatTile({
+    required this.icon,
+    required this.big,
+    required this.caption,
+    this.tonal = false,
+  });
+
+  final IconData icon;
+  final int big;
+  final String caption;
+  final bool tonal;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final bg = tonal ? scheme.surfaceContainerHigh : scheme.primaryContainer;
+    final fg = tonal ? scheme.onSurface : scheme.onPrimaryContainer;
+    final accent = tonal ? scheme.primary : fg;
+    return Container(
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(18),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: accent.withValues(alpha: 0.16),
+            ),
+            child: Icon(icon, size: 19, color: accent),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: CountUp(big,
+                      style: TextStyle(
+                          fontSize: 22,
+                          height: 1,
+                          fontWeight: FontWeight.w800,
+                          color: fg)),
+                ),
+                const SizedBox(height: 3),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(caption,
+                      maxLines: 1,
+                      style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: fg.withValues(alpha: 0.82))),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _HeroCard extends StatelessWidget {
   const _HeroCard({
     super.key,
@@ -942,9 +1252,10 @@ class _HeroCard extends StatelessWidget {
 
 /// Straight on with the book: the round button on its card.
 class _PlayButton extends StatelessWidget {
-  const _PlayButton({super.key, required this.onTap});
+  const _PlayButton({super.key, required this.onTap, this.size = 42});
 
   final VoidCallback onTap;
+  final double size;
 
   @override
   Widget build(BuildContext context) {
@@ -956,8 +1267,8 @@ class _PlayButton extends StatelessWidget {
         onTap: onTap,
         scale: 0.9,
         child: Container(
-          width: 42,
-          height: 42,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             gradient: LinearGradient(
@@ -975,8 +1286,8 @@ class _PlayButton extends StatelessWidget {
                   offset: Offset(0, 4)),
             ],
           ),
-          child: const Icon(Icons.play_arrow_rounded,
-              color: Colors.white, size: 26),
+          child: Icon(Icons.play_arrow_rounded,
+              color: Colors.white, size: size * 0.62),
         ),
       ),
     );
@@ -985,6 +1296,7 @@ class _PlayButton extends StatelessWidget {
 
 class _SmallCoverCard extends StatelessWidget {
   const _SmallCoverCard({
+    super.key,
     required this.book,
     required this.onTap,
     this.onLongPress,

@@ -17,20 +17,30 @@ import 'package:openlib/ui/components/library_tiles.dart'
 
 /// Loads the recap and lays it out; nothing while loading or on error.
 class LibraryRecapSection extends ConsumerWidget {
-  const LibraryRecapSection({super.key});
+  const LibraryRecapSection({super.key, this.narrow = false});
+
+  /// In a narrow column (the pane beside the shelf): see
+  /// [LibraryRecapBento.narrow].
+  final bool narrow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recap = ref.watch(readingRecapProvider).valueOrNull;
     if (recap == null || recap.total == 0) return const SizedBox.shrink();
-    return LibraryRecapBento(recap: recap);
+    return LibraryRecapBento(recap: recap, narrow: narrow);
   }
 }
 
 class LibraryRecapBento extends StatelessWidget {
-  const LibraryRecapBento({super.key, required this.recap});
+  const LibraryRecapBento(
+      {super.key, required this.recap, this.narrow = false});
 
   final ReadingRecap recap;
+
+  /// A column under 300 dp wide: cards as wide as the column or half of
+  /// it, on the same two columns as what stands over them - not the
+  /// two-thirds and a third of a phone's width, where a third is 80 dp.
+  final bool narrow;
 
   @override
   Widget build(BuildContext context) {
@@ -65,6 +75,32 @@ class LibraryRecapBento extends StatelessWidget {
                   ],
                 ),
               );
+          if (narrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: 124, child: _MilestoneCard(recap: recap)),
+                const SizedBox(height: gap),
+                SizedBox(
+                  height: 112,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _StreakCard(recap: recap)),
+                      const SizedBox(width: gap),
+                      Expanded(child: _MonthCard(recap: recap)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: gap),
+                SizedBox(height: 116, child: _ActivityCard(recap: recap)),
+                if (recap.genres.isNotEmpty) ...[
+                  const SizedBox(height: gap),
+                  _GenreMixCard(recap: recap),
+                ],
+              ],
+            );
+          }
           return Column(
             children: [
               row(_MilestoneCard(recap: recap), _StreakCard(recap: recap)),
