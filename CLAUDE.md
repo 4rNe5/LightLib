@@ -46,6 +46,9 @@ debug key (only CI signs releases).
   the release before it and the next release over the beta. The app offers
   betas only with Settings → Include Beta Updates. To ship a beta: push
   the work to `beta`; when it holds up, merge into `main`.
+- A pull request into `main` is merged with a merge commit (or rebased),
+  never squashed: a squash writes every commit's message into one, its
+  `[skip ci]` with them, and the release, Pages and Cloudflare all skip.
 - The app reads its build from the versionCode (`AppBuild.buildOf`: 2048 →
   48); builds before 52 read 2048 and never saw an update.
 - Signing: package `dev.arne5.lightlib`, certificate `CN=LightLib, O=4rNe5`;
@@ -57,6 +60,9 @@ debug key (only CI signs releases).
 - Web app = `lib/main_web.dart` (library, the same reader, Gemini or
   Claude):
   Vercel project `lightlib` builds it on every push that touches the app
+  since its last deployment on that branch (`tool/vercel_ignore.sh`; it
+  once looked at the last commit only, and a branch moved forward by many
+  commits whose last one touched notes alone was never built)
   (`vercel.json`, `tool/vercel_build.sh`; CSP in `vercel.json` - test a
   new outside host against it; no inline script, so `web/splash.js`). Not
   built: search/downloads, the device model, widgets, updates.
@@ -164,7 +170,7 @@ debug key (only CI signs releases).
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
 | Relay to the sync project (Cloudflare) | `cloudflare/` (`relay.js`, `worker.js` + `wrangler.jsonc`, `functions/sb/[[path]].js` for Pages, `test/`), `tool/cloudflare_build.sh`, `tool/cloudflare_headers.py` |
-| Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
+| Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_series_bento` the series packed into rows, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
 | Sync | `lib/services/sync/` (`sync_engine`, `supabase_remote`, `library_sync_local`, `sync_service`); settings `lib/ui/components/sync_section.dart` |
 | Files the app keeps (web: IndexedDB) | `lib/services/storage/` (`AppFiles`) |
 | Older reader | `lib/ui/epub_viewer.dart` |
@@ -542,6 +548,24 @@ debug key (only CI signs releases).
   first of a ranking shown twice as large came out blurred, and its row
   did not line up with the captions beside it. Every cover of the home
   lists is one size; no numbers on them either (the owner's word, twice).
+- The light theme's `primary` was white (`themes.dart`, from Openlib):
+  whatever Material draws in it - a switch that is on, a checkbox, a
+  slider, a spinner, a text button, an icon given the primary colour -
+  was white on white. The web's settings had three switches nobody could
+  see, a "sign out" button and a link that were not there, the reader's
+  links and its "translation on" icon vanished on a light page. It is
+  near black now (as white is in the dark theme); the screens under
+  `modernSurfaceTheme` were never affected. What sits on the reader's
+  page takes the page's colours (`ReaderPalette.accent`), not the app's:
+  the app may be light and the page "night". Look with
+  `tool/web_check/themes.mjs light` and `SHOT_THEME=light` in
+  `tool/ui_shots` - white on white shows only in a picture.
+- The web listed each series as a full-width row of covers, mostly
+  empty: seven series took three screens. `web_series_bento.dart` packs
+  them - a card as wide as its volumes, the first row with room
+  (`packSeries`), each row's covers grown alike to reach the edge, a
+  series longer than a line folded to a line and "+N"; one line under a
+  cover (the volume: `volumeCaption`).
 - `dart format` on a whole file of this repository rewrites it (most
   files were formatted by an older formatter: `settings_page.dart` came
   back with 770 lines changed). Format what is new by hand, or a new
