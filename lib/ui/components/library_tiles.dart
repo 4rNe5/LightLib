@@ -21,6 +21,7 @@ import 'package:openlib/services/local_book_import.dart'
 import 'package:openlib/ui/components/book_card_widget.dart'
     show coverHeadersFor;
 import 'package:openlib/ui/components/marquee_text.dart';
+import 'package:openlib/ui/components/motion.dart';
 
 String genreLabel(AppLocalizations l10n, BookGenre genre) {
   switch (genre) {
@@ -81,7 +82,9 @@ ThemeData modernSurfaceTheme(ThemeData base) {
       side: BorderSide(color: scheme.outlineVariant),
       backgroundColor: scheme.surfaceContainerLow,
       selectedColor: scheme.primaryContainer,
-      labelStyle: TextStyle(color: scheme.onSurface),
+      // (The app's own font, as everywhere else.)
+      labelStyle: (base.textTheme.labelLarge ?? const TextStyle())
+          .copyWith(color: scheme.onSurface),
       iconTheme: IconThemeData(color: scheme.primary, size: 15),
       shape: const StadiumBorder(),
     ),
@@ -200,6 +203,72 @@ class BookCover extends StatelessWidget {
   }
 }
 
+/// A book's cover as the light of the room behind something: out of
+/// focus, filling its box. A small copy of the picture is blurred (not
+/// the picture itself), and it is its own layer: blurred once, however
+/// much moves in front of it. Nothing where the book has no cover or its
+/// cover is hidden.
+class BookCoverBackdrop extends StatelessWidget {
+  const BookCoverBackdrop({super.key, required this.book, this.opacity = 1});
+
+  final LibraryBook book;
+  final double opacity;
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+        listenable:
+            Listenable.merge([BookCovers.instance, HiddenCovers.instance]),
+        builder: (context, _) {
+          if (HiddenCovers.instance.isHidden(book.book.id)) {
+            return const SizedBox.expand();
+          }
+          final url = BookCovers.instance.coverFor(book.book.id) ??
+              book.book.thumbnail;
+          final Widget picture;
+          if (isLocalImagePath(url)) {
+            picture = Image.file(
+              File(localImageFilePath(url!)),
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              cacheWidth: 64,
+              filterQuality: FilterQuality.medium,
+              gaplessPlayback: true,
+              errorBuilder: (_, __, ___) => const SizedBox.expand(),
+            );
+          } else if (url == null || url.isEmpty) {
+            return const SizedBox.expand();
+          } else {
+            picture = CachedNetworkImage(
+              imageUrl: url,
+              httpHeaders: coverHeadersFor(url),
+              fit: BoxFit.cover,
+              width: double.infinity,
+              height: double.infinity,
+              memCacheWidth: 64,
+              fadeInDuration: Duration.zero,
+              placeholder: (_, __) => const SizedBox.expand(),
+              errorWidget: (_, __, ___) => const SizedBox.expand(),
+            );
+          }
+          return RepaintBoundary(
+            child: ClipRect(
+              child: Opacity(
+                opacity: opacity,
+                child: ImageFiltered(
+                  imageFilter: ui.ImageFilter.blur(
+                      sigmaX: 24, sigmaY: 24, tileMode: TileMode.clamp),
+                  // (A little larger than its box: the blur's soft edge
+                  // falls outside.)
+                  child: Transform.scale(scale: 1.25, child: picture),
+                ),
+              ),
+            ),
+          );
+        },
+      );
+}
+
 /// In place of a cover the reader chose to hide: a plain card with the
 /// title and a crossed-out eye.
 class HiddenCover extends StatelessWidget {
@@ -259,7 +328,7 @@ class _Pill extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
             color: color ?? Colors.black.withAlpha(110),
-            child: DefaultTextStyle(
+            child: DefaultTextStyle.merge(
               style: const TextStyle(
                   fontSize: 9.5,
                   fontWeight: FontWeight.w700,
@@ -275,6 +344,76 @@ class _Pill extends StatelessWidget {
       );
 }
 
+/// How far a book was read, in one line under its cover: a bar and the
+/// percent while it is being read, a check once it is finished. Nothing
+/// for a book not opened yet.
+class ReadingLine extends StatelessWidget {
+  const ReadingLine({super.key, required this.book, this.onDark = false});
+
+  final LibraryBook book;
+
+  /// Over a picture: white on dark.
+  final bool onDark;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final accent = onDark ? Colors.white : scheme.primary;
+    final style = TextStyle(
+        fontSize: 10.5,
+        height: 1.1,
+        fontWeight: FontWeight.w800,
+        color: accent,
+        fontFeatures: const [ui.FontFeature.tabularFigures()]);
+    switch (book.status) {
+      case ReadingStatus.unread:
+        return const SizedBox.shrink();
+      case ReadingStatus.completed:
+        return Row(
+          key: ValueKey('readingLine-${book.id}'),
+          children: [
+            Icon(Icons.check_circle_rounded, size: 12, color: accent),
+            const SizedBox(width: 3),
+            Flexible(
+              child: Text(l10n.statusCompleted,
+                  maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+            ),
+          ],
+        );
+      case ReadingStatus.inProgress:
+        final percent = book.percent;
+        // (How far is not known - a viewer that does not say: the word,
+        // no bar.)
+        if (percent == null) {
+          return Align(
+            key: ValueKey('readingLine-${book.id}'),
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(l10n.statusInProgress,
+                maxLines: 1, overflow: TextOverflow.ellipsis, style: style),
+          );
+        }
+        return Row(
+          key: ValueKey('readingLine-${book.id}'),
+          children: [
+            Expanded(
+              child: ProgressBar(
+                value: book.fraction,
+                height: 3.5,
+                color: accent,
+                trackColor: onDark
+                    ? Colors.white.withValues(alpha: 0.28)
+                    : scheme.onSurface.withValues(alpha: 0.14),
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text('$percent%', style: style),
+          ],
+        );
+    }
+  }
+}
+
 /// A cover in the library grid with its title running underneath.
 class LibraryGridTile extends StatelessWidget {
   const LibraryGridTile({
@@ -283,9 +422,11 @@ class LibraryGridTile extends StatelessWidget {
     required this.onTap,
     this.onLongPress,
     this.selected,
+    this.shown = false,
+    this.heroTag,
   });
 
-  /// Height of the title and author under the cover.
+  /// Height of the title and the line under it.
   static const captionHeight = 46.0;
 
   final LibraryBook book;
@@ -295,44 +436,72 @@ class LibraryGridTile extends StatelessWidget {
   /// While books are being chosen: whether this one is. Null otherwise.
   final bool? selected;
 
+  /// The pane beside the shelf shows this book: a ring round its cover.
+  final bool shown;
+
+  /// The cover flies to the book's page under this tag.
+  final Object? heroTag;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     final format = (book.book.format ?? '').toUpperCase();
-    return GestureDetector(
+    Widget cover = ClipRRect(
+      borderRadius: BorderRadius.circular(10),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          BookCover(book: book),
+          // Spine shading, like a printed book.
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Color(0x33000000), Color(0x00000000)],
+                stops: [0, 0.08],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (heroTag != null) cover = Hero(tag: heroTag!, child: cover);
+    return Pressable(
       onTap: onTap,
       onLongPress: onLongPress,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: DecoratedBox(
+            child: AnimatedContainer(
+              duration: AppMotion.reduced(context)
+                  ? Duration.zero
+                  : AppMotion.standard,
+              curve: AppMotion.enter,
+              // The ring of the book the pane shows, a hair off the cover.
+              padding: EdgeInsets.all(shown ? 3 : 0),
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(45),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+                borderRadius: BorderRadius.circular(shown ? 13 : 10),
+                border: Border.all(
+                    color: shown ? scheme.primary : Colors.transparent,
+                    width: 2,
+                    strokeAlign: BorderSide.strokeAlignOutside),
               ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(45),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
-                    BookCover(book: book),
-                    // Spine shading, like a printed book.
-                    const DecoratedBox(
-                      decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                          colors: [Color(0x33000000), Color(0x00000000)],
-                          stops: [0, 0.08],
-                        ),
-                      ),
-                    ),
+                    cover,
                     if (book.genre != null)
                       Positioned(
                         top: 6,
@@ -341,7 +510,8 @@ class LibraryGridTile extends StatelessWidget {
                           child: Text(genreLabel(l10n, book.genre!)),
                         ),
                       ),
-                    if (book.status == ReadingStatus.completed)
+                    if (book.status == ReadingStatus.completed &&
+                        selected == null)
                       const Positioned(
                         top: 6,
                         right: 6,
@@ -349,13 +519,6 @@ class LibraryGridTile extends StatelessWidget {
                           color: Color(0xCC2E7D32),
                           child: Icon(Icons.check),
                         ),
-                      )
-                    else if (book.status == ReadingStatus.inProgress)
-                      Positioned(
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        child: Container(height: 3, color: scheme.primary),
                       ),
                     if (format == 'PDF')
                       const Positioned(
@@ -366,7 +529,12 @@ class LibraryGridTile extends StatelessWidget {
                     // Being chosen: the ones not chosen step back, the
                     // chosen ones carry a mark.
                     if (selected == false)
-                      const ColoredBox(color: Color(0x66000000)),
+                      const DecoratedBox(
+                        decoration: BoxDecoration(
+                          color: Color(0x66000000),
+                          borderRadius: BorderRadius.all(Radius.circular(10)),
+                        ),
+                      ),
                     if (selected != null)
                       Positioned(
                         top: 6,
@@ -408,13 +576,18 @@ class LibraryGridTile extends StatelessWidget {
                         color: scheme.onSurface),
                   ),
                   const SizedBox(height: 2),
-                  Text(
-                    book.author.isEmpty ? ' ' : book.author,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style:
-                        TextStyle(fontSize: 11, color: scheme.onSurfaceVariant),
-                  ),
+                  // Once the book is opened, how far it was read stands
+                  // where its author did.
+                  if (book.status == ReadingStatus.unread)
+                    Text(
+                      book.author.isEmpty ? ' ' : book.author,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          fontSize: 11, color: scheme.onSurfaceVariant),
+                    )
+                  else
+                    SizedBox(height: 15, child: ReadingLine(book: book)),
                 ],
               ),
             ),
@@ -433,6 +606,8 @@ class LibraryBentoPanel extends StatelessWidget {
     required this.books,
     required this.onOpen,
     this.onLongPress,
+    this.onContinue,
+    this.heroTags = false,
   });
 
   /// The whole library, newest first.
@@ -440,11 +615,21 @@ class LibraryBentoPanel extends StatelessWidget {
   final ValueChanged<LibraryBook> onOpen;
   final ValueChanged<LibraryBook>? onLongPress;
 
+  /// Straight on with the book in the large card (its round button).
+  final ValueChanged<LibraryBook>? onContinue;
+
+  /// The covers fly to the book's page (off where a tap changes a pane
+  /// of this same screen).
+  final bool heroTags;
+
+  /// The cover's tag in the large card and in the small one.
+  static Object heroTagOf(LibraryBook book) => 'bentoCover:${book.id}';
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final reading =
-        books.where((b) => b.status == ReadingStatus.inProgress).toList();
+    // The book read last comes first.
+    final reading = continueReading(books);
     final continuing = reading.isNotEmpty;
     final featured = continuing ? reading : books;
     if (featured.isEmpty) return const SizedBox.shrink();
@@ -468,12 +653,15 @@ class LibraryBentoPanel extends StatelessWidget {
               child: _HeroCard(
                 key: const ValueKey('bentoHero'),
                 book: hero,
+                heroTag: heroTags ? heroTagOf(hero) : null,
                 label: continuing
                     ? l10n.libraryContinueReading
                     : l10n.libraryRecentlyAdded,
                 onTap: () => onOpen(hero),
                 onLongPress:
                     onLongPress == null ? null : () => onLongPress!(hero),
+                onContinue:
+                    onContinue == null ? null : () => onContinue!(hero),
               ),
             ),
             const SizedBox(width: gap),
@@ -485,11 +673,12 @@ class LibraryBentoPanel extends StatelessWidget {
                     child: second == null
                         ? _StatCard(
                             icon: Icons.local_library_outlined,
-                            big: '${books.length}',
+                            big: books.length,
                             caption: l10n.libraryAllBooks,
                           )
                         : _SmallCoverCard(
                             book: second,
+                            heroTag: heroTags ? heroTagOf(second) : null,
                             onTap: () => onOpen(second),
                             onLongPress: onLongPress == null
                                 ? null
@@ -501,13 +690,13 @@ class LibraryBentoPanel extends StatelessWidget {
                     child: second == null
                         ? _StatCard(
                             icon: Icons.task_alt,
-                            big: '$finished',
+                            big: finished,
                             caption: l10n.statusCompleted,
                             tonal: true,
                           )
                         : _StatCard(
                             icon: Icons.local_library_outlined,
-                            big: '${books.length}',
+                            big: books.length,
                             caption: l10n.libraryFinishedCount(finished),
                             tonal: true,
                           ),
@@ -529,34 +718,44 @@ class _HeroCard extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.onLongPress,
+    this.onContinue,
+    this.heroTag,
   });
 
   final LibraryBook book;
   final String label;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final VoidCallback? onContinue;
+  final Object? heroTag;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    Widget cover = ClipRRect(
+      borderRadius: BorderRadius.circular(8),
+      child: BookCover(book: book),
+    );
+    if (heroTag != null) cover = Hero(tag: heroTag!, child: cover);
+    return Pressable(
       onTap: onTap,
       onLongPress: onLongPress,
+      scale: 0.975,
       child: ClipRRect(
         borderRadius: BorderRadius.circular(22),
         child: Stack(
           fit: StackFit.expand,
           children: [
-            // The cover, blurred, as the card's backdrop.
-            ImageFiltered(
-              imageFilter: ui.ImageFilter.blur(sigmaX: 26, sigmaY: 26),
-              child: Transform.scale(scale: 1.3, child: BookCover(book: book)),
+            // The cover, out of focus, as the card's backdrop.
+            ColoredBox(
+              color: const Color(0xFF2A2527),
+              child: BookCoverBackdrop(book: book),
             ),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0x22000000), Color(0xB3000000)],
+                  colors: [Color(0x33000000), Color(0xC2000000)],
                 ),
               ),
             ),
@@ -579,46 +778,114 @@ class _HeroCard extends StatelessWidget {
                                   offset: Offset(0, 6)),
                             ],
                           ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: BookCover(book: book),
-                          ),
+                          child: cover,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _Pill(
-                    color: Colors.white.withAlpha(50),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.play_arrow_rounded),
-                        const SizedBox(width: 2),
-                        Text(label),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            _Pill(
+                              color: Colors.white.withAlpha(50),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.play_arrow_rounded),
+                                  const SizedBox(width: 2),
+                                  Flexible(
+                                    child: Text(label,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            MarqueeText(
+                              book.title,
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white),
+                            ),
+                            if (book.author.isNotEmpty)
+                              Text(
+                                book.author,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                    fontSize: 12, color: Color(0xCCFFFFFF)),
+                              ),
+                          ],
+                        ),
+                      ),
+                      if (onContinue != null) ...[
+                        const SizedBox(width: 8),
+                        _PlayButton(
+                            key: const ValueKey('bentoContinue'),
+                            onTap: onContinue!),
                       ],
-                    ),
+                    ],
                   ),
-                  const SizedBox(height: 6),
-                  MarqueeText(
-                    book.title,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.white),
-                  ),
-                  if (book.author.isNotEmpty)
-                    Text(
-                      book.author,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 12, color: Color(0xCCFFFFFF)),
-                    ),
+                  if (book.status != ReadingStatus.unread) ...[
+                    const SizedBox(height: 9),
+                    SizedBox(
+                        height: 13,
+                        child: ReadingLine(book: book, onDark: true)),
+                  ],
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Straight on with the book: the round button on its card.
+class _PlayButton extends StatelessWidget {
+  const _PlayButton({super.key, required this.onTap});
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    const accent = Color(0xFFFF6B9D);
+    return Semantics(
+      button: true,
+      label: AppLocalizations.of(context).libraryContinueReading,
+      child: Pressable(
+        onTap: onTap,
+        scale: 0.9,
+        child: Container(
+          width: 42,
+          height: 42,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color.lerp(accent, Colors.white, 0.06)!,
+                Color.lerp(accent, Colors.black, 0.18)!,
+              ],
+            ),
+            boxShadow: const [
+              BoxShadow(
+                  color: Color(0x59000000),
+                  blurRadius: 10,
+                  offset: Offset(0, 4)),
+            ],
+          ),
+          child: const Icon(Icons.play_arrow_rounded,
+              color: Colors.white, size: 26),
         ),
       ),
     );
@@ -630,15 +897,24 @@ class _SmallCoverCard extends StatelessWidget {
     required this.book,
     required this.onTap,
     this.onLongPress,
+    this.heroTag,
   });
 
   final LibraryBook book;
   final VoidCallback onTap;
   final VoidCallback? onLongPress;
+  final Object? heroTag;
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    Widget cover = BookCover(book: book);
+    if (heroTag != null) {
+      cover = Hero(
+          tag: heroTag!,
+          child: ClipRRect(
+              borderRadius: BorderRadius.circular(18), child: cover));
+    }
+    return Pressable(
       onTap: onTap,
       onLongPress: onLongPress,
       child: ClipRRect(
@@ -646,14 +922,14 @@ class _SmallCoverCard extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            BookCover(book: book),
+            cover,
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0x00000000), Color(0xCC000000)],
-                  stops: [0.45, 1],
+                  colors: [Color(0x00000000), Color(0xD9000000)],
+                  stops: [0.4, 1],
                 ),
               ),
             ),
@@ -661,12 +937,24 @@ class _SmallCoverCard extends StatelessWidget {
               left: 10,
               right: 10,
               bottom: 9,
-              child: MarqueeText(
-                book.title,
-                style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  MarqueeText(
+                    book.title,
+                    style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white),
+                  ),
+                  if (book.status != ReadingStatus.unread) ...[
+                    const SizedBox(height: 5),
+                    SizedBox(
+                        height: 12,
+                        child: ReadingLine(book: book, onDark: true)),
+                  ],
+                ],
               ),
             ),
           ],
@@ -685,7 +973,7 @@ class _StatCard extends StatelessWidget {
   });
 
   final IconData icon;
-  final String big;
+  final int big;
   final String caption;
   final bool tonal;
 
@@ -709,7 +997,7 @@ class _StatCard extends StatelessWidget {
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
-            child: Text(big,
+            child: CountUp(big,
                 style: TextStyle(
                     fontSize: 30,
                     height: 1,

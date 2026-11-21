@@ -20,11 +20,16 @@ translation, library with widgets and series. Owner: 4rNe5. Reports go to the ow
 ```bash
 export ANDROID_HOME=/opt/android-sdk          # cloud sessions
 /opt/flutter/bin/flutter analyze --no-pub     # 13 known issues, all in third_party/epubx
-/opt/flutter/bin/flutter test --no-pub        # ~530 tests, ~2.5 min
+/opt/flutter/bin/flutter test --no-pub        # ~890 tests, ~3 min
 /opt/flutter/bin/flutter gen-l10n             # after editing lib/l10n/*.arb
 /opt/flutter/bin/flutter build apk --release --split-per-abi --target-platform android-arm64   # ~7 min
 /opt/flutter/bin/flutter build web --release -t lib/main_web.dart   # the web app, ~2 min
+flutter test --no-pub tool/ui_shots/shots_test.dart   # pictures of the screens, phone and unfolded (its README)
 ```
+A cloud session whose container was replaced has no Flutter and no SDK:
+the release `flutter_linux_<version>-stable.tar.xz` (the workflow's
+`FLUTTER_VERSION`) into `/opt`, and the SDK's command-line tools with
+`platforms;android-36` and `build-tools;36.0.0` into `/opt/android-sdk`.
 Without `android/key.properties` a local release build is signed with the
 debug key (only CI signs releases).
 
@@ -49,7 +54,8 @@ debug key (only CI signs releases).
 - `gh` works through REST only (no GraphQL, no Actions secrets).
 
 ## Web and sync
-- Web app = `lib/main_web.dart` (library, the same reader, Gemini only):
+- Web app = `lib/main_web.dart` (library, the same reader, Gemini or
+  Claude):
   Vercel project `lightlib` builds it on every push that touches the app
   (`vercel.json`, `tool/vercel_build.sh`; CSP in `vercel.json` - test a
   new outside host against it; no inline script, so `web/splash.js`). Not
@@ -65,9 +71,16 @@ debug key (only CI signs releases).
   book) and kept for the others. The first frame waits for nothing
   (`main_web.dart`); `web/index.html` shows the app's name until then.
   A window ≥ 900 px wide gets the desktop layout (`webWideLayout`).
-  Series made on a device show as rows there too (`webSeries`, by the
-  shared map: the web has no rows of its own for most books); the web
-  does not make series.
+  Series show as rows there too (`webSeries`, by the shared map: the
+  web has no rows of its own for most books) and are made there as on a
+  phone - books chosen from a tile's menu or with Ctrl/⌘, the bar, a
+  name; a row's menu renames or undoes one. The web writes the shared
+  map itself, by MD5 (`WebLibrary.setSeries`), and sync sends it.
+  "Translate this whole book" is on a book's card
+  (`web_book_translation.dart`): the library's translator
+  (`BookTranslationService`, started in `main_web.dart`) works on that
+  book while the tab is open, fetching it first if it is only on the
+  account.
 - Cloudflare, for a network that does not reach `*.supabase.co` (nor
   Vercel): the Workers project `lightlib`
   (https://lightlib.4rnne5.workers.dev), root `cloudflare`, build
@@ -92,6 +105,16 @@ debug key (only CI signs releases).
   in the page). `[skip ci]` skips it: run the workflow by hand then. The
   sign-in returns to `SyncConfig.webRedirect` (the app's own address); a
   new host's address must be in the project's Auth redirect URLs.
+- A page's headers can change while the page does not: the browser
+  that has it asks "changed?", Vercel answers 304 without the policy,
+  and the browser keeps the policy it first got. `api.anthropic.com`
+  was let out by a new `connect-src` that way and the owner's browser
+  went on refusing it ("XMLHttpRequest onError" in the app, the policy
+  named in the console). `tool/stamp_page.py` (run by
+  `tool/vercel_build.sh`) puts a line in the built page that changes
+  with the commit and with `vercel.json`. A deployment is checked as a
+  browser that has the page sees it too: `curl -H 'If-None-Match:
+  <the etag before>'` must come back 200 with the new header.
 - Web checks: `tool/web_check/` (its README) - the built app in headless
   Chrome with real clicks and touches, against a stand-in for the sync
   project (no live account).
@@ -113,8 +136,7 @@ debug key (only CI signs releases).
   `put_progress` clears it). Shared settings (`settings` table,
   `put_setting`, newest wins; a value up to 262,144 characters): the
   Gemini key, unless `syncGeminiKey` is 0; the Claude key with its
-  workspace, unless `syncClaudeKey` is 0 (devices only - the web
-  neither takes nor sends it); the series (`series_sync.dart`: each
+  workspace, unless `syncClaudeKey` is 0; the series (`series_sync.dart`: each
   book's MD5 under its series' name, under "" the books taken out).
   The series are a setting both sides add to: a device keeps the whole
   map (books that are not here too, `seriesShared`), writes into it
@@ -131,6 +153,11 @@ debug key (only CI signs releases).
 | Area | Where |
 |---|---|
 | App start, tabs, home widgets update | `lib/main.dart` |
+| One pane or two (width classes, the fold of a foldable) | `lib/ui/adaptive.dart` (`useTwoPanes` from 600 dp, `verticalFoldOf`, `TwoPane`: the end pane starts just past the fold, `trailing` = the tabs' rail beside it) |
+| The tabs' bar / rail | `lib/ui/components/app_nav_bar.dart` (a phone: the pill at the foot; from 600 dp: the same pill on end in the lower right corner, `AppNavRail.width` wide) |
+| A library book: opening it, its page, the order of screens | `lib/ui/book_navigation.dart` (`openBookReader`, `pushBookPage`, `showBookFromOutside`, `libraryDetailProvider`), `lib/ui/components/book_detail.dart` (`BookDetail`: a page on a phone - `mybook_page.dart` - and the pane beside the shelf on a wide screen), `lib/ui/components/book_opening.dart` (the picture while a book opens) |
+| How far a book was read, finished, read last | `MyLibraryDb.readingOf`, `setCompleted`, `readingChanged`; `LibraryBook.fraction/readAt/percent`, `continueReading` (`library_organization.dart`); the reader's `_saveNow(leaving:, finished:)` |
+| Motion | `lib/ui/components/motion.dart` (`AppMotion`, `Pressable`, `Appear`, `ProgressBar`, `CountUp`, `FadeThroughRoute`) - everything stands still with the system's "remove animations" |
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
@@ -143,17 +170,19 @@ debug key (only CI signs releases).
 | Device translation | `translator.dart` (`LocalLlmTranslator`, scheduler, `SharedTranslationEngine`), `third_party/llamadart` (see `PATCHES.md`) |
 | Gemini | `lib/services/translation/gemini/` (`gemini_api`, `gemini_client`, `gemini_settings`: today's use kept per model, `usageOf`); settings UI `lib/ui/components/gemini_engine_section.dart` (the engine choice is there too) |
 | What every engine off the phone shares | `cloud_engine.dart` (`CloudClient`, `CloudSettings`: results and errors are Gemini's types), `gemini/cloud_translator.dart` (prompts, checks, corrections - `gatherCorrections` for a book on its own: held, sent 24 together, an answer with one out of place not used, `misplacedCorrections`) |
-| Claude (devices only; key in `claude_api_key`, shared with the owner's devices like Gemini's) | `lib/services/translation/claude/` (`claude_api`: models and prices, `claudeRequest`, `claudeSchema`, `claudeError`; `claude_client`; `claude_settings`: cost per model); settings UI `lib/ui/components/claude_engine_section.dart` |
+| Claude (devices and the web; key in `claude_api_key`, shared with the owner's devices like Gemini's) | `lib/services/translation/claude/` (`claude_api`: models and prices, `claudeRequest`, `claudeSchema`, `claudeError`; `claude_client`; `claude_settings`: cost per model); settings UI `lib/ui/components/claude_engine_section.dart` |
 | Prompts, styles | `translation_models.dart` (`batchPromptHead`, Korean light-novel style) |
 | Checks and fixes | `translation_qa.dart` (`checkTranslation`, `finishTranslation`; names written as the glossary has them: `enforceGlossary`), `translation_style.dart` (how narration ends, read off the last syllables: `tenseSlips`, `leansOnShe`, `readsStiff`), `paragraph_text.dart` (`cleanTranslation`, `polishTranslation`) |
 | Translations on real books, counted | `tool/translation_eval/` (its README): a book and its exported translation, the phone's steps against a `llama-server`, or `GlossaryService` and `CloudTranslator` against the API with a key |
 | Paragraph split (shared by reader and library) | `paragraph_text.dart` (`readerParagraphs`, `epubReaderParagraphs`; `containsImage`, `glyphOf`: a glyph set as a picture is text), the page's own `reader_web/src/paragraphs.js` - the two must read every book alike |
 | Saved translations | `translation_cache.dart` — one set per book × language × style (`shared`, `shared+plain`), JSON under `<books>/.translations/`; paragraphs to make again are marked beside it (`<set>.redo`, `redo`, `lookup` null while marked; `translation_repair.dart` `redoTranslationsWith`) |
 | Glossary per book | `book_glossary.dart` (candidates, `BookSurvey`, `parseGlossaryAnswer`, `tidyNames`, `upgradeGlossary`; Gemini reading the whole book: `bookAnalysis*`), `japanese_names.dart` (the noun a name ends in, well-known places), `glossary_service.dart`, `series_glossary.dart` (the other volumes' names), `translation_repair.dart` (saved translations set right after a glossary is) |
-| Library/background and "translate this whole book" | `book_translation_service.dart`, `lib/ui/components/priority_translation_card.dart` |
+| Library/background and "translate this whole book" | `book_translation_service.dart` (also the paragraphs marked to be made again, at once: `redo`, `redoWord`, a pass of those only), `lib/ui/components/priority_translation_card.dart` |
+| A glossary outside the reader | `lib/ui/components/glossary_sheet.dart` (`showGlossarySheet`: a book's, or with `series` what its volumes have between them; a word set right asks which paragraphs to translate again - none, this book, the whole series): from a book's page (`mybook_page.dart`), a series' row in the library (`mylibrary_page.dart`), and on the web a book's card and a series' row menu |
 | Series the reader makes | table `bookseries` (`MyLibraryDb.setSeries`), `library_organization.dart` (`librarySeries`: volumes by the number in their titles; `suggestedSeriesName`), `lib/ui/mylibrary_page.dart` (a long press chooses books, the bar over the foot of the list, a row per series; its books leave the grid unless something is searched), `series_glossary.dart` (`sameSeries`: titles and the reader's grouping, which has the last word; `passOnToSeries` an edit to the other volumes, `shareWithinSeries` on grouping; pref `seriesGlossaryShare`, on unless turned off); between devices `lib/services/sync/series_sync.dart` and `LibrarySyncLocal._reconcileSeries` |
 | Translated EPUB export | `translated_epub.dart` |
-| Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
+| Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*`; what they show is written by `lib/services/home_widgets.dart` (`widgetSnapshot`: the book read last, its percent) when the library's books change |
+| Pictures of the screens without a device | `tool/ui_shots/` (its README) |
 | Hidden covers | `lib/services/hidden_covers.dart` |
 | Z-Library account (its download limit) | `lib/services/zlibrary_account.dart` (session = two cookies, in `zlibrary_session` in the private folder; not in backups or sync), `ZlibraryProvider.signIn` / `accountLimits` (`/eapi/user/login`, `/eapi/user/profile`) and `_AsAccount` (book pages, `/dl/`, `/eapi` only) in `search_manager.dart`; UI `components/zlibrary_account_sheet.dart`, browser sign-in `zlibrary_login_page.dart` |
 | Search | `lib/ui/search_page.dart` (field, suggestions: BOOK☆WALKER `suggest`, Google `hl=ja`, history; Korean → Japanese title via `original_title.dart`), filters in `components/search_filter_sheet.dart` (default Japanese + EPUB); results `results_page.dart` grouped by `search_results.dart` (series/volume from titles, best file per volume — only what the libraries returned); catalogs in `search_manager.dart` |
@@ -216,6 +245,30 @@ debug key (only CI signs releases).
   entry as it was; the series' other volumes in `passOnToSeries`), and
   every paragraph with the word when the reader ticks that in the edit
   dialog (`glossaryRedoAll`).
+- A set of saved translations is kept by the language's code (`ko`):
+  `translation_repair.dart` opened it by the English name the prompts
+  use (`Korean`) - another, empty set, and nothing said so. So names set
+  right after a glossary changed were never written into what was
+  saved, and "every paragraph with this word" marked 0 for the owner an
+  hour after it shipped. The tests passed: they made their sets by the
+  same wrong name. `TranslationCache.open` asserts a code now; a test
+  makes its sets as the app does (`target.code`), not as the function
+  under test happens to. Marks alone do not change an open page either:
+  the reader sends the page each paragraph once (`_sent`), so it starts
+  its page over when it hears of them (`redoMarks`, `_onRedoMarked`).
+- Paragraphs marked to be made again waited for the reader to come to
+  them: a word wrong in a series was put right one screen at a time,
+  each screen translating while it was read. `BookTranslationService.redo`
+  makes them at once and to the end without a book being opened - the
+  marked ones only (a book half translated is not finished on that
+  account), an engine off the phone taking 24 that lie apart in one
+  request, as it takes the ones sent back. The glossary is reached
+  without opening a book for that, and for a series as one.
+- A write to a real file begun inside `testWidgets` never comes back,
+  and what waits for it stops there without a word: the glossary
+  sheet's first test passed because the service changes what it holds
+  in memory before it writes. A widget test that goes on after a write
+  keeps the files in memory (`IdbAppFiles(newIdbFactoryMemory())`).
 - A glyph set as a picture: the Japanese publishers' EPUBs write what
   the fonts lack as `<img class="gaiji" alt="…">`, and one book wrote
   every "!!?" so. The rule that leaves a block with a picture alone (an
@@ -283,7 +336,12 @@ debug key (only CI signs releases).
   carry no sizes (`claudeSchema`); a key not tied to a workspace needs
   `anthropic-workspace-id` (the error says so: `badKey`, shown as it
   is); "credit balance is too low" is the one error that ends the key
-  for the day. Claude counts about 1.5 times the tokens Gemini does for
+  for the day. From a page the API answers only a request that says it
+  comes from a browser (`anthropic-dangerous-direct-browser-access:
+  true`, sent on the web alone) and the site's policy must let it out
+  (`connect-src` in `vercel.json`, which the other hosts copy). Claude
+  was first built for devices only, the owner not asked: he found the
+  web without it. What the web leaves out is his to decide. Claude counts about 1.5 times the tokens Gemini does for
   the same Japanese and Korean: compare prices on measured tokens.
   Book 3, 240 paragraphs, the same glossary, judged blind by Gemini 3.8
   Flash and by Claude Fable 5.2 (paragraphs where one was ahead of the
@@ -413,19 +471,74 @@ debug key (only CI signs releases).
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.
 
+- "Back" from a reader landed in another book's reader: a home-screen
+  widget's tap pushed its book's page on whatever was on screen, so the
+  stack became shelf → book A → reader A → book B → reader B. Screens
+  round a book have one order (`book_navigation.dart`): the tabs, the
+  book's page, the reader. A book asked for from outside closes what is
+  open first (`showBookFromOutside`: routes are named `book:<id>`,
+  `reader:<id>`; the very book already on screen is left alone).
+- The web's library did not show where a book was left: it reloaded
+  when the future of the page it pushed completed - and that page (the
+  one that fetches the book) hands over to the reader with
+  `pushReplacement`, which completes the future as the reader *opens*.
+  A replaced route's future says nothing about the route that took its
+  place. Whoever shows reading state listens to
+  `MyLibraryDb.readingChanged`, which the reader counts up after its last
+  position is written (a reader's `dispose` saves without waiting; a
+  reload at the pop reads the position of a page ago).
+- No book was ever "finished" in the app: `setCompleted` had no caller,
+  a saved position reset the mark (`INSERT OR REPLACE` of the row) and
+  the mark wiped the position. The reader marks a book at its last page
+  (`atEnd` of the last section - a short book's last page starts well
+  before 99.5% of it - or 99.5%, the web's rule), a book's page has the
+  button both ways, the mark and the position each keep the other. A
+  book read to its end on another device counts by its share alone.
+- "Continue reading" was the newest book among those being read, not the
+  one read last: `continueReading` orders by `pos:<file>` (when the
+  position was saved, here or on the device it came from).
+- Two panes on a foldable: the fold is at half the screen, the tabs'
+  rail stands on the right, so the end pane is narrower than the start
+  one (289 dp on a Z Fold 7: 750 − 375 − 6 − 80). What goes there must
+  fit a 290 dp column - two buttons side by side become one under the
+  other (`book_detail.dart`), the reading record's row has a floor of
+  124 dp. `MediaQuery.displayFeatures` is in logical pixels, in tests
+  too (`tester.view.displayFeatures`).
+- A widget test's window is 800 x 600: wide. A test of a phone's layout
+  sets `tester.view.physicalSize`; one that pushes a book's page on that
+  window sees it step into the pane and leave the stack (`BookPage`
+  does that when a phone is unfolded).
+- A provider read to build a menu item started a fetch: the "open in
+  site" address needs the mirror that is up
+  (`annaArchiveBaseUrlProvider`), and watching it in `build` asked the
+  network whenever a book's page was shown (in a widget test: a timer
+  left pending). It is asked when the item is tapped.
+- A picture blurred under things that move is blurred again each frame:
+  the library's large card blurred its full-size cover behind a title
+  that scrolls. `BookCoverBackdrop` blurs a 64 px copy in a layer of its
+  own (`RepaintBoundary`). A small decode stretched with
+  `FilterQuality.high` alone is not a blur: it came out in blocks.
+- A `GlobalKey` above `MaterialApp` moves the whole app, navigator and
+  all, to wherever the key is pumped next: a "new" app in the same test
+  kept the old one's pages (`tool/ui_shots`: the fresh key goes on
+  `MaterialApp` itself).
+
 ## Open plans (owner's order)
 1. Translation on the owner's MacBook: largest Gemma 4 the Mac's memory
    allows (MLX or llama-server, OpenAI-compatible), reachable only by the
    owner (Tailscale preferred, or a tunnel with an API key); an app engine
    "내 서버" (URL + key) reusing `CloudTranslator`'s structure.
-2. Web + sync (built, see "Web and sync"): next - whole-book translation
-   on the web, the reader's fonts and word tools on the web, a smaller
+2. Web + sync (built, see "Web and sync"): next - the reader's fonts
+   and word tools on the web, a smaller
    start (llamadart is still in the web bundle, ~0.4 MB; a WebAssembly
    build compiles but saved only ~10% of the download). No public relay
    for shadow-library search/downloads.
 3. Smaller: `[n]`→`n.` numbering, token-budget batches, translator-note
-   stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
-   two-page spread on unfolded screens.
+   stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB.
+   Foldables, not done: the reader half open on a table (the page on the
+   upper half, its controls on the lower) - nothing here can show a web
+   view folded, so it waits for the owner's device; two pages for text
+   written down the page.
    Translation quality, not done yet (project doc
    `claude/translation-quality-status.md`,
    `claude/translation-engines-status.md`): Gemini 3.5 Flash measured
@@ -434,8 +547,8 @@ debug key (only CI signs releases).
    honorifics
    (kanji pairs that always go together), on the phone a draft whose
    flagged paragraphs go to Gemini when online, a no-kanji grammar for
-   GGUF models. Claude: on the web (a key in a page), older models on
-   the list. Series: making them on the web.
+   GGUF models. Claude: older models on
+   the list.
 4. Study, later: a bundled pre-translated dictionary (JMdict + Korean
    meanings) as an extension; the word sheet would show it before the
    engine's contextual meaning.

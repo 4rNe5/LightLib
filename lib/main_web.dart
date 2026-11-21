@@ -1,6 +1,6 @@
 // The web build's entry point (flutter build web -t lib/main_web.dart):
 // the library (this browser's books and the account's), the reader,
-// Gemini translation and sync. The phone app's other parts (search and
+// translation by Gemini or Claude and sync. The phone app's other parts (search and
 // downloads, the model on the device, widgets, updates) are not part of
 // it.
 //
@@ -25,6 +25,7 @@ import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/sync/sync_service.dart';
+import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/ui/themes.dart';
 import 'package:openlib/web/web_library_page.dart';
@@ -46,6 +47,9 @@ Future<void> _afterFirstFrame() async {
           .getPreference(translationLightNovelStylePref)
           .catchError((_) => null) !=
       0;
+  // "Translate this book to the end", while the tab is open (a book
+  // chosen before the page was closed goes on).
+  unawaited(BookTranslationService.instance.start());
 }
 
 class LightLibWebApp extends StatelessWidget {

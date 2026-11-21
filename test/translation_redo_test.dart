@@ -14,6 +14,7 @@ import 'package:flutter_test/flutter_test.dart';
 // Project imports:
 import 'package:openlib/services/translation/paragraph_text.dart';
 import 'package:openlib/services/translation/translation_cache.dart';
+import 'package:openlib/services/translation/translation_models.dart';
 import 'package:openlib/services/translation/translation_repair.dart';
 
 Uint8List _epub(List<String> paragraphs) {
@@ -51,7 +52,7 @@ void main() {
     expect(paragraphs, [witch, blue, other]);
     final cache = await TranslationCache.open(
         bookFileName: 'book.epub',
-        targetLanguage: 'Korean',
+        targetLanguage: 'ko',
         modelId: TranslationCache.sharedModelId(lightNovel: true),
         directory: dir);
     cache
@@ -73,7 +74,7 @@ void main() {
 
   Future<TranslationCache> open() => TranslationCache.open(
       bookFileName: 'book.epub',
-      targetLanguage: 'Korean',
+      targetLanguage: 'ko',
       modelId: TranslationCache.sharedModelId(lightNovel: true),
       directory: dir);
 
@@ -81,6 +82,11 @@ void main() {
     var told = 0;
     onTranslationsToRedo = () => told++;
     addTearDown(() => onTranslationsToRedo = null);
+    // A reader with the book open hears of it (it starts its page over).
+    final rung = <String?>[];
+    void heard() => rung.add(redoMarks.bookFile);
+    redoMarks.addListener(heard);
+    addTearDown(() => redoMarks.removeListener(heard));
     final marked = await redoTranslationsWith(
         bookFile: 'book.epub',
         bookPath: book,
@@ -89,6 +95,16 @@ void main() {
         directory: dir);
     expect(marked, 1);
     expect(told, 1);
+    expect(rung, ['book.epub']);
+    // Nothing marked, nobody told.
+    expect(
+        await redoTranslationsWith(
+            bookFile: 'book.epub',
+            bookPath: book,
+            source: '勇者',
+            directory: dir),
+        0);
+    expect(rung, hasLength(1));
     final cache = await open();
     expect(cache.lookup(witch), isNull, reason: 'counts as not translated');
     expect(cache.saved(witch), '꽃의 푸른마녀는 웃었다.');
@@ -144,5 +160,24 @@ void main() {
             directory: dir),
         0);
     expect((await open()).toRedo, 0);
+  });
+
+  test('a set is opened by its language code: by its name it is another, '
+      'empty set - the reader\'s translations were never found', () {
+    // (The reader and the library open 'ko'. The repair opened 'Korean':
+    // every paragraph with the word came to 0.)
+    expect(
+        TranslationCache.fileIdFor('book.epub', 'ko', 'shared'),
+        isNot(TranslationCache.fileIdFor('book.epub', 'Korean', 'shared')));
+    expect(
+        () => TranslationCache.open(
+            bookFileName: 'book.epub',
+            targetLanguage: 'Korean',
+            modelId: TranslationCache.sharedModelId(lightNovel: true),
+            directory: dir),
+        throwsA(isA<AssertionError>()));
+    for (final language in translationLanguages) {
+      expect(TranslationCache.languages, contains(language.code));
+    }
   });
 }

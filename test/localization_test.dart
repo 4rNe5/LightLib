@@ -111,6 +111,10 @@ void main() {
       (tester) async {
     final container = ProviderContainer();
     addTearDown(container.dispose);
+    // (A phone: on a wide window the language is under its category.)
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(411, 914);
+    addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
       UncontrolledProviderScope(

@@ -28,11 +28,9 @@ class TranslationEngines {
   /// it.
   static Future<({CloudClient client, CloudSettings settings})?>
       _chosen() async {
-    if (!kIsWeb) {
-      await ClaudeSettings.instance.load();
-      if (ClaudeSettings.instance.active) {
-        return (client: ClaudeClient.shared, settings: ClaudeSettings.instance);
-      }
+    await ClaudeSettings.instance.load();
+    if (ClaudeSettings.instance.active) {
+      return (client: ClaudeClient.shared, settings: ClaudeSettings.instance);
     }
     await GeminiSettings.instance.load();
     if (GeminiSettings.instance.active) {

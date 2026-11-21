@@ -3,7 +3,8 @@
 The built web app (`build/web`) run in headless Chrome: real mouse clicks
 and touches at real coordinates, the sync project answered by a stand-in
 that lives in memory (no account, nothing on the owner's project is
-touched), Gemini answered by a stand-in too (the API is never called).
+touched), Gemini and Claude answered by stand-ins too (the APIs are never
+called).
 
 ```bash
 cd tool/web_check && npm install          # puppeteer-core; Chrome at $CHROME or /usr/bin/google-chrome
@@ -16,6 +17,9 @@ node mock_project.mjs /tmp/lib24 8099 &                   # the stand-in project
 node library.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/shots desktop   # or: mobile
 node account.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/shots /tmp/other.epub
 node translate.mjs http://127.0.0.1:8094/ /tmp/haru.epub /tmp/shots
+node claude.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/haru.epub /tmp/shots
+node series.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/shots
+node whole_book.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 /tmp/haru.epub /tmp/shots
 node reader_taps.mjs http://127.0.0.1:8094/ /tmp/haru.epub /tmp/shots
 node desktop_reading.mjs http://127.0.0.1:8094/ /tmp/horizontal.epub /tmp/shots
 node drop.mjs http://127.0.0.1:8094/ /tmp/other.epub /tmp/shots
@@ -27,8 +31,11 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 
 | Script | What it shows |
 |---|---|
-| `library.mjs` | Signed in: every book listed without one file fetched; a book's card; "Read" fetches that one file with its progress; the reader; back in the library the book is here and read a little; search, the side bar, the right-click menu, settings |
+| `library.mjs` | Signed in: every book listed without one file fetched; a book's card; "Read" fetches that one file with its progress; the reader; back in the library the book is here and how far it was read shows at once; search, the side bar, the right-click menu, settings |
 | `account.mjs` | The Gemini key typed in one browser is on the account and in a second browser; a book added here goes up with its details and small cover; this browser's copy goes while the account keeps the book; a deletion reaches the account |
+| `claude.mjs` | Signed in to an account a phone put its Claude key on: the key comes with the first sync, Settings has its switch, Claude is chosen, a book is translated by it - every request saying it comes from a browser, none refused by the site's policy, none to Gemini |
+| `series.mjs` | Signed in: two of the account's books (neither in this browser) chosen from a tile's menu and by a click, named, grouped; the row shows and the account has the series under their MD5s, sent from the web |
+| `whole_book.mjs` | A book added, its card opened, "translate this whole book" pressed: every paragraph translated (stand-in) and kept in the browser, the reader never opened |
 | `translate.mjs` | Not signed in: an EPUB added, opened, translated (stand-in), kept over a reload, shown without a key |
 | `reader_taps.mjs` | A phone: the reader's bars, a sheet over the page and a message's button take real taps |
 | `desktop_reading.mjs` | A horizontal book in a wide window: the column's width when scrolling, two pages when turning, keys and wheel |
@@ -39,6 +46,13 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 | `load.mjs` | First load as a phone on 4G or a desktop: first paint, first frame, bytes, memory (`node load.mjs <url> mobile`) |
 | `visit.mjs` | A signed-in visit to the 24-book account: what is fetched before the library is ready, what the tab holds |
 | `reading_memory.mjs` | The tab while a book is read |
+
+A page reloaded, or visited a second time, in the same headless browser
+stays on the library's outline (the database's worker of the first visit
+is still there): the deployed site does the same under this harness, a
+person's browser does not. A check that needs something in place before
+the app starts puts it there from a file of the site that is not the app
+(`version.json`), then opens the app once.
 
 The stand-in refuses a storage or table request without the project's
 key and a session's token, in the project's own words (400 "Bucket not

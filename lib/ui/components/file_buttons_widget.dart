@@ -16,7 +16,6 @@ import 'package:openlib/ui/pdf_viewer.dart' show launchPdfViewer;
 // Providers may report uppercase extensions (e.g. Z-Library's "EPUB").
 enum BookOpenTarget { pdf, epub, external }
 
-@visibleForTesting
 BookOpenTarget bookOpenTargetForFormat(String format) {
   switch (format.trim().toLowerCase()) {
     case 'pdf':

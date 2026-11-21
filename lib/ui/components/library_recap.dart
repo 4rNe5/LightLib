@@ -51,7 +51,9 @@ class LibraryRecapBento extends StatelessWidget {
         LayoutBuilder(builder: (context, constraints) {
           const gap = 10.0;
           final unit = (constraints.maxWidth - 2 * gap) / 3;
-          final rowHeight = (unit * 1.12).clamp(118.0, 156.0);
+          // (124: what the checkpoints' card needs in the narrow pane
+          // beside the shelf.)
+          final rowHeight = (unit * 1.12).clamp(124.0, 156.0);
           Widget row(Widget wide, Widget narrow) => SizedBox(
                 height: rowHeight,
                 child: Row(
@@ -117,11 +119,16 @@ class _CardLabel extends StatelessWidget {
         Icon(icon, size: 15, color: fg),
         const SizedBox(width: 5),
         Expanded(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 11.5, fontWeight: FontWeight.w700, color: fg)),
+          // (A narrow card - the pane beside the shelf on a foldable -
+          // shows the whole label a little smaller, not a cut one.)
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(text,
+                maxLines: 1,
+                style: TextStyle(
+                    fontSize: 11.5, fontWeight: FontWeight.w700, color: fg)),
+          ),
         ),
       ],
     );
@@ -470,13 +477,16 @@ class _MonthCard extends StatelessWidget {
                     color: scheme.onSecondaryContainer)),
           ),
           const SizedBox(height: 3),
-          Text(l10n.recapFinishedThisMonth,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSecondaryContainer)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(l10n.recapFinishedThisMonth,
+                maxLines: 1,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSecondaryContainer)),
+          ),
           Text(l10n.recapReadingDays(recap.readingDaysThisMonth),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

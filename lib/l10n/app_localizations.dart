@@ -4512,23 +4512,257 @@ abstract class AppLocalizations {
   /// **'Your other devices use the same key and workspace. Off: kept on this device and removed from your project.'**
   String get syncClaudeKeyHint;
 
-  /// glossaryRedoAll
-  ///
-  /// In en, this message translates to:
-  /// **'Translate again every paragraph with this word'**
-  String get glossaryRedoAll;
-
-  /// glossaryRedoAllHint
-  ///
-  /// In en, this message translates to:
-  /// **'Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.'**
-  String get glossaryRedoAllHint;
-
   /// glossaryRedone
   ///
   /// In en, this message translates to:
   /// **'{count} paragraphs will be translated again'**
   String glossaryRedone(int count);
+
+  /// webSelect
+  ///
+  /// In en, this message translates to:
+  /// **'Select'**
+  String get webSelect;
+
+  /// seriesRename
+  ///
+  /// In en, this message translates to:
+  /// **'Rename series'**
+  String get seriesRename;
+
+  /// seriesDissolve
+  ///
+  /// In en, this message translates to:
+  /// **'Ungroup series'**
+  String get seriesDissolve;
+
+  /// webTranslateWholeHint
+  ///
+  /// In en, this message translates to:
+  /// **'Translates to the end while this tab is open, also while you read.'**
+  String get webTranslateWholeHint;
+
+  /// webTranslateNoEngine
+  ///
+  /// In en, this message translates to:
+  /// **'Add a Gemini or Claude key in Settings to translate.'**
+  String get webTranslateNoEngine;
+
+  /// webTranslateStopped
+  ///
+  /// In en, this message translates to:
+  /// **'Translation stopped: {reason}'**
+  String webTranslateStopped(String reason);
+
+  /// redoTranslating
+  ///
+  /// In en, this message translates to:
+  /// **'Translating again with the corrected term'**
+  String get redoTranslating;
+
+  /// glossaryRedoScope
+  ///
+  /// In en, this message translates to:
+  /// **'Translate again the paragraphs with this word'**
+  String get glossaryRedoScope;
+
+  /// glossaryRedoNone
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get glossaryRedoNone;
+
+  /// glossaryRedoBook
+  ///
+  /// In en, this message translates to:
+  /// **'This book'**
+  String get glossaryRedoBook;
+
+  /// glossaryRedoSeries
+  ///
+  /// In en, this message translates to:
+  /// **'Whole series'**
+  String get glossaryRedoSeries;
+
+  /// glossaryRedoScopeHint
+  ///
+  /// In en, this message translates to:
+  /// **'Only those paragraphs, now and to the end, without opening the book. What is not translated yet is left alone.'**
+  String get glossaryRedoScopeHint;
+
+  /// glossaryRedoProgress
+  ///
+  /// In en, this message translates to:
+  /// **'Translating again · {done}/{total} paragraphs'**
+  String glossaryRedoProgress(int done, int total);
+
+  /// glossaryRedoWaiting
+  ///
+  /// In en, this message translates to:
+  /// **'Waiting to translate again'**
+  String get glossaryRedoWaiting;
+
+  /// glossaryRedoNothing
+  ///
+  /// In en, this message translates to:
+  /// **'Nothing to translate again: no translated paragraph has this word.'**
+  String get glossaryRedoNothing;
+
+  /// glossarySeriesTitle
+  ///
+  /// In en, this message translates to:
+  /// **'{name} glossary'**
+  String glossarySeriesTitle(String name);
+
+  /// webGlossaryNoBooks
+  ///
+  /// In en, this message translates to:
+  /// **'No volume of this series is in this browser yet. Open one first.'**
+  String get webGlossaryNoBooks;
+
+  /// bookMarkFinished
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as finished'**
+  String get bookMarkFinished;
+
+  /// bookMarkUnfinished
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as not finished'**
+  String get bookMarkUnfinished;
+
+  /// bookReadAgain
+  ///
+  /// In en, this message translates to:
+  /// **'Read again'**
+  String get bookReadAgain;
+
+  /// bookContinueFrom
+  ///
+  /// In en, this message translates to:
+  /// **'Continue from {percent}%'**
+  String bookContinueFrom(int percent);
+
+  /// bookReadToday
+  ///
+  /// In en, this message translates to:
+  /// **'Read today'**
+  String get bookReadToday;
+
+  /// bookReadYesterday
+  ///
+  /// In en, this message translates to:
+  /// **'Read yesterday'**
+  String get bookReadYesterday;
+
+  /// bookReadDaysAgo
+  ///
+  /// In en, this message translates to:
+  /// **'Read {days} days ago'**
+  String bookReadDaysAgo(int days);
+
+  /// bookFinishedOn
+  ///
+  /// In en, this message translates to:
+  /// **'Finished {date}'**
+  String bookFinishedOn(String date);
+
+  /// bookAbout
+  ///
+  /// In en, this message translates to:
+  /// **'About this book'**
+  String get bookAbout;
+
+  /// bookNoDescription
+  ///
+  /// In en, this message translates to:
+  /// **'No description.'**
+  String get bookNoDescription;
+
+  /// bookMore
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get bookMore;
+
+  /// bookShare
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get bookShare;
+
+  /// bookOpeningAt
+  ///
+  /// In en, this message translates to:
+  /// **'Opening at {percent}%…'**
+  String bookOpeningAt(int percent);
+
+  /// bookOpening
+  ///
+  /// In en, this message translates to:
+  /// **'Opening the book…'**
+  String get bookOpening;
+
+  /// libraryNowReading
+  ///
+  /// In en, this message translates to:
+  /// **'Reading now'**
+  String get libraryNowReading;
+
+  /// libraryAlsoReading
+  ///
+  /// In en, this message translates to:
+  /// **'Also reading'**
+  String get libraryAlsoReading;
+
+  /// libraryBackToOverview
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the overview'**
+  String get libraryBackToOverview;
+
+  /// bookFinishedToast
+  ///
+  /// In en, this message translates to:
+  /// **'Finished! Marked as read.'**
+  String get bookFinishedToast;
+
+  /// readerTwoPages
+  ///
+  /// In en, this message translates to:
+  /// **'Two pages side by side'**
+  String get readerTwoPages;
+
+  /// readerTwoPagesHint
+  ///
+  /// In en, this message translates to:
+  /// **'On an unfolded or wide screen, when turning pages'**
+  String get readerTwoPagesHint;
+
+  /// settingsCatSearch
+  ///
+  /// In en, this message translates to:
+  /// **'Search & downloads'**
+  String get settingsCatSearch;
+
+  /// settingsCatReading
+  ///
+  /// In en, this message translates to:
+  /// **'Reading & translation'**
+  String get settingsCatReading;
+
+  /// settingsCatStorage
+  ///
+  /// In en, this message translates to:
+  /// **'Storage & sync'**
+  String get settingsCatStorage;
+
+  /// settingsCatApp
+  ///
+  /// In en, this message translates to:
+  /// **'App'**
+  String get settingsCatApp;
 }
 
 class _AppLocalizationsDelegate

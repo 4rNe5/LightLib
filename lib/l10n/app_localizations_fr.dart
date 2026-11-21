@@ -2573,15 +2573,150 @@ class AppLocalizationsFr extends AppLocalizations {
       'Vos autres appareils utilisent la même clé et le même espace de travail. Désactivé : conservée sur cet appareil et retirée du projet.';
 
   @override
-  String get glossaryRedoAll =>
-      'Retraduire tous les paragraphes contenant ce mot';
-
-  @override
-  String get glossaryRedoAllHint =>
-      'Changer la graphie refait déjà les paragraphes écrits à l\'ancienne. Cochez si des paragraphes contenant ce mot restent faux.';
-
-  @override
   String glossaryRedone(int count) {
     return '$count paragraphes seront retraduits';
   }
+
+  @override
+  String get webSelect => 'Sélectionner';
+
+  @override
+  String get seriesRename => 'Renommer la série';
+
+  @override
+  String get seriesDissolve => 'Dissoudre la série';
+
+  @override
+  String get webTranslateWholeHint =>
+      'Traduit jusqu’à la fin tant que cet onglet est ouvert, même pendant la lecture.';
+
+  @override
+  String get webTranslateNoEngine =>
+      'Pour traduire, ajoutez une clé Gemini ou Claude dans les réglages.';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return 'Traduction arrêtée : $reason';
+  }
+
+  @override
+  String get redoTranslating => 'Retraduction avec le terme corrigé';
+
+  @override
+  String get glossaryRedoScope => 'Retraduire les paragraphes contenant ce mot';
+
+  @override
+  String get glossaryRedoNone => 'Non';
+
+  @override
+  String get glossaryRedoBook => 'Ce livre';
+
+  @override
+  String get glossaryRedoSeries => 'Toute la série';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'Seulement ces paragraphes, tout de suite et jusqu’au bout, sans ouvrir le livre. Ce qui n’est pas encore traduit reste tel quel.';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return 'Retraduction · $done/$total paragraphes';
+  }
+
+  @override
+  String get glossaryRedoWaiting => 'En attente de retraduction';
+
+  @override
+  String get glossaryRedoNothing =>
+      'Rien à retraduire : aucun paragraphe traduit ne contient ce mot.';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return 'Glossaire de $name';
+  }
+
+  @override
+  String get webGlossaryNoBooks =>
+      'Aucun volume de cette série n’est dans ce navigateur. Ouvrez-en un d’abord.';
+
+  @override
+  String get bookMarkFinished => 'Marquer comme lu';
+
+  @override
+  String get bookMarkUnfinished => 'Marquer comme non lu';
+
+  @override
+  String get bookReadAgain => 'Relire';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return 'Reprendre à $percent %';
+  }
+
+  @override
+  String get bookReadToday => 'Lu aujourd\'hui';
+
+  @override
+  String get bookReadYesterday => 'Lu hier';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return 'Lu il y a $days jours';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return 'Terminé le $date';
+  }
+
+  @override
+  String get bookAbout => 'À propos du livre';
+
+  @override
+  String get bookNoDescription => 'Pas de description.';
+
+  @override
+  String get bookMore => 'Plus';
+
+  @override
+  String get bookShare => 'Partager';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return 'Ouverture à $percent %…';
+  }
+
+  @override
+  String get bookOpening => 'Ouverture du livre…';
+
+  @override
+  String get libraryNowReading => 'En cours de lecture';
+
+  @override
+  String get libraryAlsoReading => 'Aussi en cours';
+
+  @override
+  String get libraryBackToOverview => 'Retour à l\'aperçu';
+
+  @override
+  String get bookFinishedToast => 'Terminé ! Marqué comme lu.';
+
+  @override
+  String get readerTwoPages => 'Deux pages côte à côte';
+
+  @override
+  String get readerTwoPagesHint =>
+      'Sur un écran déplié ou large, en mode pages';
+
+  @override
+  String get settingsCatSearch => 'Recherche et téléchargements';
+
+  @override
+  String get settingsCatReading => 'Lecture et traduction';
+
+  @override
+  String get settingsCatStorage => 'Stockage et synchronisation';
+
+  @override
+  String get settingsCatApp => 'Application';
 }

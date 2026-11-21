@@ -1,6 +1,15 @@
-// The book's glossary in the reader: the names and terms every
-// translation writes the same way, each editable (its Korean form, kind
-// and gender) or removable, and the whole made again on request.
+// A glossary, in the reader and outside it (a book's page, a series' row
+// in the library): the names and terms every translation writes the same
+// way, each editable (its Korean form, kind and gender) or removable,
+// and the whole made again on request.
+//
+// A word that was wrong is wrong in every paragraph translated with it,
+// in every volume of a series that shares the glossary: setting it right
+// here can have those paragraphs - of this book, or of the whole series
+// - translated again at once, without a book being opened.
+
+// Dart imports:
+import 'dart:async';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -8,15 +17,20 @@ import 'package:flutter/material.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/translation/book_glossary.dart';
+import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/services/translation/glossary_service.dart';
-import 'package:openlib/services/files.dart' show getFilePath;
-import 'package:openlib/services/translation/translation_repair.dart';
+import 'package:openlib/services/translation/series_glossary.dart'
+    show seriesFiles;
 import 'package:openlib/ui/components/library_tiles.dart'
     show modernSurfaceTheme;
 
+/// The glossary of [bookFile] - or, with [series] (every volume's file),
+/// of a series: what its volumes' glossaries have between them.
 Future<void> showGlossarySheet(
   BuildContext context, {
   required String bookFile,
+  List<String> series = const [],
+  String? seriesName,
   Future<void> Function()? onRemake,
 }) {
   return showModalBottomSheet<void>(
@@ -37,6 +51,8 @@ Future<void> showGlossarySheet(
         maxChildSize: 0.95,
         builder: (context, controller) => GlossarySheet(
           bookFile: bookFile,
+          series: series,
+          seriesName: seriesName,
           onRemake: onRemake,
           scrollController: controller,
         ),
@@ -45,21 +61,40 @@ Future<void> showGlossarySheet(
   );
 }
 
-class GlossarySheet extends StatelessWidget {
+/// Which paragraphs with a word are translated again when it is set
+/// right.
+enum GlossaryRedo { none, book, series }
+
+class GlossarySheet extends StatefulWidget {
   const GlossarySheet({
     super.key,
     required this.bookFile,
+    this.series = const [],
+    this.seriesName,
     this.onRemake,
     this.scrollController,
     this.service,
+    this.redoWord,
+    this.seriesOf,
   });
 
+  /// The book; for a series, any of its volumes.
   final String bookFile;
+
+  /// Every volume's file, when this is a series' glossary.
+  final List<String> series;
+  final String? seriesName;
   final Future<void> Function()? onRemake;
   final ScrollController? scrollController;
   final GlossaryService? service;
 
-  GlossaryService get _service => service ?? GlossaryService.instance;
+  /// Marks the paragraphs of the files that have the word and has them
+  /// made again now; how many wait
+  /// ([BookTranslationService.redoWord] unless given).
+  final Future<int> Function(List<String> files, String source)? redoWord;
+
+  /// The other volumes of a book's series ([seriesFiles] unless given).
+  final Future<List<String>> Function(String bookFile)? seriesOf;
 
   static String kindLabel(AppLocalizations l10n, GlossaryKind kind) =>
       switch (kind) {
@@ -76,22 +111,134 @@ class GlossarySheet extends StatelessWidget {
       };
 
   @override
+  State<GlossarySheet> createState() => _GlossarySheetState();
+}
+
+class _GlossarySheetState extends State<GlossarySheet> {
+  GlossaryService get _service => widget.service ?? GlossaryService.instance;
+  final _translation = BookTranslationService.instance;
+  String get bookFile => widget.bookFile;
+  Future<void> Function()? get onRemake => widget.onRemake;
+  ScrollController? get scrollController => widget.scrollController;
+
+  /// The files this glossary is of: the book, or the series' volumes.
+  late final List<String> _files =
+      widget.series.isNotEmpty ? widget.series : [widget.bookFile];
+  bool get _ofSeries => widget.series.isNotEmpty;
+
+  /// The other volumes of the book's series (a book's sheet).
+  List<String> _others = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    // Outside the reader nothing has read the glossaries yet.
+    for (final file in _files) {
+      unawaited(_service.load(file).then((_) {
+        if (mounted) setState(() {});
+      }));
+    }
+    if (!_ofSeries) {
+      unawaited((widget.seriesOf ?? seriesFiles)(bookFile).then((others) {
+        if (mounted) setState(() => _others = others);
+      }).catchError((_) {}));
+    }
+  }
+
+  /// What the files' glossaries have between them: a word once, as the
+  /// reader set it where a volume has it so.
+  List<GlossaryEntry> _entries() {
+    final by = <String, GlossaryEntry>{};
+    for (final file in _files) {
+      for (final e in (_service.cached(file) ?? BookGlossary.empty).entries) {
+        if (e.target.isEmpty) continue;
+        final known = by[e.source];
+        if (known == null || (e.edited && !known.edited)) by[e.source] = e;
+      }
+    }
+    return by.values.toList()
+      ..sort((a, b) {
+        final k = a.kind.index.compareTo(b.kind.index);
+        return k != 0 ? k : a.source.compareTo(b.source);
+      });
+  }
+
+  /// How far the paragraphs asked to be made again are, for these books.
+  Widget? _redoStatus(AppLocalizations l10n, ThemeData theme) {
+    final mine = {..._files, ..._others};
+    final waiting =
+        _translation.redoFiles.where(mine.contains).toList(growable: false);
+    if (waiting.isEmpty) return null;
+    var done = 0, total = 0;
+    for (final file in waiting) {
+      final p = _translation.redoProgress[file];
+      if (p == null) continue;
+      done += p.done;
+      total += p.total;
+    }
+    final scheme = theme.colorScheme;
+    return Container(
+      key: const ValueKey('glossaryRedoStatus'),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.fromLTRB(12, 6, 4, 6),
+      decoration: BoxDecoration(
+        color: scheme.secondaryContainer,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.translate_rounded,
+                  size: 16, color: scheme.onSecondaryContainer),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                    total > 0
+                        ? l10n.glossaryRedoProgress(done, total)
+                        : l10n.glossaryRedoWaiting,
+                    style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: scheme.onSecondaryContainer)),
+              ),
+              TextButton(
+                key: const ValueKey('glossaryRedoStop'),
+                onPressed: _translation.cancelRedo,
+                child: Text(l10n.translationNoticeStop),
+              ),
+            ],
+          ),
+          // (Only when it is known how far.)
+          if (total > 0)
+            Padding(
+              padding: const EdgeInsets.only(right: 8, bottom: 4),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(3),
+                child: LinearProgressIndicator(
+                    value: done / total,
+                    minHeight: 4,
+                    color: scheme.secondary,
+                    backgroundColor: scheme.onSecondaryContainer.withAlpha(30)),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     return ListenableBuilder(
-      listenable: _service,
+      listenable: Listenable.merge([_service, _translation]),
       builder: (context, _) {
-        final making = _service.isMaking(bookFile);
-        final glossary = _service.cached(bookFile) ?? BookGlossary.empty;
-        final entries = glossary.entries
-            .where((e) => e.target.isNotEmpty)
-            .toList()
-          ..sort((a, b) {
-            final k = a.kind.index.compareTo(b.kind.index);
-            return k != 0 ? k : a.source.compareTo(b.source);
-          });
+        final making = _files.any(_service.isMaking);
+        final entries = _entries();
+        final status = _redoStatus(l10n, theme);
         return ListView(
           key: const ValueKey('glossarySheet'),
           controller: scrollController,
@@ -100,7 +247,12 @@ class GlossarySheet extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: Text(l10n.glossaryTitle,
+                  child: Text(
+                      _ofSeries && widget.seriesName != null
+                          ? l10n.glossarySeriesTitle(widget.seriesName!)
+                          : l10n.glossaryTitle,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleLarge
                           ?.copyWith(fontWeight: FontWeight.w800)),
                 ),
@@ -123,6 +275,7 @@ class GlossarySheet extends StatelessWidget {
                 style: theme.textTheme.bodySmall
                     ?.copyWith(color: scheme.onSurfaceVariant)),
             const SizedBox(height: 14),
+            if (status != null) status,
             if (entries.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 32),
@@ -166,11 +319,11 @@ class GlossarySheet extends StatelessWidget {
                               ],
                             ),
                           ),
-                          _Chip(kindLabel(l10n, e.kind)),
+                          _Chip(GlossarySheet.kindLabel(l10n, e.kind)),
                           if (e.kind == GlossaryKind.person &&
                               e.gender != GlossaryGender.unknown) ...[
                             const SizedBox(width: 4),
-                            _Chip(genderLabel(l10n, e.gender)),
+                            _Chip(GlossarySheet.genderLabel(l10n, e.gender)),
                           ],
                           if (e.edited) ...[
                             const SizedBox(width: 4),
@@ -197,25 +350,48 @@ class GlossarySheet extends StatelessWidget {
     final messenger = ScaffoldMessenger.maybeOf(context);
     final result = await showDialog<_Edited?>(
       context: context,
-      builder: (_) => _EditDialog(entry: entry),
+      builder: (_) => _EditDialog(
+        entry: entry,
+        scopes: [
+          GlossaryRedo.none,
+          if (!_ofSeries) GlossaryRedo.book,
+          if (_ofSeries || _others.isNotEmpty) GlossaryRedo.series,
+        ],
+      ),
     );
     if (result == null) return;
     final edited = result.entry;
-    // (Paragraphs written with the form it had are made again by the
-    // service itself: `GlossaryService.onEdited`.)
-    if (edited.target.trim().isEmpty) {
-      await _service.removeEntry(bookFile, entry.source);
-    } else {
-      await _service.updateEntry(bookFile, edited);
+    // In every file here that has the word (a series' sheet: each volume;
+    // what the reader sets in one volume also goes to the others by
+    // itself where the series shares its glossaries).
+    for (final file in _files) {
+      final has = (_service.cached(file) ?? BookGlossary.empty)
+          .entries
+          .any((e) => e.source == entry.source);
+      if (!has) continue;
+      if (edited.target.trim().isEmpty) {
+        await _service.removeEntry(file, entry.source);
+      } else {
+        await _service.updateEntry(file, edited);
+      }
     }
-    if (!result.redoAll) return;
+    if (result.redo == GlossaryRedo.none) return;
+    // The paragraphs with the word, translated again now: this book's,
+    // or every volume's.
+    final files = result.redo == GlossaryRedo.book
+        ? [bookFile]
+        : {..._files, ..._others}.toList();
     try {
-      final marked = await redoTranslationsWith(
-          bookFile: bookFile,
-          bookPath: await getFilePath(bookFile),
-          source: entry.source);
-      messenger?.showSnackBar(
-          SnackBar(content: Text(l10n.glossaryRedone(marked))));
+      final waiting = await (widget.redoWord ??
+          (files, source) =>
+              _translation.redoWord(files: files, source: source))(
+          files, entry.source);
+      messenger
+        ?..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(
+            content: Text(waiting > 0
+                ? l10n.glossaryRedone(waiting)
+                : l10n.glossaryRedoNothing)));
     } catch (_) {}
   }
 }
@@ -244,16 +420,19 @@ class _Chip extends StatelessWidget {
 
 /// What the reader set in the dialog.
 class _Edited {
-  const _Edited(this.entry, {this.redoAll = false});
+  const _Edited(this.entry, {this.redo = GlossaryRedo.none});
   final GlossaryEntry entry;
 
-  /// Every paragraph with the word is to be translated again.
-  final bool redoAll;
+  /// Which paragraphs with the word are to be translated again.
+  final GlossaryRedo redo;
 }
 
 class _EditDialog extends StatefulWidget {
-  const _EditDialog({required this.entry});
+  const _EditDialog({required this.entry, required this.scopes});
   final GlossaryEntry entry;
+
+  /// What can be asked to be translated again here.
+  final List<GlossaryRedo> scopes;
 
   @override
   State<_EditDialog> createState() => _EditDialogState();
@@ -264,7 +443,7 @@ class _EditDialogState extends State<_EditDialog> {
       TextEditingController(text: widget.entry.target);
   late GlossaryKind _kind = widget.entry.kind;
   late GlossaryGender _gender = widget.entry.gender;
-  bool _redoAll = false;
+  GlossaryRedo _redo = GlossaryRedo.none;
 
   @override
   void dispose() {
@@ -314,18 +493,34 @@ class _EditDialogState extends State<_EditDialog> {
                 onSelectionChanged: (v) => setState(() => _gender = v.first),
               ),
             ],
+            const SizedBox(height: 16),
+            Text(l10n.glossaryRedoScope,
+                style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 6),
-            CheckboxListTile(
-              key: const ValueKey('glossaryRedoAll'),
-              contentPadding: EdgeInsets.zero,
-              controlAffinity: ListTileControlAffinity.leading,
-              dense: true,
-              title: Text(l10n.glossaryRedoAll),
-              subtitle: Text(l10n.glossaryRedoAllHint,
-                  style: const TextStyle(fontSize: 11)),
-              value: _redoAll,
-              onChanged: (v) => setState(() => _redoAll = v ?? false),
+            SegmentedButton<GlossaryRedo>(
+              key: const ValueKey('glossaryRedoScope'),
+              showSelectedIcon: false,
+              segments: [
+                for (final r in widget.scopes)
+                  ButtonSegment(
+                      value: r,
+                      label: Text(
+                          switch (r) {
+                            GlossaryRedo.none => l10n.glossaryRedoNone,
+                            GlossaryRedo.book => l10n.glossaryRedoBook,
+                            GlossaryRedo.series => l10n.glossaryRedoSeries,
+                          },
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis)),
+              ],
+              selected: {_redo},
+              onSelectionChanged: (v) => setState(() => _redo = v.first),
             ),
+            const SizedBox(height: 6),
+            Text(l10n.glossaryRedoScopeHint,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       ),
@@ -333,7 +528,7 @@ class _EditDialogState extends State<_EditDialog> {
         TextButton(
           key: const ValueKey('glossaryDelete'),
           onPressed: () => Navigator.of(context)
-              .pop(_Edited(e.copyWith(target: ''), redoAll: _redoAll)),
+              .pop(_Edited(e.copyWith(target: ''), redo: _redo)),
           child: Text(l10n.delete),
         ),
         TextButton(
@@ -350,7 +545,7 @@ class _EditDialogState extends State<_EditDialog> {
                     ? _gender
                     : GlossaryGender.unknown,
               ),
-              redoAll: _redoAll)),
+              redo: _redo)),
           child: Text(l10n.save),
         ),
       ],

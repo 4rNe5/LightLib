@@ -56,6 +56,7 @@ log('listed', JSON.stringify(await Promise.all(titles.map(async t => !!(await fi
   '| covers fetched:', (await calls(/GET .*\.cover\.jpg$/)).length)
 
 // A book's card.
+const placeBefore = await find('雨上がりの約束')
 await tapText('雨上がりの約束')
 await sleep(1200); await semantics()
 await shot('2_card')
@@ -90,6 +91,13 @@ if (!mobile && frame) {
 if (mobile) { await page.touchscreen.tap(196, 425); await sleep(700); await page.touchscreen.tap(24, 28) } else { await page.mouse.click(720, 450); await sleep(500); await page.mouse.click(24, 28) }
 await sleep(2500); await semantics()
 await shot('5_back')
+// (Without a reload, a sync or a second visit: the reader says it was
+// left, the library reads the positions again. The book read last comes
+// first; a book of one screen was read to its end.)
+const placeAfter = await find('雨上がりの約束')
+log('the library right after the reader: the book moved from x', Math.round(placeBefore?.x ?? -1), 'to', Math.round(placeAfter?.x ?? -1),
+  '| counts', JSON.stringify(await page.evaluate(() => [...document.querySelectorAll('flt-semantics')]
+    .map(n => (n.getAttribute('aria-label') || n.textContent || '').trim()).filter(t => /^(읽는 중|다 읽음|이 브라우저에 있음)\s*\d+$/.test(t)).map(t => t.replace(/\s+/g, ' ')))))
 const st = await state(mock)
 log('progress rows with a fraction:', st.progress.filter(p => p.fraction != null).length, '| reading sent:', (await calls(/rpc\/put_reading/)).length)
 

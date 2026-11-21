@@ -3580,14 +3580,6 @@
   "@syncClaudeKeyHint": {
     "description": "syncClaudeKeyHint"
   },
-  "glossaryRedoAll": "Translate again every paragraph with this word",
-  "@glossaryRedoAll": {
-    "description": "glossaryRedoAll"
-  },
-  "glossaryRedoAllHint": "Changing how it is written already redoes the paragraphs written the old way. Tick this when paragraphs with the word are still wrong.",
-  "@glossaryRedoAllHint": {
-    "description": "glossaryRedoAllHint"
-  },
   "glossaryRedone": "{count} paragraphs will be translated again",
   "@glossaryRedone": {
     "description": "glossaryRedone",
@@ -3596,5 +3588,207 @@
         "type": "int"
       }
     }
+  },
+  "webSelect": "Select",
+  "@webSelect": {
+    "description": "webSelect"
+  },
+  "seriesRename": "Rename series",
+  "@seriesRename": {
+    "description": "seriesRename"
+  },
+  "seriesDissolve": "Ungroup series",
+  "@seriesDissolve": {
+    "description": "seriesDissolve"
+  },
+  "webTranslateWholeHint": "Translates to the end while this tab is open, also while you read.",
+  "@webTranslateWholeHint": {
+    "description": "webTranslateWholeHint"
+  },
+  "webTranslateNoEngine": "Add a Gemini or Claude key in Settings to translate.",
+  "@webTranslateNoEngine": {
+    "description": "webTranslateNoEngine"
+  },
+  "webTranslateStopped": "Translation stopped: {reason}",
+  "@webTranslateStopped": {
+    "description": "webTranslateStopped",
+    "placeholders": {
+      "reason": {
+        "type": "String"
+      }
+    }
+  },
+  "redoTranslating": "Translating again with the corrected term",
+  "@redoTranslating": {
+    "description": "redoTranslating"
+  },
+  "glossaryRedoScope": "Translate again the paragraphs with this word",
+  "@glossaryRedoScope": {
+    "description": "glossaryRedoScope"
+  },
+  "glossaryRedoNone": "No",
+  "@glossaryRedoNone": {
+    "description": "glossaryRedoNone"
+  },
+  "glossaryRedoBook": "This book",
+  "@glossaryRedoBook": {
+    "description": "glossaryRedoBook"
+  },
+  "glossaryRedoSeries": "Whole series",
+  "@glossaryRedoSeries": {
+    "description": "glossaryRedoSeries"
+  },
+  "glossaryRedoScopeHint": "Only those paragraphs, now and to the end, without opening the book. What is not translated yet is left alone.",
+  "@glossaryRedoScopeHint": {
+    "description": "glossaryRedoScopeHint"
+  },
+  "glossaryRedoProgress": "Translating again · {done}/{total} paragraphs",
+  "@glossaryRedoProgress": {
+    "description": "glossaryRedoProgress",
+    "placeholders": {
+      "done": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "glossaryRedoWaiting": "Waiting to translate again",
+  "@glossaryRedoWaiting": {
+    "description": "glossaryRedoWaiting"
+  },
+  "glossaryRedoNothing": "Nothing to translate again: no translated paragraph has this word.",
+  "@glossaryRedoNothing": {
+    "description": "glossaryRedoNothing"
+  },
+  "glossarySeriesTitle": "{name} glossary",
+  "@glossarySeriesTitle": {
+    "description": "glossarySeriesTitle",
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "webGlossaryNoBooks": "No volume of this series is in this browser yet. Open one first.",
+  "@webGlossaryNoBooks": {
+    "description": "webGlossaryNoBooks"
+  },
+  "bookMarkFinished": "Mark as finished",
+  "@bookMarkFinished": {
+    "description": "bookMarkFinished"
+  },
+  "bookMarkUnfinished": "Mark as not finished",
+  "@bookMarkUnfinished": {
+    "description": "bookMarkUnfinished"
+  },
+  "bookReadAgain": "Read again",
+  "@bookReadAgain": {
+    "description": "bookReadAgain"
+  },
+  "bookContinueFrom": "Continue from {percent}%",
+  "@bookContinueFrom": {
+    "description": "bookContinueFrom",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bookReadToday": "Read today",
+  "@bookReadToday": {
+    "description": "bookReadToday"
+  },
+  "bookReadYesterday": "Read yesterday",
+  "@bookReadYesterday": {
+    "description": "bookReadYesterday"
+  },
+  "bookReadDaysAgo": "Read {days} days ago",
+  "@bookReadDaysAgo": {
+    "description": "bookReadDaysAgo",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "bookFinishedOn": "Finished {date}",
+  "@bookFinishedOn": {
+    "description": "bookFinishedOn",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "bookAbout": "About this book",
+  "@bookAbout": {
+    "description": "bookAbout"
+  },
+  "bookNoDescription": "No description.",
+  "@bookNoDescription": {
+    "description": "bookNoDescription"
+  },
+  "bookMore": "More",
+  "@bookMore": {
+    "description": "bookMore"
+  },
+  "bookShare": "Share",
+  "@bookShare": {
+    "description": "bookShare"
+  },
+  "bookOpeningAt": "Opening at {percent}%…",
+  "@bookOpeningAt": {
+    "description": "bookOpeningAt",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bookOpening": "Opening the book…",
+  "@bookOpening": {
+    "description": "bookOpening"
+  },
+  "libraryNowReading": "Reading now",
+  "@libraryNowReading": {
+    "description": "libraryNowReading"
+  },
+  "libraryAlsoReading": "Also reading",
+  "@libraryAlsoReading": {
+    "description": "libraryAlsoReading"
+  },
+  "libraryBackToOverview": "Back to the overview",
+  "@libraryBackToOverview": {
+    "description": "libraryBackToOverview"
+  },
+  "bookFinishedToast": "Finished! Marked as read.",
+  "@bookFinishedToast": {
+    "description": "bookFinishedToast"
+  },
+  "readerTwoPages": "Two pages side by side",
+  "@readerTwoPages": {
+    "description": "readerTwoPages"
+  },
+  "readerTwoPagesHint": "On an unfolded or wide screen, when turning pages",
+  "@readerTwoPagesHint": {
+    "description": "readerTwoPagesHint"
+  },
+  "settingsCatSearch": "Search & downloads",
+  "@settingsCatSearch": {
+    "description": "settingsCatSearch"
+  },
+  "settingsCatReading": "Reading & translation",
+  "@settingsCatReading": {
+    "description": "settingsCatReading"
+  },
+  "settingsCatStorage": "Storage & sync",
+  "@settingsCatStorage": {
+    "description": "settingsCatStorage"
+  },
+  "settingsCatApp": "App",
+  "@settingsCatApp": {
+    "description": "settingsCatApp"
   }
 }

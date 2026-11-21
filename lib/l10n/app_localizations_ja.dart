@@ -2475,14 +2475,145 @@ class AppLocalizationsJa extends AppLocalizations {
       'ほかの端末でも同じキーとワークスペースを使います。オフにするとこの端末だけに保存し、プロジェクトのキーは削除します。';
 
   @override
-  String get glossaryRedoAll => 'この語が出てくる段落をすべて翻訳し直す';
-
-  @override
-  String get glossaryRedoAllHint =>
-      '表記を変えると、以前の表記で訳された段落は自動で訳し直されます。それでもこの語の段落が誤っているときにチェックしてください。';
-
-  @override
   String glossaryRedone(int count) {
     return '$count段落を翻訳し直します';
   }
+
+  @override
+  String get webSelect => '選択';
+
+  @override
+  String get seriesRename => 'シリーズ名を変更';
+
+  @override
+  String get seriesDissolve => 'シリーズを解除';
+
+  @override
+  String get webTranslateWholeHint => 'このタブを開いている間、最後まで翻訳します。読書中も続きます。';
+
+  @override
+  String get webTranslateNoEngine => '翻訳するには設定で Gemini か Claude のキーを入れてください。';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return '翻訳が止まりました: $reason';
+  }
+
+  @override
+  String get redoTranslating => '修正した用語で再翻訳中';
+
+  @override
+  String get glossaryRedoScope => 'この語がある段落を再翻訳';
+
+  @override
+  String get glossaryRedoNone => 'しない';
+
+  @override
+  String get glossaryRedoBook => 'この本';
+
+  @override
+  String get glossaryRedoSeries => 'シリーズ全体';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'その段落だけを今すぐ、本を開かなくても最後まで再翻訳します。未翻訳の段落はそのままです。';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return '再翻訳中 · $done/$total 段落';
+  }
+
+  @override
+  String get glossaryRedoWaiting => '再翻訳待ち';
+
+  @override
+  String get glossaryRedoNothing => '再翻訳する段落がありません。この語がある翻訳済みの段落がありません。';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return '$name の用語集';
+  }
+
+  @override
+  String get webGlossaryNoBooks => 'このブラウザーにはこのシリーズの本がまだありません。先に開いてください。';
+
+  @override
+  String get bookMarkFinished => '読了にする';
+
+  @override
+  String get bookMarkUnfinished => '読了を解除';
+
+  @override
+  String get bookReadAgain => 'もう一度読む';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return '$percent%から続きを読む';
+  }
+
+  @override
+  String get bookReadToday => '今日読んだ';
+
+  @override
+  String get bookReadYesterday => '昨日読んだ';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return '$days日前に読んだ';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return '$date 読了';
+  }
+
+  @override
+  String get bookAbout => '作品紹介';
+
+  @override
+  String get bookNoDescription => '紹介文がありません。';
+
+  @override
+  String get bookMore => 'その他';
+
+  @override
+  String get bookShare => '共有';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return '$percent%の位置を開いています…';
+  }
+
+  @override
+  String get bookOpening => '本を開いています…';
+
+  @override
+  String get libraryNowReading => 'いま読んでいる本';
+
+  @override
+  String get libraryAlsoReading => 'ほかに読んでいる本';
+
+  @override
+  String get libraryBackToOverview => '概要に戻る';
+
+  @override
+  String get bookFinishedToast => '読了！読み終えた本にしました。';
+
+  @override
+  String get readerTwoPages => '見開きで表示';
+
+  @override
+  String get readerTwoPagesHint => '開いた画面や広い画面でページめくりのとき';
+
+  @override
+  String get settingsCatSearch => '検索・ダウンロード';
+
+  @override
+  String get settingsCatReading => '読書・翻訳';
+
+  @override
+  String get settingsCatStorage => '保存・同期';
+
+  @override
+  String get settingsCatApp => 'アプリ情報';
 }

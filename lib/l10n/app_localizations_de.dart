@@ -2565,14 +2565,150 @@ class AppLocalizationsDe extends AppLocalizations {
       'Deine anderen Geräte nutzen denselben Schlüssel und Workspace. Aus: nur auf diesem Gerät, im Projekt wird er gelöscht.';
 
   @override
-  String get glossaryRedoAll => 'Alle Absätze mit diesem Wort neu übersetzen';
-
-  @override
-  String get glossaryRedoAllHint =>
-      'Eine neue Schreibweise übersetzt die Absätze mit der alten bereits neu. Ankreuzen, wenn Absätze mit dem Wort trotzdem falsch sind.';
-
-  @override
   String glossaryRedone(int count) {
     return '$count Absätze werden neu übersetzt';
   }
+
+  @override
+  String get webSelect => 'Auswählen';
+
+  @override
+  String get seriesRename => 'Reihe umbenennen';
+
+  @override
+  String get seriesDissolve => 'Reihe auflösen';
+
+  @override
+  String get webTranslateWholeHint =>
+      'Übersetzt bis zum Ende, solange dieser Tab offen ist – auch beim Lesen.';
+
+  @override
+  String get webTranslateNoEngine =>
+      'Zum Übersetzen in den Einstellungen einen Gemini- oder Claude-Schlüssel eintragen.';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return 'Übersetzung angehalten: $reason';
+  }
+
+  @override
+  String get redoTranslating => 'Neuübersetzung mit korrigiertem Begriff';
+
+  @override
+  String get glossaryRedoScope => 'Absätze mit diesem Wort neu übersetzen';
+
+  @override
+  String get glossaryRedoNone => 'Nein';
+
+  @override
+  String get glossaryRedoBook => 'Dieses Buch';
+
+  @override
+  String get glossaryRedoSeries => 'Ganze Reihe';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'Nur diese Absätze, sofort und bis zum Ende, ohne das Buch zu öffnen. Noch nicht Übersetztes bleibt unberührt.';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return 'Neuübersetzung · $done/$total Absätze';
+  }
+
+  @override
+  String get glossaryRedoWaiting => 'Wartet auf Neuübersetzung';
+
+  @override
+  String get glossaryRedoNothing =>
+      'Nichts neu zu übersetzen: kein übersetzter Absatz enthält dieses Wort.';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return 'Glossar: $name';
+  }
+
+  @override
+  String get webGlossaryNoBooks =>
+      'Kein Band dieser Reihe ist in diesem Browser. Zuerst einen öffnen.';
+
+  @override
+  String get bookMarkFinished => 'Als gelesen markieren';
+
+  @override
+  String get bookMarkUnfinished => 'Als nicht gelesen markieren';
+
+  @override
+  String get bookReadAgain => 'Noch einmal lesen';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return 'Weiterlesen ab $percent %';
+  }
+
+  @override
+  String get bookReadToday => 'Heute gelesen';
+
+  @override
+  String get bookReadYesterday => 'Gestern gelesen';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return 'Vor $days Tagen gelesen';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return 'Gelesen am $date';
+  }
+
+  @override
+  String get bookAbout => 'Über dieses Buch';
+
+  @override
+  String get bookNoDescription => 'Keine Beschreibung.';
+
+  @override
+  String get bookMore => 'Mehr';
+
+  @override
+  String get bookShare => 'Teilen';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return 'Öffne bei $percent %…';
+  }
+
+  @override
+  String get bookOpening => 'Buch wird geöffnet…';
+
+  @override
+  String get libraryNowReading => 'Lese ich gerade';
+
+  @override
+  String get libraryAlsoReading => 'Lese ich auch';
+
+  @override
+  String get libraryBackToOverview => 'Zurück zur Übersicht';
+
+  @override
+  String get bookFinishedToast => 'Fertig! Als gelesen markiert.';
+
+  @override
+  String get readerTwoPages => 'Zwei Seiten nebeneinander';
+
+  @override
+  String get readerTwoPagesHint =>
+      'Auf aufgeklapptem oder breitem Bildschirm beim Blättern';
+
+  @override
+  String get settingsCatSearch => 'Suche & Downloads';
+
+  @override
+  String get settingsCatReading => 'Lesen & Übersetzen';
+
+  @override
+  String get settingsCatStorage => 'Speicher & Sync';
+
+  @override
+  String get settingsCatApp => 'App';
 }

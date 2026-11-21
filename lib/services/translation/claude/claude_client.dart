@@ -7,6 +7,9 @@
 import 'dart:async';
 import 'dart:math' as math;
 
+// Flutter imports:
+import 'package:flutter/foundation.dart' show kIsWeb;
+
 // Package imports:
 import 'package:dio/dio.dart';
 
@@ -77,6 +80,9 @@ class ClaudeClient implements CloudClient {
               'x-api-key': key,
               'anthropic-version': _version,
               if (space.isNotEmpty) 'anthropic-workspace-id': space,
+              // A browser's request is answered only when it says it
+              // comes from one (the API's CORS rule).
+              if (kIsWeb) 'anthropic-dangerous-direct-browser-access': 'true',
             },
             contentType: 'application/json',
             responseType: ResponseType.json,

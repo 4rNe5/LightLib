@@ -125,13 +125,13 @@ class ClaudeSettings extends ChangeNotifier implements CloudSettings {
     final db = MyLibraryDb.instance;
     Future<Object?> pref(String k) =>
         db.getPreference(k).catchError((_) => null);
-    // The web keeps to Gemini: a key in a page is anyone's who opens it.
-    _useClaude = !kIsWeb && await pref(translationEnginePref) == claudeEngine;
+    _useClaude = await pref(translationEnginePref) == claudeEngine;
     _model = claudeModelFor(await pref(claudeModelPref) as String?);
     _thinking = GeminiThinking.parse(await pref(claudeThinkingPref));
     final c = int.tryParse('${await pref(claudeConcurrencyPref)}');
     if (c != null) _concurrency = c.clamp(1, 8);
-    _deviceFallback = await pref(claudeDeviceFallbackPref) != 0;
+    // (The web has no model of its own to fall back on.)
+    _deviceFallback = !kIsWeb && await pref(claudeDeviceFallbackPref) != 0;
     _polish = await pref(claudePolishPref) == 1;
     _workspace = '${await pref(claudeWorkspacePref) ?? ''}'.trim();
     _decodeUsage(await pref(claudeUsagePref));

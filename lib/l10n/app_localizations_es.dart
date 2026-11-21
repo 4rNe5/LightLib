@@ -2560,15 +2560,150 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tus otros dispositivos usan la misma clave y el mismo espacio de trabajo. Desactivado: solo en este dispositivo y se borra del proyecto.';
 
   @override
-  String get glossaryRedoAll =>
-      'Volver a traducir todos los párrafos con esta palabra';
-
-  @override
-  String get glossaryRedoAllHint =>
-      'Al cambiar cómo se escribe ya se rehacen los párrafos con la forma antigua. Márcalo si los párrafos con la palabra siguen mal.';
-
-  @override
   String glossaryRedone(int count) {
     return 'Se volverán a traducir $count párrafos';
   }
+
+  @override
+  String get webSelect => 'Seleccionar';
+
+  @override
+  String get seriesRename => 'Renombrar serie';
+
+  @override
+  String get seriesDissolve => 'Deshacer serie';
+
+  @override
+  String get webTranslateWholeHint =>
+      'Traduce hasta el final mientras esta pestaña esté abierta, también mientras lees.';
+
+  @override
+  String get webTranslateNoEngine =>
+      'Para traducir, añade una clave de Gemini o Claude en Ajustes.';
+
+  @override
+  String webTranslateStopped(String reason) {
+    return 'La traducción se detuvo: $reason';
+  }
+
+  @override
+  String get redoTranslating => 'Retraduciendo con el término corregido';
+
+  @override
+  String get glossaryRedoScope => 'Retraducir los párrafos con esta palabra';
+
+  @override
+  String get glossaryRedoNone => 'No';
+
+  @override
+  String get glossaryRedoBook => 'Este libro';
+
+  @override
+  String get glossaryRedoSeries => 'Toda la serie';
+
+  @override
+  String get glossaryRedoScopeHint =>
+      'Solo esos párrafos, ahora y hasta el final, sin abrir el libro. Lo que aún no está traducido se deja como está.';
+
+  @override
+  String glossaryRedoProgress(int done, int total) {
+    return 'Retraduciendo · $done/$total párrafos';
+  }
+
+  @override
+  String get glossaryRedoWaiting => 'En espera de retraducir';
+
+  @override
+  String get glossaryRedoNothing =>
+      'Nada que retraducir: ningún párrafo traducido contiene esta palabra.';
+
+  @override
+  String glossarySeriesTitle(String name) {
+    return 'Glosario de $name';
+  }
+
+  @override
+  String get webGlossaryNoBooks =>
+      'Ningún volumen de esta serie está en este navegador. Abre uno primero.';
+
+  @override
+  String get bookMarkFinished => 'Marcar como leído';
+
+  @override
+  String get bookMarkUnfinished => 'Marcar como no leído';
+
+  @override
+  String get bookReadAgain => 'Leer de nuevo';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return 'Continuar desde el $percent %';
+  }
+
+  @override
+  String get bookReadToday => 'Leído hoy';
+
+  @override
+  String get bookReadYesterday => 'Leído ayer';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return 'Leído hace $days días';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return 'Terminado el $date';
+  }
+
+  @override
+  String get bookAbout => 'Sobre este libro';
+
+  @override
+  String get bookNoDescription => 'Sin descripción.';
+
+  @override
+  String get bookMore => 'Más';
+
+  @override
+  String get bookShare => 'Compartir';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return 'Abriendo en el $percent %…';
+  }
+
+  @override
+  String get bookOpening => 'Abriendo el libro…';
+
+  @override
+  String get libraryNowReading => 'Leyendo ahora';
+
+  @override
+  String get libraryAlsoReading => 'También leyendo';
+
+  @override
+  String get libraryBackToOverview => 'Volver al resumen';
+
+  @override
+  String get bookFinishedToast => '¡Terminado! Marcado como leído.';
+
+  @override
+  String get readerTwoPages => 'Dos páginas a la vez';
+
+  @override
+  String get readerTwoPagesHint =>
+      'En pantalla desplegada o ancha, al pasar páginas';
+
+  @override
+  String get settingsCatSearch => 'Búsqueda y descargas';
+
+  @override
+  String get settingsCatReading => 'Lectura y traducción';
+
+  @override
+  String get settingsCatStorage => 'Almacenamiento y sincronización';
+
+  @override
+  String get settingsCatApp => 'Aplicación';
 }

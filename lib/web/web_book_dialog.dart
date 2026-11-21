@@ -12,11 +12,12 @@ import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/translation/translation_models.dart'
     show languageForCode;
+import 'package:openlib/web/web_book_translation.dart';
 import 'package:openlib/web/web_cover.dart';
 import 'package:openlib/web/web_library.dart';
 
 /// What the reader asked for on a book's card.
-enum WebBookAction { read, removeCopy, delete }
+enum WebBookAction { read, removeCopy, delete, select, ungroup }
 
 Future<WebBookAction?> showWebBookDialog(BuildContext context, WebBook book) =>
     showGeneralDialog<WebBookAction>(
@@ -125,7 +126,9 @@ class _BookDialog extends StatelessWidget {
                 ..._facts(context),
                 const SizedBox(height: 16),
                 Expanded(child: _description(context)),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
+                WebBookTranslation(book: book),
+                const SizedBox(height: 14),
                 _actions(context),
               ],
             ),
@@ -146,6 +149,8 @@ class _BookDialog extends StatelessWidget {
                   ..._heading(context, titleSize: 20),
                   const SizedBox(height: 14),
                   ..._facts(context),
+                  const SizedBox(height: 14),
+                  WebBookTranslation(book: book),
                   const SizedBox(height: 14),
                   _descriptionText(context),
                 ],

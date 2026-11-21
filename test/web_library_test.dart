@@ -6,6 +6,7 @@
 import 'dart:typed_data';
 
 // Flutter imports:
+import 'package:flutter/gestures.dart' show kSecondaryButton;
 import 'package:flutter/material.dart';
 
 // Package imports:
@@ -23,7 +24,9 @@ import 'package:openlib/services/storage/app_files.dart';
 import 'package:openlib/services/storage/idb_app_files.dart';
 import 'package:openlib/services/sync/remote_library.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
+import 'package:openlib/services/translation/book_translation_service.dart';
 import 'package:openlib/web/web_book_dialog.dart';
+import 'package:openlib/web/web_book_translation.dart';
 import 'package:openlib/web/web_book_opening.dart';
 import 'package:openlib/web/web_cover.dart';
 import 'package:openlib/web/web_library.dart';
@@ -98,11 +101,19 @@ class _Library extends WebLibrary {
   _Library(this._list);
   final List<WebBook> _list;
 
+  /// What was put in which series (null: taken out), by title.
+  final List<(List<String>, String?)> grouped = [];
+
   @override
   List<WebBook>? get books => _list;
 
   @override
   Future<void> reload() async {}
+
+  @override
+  Future<void> setSeries(Iterable<WebBook> books, String? series) async {
+    grouped.add(([for (final b in books) b.title], series));
+  }
 }
 
 void main() {
@@ -138,6 +149,21 @@ void main() {
       final books = merged(local: [here(a, 'A')]);
       expect(books.single.onAccount, isFalse);
       expect(books.single.author, '');
+    });
+
+    test('finished here counts before the account has heard of it', () {
+      // A short book's last page starts well before 99.5% of it: the
+      // reader marks it, and the mark is what says it is finished.
+      final books = mergeLibrary(
+        local: [here(a, 'A'), here(b, 'B')],
+        remote: RemoteLibrary(books: [there(a, 'A'), there(b, 'B')]),
+        md5Of: (book) => book.id.substring('local_'.length),
+        fractionOf: (book) => book.title == 'A' ? 0.97 : 0.4,
+        readAtOf: (_) => null,
+        completedOf: (book) => book.title == 'A',
+      );
+      expect(books[0].finished, isTrue);
+      expect(books[1].finished, isFalse);
     });
 
     test('how far: the newer reading says, here or on another device', () {
@@ -438,6 +464,62 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
+    testWidgets('"translate this book to the end": offered with what it '
+        'does; while it runs, how far and a stop; then done', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final service = BookTranslationService.instance;
+      addTearDown(() => service.debugShow());
+      final mine = merged(local: [here(c, 'Here Too')]).single;
+      await tester.pumpWidget(
+          app(Scaffold(body: WebBookTranslation(book: mine))));
+      expect(find.byKey(const ValueKey('webTranslateWhole')), findsOneWidget);
+      expect(find.text('Translate this whole book'), findsOneWidget);
+      expect(find.textContaining('while this tab is open'), findsOneWidget);
+      expect(find.byKey(const ValueKey('webTranslateStop')), findsNothing);
+
+      service.debugShow(priorityFile: 'Here Too.epub');
+      await tester.pump();
+      expect(find.byKey(const ValueKey('webTranslateRunning')), findsOneWidget);
+      // How far is not known yet: no bar that runs without end.
+      expect(find.byType(LinearProgressIndicator), findsNothing);
+      service.debugShow(
+          priorityFile: 'Here Too.epub',
+          progress: const BookTranslationProgress(
+              fileName: 'Here Too.epub',
+              title: 'Here Too',
+              done: 120,
+              total: 480,
+              state: BookTranslationState.translating));
+      await tester.pump();
+      expect(
+          tester
+              .widget<Text>(find.byKey(const ValueKey('webTranslateProgress')))
+              .data,
+          contains('120/480'));
+      expect(
+          tester
+              .widget<LinearProgressIndicator>(
+                  find.byType(LinearProgressIndicator))
+              .value,
+          0.25);
+      expect(find.byKey(const ValueKey('webTranslateStop')), findsOneWidget);
+
+      service.debugShow(
+          progress: const BookTranslationProgress(
+              fileName: 'Here Too.epub',
+              title: 'Here Too',
+              done: 480,
+              total: 480,
+              state: BookTranslationState.done));
+      await tester.pump();
+      final button = tester.widget<OutlinedButton>(
+          find.byKey(const ValueKey('webTranslateWhole')));
+      expect(button.onPressed, isNull);
+      expect(tester.takeException(), isNull);
+    });
+
     testWidgets('the menu: only what applies to the book', (tester) async {
       tester.view.physicalSize = const Size(1440, 900);
       tester.view.devicePixelRatio = 1;
@@ -528,6 +610,89 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
     }
+
+    testWidgets('a series made here: books chosen from a tile\'s menu and '
+        'by tapping, named, grouped; a series renamed and undone from its '
+        'row', (tester) async {
+      tester.view.physicalSize = const Size(1440, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final library = _Library(merged(
+        remote: RemoteLibrary(books: [
+          there(a, 'Tale 2'),
+          there(b, 'Tale 1'),
+          there(c, 'Saga 1'),
+        ]),
+        series: const {c: 'Saga'},
+      ));
+      await tester.pumpWidget(app(WebLibraryPage(library: library)));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(find.byKey(const ValueKey('webSelectionBar')), findsNothing);
+
+      // The menu of one tile starts the choosing.
+      await tester.tap(find.byKey(const ValueKey('webBook:$a')),
+          buttons: kSecondaryButton);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('webMenuSelect')));
+      await tester.pumpAndSettle();
+      expect(find.byKey(const ValueKey('webSelectionBar')), findsOneWidget);
+      expect(find.text('1 selected'), findsOneWidget);
+      // While choosing, a tap chooses (no card opens).
+      await tester.tap(find.byKey(const ValueKey('webBook:$b')));
+      await tester.pumpAndSettle();
+      expect(find.text('2 selected'), findsOneWidget);
+      expect(find.byKey(const ValueKey('webBookDialog')), findsNothing);
+      // Neither is in a series: nothing to take out.
+      expect(find.byKey(const ValueKey('webSelectionUngroup')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('webSelectionGroup')));
+      await tester.pumpAndSettle();
+      // What their titles say is offered; the series there is can be joined.
+      expect(
+          tester
+              .widget<TextField>(find.byKey(const ValueKey('seriesName')))
+              .controller!
+              .text,
+          'Tale');
+      expect(find.byKey(const ValueKey('seriesPick-Saga')), findsOneWidget);
+      await tester.tap(find.byKey(const ValueKey('seriesNameSave')));
+      await tester.pumpAndSettle();
+      expect(library.grouped.single.$1, ['Tale 2', 'Tale 1']);
+      expect(library.grouped.single.$2, 'Tale');
+      expect(find.byKey(const ValueKey('webSelectionBar')), findsNothing);
+      expect(find.textContaining('grouped as'), findsOneWidget);
+
+      // The row of a series: another name, or its books out of it.
+      await tester.tap(find.byKey(const ValueKey('webSeriesMenu:Saga')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Rename series'));
+      await tester.pumpAndSettle();
+      await tester.enterText(
+          find.byKey(const ValueKey('seriesName')), 'Saga of the North');
+      await tester.tap(find.byKey(const ValueKey('seriesNameSave')));
+      await tester.pumpAndSettle();
+      expect(library.grouped.last.$1, ['Saga 1']);
+      expect(library.grouped.last.$2, 'Saga of the North');
+
+      // Its glossary comes with its books' files: none is in this
+      // browser, and that is said.
+      await tester.tap(find.byKey(const ValueKey('webSeriesMenu:Saga')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Glossary'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('No volume of this series is in this browser'),
+          findsOneWidget);
+      expect(find.byKey(const ValueKey('glossarySheet')), findsNothing);
+
+      await tester.tap(find.byKey(const ValueKey('webSeriesMenu:Saga')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Ungroup series'));
+      await tester.pumpAndSettle();
+      expect(library.grouped.last.$1, ['Saga 1']);
+      expect(library.grouped.last.$2, isNull);
+      expect(tester.takeException(), isNull);
+    });
 
     testWidgets('a series made on a device: one row for its volumes, in '
         'order, and out of the grid - until something is searched',

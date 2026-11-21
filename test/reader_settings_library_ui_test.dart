@@ -250,7 +250,10 @@ void main() {
       await tester.pump();
       // Title shows on the placeholder cover and in the caption.
       expect(find.text('Death Game'), findsNWidgets(2));
-      expect(find.text('Author ln'), findsOneWidget);
+      // A finished book: that it is finished stands where its author
+      // would, with the check on its cover.
+      expect(find.text('Author ln'), findsNothing);
+      expect(find.text('Completed'), findsOneWidget);
       expect(find.text('Light novel'), findsOneWidget);
       expect(find.byIcon(Icons.check), findsOneWidget);
       expect(tester.takeException(), isNull);

@@ -20,11 +20,16 @@ import 'package:file_picker/file_picker.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/database.dart' show MyLibraryDb;
+import 'package:openlib/services/library_organization.dart'
+    show suggestedSeriesName;
 import 'package:openlib/services/local_book_import.dart';
 import 'package:openlib/services/sync/library_sync_local.dart';
 import 'package:openlib/services/sync/remote_library.dart';
 import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/sync/sync_service.dart';
+import 'package:openlib/ui/components/glossary_sheet.dart';
+import 'package:openlib/ui/components/series_name_dialog.dart';
 import 'package:openlib/web/browser.dart';
 import 'package:openlib/web/web_book_dialog.dart';
 import 'package:openlib/web/web_book_opening.dart';
@@ -57,6 +62,10 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   String _query = '';
   bool _searching = false;
   bool _adding = false;
+
+  /// The books chosen (by [WebBook.key]) to put in a series or take out
+  /// of one. While any is, a tap on a tile chooses instead of opening.
+  final Set<String> _selected = {};
   StreamSubscription<SyncReport>? _finished;
   VoidCallback? _stopDrops;
 
@@ -64,6 +73,12 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   void initState() {
     super.initState();
     _sync.onLocalChanges = _reload;
+    // A reader was left: where its book is shows at once. (The page that
+    // opens a book hands over to the reader and is done by then, so
+    // waiting for that page says when a book was opened, not when it
+    // was closed - and the reader's last position is written after it
+    // is gone.)
+    MyLibraryDb.readingChanged.addListener(_reload);
     _finished = _sync.finished.listen(_onSynced);
     _stopDrops = Browser.onFilesDropped((files) => unawaited(_addFiles([
           for (final f in files)
@@ -85,6 +100,7 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
     if (_sync.onLocalChanges == _reload) _sync.onLocalChanges = null;
+    MyLibraryDb.readingChanged.removeListener(_reload);
     _finished?.cancel();
     _stopDrops?.call();
     if (widget.library == null) _library.dispose();
@@ -153,6 +169,11 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
         await _removeCopy(book);
       case WebBookAction.delete:
         await _delete(book);
+      // (The card does not offer these; the tile's menu does.)
+      case WebBookAction.select:
+        _toggle(book);
+      case WebBookAction.ungroup:
+        await _ungroup([book]);
     }
   }
 
@@ -230,6 +251,15 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
         PopupMenuItem(
             value: WebBookAction.read,
             child: Text(resume ? l10n.webContinue : l10n.webRead)),
+        PopupMenuItem(
+            key: const ValueKey('webMenuSelect'),
+            value: WebBookAction.select,
+            child: Text(l10n.webSelect)),
+        if ((book.series ?? '').isNotEmpty)
+          PopupMenuItem(
+              key: const ValueKey('webMenuUngroup'),
+              value: WebBookAction.ungroup,
+              child: Text(l10n.seriesUngroup)),
         if (book.downloaded && book.onAccount)
           PopupMenuItem(
               value: WebBookAction.removeCopy, child: Text(l10n.webRemoveCopy)),
@@ -244,8 +274,173 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
         WebBookAction.read => _read(book),
         WebBookAction.removeCopy => _removeCopy(book),
         WebBookAction.delete => _delete(book),
+        WebBookAction.select => Future.sync(() => _toggle(book)),
+        WebBookAction.ungroup => _ungroup([book]),
       });
     }));
+  }
+
+  // ----------------------------------------------------------------------
+  // Series: books chosen, named, taken out
+  // ----------------------------------------------------------------------
+
+  void _toggle(WebBook book) => setState(() {
+        if (!_selected.remove(book.key)) _selected.add(book.key);
+      });
+
+  /// A tap on a tile: the book's card - or, while books are being chosen
+  /// (or with Ctrl/⌘ held), this one chosen too.
+  void _tapped(WebBook book) {
+    final chord = HardwareKeyboard.instance.isControlPressed ||
+        HardwareKeyboard.instance.isMetaPressed;
+    if (_selected.isNotEmpty || chord) {
+      _toggle(book);
+    } else {
+      unawaited(_details(book));
+    }
+  }
+
+  List<WebBook> get _chosen => [
+        for (final b in _library.books ?? const <WebBook>[])
+          if (_selected.contains(b.key)) b,
+      ];
+
+  /// The chosen books in a series the reader names (or in one there is,
+  /// by its name).
+  Future<void> _group() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final chosen = _chosen;
+    if (chosen.isEmpty) return;
+    final theirs = {
+      for (final b in chosen)
+        if ((b.series ?? '').isNotEmpty) b.series!,
+    };
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => SeriesNameDialog(
+        initial: theirs.length == 1
+            ? theirs.first
+            : suggestedSeriesName(chosen.map((b) => b.title)),
+        existing: [
+          for (final s in webSeries(_library.books ?? const [])) s.name,
+        ],
+      ),
+    );
+    if (name == null || name.trim().isEmpty || !mounted) return;
+    await _library.setSeries(chosen, name.trim());
+    if (!mounted) return;
+    setState(_selected.clear);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(SnackBar(
+          content: Text(l10n.seriesGrouped(chosen.length, name.trim()))));
+  }
+
+  Future<void> _ungroup(List<WebBook> books) async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final inOne = [
+      for (final b in books)
+        if ((b.series ?? '').isNotEmpty) b,
+    ];
+    if (inOne.isEmpty) return;
+    await _library.setSeries(inOne, null);
+    if (!mounted) return;
+    setState(_selected.clear);
+    messenger
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+          SnackBar(content: Text(l10n.seriesUngrouped(inOne.length))));
+  }
+
+  /// A series renamed: its volumes under the new name (an existing
+  /// series' name joins the two).
+  Future<void> _rename(String series, List<WebBook> volumes) async {
+    final l10n = AppLocalizations.of(context);
+    final name = await showDialog<String>(
+      context: context,
+      builder: (_) => SeriesNameDialog(
+        title: l10n.seriesRename,
+        initial: series,
+        existing: [
+          for (final s in webSeries(_library.books ?? const []))
+            if (s.name != series) s.name,
+        ],
+      ),
+    );
+    if (name == null || name.trim().isEmpty || name.trim() == series) return;
+    await _library.setSeries(volumes, name.trim());
+  }
+
+  /// The glossary of a series: of its volumes that are in this browser
+  /// (a glossary comes with its book's file).
+  void _seriesGlossary(String name, List<WebBook> volumes) {
+    final files = [
+      for (final b in volumes)
+        if (b.local != null) b.local!.getFileName(),
+    ];
+    if (files.isEmpty) {
+      _say(AppLocalizations.of(context).webGlossaryNoBooks);
+      return;
+    }
+    unawaited(showGlossarySheet(context,
+        bookFile: files.first, series: files, seriesName: name));
+  }
+
+  /// The bar of the chosen books: how many, into a series, out of
+  /// theirs, and never mind.
+  Widget _selectionBar(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final chosen = _chosen;
+    final grouped = chosen.any((b) => (b.series ?? '').isNotEmpty);
+    return Material(
+      key: const ValueKey('webSelectionBar'),
+      elevation: 10,
+      color: scheme.inverseSurface,
+      borderRadius: BorderRadius.circular(16),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(6, 6, 8, 6),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              key: const ValueKey('webSelectionClear'),
+              tooltip: l10n.close,
+              color: scheme.onInverseSurface,
+              onPressed: () => setState(_selected.clear),
+              icon: const Icon(Icons.close, size: 20),
+            ),
+            Flexible(
+              child: Text(l10n.librarySelected(chosen.length),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: scheme.onInverseSurface,
+                      fontWeight: FontWeight.w600)),
+            ),
+            const SizedBox(width: 10),
+            if (grouped)
+              IconButton(
+                key: const ValueKey('webSelectionUngroup'),
+                tooltip: l10n.seriesUngroup,
+                color: scheme.onInverseSurface,
+                onPressed: () => _ungroup(chosen),
+                icon: const Icon(Icons.layers_clear_outlined, size: 20),
+              ),
+            Flexible(
+              child: FilledButton.tonal(
+                key: const ValueKey('webSelectionGroup'),
+                onPressed: _group,
+                child: Text(l10n.seriesGroup,
+                    maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   /// "/" or Ctrl/⌘+K: the search box; Esc there: cleared. Heard wherever
@@ -263,6 +458,10 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
       // After this frame: on a phone the box is only now being built.
       WidgetsBinding.instance
           .addPostFrameCallback((_) => _searchFocus.requestFocus());
+      return true;
+    }
+    if (key == LogicalKeyboardKey.escape && !typing && _selected.isNotEmpty) {
+      setState(_selected.clear);
       return true;
     }
     if (key == LogicalKeyboardKey.escape && typing) {
@@ -290,6 +489,13 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
             children: [
               Positioned.fill(
                   child: wide ? _desktop(context) : _phone(context)),
+              if (_selected.isNotEmpty)
+                Positioned(
+                  left: wide ? 252 + 16 : 12,
+                  right: wide ? 16 : 12,
+                  bottom: 18,
+                  child: Center(child: _selectionBar(context)),
+                ),
               Positioned.fill(child: _DropHint(listenable: Browser.dragging)),
             ],
           );
@@ -653,12 +859,18 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
                   name: s.name,
                   count: l10n.seriesVolumes(s.volumes.length),
                   tileWidth: wide ? 132 : 100,
+                  onRename: () => _rename(s.name, s.volumes),
+                  onDissolve: () => _ungroup(s.volumes),
+                  onGlossary: () => _seriesGlossary(s.name, s.volumes),
                   children: [
                     for (final b in s.volumes)
                       _BookTile(
                         key: ValueKey('webBook:${b.key}'),
                         book: b,
-                        onOpen: () => _details(b),
+                        selected: _selected.isEmpty
+                            ? null
+                            : _selected.contains(b.key),
+                        onOpen: () => _tapped(b),
                         onMenu: (at) => _menu(b, at),
                       ),
                   ],
@@ -697,7 +909,10 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
                   (context, i) => _BookTile(
                     key: ValueKey('webBook:${shown[i].key}'),
                     book: shown[i],
-                    onOpen: () => _details(shown[i]),
+                    selected: _selected.isEmpty
+                        ? null
+                        : _selected.contains(shown[i].key),
+                    onOpen: () => _tapped(shown[i]),
                     onMenu: (at) => _menu(shown[i], at),
                   ),
                   childCount: shown.length,
@@ -718,12 +933,22 @@ class _SeriesRow extends StatelessWidget {
     required this.count,
     required this.tileWidth,
     required this.children,
+    this.onRename,
+    this.onDissolve,
+    this.onGlossary,
   });
 
   final String name;
   final String count;
   final double tileWidth;
   final List<Widget> children;
+
+  /// Another name for the series; its books out of it.
+  final VoidCallback? onRename;
+  final VoidCallback? onDissolve;
+
+  /// The glossary its volumes share.
+  final VoidCallback? onGlossary;
 
   @override
   Widget build(BuildContext context) {
@@ -755,6 +980,30 @@ class _SeriesRow extends StatelessWidget {
                 Text(count,
                     style: TextStyle(
                         fontSize: 12, color: scheme.onSurface.withAlpha(150))),
+                if (onRename != null || onDissolve != null)
+                  PopupMenuButton<int>(
+                    key: ValueKey('webSeriesMenu:$name'),
+                    tooltip: AppLocalizations.of(context).webMore,
+                    padding: EdgeInsets.zero,
+                    iconSize: 18,
+                    icon: const Icon(Icons.more_horiz),
+                    onSelected: (v) =>
+                        [onRename, onDissolve, onGlossary][v]?.call(),
+                    itemBuilder: (context) {
+                      final l10n = AppLocalizations.of(context);
+                      return [
+                        if (onGlossary != null)
+                          PopupMenuItem(
+                              value: 2, child: Text(l10n.glossaryTitle)),
+                        if (onRename != null)
+                          PopupMenuItem(
+                              value: 0, child: Text(l10n.seriesRename)),
+                        if (onDissolve != null)
+                          PopupMenuItem(
+                              value: 1, child: Text(l10n.seriesDissolve)),
+                      ];
+                    },
+                  ),
               ],
             ),
           ),
@@ -1136,11 +1385,15 @@ class _BookTile extends StatefulWidget {
     required this.book,
     required this.onOpen,
     required this.onMenu,
+    this.selected,
   });
 
   final WebBook book;
   final VoidCallback onOpen;
   final void Function(Offset at) onMenu;
+
+  /// Whether it is among the books being chosen; null while none is.
+  final bool? selected;
 
   @override
   State<_BookTile> createState() => _BookTileState();
@@ -1216,6 +1469,27 @@ class _BookTileState extends State<_BookTile> {
                               shape: BoxShape.circle),
                           child: const Icon(Icons.cloud_outlined,
                               size: 13, color: Colors.white),
+                        ),
+                      ),
+                    if (widget.selected != null)
+                      Positioned(
+                        left: 6,
+                        top: 6,
+                        child: Container(
+                          key: ValueKey('webBookChosen:${widget.selected}'),
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: widget.selected!
+                                ? scheme.secondary
+                                : Colors.black.withAlpha(110),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 1.5),
+                          ),
+                          child: widget.selected!
+                              ? const Icon(Icons.check,
+                                  size: 14, color: Colors.white)
+                              : null,
                         ),
                       ),
                     if (book.finished)

@@ -50,6 +50,28 @@ export async function signedIn(page, mock, { signIn = true } = {}) {
       return req.respond({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({
         candidates: [{ content: { role: 'model', parts: [{ text }] }, finishReason: 'STOP' }], usageMetadata: { promptTokenCount: 100, candidatesTokenCount: 100, totalTokenCount: 200 } }) })
     }
+    // Claude answered here too, as its API answers a browser: only a
+    // request that says it comes from one (the CORS rule's header).
+    if (url.startsWith('https://api.anthropic.com/')) {
+      const cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Methods': 'POST,OPTIONS',
+        'Access-Control-Allow-Headers': 'x-api-key,anthropic-version,anthropic-workspace-id,anthropic-dangerous-direct-browser-access,content-type' }
+      if (req.method() === 'OPTIONS') return req.respond({ status: 204, headers: cors })
+      if (req.headers()['anthropic-dangerous-direct-browser-access'] !== 'true') {
+        return req.respond({ status: 401, headers: cors, contentType: 'application/json',
+          body: JSON.stringify({ type: 'error', error: { type: 'authentication_error', message: 'a browser must say it is one' } }) })
+      }
+      let text = 'OK'
+      try {
+        const body = JSON.parse(req.postData() ?? '{}')
+        const user = String(body.messages?.[0]?.content ?? '')
+        const nl = user.indexOf('\n')
+        if (user.startsWith('Translate the') && nl > 0) text = JSON.stringify({ translations: JSON.parse(user.slice(nl + 1)).paragraphs.map(p => ({ n: p.n, text: '[KO] ' + p.text })) })
+        else if (body.output_config?.format) text = '{}'
+      } catch { text = '{}' }
+      return req.respond({ status: 200, headers: cors, contentType: 'application/json', body: JSON.stringify({
+        id: 'msg_standin', type: 'message', role: 'assistant', model: 'stand-in', stop_reason: 'end_turn',
+        content: [{ type: 'text', text }], usage: { input_tokens: 100, output_tokens: 100 } }) })
+    }
     req.continue()
   })
 }

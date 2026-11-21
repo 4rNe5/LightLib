@@ -105,6 +105,8 @@ class WebLibrary extends ChangeNotifier {
     final md5s = await _db.getSyncStates('md5:');
     final fractions = await _db.getSyncStates('frac:');
     final stamps = await _db.getSyncStates('pos:');
+    final finishedHere =
+        await _db.getCompletedForAll().catchError((_) => <String, bool>{});
     final series = sharedSeries(
         '${await _db.getPreference(seriesSharedPref).catchError((_) => null) ?? ''}');
     if (_disposed || generation != _generation) return;
@@ -115,6 +117,7 @@ class WebLibrary extends ChangeNotifier {
       md5Of: (b) => md5FromBookId(b.id) ?? md5s['md5:${b.getFileName()}'],
       fractionOf: (b) =>
           double.tryParse(fractions['frac:${b.getFileName()}'] ?? ''),
+      completedOf: (b) => finishedHere[b.getFileName()] ?? false,
       readAtOf: (b) {
         final ms = int.tryParse(stamps['pos:${b.getFileName()}'] ?? '');
         // 1 ms: a position from before sync kept times.
@@ -124,6 +127,47 @@ class WebLibrary extends ChangeNotifier {
       },
     );
     notifyListeners();
+  }
+
+  /// Puts [books] in [series], or takes them out of theirs (null).
+  ///
+  /// The web lists the account's books, and most have no row here: the
+  /// map the devices share is written itself - each book's MD5 with its
+  /// series, "" for one taken out - and counts as changed now, so the
+  /// next run of sync sends it ([MyLibraryDb.onSeriesChanged] asks for
+  /// one). A book that is in this browser has its row follow.
+  Future<void> setSeries(Iterable<WebBook> books, String? series) async {
+    final name = series?.trim() ?? '';
+    final map = decodeSeries(
+        '${await _db.getPreference(seriesSharedPref).catchError((_) => null) ?? ''}');
+    final was = encodeSeries(map);
+    final rows = <String>[], unknown = <String>[];
+    for (final book in books) {
+      final md5 = book.md5;
+      if (md5 == null) {
+        // Added here and not yet on the account: marked as a phone marks
+        // its own, and written into the map when its MD5 is known.
+        if (book.local != null) unknown.add(book.local!.id);
+        continue;
+      }
+      // (A book that was never in a series is not "taken out" of one.)
+      if (name.isNotEmpty || map.containsKey(md5)) map[md5] = name;
+      if (book.local != null) rows.add(book.local!.id);
+    }
+    final now = encodeSeries(map);
+    if (now != was) {
+      await _db.savePreference(seriesSharedPref, now);
+      await _db.setSyncState(
+          'set:$seriesSetting', '${DateTime.now().millisecondsSinceEpoch}');
+    }
+    if (rows.isNotEmpty) {
+      await _db.setSeries(rows, name.isEmpty ? null : name, fromSync: true);
+    }
+    if (unknown.isNotEmpty) {
+      await _db.setSeries(unknown, name.isEmpty ? null : name);
+    }
+    await reload();
+    if (now != was) MyLibraryDb.onSeriesChanged?.call();
   }
 
   @override
@@ -142,6 +186,7 @@ List<WebBook> mergeLibrary({
   required String? Function(MyBook book) md5Of,
   required double? Function(MyBook book) fractionOf,
   required DateTime? Function(MyBook book) readAtOf,
+  bool Function(MyBook book)? completedOf,
   Map<String, String> series = const {},
 }) {
   final rows = {for (final b in remote.books) b.md5: b};
@@ -160,7 +205,10 @@ List<WebBook> mergeLibrary({
       local: book,
       remote: md5 == null ? null : rows[md5],
       fraction: theirsNewer ? theirs.fraction : fractionOf(book),
-      completed: theirs?.completed ?? false,
+      // Finished on the account, or here (the reader marks a book whose
+      // last page was reached; the account hears at the next sync).
+      completed:
+          (theirs?.completed ?? false) || (completedOf?.call(book) ?? false),
       readAt: theirsNewer ? theirs.updatedAt : mine ?? _known(theirs),
       translated: remote.translated[md5] ?? const {},
       series: md5 == null ? null : series[md5],

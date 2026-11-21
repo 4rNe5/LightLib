@@ -292,6 +292,15 @@ class ReaderSettingsSheet extends StatelessWidget {
             onChanged: (v) => _set(s.copyWith(justify: v)),
           ),
           SwitchListTile(
+            key: const ValueKey('twoPages'),
+            secondary: const Icon(Icons.auto_stories_outlined),
+            title: Text(l10n.readerTwoPages),
+            subtitle: Text(l10n.readerTwoPagesHint,
+                style: const TextStyle(fontSize: 12)),
+            value: s.twoPages,
+            onChanged: (v) => _set(s.copyWith(twoPages: v)),
+          ),
+          SwitchListTile(
             key: const ValueKey('boldText'),
             secondary: const Icon(Icons.format_bold),
             title: Text(l10n.readerBoldText),

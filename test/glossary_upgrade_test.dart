@@ -122,7 +122,7 @@ void main() {
     }));
     final cache = await TranslationCache.open(
         bookFileName: 'upgrade.epub',
-        targetLanguage: 'Korean',
+        targetLanguage: 'ko',
         modelId: TranslationCache.sharedModelId(lightNovel: true),
         directory: dir);
     cache

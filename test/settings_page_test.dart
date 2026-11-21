@@ -47,7 +47,12 @@ void main() {
     Directory(_FakePathProvider.base).createSync(recursive: true);
   });
 
-  Future<void> pumpPage(WidgetTester tester) async {
+  // A phone, unless [wide]: the test window is 800 x 600, where the page
+  // shows its categories beside the chosen one's settings.
+  Future<void> pumpPage(WidgetTester tester, {bool wide = false}) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = wide ? const Size(750, 832) : const Size(411, 914);
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       ProviderScope(
         child: MaterialApp(
@@ -123,6 +128,34 @@ void main() {
     final container = ProviderScope.containerOf(element);
     expect(container.read(themeModeProvider), ThemeMode.dark,
         reason: 'selecting Dark theme must update the provider state');
+  });
+
+  testWidgets('wide: the categories on one side, the chosen one beside',
+      (tester) async {
+    await pumpPage(tester, wide: true);
+
+    // The first category's settings are there without a tap; the others'
+    // are not built.
+    expect(find.byKey(const ValueKey('settingsPane-0')), findsOneWidget);
+    expect(find.text('Mirrors & Providers'), findsOneWidget);
+    expect(find.byKey(const ValueKey('themeSegments')), findsNothing);
+
+    await tester.tap(find.byKey(const ValueKey('settingsCategory-1')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(find.byKey(const ValueKey('settingsPane-1')), findsOneWidget);
+    expect(find.byKey(const ValueKey('themeSegments')), findsOneWidget);
+    expect(find.text('Mirrors & Providers'), findsNothing);
+
+    // Every category can be reached, and none overflows its pane.
+    for (var i = 2; i < 5; i++) {
+      await tester.tap(find.byKey(ValueKey('settingsCategory-$i')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 600));
+      expect(find.byKey(ValueKey('settingsPane-$i')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    }
+    expect(find.text('Check for Updates'), findsOneWidget);
   });
 
   test('setTheme persists the selected mode', () async {

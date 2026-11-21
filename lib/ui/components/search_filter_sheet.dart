@@ -118,8 +118,12 @@ Future<void> showSearchFilterSheet(BuildContext context) =>
     );
 
 class SearchFilterSheet extends ConsumerStatefulWidget {
-  const SearchFilterSheet({super.key, this.scroll});
+  const SearchFilterSheet({super.key, this.scroll, this.embedded = false});
   final ScrollController? scroll;
+
+  /// Part of the page (the pane beside the search field on a wide
+  /// screen), not a sheet over it: nothing to close.
+  final bool embedded;
 
   @override
   ConsumerState<SearchFilterSheet> createState() => _SearchFilterSheetState();
@@ -198,7 +202,7 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
 
     return ListView(
       controller: widget.scroll,
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 28),
+      padding: EdgeInsets.fromLTRB(20, widget.embedded ? 18 : 0, 20, 28),
       children: [
         Row(children: [
           Expanded(
@@ -279,12 +283,14 @@ class _SearchFilterSheetState extends ConsumerState<SearchFilterSheet> {
           onChanged: (v) =>
               ref.read(searchPublisherProvider.notifier).state = v.trim(),
         ),
-        const SizedBox(height: 20),
-        FilledButton(
-          key: const ValueKey('filterDone'),
-          onPressed: () => Navigator.pop(context),
-          child: Text(l10n.filterDone),
-        ),
+        if (!widget.embedded) ...[
+          const SizedBox(height: 20),
+          FilledButton(
+            key: const ValueKey('filterDone'),
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.filterDone),
+          ),
+        ],
       ],
     );
   }

@@ -5,9 +5,6 @@
 // Dart imports:
 import 'dart:typed_data';
 
-// Flutter imports:
-import 'package:flutter/foundation.dart' show kIsWeb;
-
 // Package imports:
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as p;
@@ -244,9 +241,7 @@ class LibrarySyncLocal implements SyncLocal {
     await _reconcileSeries();
     return [
       if (await on(syncGeminiKeyPref)) geminiKeySetting,
-      // The web does not translate with Claude, and a page is no place
-      // for a paid key.
-      if (!kIsWeb && await on(syncClaudeKeyPref)) claudeKeySetting,
+      if (await on(syncClaudeKeyPref)) claudeKeySetting,
       seriesSetting,
     ];
   }

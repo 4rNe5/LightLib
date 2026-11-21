@@ -15,8 +15,10 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:openlib/services/database.dart';
 import 'package:openlib/services/sync/library_sync_local.dart';
 import 'package:openlib/services/sync/series_sync.dart';
+import 'package:openlib/services/sync/sync_engine.dart';
 import 'package:openlib/services/translation/claude/claude_settings.dart';
 import 'package:openlib/services/translation/gemini/gemini_settings.dart';
+import 'package:openlib/web/web_library.dart';
 
 class _FakePathProvider extends PathProviderPlatform {
   Future<String> _dir(String name) async {
@@ -157,6 +159,70 @@ void main() {
       await db.setSeries([a], 'Old', fromSync: true);
       await local.syncedSettings();
       expect(await said(), {a: 'Old'});
+    });
+
+    // The web lists the account's books, most of them not in the
+    // browser: a series is made of them by their MD5s.
+    group('made on the web', () {
+      late WebLibrary library;
+      var asked = 0;
+      WebBook onAccount(String md5, String title) => WebBook(
+          md5: md5,
+          remote: RemoteBook(
+              md5: md5,
+              bookId: md5,
+              fileName: '$md5.epub',
+              title: title,
+              hasFile: true,
+              addedAt: DateTime.utc(2026, 11, 1)));
+
+      setUp(() {
+        asked = 0;
+        MyLibraryDb.onSeriesChanged = () => asked++;
+        library = WebLibrary(database: db);
+      });
+      tearDown(() {
+        MyLibraryDb.onSeriesChanged = null;
+        library.dispose();
+      });
+
+      test('books that are only on the account, grouped: in the map, '
+          'changed now, sync asked for once; a book that is here has its '
+          'row follow', () async {
+        final here = WebBook(md5: a, local: _book(a, 'Tale 1'));
+        await library
+            .setSeries([here, onAccount(elsewhere, 'Tale 3')], ' Tale ');
+        expect(await said(), {a: 'Tale', elsewhere: 'Tale'});
+        expect(await db.getSyncState('set:$seriesSetting'), isNotNull);
+        expect(asked, 1);
+        expect((await db.getSeriesForAll())[a], 'Tale');
+        // The next run tells the account the same map, nothing more.
+        await local.syncedSettings();
+        expect(await said(), {a: 'Tale', elsewhere: 'Tale'});
+        expect(await db.getSyncStates(MyLibraryDb.seriesChangeMark), isEmpty);
+      });
+
+      test('renamed, taken out, and a book that was never in one', () async {
+        final far = onAccount(elsewhere, 'Tale 3');
+        final other = onAccount(c, 'Another');
+        await library.setSeries([far], 'Tale');
+        await library.setSeries([far], 'Saga');
+        expect(await said(), {elsewhere: 'Saga'});
+        await library.setSeries([far], null);
+        // Out, and said so: the other devices take it out too.
+        expect(await said(), {elsewhere: ''});
+        expect(asked, 3);
+        await library.setSeries([other], null);
+        expect(await said(), {elsewhere: ''}, reason: 'nothing to take out');
+        expect(asked, 3);
+      });
+
+      test('what the web made stands when a phone\'s older map arrives '
+          'for other books', () async {
+        await library.setSeries([onAccount(elsewhere, 'Tale 3')], 'Tale');
+        await local.applySetting(seriesSetting, encodeSeries({b: 'Theirs'}));
+        expect(await said(), {elsewhere: 'Tale', b: 'Theirs'});
+      });
     });
   });
 }

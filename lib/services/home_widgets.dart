@@ -59,18 +59,33 @@ Map<String, Object?> widgetSnapshot({
   required Map<String, String?> covers,
   DateTime? now,
 }) {
-  final reading =
-      books.where((b) => b.status == ReadingStatus.inProgress).toList();
+  // The book read last comes first, as in the library.
+  final reading = continueReading(books);
   final continuing = reading.isNotEmpty;
   final featured = continuing ? reading : books;
-  Map<String, Object?>? book(LibraryBook? b) => b == null
-      ? null
-      : {
-          'id': b.id,
-          'title': b.title,
-          'author': b.author,
-          'cover': covers[b.id],
-        };
+  Map<String, Object?>? book(LibraryBook? b) {
+    if (b == null) return null;
+    // How far it was read: a percent for the bar and what stands beside
+    // it. A book not opened has neither.
+    final int? percent = switch (b.status) {
+      ReadingStatus.completed => 100,
+      ReadingStatus.inProgress =>
+        b.fraction == null ? null : (b.fraction! * 100).round().clamp(1, 99),
+      ReadingStatus.unread => null,
+    };
+    return {
+      'id': b.id,
+      'title': b.title,
+      'author': b.author,
+      'cover': covers[b.id],
+      if (percent != null) 'percent': percent,
+      if (percent != null)
+        'progressText': b.status == ReadingStatus.completed
+            ? l10n.statusCompleted
+            : '$percent%',
+    };
+  }
+
   final finished =
       books.where((b) => b.status == ReadingStatus.completed).length;
   final r = recap;
@@ -180,8 +195,7 @@ class HomeWidgets {
   }
 
   List<LibraryBook> _shownBooks(List<LibraryBook> books) {
-    final reading =
-        books.where((b) => b.status == ReadingStatus.inProgress).toList();
+    final reading = continueReading(books);
     return (reading.isNotEmpty ? reading : books).take(2).toList();
   }
 
