@@ -158,7 +158,8 @@ class _StoreCover extends StatelessWidget {
 /// A list of the store's books as covers, each opening a search for its
 /// series: three columns on a phone, more on a wider screen. [ranked]:
 /// the list is in the order they sell - the first one large, with the
-/// next few beside it, and a number on the first ten.
+/// next few beside it. (No numbers on the covers: the owner found them
+/// in the way of the pictures.)
 class BookWalkerGrid extends ConsumerWidget {
   const BookWalkerGrid(
       {super.key, required this.books, this.onRefresh, this.ranked = false});
@@ -194,14 +195,7 @@ class BookWalkerGrid extends ConsumerWidget {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(10),
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    _StoreCover(book.cover),
-                    if (ranked && i < 10)
-                      Positioned(top: 6, left: 6, child: _Rank(i + 1)),
-                  ],
-                ),
+                child: _StoreCover(book.cover),
               ),
             ),
           ),
@@ -259,7 +253,6 @@ class BookWalkerGrid extends ConsumerWidget {
                   ),
                 ),
               ),
-              const Positioned(top: 10, left: 10, child: _Rank(1, large: true)),
               Positioned(
                 left: 14,
                 right: 14,
@@ -403,38 +396,6 @@ class _GridAgeState extends State<_GridAge> {
 
   @override
   Widget build(BuildContext context) => widget.child;
-}
-
-/// Where a book stands in the list of what sells.
-class _Rank extends StatelessWidget {
-  const _Rank(this.rank, {this.large = false});
-
-  final int rank;
-  final bool large;
-
-  @override
-  Widget build(BuildContext context) {
-    const accent = Color(0xFFFF6B9D);
-    final size = large ? 34.0 : 22.0;
-    return Container(
-      width: size,
-      height: size,
-      alignment: Alignment.center,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: rank <= 3 ? accent : const Color(0xB3000000),
-        boxShadow: const [
-          BoxShadow(color: Color(0x40000000), blurRadius: 6),
-        ],
-      ),
-      child: Text('$rank',
-          style: TextStyle(
-              fontSize: large ? 17 : 11.5,
-              height: 1,
-              fontWeight: FontWeight.w900,
-              color: Colors.white)),
-    );
-  }
 }
 
 Widget _loading(BuildContext context) => Center(
