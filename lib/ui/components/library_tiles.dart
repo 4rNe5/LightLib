@@ -132,6 +132,19 @@ Color _placeholderColor(String seed) {
   return colors[seed.hashCode.abs() % colors.length];
 }
 
+/// The width a cover is decoded at to be shown [pixels] wide: the next of
+/// a few steps, not the very width. A cover that flies from a tile to a
+/// page changes its width every frame of the way, and a width of its own
+/// each frame was a decode each frame - the flight stuttered and the
+/// picture blinked.
+int coverDecodeWidth(double pixels) {
+  const steps = [160, 320, 480, 720, 1080, 1600];
+  for (final step in steps) {
+    if (pixels <= step) return step;
+  }
+  return steps.last;
+}
+
 /// A book's cover filling its box: a local file for imported books, a
 /// cached network image otherwise, a titled placeholder without one.
 class BookCover extends StatelessWidget {
@@ -178,7 +191,7 @@ class BookCover extends StatelessWidget {
         final dpr = MediaQuery.devicePixelRatioOf(context);
         final w = constraints.maxWidth;
         final cacheWidth =
-            w.isFinite && w > 0 ? (w * dpr).round().clamp(64, 1600) : null;
+            w.isFinite && w > 0 ? coverDecodeWidth(w * dpr) : null;
         return Image.file(
           File(localImageFilePath(url!)),
           fit: fit,
@@ -186,6 +199,9 @@ class BookCover extends StatelessWidget {
           height: double.infinity,
           cacheWidth: cacheWidth,
           filterQuality: FilterQuality.medium,
+          // (While a larger copy is read - a cover on its way to a
+          // larger place - the one there is stays.)
+          gaplessPlayback: true,
           errorBuilder: (_, __, ___) => _placeholder(),
         );
       });
@@ -204,69 +220,144 @@ class BookCover extends StatelessWidget {
 }
 
 /// A book's cover as the light of the room behind something: out of
-/// focus, filling its box. A small copy of the picture is blurred (not
-/// the picture itself), and it is its own layer: blurred once, however
-/// much moves in front of it. Nothing where the book has no cover or its
-/// cover is hidden.
-class BookCoverBackdrop extends StatelessWidget {
+/// focus, filling its box. A copy of the picture 48 pixels wide is
+/// blurred once, into a picture of its own, and that is stretched over
+/// the box: nothing is blurred while frames are drawn. (A blur as a
+/// layer was worked out again every frame anything moved in front of it
+/// or the layer itself faded - over a whole unfolded screen, while a book
+/// was opening.) Nothing where the book has no cover or its cover is
+/// hidden.
+class BookCoverBackdrop extends StatefulWidget {
   const BookCoverBackdrop({super.key, required this.book, this.opacity = 1});
 
   final LibraryBook book;
   final double opacity;
 
   @override
-  Widget build(BuildContext context) => ListenableBuilder(
-        listenable:
-            Listenable.merge([BookCovers.instance, HiddenCovers.instance]),
-        builder: (context, _) {
-          if (HiddenCovers.instance.isHidden(book.book.id)) {
-            return const SizedBox.expand();
-          }
-          final url = BookCovers.instance.coverFor(book.book.id) ??
-              book.book.thumbnail;
-          final Widget picture;
-          if (isLocalImagePath(url)) {
-            picture = Image.file(
-              File(localImageFilePath(url!)),
+  State<BookCoverBackdrop> createState() => _BookCoverBackdropState();
+}
+
+class _BookCoverBackdropState extends State<BookCoverBackdrop> {
+  // The blurred pictures by where the cover is: a few bytes each, kept so
+  // that a backdrop seen before is there in its first frame.
+  static final Map<String, ui.Image> _blurred = {};
+  static const _width = 48;
+
+  String? _source;
+  ui.Image? _image;
+  ImageStream? _stream;
+  late final ImageStreamListener _listener =
+      ImageStreamListener(_arrived, onError: (_, __) {});
+
+  @override
+  void initState() {
+    super.initState();
+    BookCovers.instance.addListener(_resolve);
+    HiddenCovers.instance.addListener(_resolve);
+    _resolve(first: true);
+  }
+
+  @override
+  void didUpdateWidget(BookCoverBackdrop old) {
+    super.didUpdateWidget(old);
+    if (old.book.book.id != widget.book.book.id ||
+        old.book.book.thumbnail != widget.book.book.thumbnail) {
+      _resolve();
+    }
+  }
+
+  @override
+  void dispose() {
+    BookCovers.instance.removeListener(_resolve);
+    HiddenCovers.instance.removeListener(_resolve);
+    _stream?.removeListener(_listener);
+    super.dispose();
+  }
+
+  void _resolve({bool first = false}) {
+    final book = widget.book.book;
+    final url = HiddenCovers.instance.isHidden(book.id)
+        ? null
+        : BookCovers.instance.coverFor(book.id) ?? book.thumbnail;
+    final source = url == null || url.isEmpty ? null : url;
+    if (source == _source) return;
+    _stream?.removeListener(_listener);
+    _stream = null;
+    _source = source;
+    final known = source == null ? null : _blurred[source];
+    if (first) {
+      _image = known;
+    } else if (mounted) {
+      setState(() => _image = known);
+    }
+    if (source == null || known != null) return;
+    final ImageProvider picture = isLocalImagePath(source)
+        ? FileImage(File(localImageFilePath(source)))
+        : CachedNetworkImageProvider(source,
+            headers: coverHeadersFor(source)) as ImageProvider;
+    _stream = ResizeImage(picture, width: _width)
+        .resolve(ImageConfiguration.empty)
+      ..addListener(_listener);
+  }
+
+  void _arrived(ImageInfo info, bool _) {
+    final source = _source;
+    _stream?.removeListener(_listener);
+    _stream = null;
+    if (source == null) {
+      info.dispose();
+      return;
+    }
+    final blurred = _blur(info.image);
+    info.dispose();
+    if (_blurred.length >= 48) _blurred.remove(_blurred.keys.first);
+    _blurred[source] = blurred;
+    if (mounted) setState(() => _image = blurred);
+  }
+
+  /// [small], out of focus, the same size.
+  static ui.Image _blur(ui.Image small) {
+    final w = small.width.toDouble();
+    final h = small.height.toDouble();
+    final recorder = ui.PictureRecorder();
+    Canvas(recorder).drawImageRect(
+      small,
+      Rect.fromLTWH(0, 0, w, h),
+      // (A little larger than its box: the blur's soft edge falls
+      // outside.)
+      Rect.fromLTWH(-w * 0.125, -h * 0.125, w * 1.25, h * 1.25),
+      Paint()
+        ..filterQuality = FilterQuality.medium
+        ..imageFilter = ui.ImageFilter.blur(
+            sigmaX: 3, sigmaY: 3, tileMode: TileMode.clamp),
+    );
+    final picture = recorder.endRecording();
+    final image = picture.toImageSync(small.width, small.height);
+    picture.dispose();
+    return image;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final image = _image;
+    // (Comes in softly where it was not known in the first frame.)
+    return AnimatedOpacity(
+      opacity: image == null ? 0 : 1,
+      duration: AppMotion.reduced(context)
+          ? Duration.zero
+          : const Duration(milliseconds: 220),
+      child: image == null
+          ? const SizedBox.expand()
+          : RawImage(
+              image: image,
               fit: BoxFit.cover,
               width: double.infinity,
               height: double.infinity,
-              cacheWidth: 64,
               filterQuality: FilterQuality.medium,
-              gaplessPlayback: true,
-              errorBuilder: (_, __, ___) => const SizedBox.expand(),
-            );
-          } else if (url == null || url.isEmpty) {
-            return const SizedBox.expand();
-          } else {
-            picture = CachedNetworkImage(
-              imageUrl: url,
-              httpHeaders: coverHeadersFor(url),
-              fit: BoxFit.cover,
-              width: double.infinity,
-              height: double.infinity,
-              memCacheWidth: 64,
-              fadeInDuration: Duration.zero,
-              placeholder: (_, __) => const SizedBox.expand(),
-              errorWidget: (_, __, ___) => const SizedBox.expand(),
-            );
-          }
-          return RepaintBoundary(
-            child: ClipRect(
-              child: Opacity(
-                opacity: opacity,
-                child: ImageFiltered(
-                  imageFilter: ui.ImageFilter.blur(
-                      sigmaX: 24, sigmaY: 24, tileMode: TileMode.clamp),
-                  // (A little larger than its box: the blur's soft edge
-                  // falls outside.)
-                  child: Transform.scale(scale: 1.25, child: picture),
-                ),
-              ),
+              opacity: AlwaysStoppedAnimation(widget.opacity),
             ),
-          );
-        },
-      );
+    );
+  }
 }
 
 /// In place of a cover the reader chose to hide: a plain card with the

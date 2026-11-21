@@ -9,6 +9,7 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
+import 'package:flutter/scheduler.dart' show Ticker;
 
 abstract final class AppMotion {
   /// A press, a toggle.
@@ -32,6 +33,51 @@ abstract final class AppMotion {
 
   static bool reduced(BuildContext context) =>
       MediaQuery.maybeDisableAnimationsOf(context) ?? false;
+}
+
+/// Waits until frames come on time again, then calls [onEven] once: a
+/// few frames in a row no more than [step] apart, or [atMost] gone by,
+/// whichever is first. For something that is to move right after heavy
+/// work - a picture fading away over a page that has just been laid
+/// out: begun in the middle of that work, most of its frames are lost
+/// and it is seen to jump.
+class EvenFrames {
+  EvenFrames({
+    required this.onEven,
+    this.frames = 5,
+    this.step = const Duration(milliseconds: 20),
+    this.atMost = const Duration(milliseconds: 800),
+  });
+
+  final VoidCallback onEven;
+  final int frames;
+  final Duration step;
+  final Duration atMost;
+
+  Ticker? _ticker;
+  Duration? _last;
+  int _even = 0;
+
+  bool get waiting => _ticker != null;
+
+  void start() {
+    if (_ticker != null) return;
+    _ticker = Ticker(_tick)..start();
+  }
+
+  void _tick(Duration elapsed) {
+    final last = _last;
+    _last = elapsed;
+    if (last != null) _even = elapsed - last <= step ? _even + 1 : 0;
+    if (_even < frames && elapsed < atMost) return;
+    dispose();
+    onEven();
+  }
+
+  void dispose() {
+    _ticker?.dispose();
+    _ticker = null;
+  }
 }
 
 /// [child] gives a little under the finger and springs back when let go:

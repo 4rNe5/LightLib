@@ -8,10 +8,12 @@
 // Dart imports:
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui show FrameTiming;
 
 // Flutter imports:
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/services.dart';
 
 // Package imports:
@@ -47,6 +49,7 @@ import 'package:openlib/services/translation/translation_repair.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
 import 'package:openlib/ui/components/paged_book_view.dart' show ReaderLayout;
+import 'package:openlib/ui/components/motion.dart';
 import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/ui/components/reader_settings_sheet.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
@@ -127,6 +130,46 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   /// the web it goes the moment the page is there).
   bool _openingSeen = kIsWeb;
   Timer? _openingTimer;
+
+  /// The page may start (its web view be made). With the opening picture
+  /// it waits for the way in to end: making a web view and loading a
+  /// book are work on the thread the frames are drawn on, and begun
+  /// with the route they made the cover's flight here stutter.
+  bool _hostAllowed = true;
+  Animation<double>? _wayIn;
+
+  /// The opening picture is taken down: the first page is up, the
+  /// picture was seen, and frames come evenly again ([_leaveOpening]).
+  bool _openingGone = false;
+  EvenFrames? _calm;
+
+  /// Frames drawn while the book opens, for the log: the way in, the
+  /// loading under the picture, the picture leaving. (Whether the way in
+  /// is smooth on a phone cannot be seen from a desk; the owner's log
+  /// says how many frames were late, and in which part.)
+  final List<_FrameCount> _openingFrames = [
+    _FrameCount('way in'),
+    _FrameCount('loading'),
+    _FrameCount('leaving'),
+  ];
+  int _openingPart = 0;
+  bool _timingFrames = false;
+  Timer? _framesTimer;
+
+  void _onFrameTimings(List<ui.FrameTiming> timings) {
+    for (final t in timings) {
+      _openingFrames[_openingPart].add(t);
+    }
+  }
+
+  void _logOpeningFrames() {
+    if (!_timingFrames) return;
+    _timingFrames = false;
+    SchedulerBinding.instance.removeTimingsCallback(_onFrameTimings);
+    _logger.info('Opening frames', tag: 'ReaderPage', metadata: {
+      for (final part in _openingFrames) part.name: part.summary,
+    });
+  }
   String? _error;
 
   // The book.
@@ -199,8 +242,13 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     SyncService.instance.arrived.addListener(_onSyncArrived);
     redoMarks.addListener(_onRedoMarked);
     if (!_openingSeen && widget.opening != null) {
+      _hostAllowed = false;
+      _timingFrames = true;
+      SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
       _openingTimer = Timer(const Duration(milliseconds: 520), () {
-        if (mounted) setState(() => _openingSeen = true);
+        if (!mounted) return;
+        setState(() => _openingSeen = true);
+        _leaveOpening();
       });
     } else {
       _openingSeen = true;
@@ -234,7 +282,63 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_hostAllowed || _wayIn != null) return;
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == null ||
+        animation.isCompleted ||
+        AppMotion.reduced(context)) {
+      _hostAllowed = true;
+      _openingPart = 1;
+      return;
+    }
+    _wayIn = animation..addStatusListener(_onWayIn);
+  }
+
+  void _onWayIn(AnimationStatus status) {
+    // (Completed: the page is in. Dismissed: it was left on the way.)
+    if (status != AnimationStatus.completed) return;
+    _wayIn?.removeStatusListener(_onWayIn);
+    if (mounted && !_hostAllowed) {
+      setState(() {
+        _hostAllowed = true;
+        _openingPart = 1;
+      });
+    }
+  }
+
+  void _openingLeft() {
+    if (!mounted) return;
+    setState(() => _openingGone = true);
+    _openingPart = 2;
+    // (The fade is 260 ms; a little after it, what was counted is
+    // written down.)
+    _framesTimer = Timer(const Duration(milliseconds: 600), _logOpeningFrames);
+  }
+
+  /// Takes the opening picture down once the first page is up and the
+  /// picture was seen - and not in the middle of the page's own work: it
+  /// waits until a few frames in a row came on time (at most 0.8 s), so
+  /// the fade is drawn evenly. The first page of a book is laid out,
+  /// its translation put back and its settings sent just then; a fade
+  /// begun at that moment lost most of its frames.
+  void _leaveOpening() {
+    if (_openingGone || _calm != null || widget.opening == null) return;
+    if (!(_shown && _openingSeen)) return;
+    if (kIsWeb || AppMotion.reduced(context)) {
+      _openingLeft();
+      return;
+    }
+    _calm = EvenFrames(onEven: _openingLeft)..start();
+  }
+
+  @override
   void dispose() {
+    _wayIn?.removeStatusListener(_onWayIn);
+    _calm?.dispose();
+    _framesTimer?.cancel();
+    _logOpeningFrames();
     _saveNow(leaving: true);
     // What was read and translated goes to the other devices.
     SyncService.instance.arrived.removeListener(_onSyncArrived);
@@ -348,6 +452,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         }
 
         seen ? setState(take) : take();
+        _leaveOpening();
         _saveSoon();
         // The last page: the book is finished (a short book's last page
         // starts well before 99.5%, so the page says when it is the end).
@@ -1727,7 +1832,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                 child: SafeArea(
                   child: _error != null
                       ? _errorView(palette, l10n)
-                      : _webViewWidget,
+                      : _hostAllowed
+                          ? _webViewWidget
+                          : const SizedBox.expand(),
                 ),
               ),
               if (!_opened && _error == null && widget.opening == null)
@@ -1788,23 +1895,14 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
               if (widget.opening case final opening?)
                 Positioned.fill(
                   child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
-                    // The app: the picture grows a little as it goes, the
-                    // page under it coming up as if stepped into. (The
-                    // web keeps the plain fade: a frame there is dear.)
-                    transitionBuilder: kIsWeb
-                        ? AnimatedSwitcher.defaultTransitionBuilder
-                        : (child, animation) => FadeTransition(
-                              opacity: animation,
-                              child: ScaleTransition(
-                                scale: Tween(begin: 1.06, end: 1.0)
-                                    .animate(animation),
-                                child: child,
-                              ),
-                            ),
-                    child: (_shown && _openingSeen) || _error != null
+                    duration: const Duration(milliseconds: 260),
+                    switchOutCurve: Curves.easeOut,
+                    // A plain fade of one flat layer: the picture behind
+                    // it is a picture (nothing is blurred as it goes),
+                    // and nothing in it changes size.
+                    child: _openingGone || _error != null
                         ? const SizedBox.shrink()
-                        : _onPage(opening(context)),
+                        : RepaintBoundary(child: _onPage(opening(context))),
                   ),
                 ),
             ],
@@ -1813,4 +1911,37 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       ),
     );
   }
+}
+
+/// Frames of one part of a book's opening, counted for the log.
+class _FrameCount {
+  _FrameCount(this.name);
+
+  final String name;
+  int frames = 0;
+  int late = 0;
+  int worstWait = 0;
+  int worstBuild = 0;
+  int worstRaster = 0;
+  int worstTotal = 0;
+
+  void add(ui.FrameTiming t) {
+    frames++;
+    final total = t.totalSpan.inMilliseconds;
+    // (Late: more than a frame of a 60 Hz screen and a little.)
+    if (total > 20) late++;
+    if (total > worstTotal) worstTotal = total;
+    // (Waiting: from the screen's tick to the frame being begun - the
+    // thread was busy with something else, the page's work for one.)
+    final wait = t.vsyncOverhead.inMilliseconds;
+    if (wait > worstWait) worstWait = wait;
+    final build = t.buildDuration.inMilliseconds;
+    if (build > worstBuild) worstBuild = build;
+    final raster = t.rasterDuration.inMilliseconds;
+    if (raster > worstRaster) worstRaster = raster;
+  }
+
+  String get summary => '$frames frames, $late over 20 ms '
+      '(worst $worstTotal ms; waited $worstWait, build $worstBuild, '
+      'raster $worstRaster)';
 }

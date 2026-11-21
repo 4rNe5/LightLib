@@ -4,7 +4,6 @@
 // page is up.
 
 // Flutter imports:
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 
 // Project imports:
@@ -38,29 +37,12 @@ class BookOpeningView extends StatefulWidget {
   State<BookOpeningView> createState() => _BookOpeningViewState();
 }
 
-class _BookOpeningViewState extends State<BookOpeningView>
-    with SingleTickerProviderStateMixin {
-  // The cover drifts a little while it waits: the screen is alive, the
-  // book is coming. Still on the web (a frame there is dear) and with
-  // animations off.
-  late final AnimationController _float = AnimationController(
-      vsync: this, duration: const Duration(milliseconds: 2600));
-  bool _started = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_started) return;
-    _started = true;
-    if (!kIsWeb && !AppMotion.reduced(context)) _float.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _float.dispose();
-    super.dispose();
-  }
-
+class _BookOpeningViewState extends State<BookOpeningView> {
+  // Nothing here moves while it waits: on a phone the page that is being
+  // loaded under it works on the thread these frames are drawn on, and a
+  // cover that kept drifting was a frame to draw every 8 ms of that -
+  // the way in stuttered. What moves, moves once and stops (the cover's
+  // flight here, the name rising, the bar filling).
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -115,17 +97,7 @@ class _BookOpeningViewState extends State<BookOpeningView>
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      AnimatedBuilder(
-                        animation: _float,
-                        builder: (context, child) => Transform.translate(
-                          offset: Offset(
-                              0,
-                              -4 *
-                                  Curves.easeInOut.transform(_float.value)),
-                          child: child,
-                        ),
-                        child: SizedBox(width: 184, child: cover),
-                      ),
+                      SizedBox(width: 184, child: cover),
                       const SizedBox(height: 28),
                       Appear(
                         delay: const Duration(milliseconds: 120),
