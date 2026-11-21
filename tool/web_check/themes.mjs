@@ -5,6 +5,9 @@
 // looking at, light against dark: an icon or a switch drawn in white on
 // white shows only in a picture. Real mouse/touch only.
 // argv: url mock shots scheme(light|dark) profile(desktop|mobile)
+// BOOK, SINGLE: the titles of the book opened and of a book standing
+// alone (the series library's by default); PAGES, PAGE_KEY: pages turned
+// in the reader before its picture.
 import puppeteer from 'puppeteer-core'
 import { signedIn, reset } from './session.mjs'
 const [url, mock, shots, scheme = 'light', profile = 'desktop'] = process.argv.slice(2)
@@ -68,7 +71,7 @@ if (!mobile) {
   await page.mouse.click(1248, 42); await sleep(700); await shot('3_sort_menu'); await escape()
 }
 // A book standing alone: its menu, then its card.
-const single = await find('月影の図書館')
+const single = await find(process.env.SINGLE ?? '月影の図書館')
 if (single) {
   if (!mobile) { await page.mouse.click(single.x, single.y - 80, { button: 'right' }); await sleep(700); await shot('4_book_menu'); await escape() }
   await tap(single.x, single.y); await sleep(1500); await shot('5_book_card'); await escape()
@@ -84,7 +87,7 @@ if (await tapText('설정', { exact: true })) {
 }
 // The reader: a book that is in this browser after it is fetched.
 await escape()
-const book = await find('風待ちの丘 1')
+const book = await find(process.env.BOOK ?? '風待ちの丘 1')
 if (book) {
   await tap(book.x, book.y); await sleep(1300)
   const read = (await find('이어 읽기', { exact: true })) ? '이어 읽기' : '책 읽기'
@@ -92,6 +95,10 @@ if (book) {
   let frame
   for (let i = 0; i < 40 && !frame; i++) { await sleep(500); frame = page.frames().find(f => f.url().includes('/reader/index.html')) }
   await sleep(5000)
+  // PAGES: pages turned first (past a cover), with PAGE_KEY.
+  for (let i = 0; i < Number(process.env.PAGES ?? 0); i++) {
+    await page.keyboard.press(process.env.PAGE_KEY ?? 'ArrowLeft'); await sleep(900)
+  }
   await shot('7_reader')
   const vp = page.viewport()
   await tap(vp.width / 2, vp.height / 2); await sleep(900)
