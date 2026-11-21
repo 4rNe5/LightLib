@@ -156,17 +156,15 @@ class _StoreCover extends StatelessWidget {
 }
 
 /// A list of the store's books as covers, each opening a search for its
-/// series: three columns on a phone, more on a wider screen. [ranked]:
-/// the list is in the order they sell - the first one large, with the
-/// next few beside it. (No numbers on the covers: the owner found them
-/// in the way of the pictures.)
+/// series: three columns on a phone, more on a wider screen, every cover
+/// the same size. (The store's pictures are thumbnails: one shown large
+/// came out blurred, and its row did not line up with the ones beside
+/// it. No numbers on the covers either: they lay over the pictures.)
 class BookWalkerGrid extends ConsumerWidget {
-  const BookWalkerGrid(
-      {super.key, required this.books, this.onRefresh, this.ranked = false});
+  const BookWalkerGrid({super.key, required this.books, this.onRefresh});
 
   final List<BookWalkerBook> books;
   final Future<void> Function()? onRefresh;
-  final bool ranked;
 
   static const _gap = 12.0;
   static const _rowGap = 14.0;
@@ -220,61 +218,6 @@ class BookWalkerGrid extends ConsumerWidget {
     );
   }
 
-  /// The one that sells most: its cover large, its name over it.
-  Widget _first(BuildContext context, WidgetRef ref) {
-    final book = books.first;
-    return Pressable(
-      key: const ValueKey('bookwalker-0'),
-      scale: 0.975,
-      onTap: () => _openSearch(context, ref, book),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: [
-            BoxShadow(
-                color: Colors.black.withAlpha(60),
-                blurRadius: 16,
-                offset: const Offset(0, 8)),
-          ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(18),
-          child: Stack(
-            fit: StackFit.expand,
-            children: [
-              _StoreCover(book.cover),
-              const DecoratedBox(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0x00000000), Color(0xD9000000)],
-                    stops: [0.5, 1],
-                  ),
-                ),
-              ),
-              Positioned(
-                left: 14,
-                right: 14,
-                bottom: 12,
-                child: Text(
-                  book.searchQuery,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 16,
-                      height: 1.25,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final view = LayoutBuilder(builder: (context, constraints) {
@@ -285,69 +228,14 @@ class BookWalkerGrid extends ConsumerWidget {
       final columns = width < 520 ? 3 : (width / 128).floor().clamp(4, 8);
       final tileWidth = (width - _gap * (columns - 1)) / columns;
       final tileHeight = tileWidth / 0.7 + _caption;
-      // The first book takes two columns and two rows; the ones after
-      // it fill the rest of those rows.
-      final lead = ranked && books.length > 2 * (columns - 2);
-      final beside = lead ? 2 * (columns - 2) : 0;
-      final rest = lead ? 1 + beside : 0;
       final fresh = _GridAge.of(context);
       Widget shown(int i, Widget child) =>
           fresh ? Appear.staggered(i, child: child) : child;
       return CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
-          if (lead)
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(side, 10, side, _rowGap),
-              sliver: SliverToBoxAdapter(
-                child: SizedBox(
-                  height: tileHeight * 2 + _rowGap,
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      SizedBox(
-                        width: tileWidth * 2 + _gap,
-                        child: Padding(
-                          // (As tall as the covers beside it, not their
-                          // captions.)
-                          padding: const EdgeInsets.only(bottom: _caption),
-                          child: shown(0, _first(context, ref)),
-                        ),
-                      ),
-                      const SizedBox(width: _gap),
-                      Expanded(
-                        child: Column(
-                          children: [
-                            for (var row = 0; row < 2; row++) ...[
-                              if (row > 0) const SizedBox(height: _rowGap),
-                              Expanded(
-                                child: Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.stretch,
-                                  children: [
-                                    for (var c = 0; c < columns - 2; c++) ...[
-                                      if (c > 0) const SizedBox(width: _gap),
-                                      Expanded(
-                                        child: shown(
-                                            1 + row * (columns - 2) + c,
-                                            _tile(context, ref,
-                                                1 + row * (columns - 2) + c)),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
           SliverPadding(
-            padding: EdgeInsets.fromLTRB(side, lead ? 0 : 10, side, 24),
+            padding: const EdgeInsets.fromLTRB(side, 10, side, 24),
             sliver: SliverGrid(
               gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: columns,
@@ -356,9 +244,8 @@ class BookWalkerGrid extends ConsumerWidget {
                 mainAxisExtent: tileHeight,
               ),
               delegate: SliverChildBuilderDelegate(
-                (context, i) =>
-                    shown(rest + i, _tile(context, ref, rest + i)),
-                childCount: books.length - rest,
+                (context, i) => shown(i, _tile(context, ref, i)),
+                childCount: books.length,
               ),
             ),
           ),
@@ -435,8 +322,7 @@ class JapanTrendingView extends ConsumerWidget {
                     error: Exception('Nothing found on BOOK☆WALKER'),
                     stackTrace: StackTrace.empty,
                     onRefresh: refresh)
-                : BookWalkerGrid(
-                    books: data, onRefresh: refresh, ranked: true),
+                : BookWalkerGrid(books: data, onRefresh: refresh),
             error: (error, _) => CustomErrorWidget(
                 error: error, stackTrace: StackTrace.empty, onRefresh: refresh),
             loading: () => _loading(context),
