@@ -421,7 +421,18 @@ void main() {
         await tester.tap(find.byKey(const ValueKey('settingsCategory-1')));
         await _settle(tester, frames: 8);
         await _save(tester, '${screen.name}_7_settings_display');
+        await tester.tap(find.byKey(const ValueKey('settingsCategory-2')));
+        await _settle(tester, frames: 8);
+      } else {
+        await tester.scrollUntilVisible(
+            find.byKey(const ValueKey('settingsReaderDefaults')), 300,
+            scrollable: find.byType(Scrollable).first);
+        await tester.drag(
+            find.byType(Scrollable).first, const Offset(0, -260));
+        await _settle(tester, frames: 8);
       }
+      // How every book opens, set from the settings.
+      await _save(tester, '${screen.name}_7b_settings_reader');
       await tester.pumpWidget(
           _app(key: UniqueKey(), const _Shell(tab: 1, page: SearchPage())));
       await _settle(tester);

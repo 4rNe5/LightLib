@@ -161,11 +161,16 @@ void main() {
             sleep: (_) async {}))));
     await tester.enterText(
         find.byKey(const ValueKey('claudeKey')), 'sk-ant-not-in-a-workspace');
-    await tester.runAsync(() async {
-      await tester.tap(find.byKey(const ValueKey('claudeTest')));
-      await Future<void>.delayed(const Duration(milliseconds: 50));
-    });
-    await tester.pump();
+    await tester.runAsync(
+        () => tester.tap(find.byKey(const ValueKey('claudeTest'))));
+    // The answer comes in real time: waited for as long as it takes (a
+    // fixed 50 ms was too short when the whole suite runs at once).
+    final status = find.byKey(const ValueKey('claudeTestStatus'));
+    for (var i = 0; i < 100 && status.evaluate().isEmpty; i++) {
+      await tester.runAsync(
+          () => Future<void>.delayed(const Duration(milliseconds: 20)));
+      await tester.pump();
+    }
     expect(api.asked, 1);
     expect(claude.hasKey, isFalse);
     expect(

@@ -157,7 +157,9 @@ debug key (only CI signs releases).
 | The tabs' bar / rail | `lib/ui/components/app_nav_bar.dart` (a phone: the pill at the foot; from 600 dp: the same pill on end in the lower right corner, `AppNavRail.width` wide) |
 | A library book: opening it, its page, the order of screens | `lib/ui/book_navigation.dart` (`openBookReader`, `pushBookPage`, `showBookFromOutside`, `libraryDetailProvider`), `lib/ui/components/book_detail.dart` (`BookDetail`: a page on a phone - `mybook_page.dart` - and the pane beside the shelf on a wide screen), `lib/ui/components/book_opening.dart` (the picture while a book opens) |
 | How far a book was read, finished, read last | `MyLibraryDb.readingOf`, `setCompleted`, `readingChanged`; `LibraryBook.fraction/readAt/percent`, `continueReading` (`library_organization.dart`); the reader's `_saveNow(leaving:, finished:)` |
-| Motion | `lib/ui/components/motion.dart` (`AppMotion`, `Pressable`, `Appear`, `ProgressBar`, `CountUp`, `FadeThroughRoute`) - everything stands still with the system's "remove animations" |
+| Motion | `lib/ui/components/motion.dart` (`AppMotion`, `Pressable`, `Appear`, `ProgressBar`, `CountUp`, `FadeThroughRoute`; `EvenFrames`: what is to move right after heavy work waits for frames to come on time) - everything stands still with the system's "remove animations" |
+| The pane beside the shelf (wide screens) | `LibraryNowReading` in `library_tiles.dart` (the book read last as a poster, the others and two numbers on equal columns), `LibraryRecapBento(narrow: true)`; a phone's shelf keeps `LibraryBentoPanel` |
+| The reader's settings | `lib/services/reader_settings.dart` (`ReaderSettings.instance`, one store), `reader_settings_sheet.dart`: the reader's "Aa" sheet, and the same widget `embedded` in Settings under reading ("Reader defaults", `_ReaderDefaultsGroup`) |
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
@@ -513,11 +515,37 @@ debug key (only CI signs releases).
   (`annaArchiveBaseUrlProvider`), and watching it in `build` asked the
   network whenever a book's page was shown (in a widget test: a timer
   left pending). It is asked when the item is tapped.
-- A picture blurred under things that move is blurred again each frame:
-  the library's large card blurred its full-size cover behind a title
-  that scrolls. `BookCoverBackdrop` blurs a 64 px copy in a layer of its
-  own (`RepaintBoundary`). A small decode stretched with
-  `FilterQuality.high` alone is not a blur: it came out in blocks.
+- The way into a book stuttered on the owner's Z Fold 7 ("like a
+  low-end phone"). Nothing here can time a phone's frames, so what was
+  found is what the code did during that second, all of it changed and
+  none of it measured: (1) the web view was made and the book loaded
+  with the route - on Android that work is on the thread frames are
+  drawn on - while the cover flew in; the reader now makes its page when
+  the way in has ended (`_hostAllowed`). (2) The opening picture kept
+  its cover drifting, a frame every 8 ms all through the loading; it
+  stands still now (`test/motion_test.dart`). (3) Its backdrop was a
+  blur as a layer (`ImageFiltered`, in a `RepaintBoundary`) over the
+  whole screen, faded and scaled as it left; `BookCoverBackdrop` now
+  blurs a 48 px copy once into a picture of its own (`toImageSync`) and
+  stretches that. (4) It left the moment the first page was up, in the
+  middle of the page's own work; it waits for frames to come evenly
+  (`EvenFrames`: five on time, or 0.8 s) and goes as a plain fade.
+  (5) A cover was decoded at the very width it was shown, so a cover
+  flying from a tile to a page was decoded anew every frame of the way:
+  `coverDecodeWidth` (a few steps), `gaplessPlayback`. The reader now
+  writes what it drew into the log - "Opening frames": for the way in,
+  the loading and the picture leaving, how many frames, how many over
+  20 ms, the worst one (waited for the thread / build / raster). If it
+  still stutters, read that line in the owner's log before changing
+  anything else.
+- The store's covers are thumbnails (`bookwalker.jp/thumbnail…`): the
+  first of a ranking shown twice as large came out blurred, and its row
+  did not line up with the captions beside it. Every cover of the home
+  lists is one size; no numbers on them either (the owner's word, twice).
+- `dart format` on a whole file of this repository rewrites it (most
+  files were formatted by an older formatter: `settings_page.dart` came
+  back with 770 lines changed). Format what is new by hand, or a new
+  file.
 - A `GlobalKey` above `MaterialApp` moves the whole app, navigator and
   all, to wherever the key is pumped next: a "new" app in the same test
   kept the old one's pages (`tool/ui_shots`: the fresh key goes on
