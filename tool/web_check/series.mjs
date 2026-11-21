@@ -58,6 +58,8 @@ log('after a click on another tile:', !!(await find('2 selected')), '| no card o
 await page.screenshot({ path: `${shots}/series_1_chosen.png` })
 
 await tapText('Group as a series'); await sleep(900)
+// (The field comes with a name the titles suggest: replaced.)
+await page.keyboard.down('Control'); await page.keyboard.press('KeyA'); await page.keyboard.up('Control')
 await page.keyboard.type('My series', { delay: 15 }); await sleep(300)
 await tapText('Save', { exact: true }); await sleep(3500); await semantics()
 log('the row shows:', !!(await find('My series')), '| "2 volumes":', !!(await find('2 volumes')))
@@ -71,10 +73,18 @@ await page.reload({ waitUntil: 'load' }); await sleep(9000); await semantics()
 log('after a reload the row is there:', !!(await find('My series')))
 
 // Undone from the row.
+// (The engine puts a label in the node's text, not always in aria-label;
+// and the book being read has a "More" of its own: the series' is the
+// one on the line of its name.)
 const menu = await page.evaluate(() => {
-  const n = [...document.querySelectorAll('flt-semantics')].find(n => (n.getAttribute('aria-label') || '').trim() === 'More')
-  if (!n) return null
-  const r = n.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
+  const label = n => (n.getAttribute('aria-label') || n.textContent || '').trim()
+  const name = [...document.querySelectorAll('flt-semantics')].filter(n => label(n) === '2 volumes')
+    .map(n => n.getBoundingClientRect()).find(r => r.width > 0)
+  const buttons = [...document.querySelectorAll('flt-semantics[role="button"]')].filter(n => label(n) === 'More')
+    .map(n => n.getBoundingClientRect()).filter(r => r.width > 0)
+  if (!name || !buttons.length) return null
+  const r = buttons.sort((a, b) => Math.abs(a.y - name.y) - Math.abs(b.y - name.y))[0]
+  return { x: r.x + r.width / 2, y: r.y + r.height / 2 }
 })
 if (menu) await page.mouse.click(menu.x, menu.y); else log('!! no menu on the row')
 await sleep(800)

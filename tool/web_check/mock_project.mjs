@@ -11,7 +11,7 @@ export const uid = '00000000-0000-4000-8000-000000000001'
 const seed = JSON.parse(readFileSync(`${dir}/library.json`, 'utf8'))
 const fresh = () => ({
   books: structuredClone(seed.books), progress: structuredClone(seed.progress), translations: structuredClone(seed.translations),
-  glossaries: [], settings: [], uploads: {}, removed: [], calls: [], times: [],
+  glossaries: [], settings: structuredClone(seed.settings ?? []), uploads: {}, removed: [], calls: [], times: [],
 })
 // BARE=1: as the owner's project was before any device put covers or details.
 if (process.env.BARE) for (const b of seed.books) { b.cover_at = null; b.description = null; b.publisher = null }

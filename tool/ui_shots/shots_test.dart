@@ -172,8 +172,12 @@ class _Shell extends StatelessWidget {
 
 final _shot = GlobalKey();
 
+/// The app's theme in the pictures: dark (the owner's), or light with
+/// `SHOT_THEME=light` (the pictures are then named `light_…`).
+final _light = _env('SHOT_THEME', 'dark') == 'light';
+
 Widget _app(Widget home,
-        {Brightness brightness = Brightness.dark,
+        {Brightness? brightness,
         Key? key,
         List<Override> overrides = const []}) =>
     ProviderScope(
@@ -194,8 +198,11 @@ Widget _app(Widget home,
           supportedLocales: AppLocalizations.supportedLocales,
           theme: _theme(lightTheme),
           darkTheme: _theme(darkTheme),
-          themeMode:
-              brightness == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+          themeMode: (brightness ??
+                      (_light ? Brightness.light : Brightness.dark)) ==
+                  Brightness.dark
+              ? ThemeMode.dark
+              : ThemeMode.light,
           home: home,
         ),
       ),
@@ -240,7 +247,7 @@ Future<void> _save(WidgetTester tester, String name) async {
   await tester.runAsync(() async {
     final image = await boundary.toImage(pixelRatio: _dpr);
     final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
-    final file = File('$_out/$name.png');
+    final file = File('$_out/${_light ? 'light_' : ''}$name.png');
     await file.parent.create(recursive: true);
     await file.writeAsBytes(bytes!.buffer.asUint8List());
   });

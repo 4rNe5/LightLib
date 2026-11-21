@@ -15,6 +15,7 @@ SHOT_COVERS=/tmp/covers SHOT_FONTS=/tmp/fonts SHOT_OUT=/tmp/shots \
 |---|---|
 | `SHOT_COVERS` | A folder with `books.json` - `[{"title", "author", "cover": "<file in the folder>", "description"}]` - and the cover pictures. Without it: nine books without covers |
 | `SHOT_FONTS` | A folder with `Nunito-400.ttf` … `Nunito-900.ttf` (the app's font; the test runner cannot fetch it). Korean and Japanese are drawn with the machine's Noto Sans CJK |
+| `SHOT_THEME` | `light` for the light theme (pictures named `light_…`); dark otherwise |
 | `SHOT_OUT` | Where the PNGs go (`phone_1_library.png`, `fold_3_book.png` …) |
 
 It is a test file so that it can pump widgets, and lives outside `test/`
