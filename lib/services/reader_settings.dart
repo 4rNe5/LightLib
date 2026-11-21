@@ -42,6 +42,12 @@ class ReaderPalette {
     required this.dark,
     this.forceBold = false,
   });
+
+  /// What stands out on this page - a link, a switch that is on, a word
+  /// to tap: pink, light on a dark page and deep on a light one. (The
+  /// app's own accent is the app's theme's, and the page's theme is the
+  /// reader's: in white on a paper page it was not seen.)
+  Color get accent => dark ? const Color(0xFFFF9EBD) : const Color(0xFFC2185B);
 }
 
 ReaderPalette paletteFor(ReaderThemeId theme, {required bool appDark}) {

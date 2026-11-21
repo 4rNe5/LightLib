@@ -627,7 +627,6 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   Future<Map<String, Object?>> _jsSettings() async {
     final s = _settings;
     final palette = _palette();
-    final scheme = Theme.of(context).colorScheme;
     final fonts = ReaderFonts.instance;
     // The chosen fonts, the shown script's first; none chosen keeps the
     // book's own.
@@ -650,8 +649,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       'background': _css(palette.background),
       'foreground': _css(palette.text),
       'secondary': _css(palette.secondaryText),
-      'link':
-          _css(palette.dark ? scheme.primary.withAlpha(230) : scheme.primary),
+      'link': _css(palette.accent),
       'dark': palette.dark,
       'fontSize': s.fontSize,
       'lineHeight': s.lineHeight,
@@ -1452,7 +1450,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.primary)),
+                      color: palette.accent)),
             ),
           ],
         ],
@@ -1499,9 +1497,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: iconColor))
                     : Icon(_translateOn ? Icons.g_translate : Icons.translate,
-                        color: _translateOn
-                            ? Theme.of(context).colorScheme.primary
-                            : iconColor),
+                        color: _translateOn ? palette.accent : iconColor),
                 onPressed:
                     _fixedLayout ? null : () => _setTranslation(!_translateOn),
               ),
@@ -1598,7 +1594,14 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                 ],
               ),
               SliderTheme(
+                // The page's colours, not the app's: a thumb in the app
+                // theme's colour was white on a paper page, or black on
+                // a night one.
                 data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: palette.accent,
+                  inactiveTrackColor: palette.text.withAlpha(40),
+                  thumbColor: palette.accent,
+                  overlayColor: palette.accent.withAlpha(40),
                   trackHeight: 3,
                   thumbShape:
                       const RoundSliderThumbShape(enabledThumbRadius: 7),

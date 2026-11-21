@@ -127,7 +127,7 @@ class _EpubViewState extends ConsumerState<EpubViewerWidget> {
       error: (error, stack) {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(AppLocalizations.of(context).appTitle),
             titleTextStyle: Theme.of(context).textTheme.displayLarge,
           ),
@@ -137,7 +137,7 @@ class _EpubViewState extends ConsumerState<EpubViewerWidget> {
       loading: () {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(AppLocalizations.of(context).appTitle),
             titleTextStyle: Theme.of(context).textTheme.displayLarge,
           ),
@@ -836,9 +836,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                   )
                 : Icon(
                     _translateOn ? Icons.g_translate : Icons.translate,
-                    color: _translateOn
-                        ? Theme.of(context).colorScheme.primary
-                        : iconColor,
+                    color: _translateOn ? palette.accent : iconColor,
                   ),
             onPressed: () => _setTranslation(!_translateOn),
           ),

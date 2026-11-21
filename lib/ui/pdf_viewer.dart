@@ -125,14 +125,10 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
   @override
   Widget build(BuildContext context) {
     final filePath = ref.watch(filePathProvider(widget.fileName));
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        // Use surface color in dark mode so it's not white
-        backgroundColor: isDarkMode
-            ? Theme.of(context).colorScheme.surface
-            : Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(AppLocalizations.of(context).appTitle),
         titleTextStyle: Theme.of(context).textTheme.displayLarge,
         leading: IconButton(
@@ -208,7 +204,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
         error: (error, stack) {
           return Scaffold(
             appBar: AppBar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               title: Text(AppLocalizations.of(context).appTitle),
               titleTextStyle: Theme.of(context).textTheme.displayLarge,
             ),
@@ -218,7 +214,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
         loading: () {
           return Scaffold(
             appBar: AppBar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               title: Text(AppLocalizations.of(context).appTitle),
               titleTextStyle: Theme.of(context).textTheme.displayLarge,
             ),
