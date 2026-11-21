@@ -20,6 +20,7 @@ import 'package:file_picker/file_picker.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/library_organization.dart'
     show suggestedSeriesName;
 import 'package:openlib/services/local_book_import.dart';
@@ -72,6 +73,12 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   void initState() {
     super.initState();
     _sync.onLocalChanges = _reload;
+    // A reader was left: where its book is shows at once. (The page that
+    // opens a book hands over to the reader and is done by then, so
+    // waiting for that page says when a book was opened, not when it
+    // was closed - and the reader's last position is written after it
+    // is gone.)
+    MyLibraryDb.readingChanged.addListener(_reload);
     _finished = _sync.finished.listen(_onSynced);
     _stopDrops = Browser.onFilesDropped((files) => unawaited(_addFiles([
           for (final f in files)
@@ -93,6 +100,7 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
     if (_sync.onLocalChanges == _reload) _sync.onLocalChanges = null;
+    MyLibraryDb.readingChanged.removeListener(_reload);
     _finished?.cancel();
     _stopDrops?.call();
     if (widget.library == null) _library.dispose();

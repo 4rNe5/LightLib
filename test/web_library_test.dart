@@ -151,6 +151,21 @@ void main() {
       expect(books.single.author, '');
     });
 
+    test('finished here counts before the account has heard of it', () {
+      // A short book's last page starts well before 99.5% of it: the
+      // reader marks it, and the mark is what says it is finished.
+      final books = mergeLibrary(
+        local: [here(a, 'A'), here(b, 'B')],
+        remote: RemoteLibrary(books: [there(a, 'A'), there(b, 'B')]),
+        md5Of: (book) => book.id.substring('local_'.length),
+        fractionOf: (book) => book.title == 'A' ? 0.97 : 0.4,
+        readAtOf: (_) => null,
+        completedOf: (book) => book.title == 'A',
+      );
+      expect(books[0].finished, isTrue);
+      expect(books[1].finished, isFalse);
+    });
+
     test('how far: the newer reading says, here or on another device', () {
       final remote = RemoteLibrary(
         books: [there(a, 'A'), there(b, 'B'), there(c, 'C')],

@@ -13,7 +13,11 @@ import 'package:openlib/services/home_widgets.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/reading_recap.dart';
 
-LibraryBook _book(String id, ReadingStatus status) => LibraryBook(
+LibraryBook _book(String id, ReadingStatus status,
+        {double? fraction, DateTime? readAt}) =>
+    LibraryBook(
+      fraction: fraction,
+      readAt: readAt,
       book: MyBook(
         id: id,
         title: 'Title $id',
@@ -43,6 +47,53 @@ Future<AppLocalizations> _l10n(WidgetTester tester, Locale locale) async {
 }
 
 void main() {
+  testWidgets('the book read last leads, with how far it was read',
+      (tester) async {
+    final l10n = await _l10n(tester, const Locale('ko'));
+    final snapshot = widgetSnapshot(
+      books: [
+        // (Added last, read a week ago.)
+        _book('volume4', ReadingStatus.inProgress,
+            fraction: 0.08, readAt: DateTime(2026, 11, 14)),
+        _book('volume3', ReadingStatus.inProgress,
+            fraction: 0.616, readAt: DateTime(2026, 11, 21)),
+        _book('done', ReadingStatus.completed),
+      ],
+      recap: null,
+      l10n: l10n,
+      localeTag: 'ko',
+      covers: const {},
+    );
+    final hero = snapshot['hero']! as Map;
+    expect(hero['id'], 'volume3');
+    expect(hero['percent'], 62);
+    expect(hero['progressText'], '62%');
+    final next = snapshot['next']! as Map;
+    expect(next['id'], 'volume4');
+    expect(next['percent'], 8);
+  });
+
+  testWidgets('a book not opened has no bar; a finished one is full',
+      (tester) async {
+    final l10n = await _l10n(tester, const Locale('ko'));
+    Map shown(LibraryBook book) => widgetSnapshot(
+          books: [book],
+          recap: null,
+          l10n: l10n,
+          localeTag: 'ko',
+          covers: const {},
+        )['hero']! as Map;
+    final unread = shown(_book('n', ReadingStatus.unread));
+    expect(unread.containsKey('percent'), isFalse);
+    expect(unread.containsKey('progressText'), isFalse);
+    final done = shown(_book('d', ReadingStatus.completed));
+    expect(done['percent'], 100);
+    expect(done['progressText'], '다 읽음');
+    // Read in a viewer that does not say how far.
+    final somewhere = shown(_book('p', ReadingStatus.inProgress));
+    expect(somewhere.containsKey('percent'), isFalse);
+  });
+
   testWidgets('the book being read comes first, the next after it',
       (tester) async {
     final l10n = await _l10n(tester, const Locale('ko'));

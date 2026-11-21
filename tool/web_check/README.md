@@ -31,7 +31,7 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 
 | Script | What it shows |
 |---|---|
-| `library.mjs` | Signed in: every book listed without one file fetched; a book's card; "Read" fetches that one file with its progress; the reader; back in the library the book is here and read a little; search, the side bar, the right-click menu, settings |
+| `library.mjs` | Signed in: every book listed without one file fetched; a book's card; "Read" fetches that one file with its progress; the reader; back in the library the book is here and how far it was read shows at once; search, the side bar, the right-click menu, settings |
 | `account.mjs` | The Gemini key typed in one browser is on the account and in a second browser; a book added here goes up with its details and small cover; this browser's copy goes while the account keeps the book; a deletion reaches the account |
 | `claude.mjs` | Signed in to an account a phone put its Claude key on: the key comes with the first sync, Settings has its switch, Claude is chosen, a book is translated by it - every request saying it comes from a browser, none refused by the site's policy, none to Gemini |
 | `series.mjs` | Signed in: two of the account's books (neither in this browser) chosen from a tile's menu and by a click, named, grouped; the row shows and the account has the series under their MD5s, sent from the web |

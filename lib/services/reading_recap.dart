@@ -175,8 +175,17 @@ final readingRecapProvider = FutureProvider<ReadingRecap>((ref) async {
   final db = MyLibraryDb.instance;
   final readingDays =
       await db.getReadingDays().catchError((_) => <String, int>{});
-  final completions =
-      await db.getCompletionDates().catchError((_) => <String, DateTime>{});
+  final completions = {
+    ...await db.getCompletionDates().catchError((_) => <String, DateTime>{}),
+  };
+  // A book read to its end on another device has no day it was marked
+  // on: the day it was last read stands for it.
+  for (final b in books) {
+    final at = b.readAt;
+    if (b.status == ReadingStatus.completed && at != null) {
+      completions.putIfAbsent(b.book.getFileName(), () => at);
+    }
+  }
   return computeReadingRecap(
     books: books,
     readingDays: readingDays,
