@@ -1,8 +1,8 @@
 // The app's tab bar. On a phone, a floating, frosted pill at the bottom:
 // the selected tab widens into a filled capsule that slides between tabs;
 // its icon pops and its label slides in. On a wide screen (an unfolded
-// phone, a tablet, a phone on its side), a rail down the left edge with
-// the same capsule behind the selected icon. Motion follows the system's
+// phone, a tablet, a phone on its side), the same pill stood on end in
+// the lower right corner, with the same capsule behind the selected icon. Motion follows the system's
 // reduce-motion setting.
 
 // Dart imports:
@@ -351,10 +351,12 @@ const appNavRailMinWidth = 600.0;
 bool useNavRail(BuildContext context) =>
     MediaQuery.sizeOf(context).width >= appNavRailMinWidth;
 
-/// The tabs down the left edge: the bottom bar's frosted pill stood on
-/// end, centred top to bottom. The selected tab grows into the accent
-/// capsule with its name under the icon, and the capsule slides between
-/// tabs the way it does in the bar.
+/// The tabs in the lower right corner of a wide screen: the bottom bar's
+/// frosted pill stood on end, down the right edge and at its foot -
+/// where the right thumb rests on an unfolded phone held in two hands
+/// (as the bars of a phone that folds move to its side). The selected
+/// tab grows into the accent capsule with its name under the icon, and
+/// the capsule slides between tabs the way it does in the bar.
 class AppNavRail extends StatelessWidget {
   const AppNavRail({
     super.key,
@@ -368,12 +370,14 @@ class AppNavRail extends StatelessWidget {
   final ValueChanged<int> onSelected;
 
   /// The pill's width, and the room the rail takes beside the page.
-  static const pillWidth = 72.0;
-  static const width = pillWidth + 12 + 8;
+  static const pillWidth = 64.0;
+  static const _gapToPage = 6.0;
+  static const _gapToEdge = 10.0;
+  static const width = pillWidth + _gapToPage + _gapToEdge;
 
   /// A tab's height; the selected one is taller (its name shows).
-  static const _tab = 58.0;
-  static const _selectedTab = 80.0;
+  static const _tab = 54.0;
+  static const _selectedTab = 76.0;
 
   @override
   Widget build(BuildContext context) {
@@ -397,12 +401,14 @@ class AppNavRail extends StatelessWidget {
 
     return SafeArea(
       key: const ValueKey('navRail'),
-      right: false,
+      left: false,
       child: SizedBox(
         width: width,
-        child: Center(
+        child: Align(
+          alignment: Alignment.bottomCenter,
           child: Padding(
-            padding: const EdgeInsets.only(left: 12, right: 8),
+            padding: const EdgeInsets.only(
+                left: _gapToPage, right: _gapToEdge, bottom: 14),
             child: DecoratedBox(
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(radius),
@@ -410,7 +416,7 @@ class AppNavRail extends StatelessWidget {
                   BoxShadow(
                     color: Colors.black.withValues(alpha: dark ? 0.45 : 0.07),
                     blurRadius: 18,
-                    offset: const Offset(2, 4),
+                    offset: const Offset(-2, 4),
                   ),
                 ],
               ),
@@ -558,7 +564,7 @@ class _RailButton extends StatelessWidget {
                 curve: Curves.easeOutCubic,
                 child: selected
                     ? Padding(
-                        padding: const EdgeInsets.only(top: 5, left: 4, right: 4),
+                        padding: const EdgeInsets.only(top: 4, left: 2, right: 2),
                         child: TweenAnimationBuilder<double>(
                           tween: Tween(begin: reduceMotion ? 1 : 0, end: 1),
                           duration: fade,
@@ -578,9 +584,9 @@ class _RailButton extends StatelessWidget {
                                     DefaultTextStyle.of(context).style)
                                 .copyWith(
                               color: Colors.white,
-                              fontSize: 12,
+                              fontSize: 11,
                               fontWeight: FontWeight.w800,
-                              letterSpacing: 0.1,
+                              letterSpacing: 0,
                             ),
                           ),
                         ),

@@ -21,7 +21,11 @@ import 'package:openlib/services/original_title.dart';
 import 'package:openlib/services/search_history.dart';
 import 'package:openlib/state/state.dart'
     show enableFiltersState, searchQueryProvider;
+import 'package:openlib/ui/adaptive.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
+import 'package:openlib/ui/components/app_nav_bar.dart' show AppNavRail;
+import 'package:openlib/ui/components/library_tiles.dart'
+    show modernSurfaceTheme;
 import 'package:openlib/ui/components/page_title_widget.dart';
 import 'package:openlib/ui/components/search_filter_sheet.dart';
 import 'package:openlib/ui/results_page.dart';
@@ -160,8 +164,10 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     ref.read(storeSuggestionProvider.notifier).state = [];
     ref.read(enableFiltersState.notifier).state = true;
     FocusScope.of(context).unfocus();
-    Navigator.push(context,
-        MaterialPageRoute(builder: (_) => ResultPage(searchQuery: query.trim())));
+    Navigator.push(
+        context,
+        MaterialPageRoute(
+            builder: (_) => ResultPage(searchQuery: query.trim())));
   }
 
   Future<void> _findOriginal(String korean) async {
@@ -185,7 +191,12 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) => Theme(
+        data: modernSurfaceTheme(Theme.of(context)),
+        child: Builder(builder: _build),
+      );
+
+  Widget _build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final typed = ref.watch(searchQueryProvider);
     final google = ref.watch(searchSuggestionProvider);
@@ -197,11 +208,13 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     final filters = SearchFilters.of(ref);
     final q = typed.trim();
 
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(12, 18, 12, 24),
+    final wide = useTwoPanes(context);
+    final list = ListView(
+      padding: EdgeInsets.fromLTRB(12, 18, wide ? 4 : 12, 24),
       children: [
         const ActiveDownloadsWidget(),
-        LargeTitle(l10n.navSearch, padding: const EdgeInsets.fromLTRB(4, 0, 0, 12)),
+        LargeTitle(l10n.navSearch,
+            padding: const EdgeInsets.fromLTRB(4, 0, 0, 12)),
         _SearchBox(
           controller: _controller,
           hint: l10n.searchHint,
@@ -210,12 +223,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           onChanged: _onChanged,
           onSubmitted: (_) => _submit(),
           onClear: _clear,
-          onFilters: () => showSearchFilterSheet(context),
+          // (On a wide screen the filters stand beside the field.)
+          onFilters: wide ? null : () => showSearchFilterSheet(context),
         ),
-        _FilterSummary(filters: filters),
+        _FilterSummary(filters: filters, opensSheet: !wide),
         if (q.isEmpty) ...[
           if (history.isNotEmpty)
-            _RecentSearches(history: history, onSearch: _searchFor, onFill: _fill),
+            _RecentSearches(
+                history: history, onSearch: _searchFor, onFill: _fill),
         ] else ...[
           if (hasHangul(q))
             _OriginalTitleRow(
@@ -239,6 +254,25 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         ],
       ],
     );
+    if (!wide) return list;
+    // A wide screen: what to look for on one side, how to look for it
+    // on the other - the filters always in sight, where they change
+    // what the field finds.
+    final scheme = Theme.of(context).colorScheme;
+    return TwoPane(
+      trailing: AppNavRail.width,
+      start: list,
+      end: Padding(
+        padding: const EdgeInsets.fromLTRB(0, 12, 0, 14),
+        child: Material(
+          key: const ValueKey('searchFiltersPane'),
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(28),
+          clipBehavior: Clip.antiAlias,
+          child: const SearchFilterSheet(embedded: true),
+        ),
+      ),
+    );
   }
 }
 
@@ -255,7 +289,7 @@ class _SearchBox extends StatelessWidget {
     required this.onChanged,
     required this.onSubmitted,
     required this.onClear,
-    required this.onFilters,
+    this.onFilters,
   });
 
   final TextEditingController controller;
@@ -265,7 +299,9 @@ class _SearchBox extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final ValueChanged<String> onSubmitted;
   final VoidCallback onClear;
-  final VoidCallback onFilters;
+
+  /// Opens the filters; null where they are on screen beside the field.
+  final VoidCallback? onFilters;
 
   @override
   Widget build(BuildContext context) {
@@ -297,7 +333,12 @@ class _SearchBox extends StatelessWidget {
                 hintStyle: TextStyle(
                     color: scheme.onSurfaceVariant.withAlpha(170),
                     fontWeight: FontWeight.w500),
+                // (No box of its own inside the pill: the theme's
+                // outlined field would draw one.)
                 border: InputBorder.none,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                filled: false,
                 isDense: true,
                 contentPadding: const EdgeInsets.symmetric(vertical: 16),
               ),
@@ -315,17 +356,20 @@ class _SearchBox extends StatelessWidget {
                 onClear();
               },
             ),
-          IconButton(
-            key: const ValueKey('searchFilters'),
-            tooltip: l10n.searchFilters,
-            onPressed: onFilters,
-            icon: Badge(
-              isLabelVisible: activeFilters > 0,
-              backgroundColor: scheme.secondary,
-              label: Text('$activeFilters'),
-              child: const Icon(Icons.tune),
+          if (onFilters == null)
+            const SizedBox(width: 12)
+          else
+            IconButton(
+              key: const ValueKey('searchFilters'),
+              tooltip: l10n.searchFilters,
+              onPressed: onFilters,
+              icon: Badge(
+                isLabelVisible: activeFilters > 0,
+                backgroundColor: scheme.secondary,
+                label: Text('$activeFilters'),
+                child: const Icon(Icons.tune),
+              ),
             ),
-          ),
         ]),
       ),
     );
@@ -335,8 +379,11 @@ class _SearchBox extends StatelessWidget {
 /// The filters in force, as small chips under the field; a tap opens
 /// the sheet.
 class _FilterSummary extends StatelessWidget {
-  const _FilterSummary({required this.filters});
+  const _FilterSummary({required this.filters, this.opensSheet = true});
   final SearchFilters filters;
+
+  /// A tap opens the filters' sheet (not where they are on screen).
+  final bool opensSheet;
 
   @override
   Widget build(BuildContext context) {
@@ -366,7 +413,7 @@ class _FilterSummary extends StatelessWidget {
               padding: const EdgeInsets.only(right: 6),
               child: InkWell(
                 borderRadius: BorderRadius.circular(14),
-                onTap: () => showSearchFilterSheet(context),
+                onTap: opensSheet ? () => showSearchFilterSheet(context) : null,
                 child: Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -442,7 +489,8 @@ class _SuggestionRow extends StatelessWidget {
               width: 34,
               child: Center(
                   child: leading ??
-                      Icon(Icons.search, size: 18, color: scheme.onSurfaceVariant))),
+                      Icon(Icons.search,
+                          size: 18, color: scheme.onSurfaceVariant))),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -492,7 +540,8 @@ class _Suggestions extends StatelessWidget {
     Widget fillButton(String q) => IconButton(
           tooltip: l10n.searchHistoryFill,
           visualDensity: VisualDensity.compact,
-          icon: Icon(Icons.north_west, size: 16, color: scheme.onSurfaceVariant),
+          icon:
+              Icon(Icons.north_west, size: 16, color: scheme.onSurfaceVariant),
           onPressed: () => onFill(q),
         );
     return Column(

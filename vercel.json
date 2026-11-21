@@ -4,7 +4,7 @@
   "installCommand": "true",
   "buildCommand": "bash tool/vercel_build.sh",
   "outputDirectory": "build/web",
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- lib web assets reader_web pubspec.yaml pubspec.lock vercel.json tool/vercel_build.sh tool/stamp_page.py",
+  "ignoreCommand": "bash tool/vercel_ignore.sh",
   "headers": [
     {
       "source": "/(.*)",

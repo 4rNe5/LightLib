@@ -4619,6 +4619,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No volume of this series is in this browser yet. Open one first.'**
   String get webGlossaryNoBooks;
+
+  /// bookMarkFinished
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as finished'**
+  String get bookMarkFinished;
+
+  /// bookMarkUnfinished
+  ///
+  /// In en, this message translates to:
+  /// **'Mark as not finished'**
+  String get bookMarkUnfinished;
+
+  /// bookReadAgain
+  ///
+  /// In en, this message translates to:
+  /// **'Read again'**
+  String get bookReadAgain;
+
+  /// bookContinueFrom
+  ///
+  /// In en, this message translates to:
+  /// **'Continue from {percent}%'**
+  String bookContinueFrom(int percent);
+
+  /// bookReadToday
+  ///
+  /// In en, this message translates to:
+  /// **'Read today'**
+  String get bookReadToday;
+
+  /// bookReadYesterday
+  ///
+  /// In en, this message translates to:
+  /// **'Read yesterday'**
+  String get bookReadYesterday;
+
+  /// bookReadDaysAgo
+  ///
+  /// In en, this message translates to:
+  /// **'Read {days} days ago'**
+  String bookReadDaysAgo(int days);
+
+  /// bookFinishedOn
+  ///
+  /// In en, this message translates to:
+  /// **'Finished {date}'**
+  String bookFinishedOn(String date);
+
+  /// bookAbout
+  ///
+  /// In en, this message translates to:
+  /// **'About this book'**
+  String get bookAbout;
+
+  /// bookNoDescription
+  ///
+  /// In en, this message translates to:
+  /// **'No description.'**
+  String get bookNoDescription;
+
+  /// bookMore
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get bookMore;
+
+  /// bookShare
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get bookShare;
+
+  /// bookOpeningAt
+  ///
+  /// In en, this message translates to:
+  /// **'Opening at {percent}%…'**
+  String bookOpeningAt(int percent);
+
+  /// bookOpening
+  ///
+  /// In en, this message translates to:
+  /// **'Opening the book…'**
+  String get bookOpening;
+
+  /// libraryNowReading
+  ///
+  /// In en, this message translates to:
+  /// **'Reading now'**
+  String get libraryNowReading;
+
+  /// libraryAlsoReading
+  ///
+  /// In en, this message translates to:
+  /// **'Also reading'**
+  String get libraryAlsoReading;
+
+  /// libraryBackToOverview
+  ///
+  /// In en, this message translates to:
+  /// **'Back to the overview'**
+  String get libraryBackToOverview;
+
+  /// bookFinishedToast
+  ///
+  /// In en, this message translates to:
+  /// **'Finished! Marked as read.'**
+  String get bookFinishedToast;
+
+  /// readerTwoPages
+  ///
+  /// In en, this message translates to:
+  /// **'Two pages side by side'**
+  String get readerTwoPages;
+
+  /// readerTwoPagesHint
+  ///
+  /// In en, this message translates to:
+  /// **'On an unfolded or wide screen, when turning pages'**
+  String get readerTwoPagesHint;
+
+  /// settingsCatSearch
+  ///
+  /// In en, this message translates to:
+  /// **'Search & downloads'**
+  String get settingsCatSearch;
+
+  /// settingsCatReading
+  ///
+  /// In en, this message translates to:
+  /// **'Reading & translation'**
+  String get settingsCatReading;
+
+  /// settingsCatStorage
+  ///
+  /// In en, this message translates to:
+  /// **'Storage & sync'**
+  String get settingsCatStorage;
+
+  /// settingsCatApp
+  ///
+  /// In en, this message translates to:
+  /// **'App'**
+  String get settingsCatApp;
+
+  /// settingsReaderDefaults
+  ///
+  /// In en, this message translates to:
+  /// **'Reader defaults'**
+  String get settingsReaderDefaults;
+
+  /// settingsReaderDefaultsHint
+  ///
+  /// In en, this message translates to:
+  /// **'The same settings as Aa in the reader: what is changed here is how every book opens.'**
+  String get settingsReaderDefaultsHint;
 }
 
 class _AppLocalizationsDelegate

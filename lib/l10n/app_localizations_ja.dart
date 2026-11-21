@@ -2536,4 +2536,91 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get webGlossaryNoBooks => 'このブラウザーにはこのシリーズの本がまだありません。先に開いてください。';
+
+  @override
+  String get bookMarkFinished => '読了にする';
+
+  @override
+  String get bookMarkUnfinished => '読了を解除';
+
+  @override
+  String get bookReadAgain => 'もう一度読む';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return '$percent%から続きを読む';
+  }
+
+  @override
+  String get bookReadToday => '今日読んだ';
+
+  @override
+  String get bookReadYesterday => '昨日読んだ';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return '$days日前に読んだ';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return '$date 読了';
+  }
+
+  @override
+  String get bookAbout => '作品紹介';
+
+  @override
+  String get bookNoDescription => '紹介文がありません。';
+
+  @override
+  String get bookMore => 'その他';
+
+  @override
+  String get bookShare => '共有';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return '$percent%の位置を開いています…';
+  }
+
+  @override
+  String get bookOpening => '本を開いています…';
+
+  @override
+  String get libraryNowReading => 'いま読んでいる本';
+
+  @override
+  String get libraryAlsoReading => 'ほかに読んでいる本';
+
+  @override
+  String get libraryBackToOverview => '概要に戻る';
+
+  @override
+  String get bookFinishedToast => '読了！読み終えた本にしました。';
+
+  @override
+  String get readerTwoPages => '見開きで表示';
+
+  @override
+  String get readerTwoPagesHint => '開いた画面や広い画面でページめくりのとき';
+
+  @override
+  String get settingsCatSearch => '検索・ダウンロード';
+
+  @override
+  String get settingsCatReading => '読書・翻訳';
+
+  @override
+  String get settingsCatStorage => '保存・同期';
+
+  @override
+  String get settingsCatApp => 'アプリ情報';
+
+  @override
+  String get settingsReaderDefaults => 'ビューアの基本設定';
+
+  @override
+  String get settingsReaderDefaultsHint =>
+      'ビューアの「Aa」と同じ設定です。ここで変えると、すべての本がその設定で開きます。';
 }

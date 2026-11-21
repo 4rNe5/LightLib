@@ -2625,4 +2625,92 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get webGlossaryNoBooks =>
       'Ningún volumen de esta serie está en este navegador. Abre uno primero.';
+
+  @override
+  String get bookMarkFinished => 'Marcar como leído';
+
+  @override
+  String get bookMarkUnfinished => 'Marcar como no leído';
+
+  @override
+  String get bookReadAgain => 'Leer de nuevo';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return 'Continuar desde el $percent %';
+  }
+
+  @override
+  String get bookReadToday => 'Leído hoy';
+
+  @override
+  String get bookReadYesterday => 'Leído ayer';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return 'Leído hace $days días';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return 'Terminado el $date';
+  }
+
+  @override
+  String get bookAbout => 'Sobre este libro';
+
+  @override
+  String get bookNoDescription => 'Sin descripción.';
+
+  @override
+  String get bookMore => 'Más';
+
+  @override
+  String get bookShare => 'Compartir';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return 'Abriendo en el $percent %…';
+  }
+
+  @override
+  String get bookOpening => 'Abriendo el libro…';
+
+  @override
+  String get libraryNowReading => 'Leyendo ahora';
+
+  @override
+  String get libraryAlsoReading => 'También leyendo';
+
+  @override
+  String get libraryBackToOverview => 'Volver al resumen';
+
+  @override
+  String get bookFinishedToast => '¡Terminado! Marcado como leído.';
+
+  @override
+  String get readerTwoPages => 'Dos páginas a la vez';
+
+  @override
+  String get readerTwoPagesHint =>
+      'En pantalla desplegada o ancha, al pasar páginas';
+
+  @override
+  String get settingsCatSearch => 'Búsqueda y descargas';
+
+  @override
+  String get settingsCatReading => 'Lectura y traducción';
+
+  @override
+  String get settingsCatStorage => 'Almacenamiento y sincronización';
+
+  @override
+  String get settingsCatApp => 'Aplicación';
+
+  @override
+  String get settingsReaderDefaults => 'Ajustes predeterminados del lector';
+
+  @override
+  String get settingsReaderDefaultsHint =>
+      'Los mismos ajustes que «Aa» en el lector: lo que cambies aquí se aplica a todos los libros.';
 }

@@ -8,10 +8,12 @@
 // Dart imports:
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui' as ui show FrameTiming;
 
 // Flutter imports:
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart' show SchedulerBinding;
 import 'package:flutter/services.dart';
 
 // Package imports:
@@ -21,7 +23,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
-import 'package:openlib/services/database.dart' show MyLibraryDb;
+import 'package:openlib/services/database.dart'
+    show BookReading, MyLibraryDb;
 import 'package:openlib/services/epub_package.dart';
 import 'package:openlib/services/heavy_work.dart';
 import 'package:openlib/services/platform_utils.dart';
@@ -45,8 +48,8 @@ import 'package:openlib/services/translation/translation_engine.dart';
 import 'package:openlib/services/translation/translation_repair.dart';
 import 'package:openlib/services/translation/translator.dart';
 import 'package:openlib/services/tts_service.dart';
-import 'package:openlib/state/state.dart' show saveEpubState;
 import 'package:openlib/ui/components/paged_book_view.dart' show ReaderLayout;
+import 'package:openlib/ui/components/motion.dart';
 import 'package:openlib/ui/components/glossary_sheet.dart';
 import 'package:openlib/ui/components/reader_settings_sheet.dart';
 import 'package:openlib/ui/components/snack_bar_widget.dart';
@@ -121,6 +124,52 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
 
   /// The book's first page is on screen.
   bool _shown = false;
+
+  /// The picture shown while the book opens has been up long enough to
+  /// be seen (a book that opens at once would flash it otherwise; on
+  /// the web it goes the moment the page is there).
+  bool _openingSeen = kIsWeb;
+  Timer? _openingTimer;
+
+  /// The page may start (its web view be made). With the opening picture
+  /// it waits for the way in to end: making a web view and loading a
+  /// book are work on the thread the frames are drawn on, and begun
+  /// with the route they made the cover's flight here stutter.
+  bool _hostAllowed = true;
+  Animation<double>? _wayIn;
+
+  /// The opening picture is taken down: the first page is up, the
+  /// picture was seen, and frames come evenly again ([_leaveOpening]).
+  bool _openingGone = false;
+  EvenFrames? _calm;
+
+  /// Frames drawn while the book opens, for the log: the way in, the
+  /// loading under the picture, the picture leaving. (Whether the way in
+  /// is smooth on a phone cannot be seen from a desk; the owner's log
+  /// says how many frames were late, and in which part.)
+  final List<_FrameCount> _openingFrames = [
+    _FrameCount('way in'),
+    _FrameCount('loading'),
+    _FrameCount('leaving'),
+  ];
+  int _openingPart = 0;
+  bool _timingFrames = false;
+  Timer? _framesTimer;
+
+  void _onFrameTimings(List<ui.FrameTiming> timings) {
+    for (final t in timings) {
+      _openingFrames[_openingPart].add(t);
+    }
+  }
+
+  void _logOpeningFrames() {
+    if (!_timingFrames) return;
+    _timingFrames = false;
+    SchedulerBinding.instance.removeTimingsCallback(_onFrameTimings);
+    _logger.info('Opening frames', tag: 'ReaderPage', metadata: {
+      for (final part in _openingFrames) part.name: part.summary,
+    });
+  }
   String? _error;
 
   // The book.
@@ -137,6 +186,10 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   String _tocHref = '';
   int _section = -1;
   Timer? _saveTimer;
+
+  /// The book is marked finished (as saved, or since its end was reached
+  /// here).
+  bool _finished = false;
 
   // The bars over the page: shown on open and on a tap in the middle.
   bool _chrome = true;
@@ -188,6 +241,18 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     super.initState();
     SyncService.instance.arrived.addListener(_onSyncArrived);
     redoMarks.addListener(_onRedoMarked);
+    if (!_openingSeen && widget.opening != null) {
+      _hostAllowed = false;
+      _timingFrames = true;
+      SchedulerBinding.instance.addTimingsCallback(_onFrameTimings);
+      _openingTimer = Timer(const Duration(milliseconds: 520), () {
+        if (!mounted) return;
+        setState(() => _openingSeen = true);
+        _leaveOpening();
+      });
+    } else {
+      _openingSeen = true;
+    }
     SharedTranslationEngine.instance.enterReader();
     ReaderSettings.instance.addListener(_onSettingsChanged);
     ReaderFonts.instance.addListener(_onSettingsChanged);
@@ -208,15 +273,73 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     _lifecycle = AppLifecycleListener(
       onHide: () {
         _translation?.pause();
-        _saveNow();
+        // (The home-screen widgets show where the book is by the time
+        // the home screen is back.)
+        _saveNow(leaving: true);
       },
       onShow: () => _translation?.resume(),
     );
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_hostAllowed || _wayIn != null) return;
+    final animation = ModalRoute.of(context)?.animation;
+    if (animation == null ||
+        animation.isCompleted ||
+        AppMotion.reduced(context)) {
+      _hostAllowed = true;
+      _openingPart = 1;
+      return;
+    }
+    _wayIn = animation..addStatusListener(_onWayIn);
+  }
+
+  void _onWayIn(AnimationStatus status) {
+    // (Completed: the page is in. Dismissed: it was left on the way.)
+    if (status != AnimationStatus.completed) return;
+    _wayIn?.removeStatusListener(_onWayIn);
+    if (mounted && !_hostAllowed) {
+      setState(() {
+        _hostAllowed = true;
+        _openingPart = 1;
+      });
+    }
+  }
+
+  void _openingLeft() {
+    if (!mounted) return;
+    setState(() => _openingGone = true);
+    _openingPart = 2;
+    // (The fade is 260 ms; a little after it, what was counted is
+    // written down.)
+    _framesTimer = Timer(const Duration(milliseconds: 600), _logOpeningFrames);
+  }
+
+  /// Takes the opening picture down once the first page is up and the
+  /// picture was seen - and not in the middle of the page's own work: it
+  /// waits until a few frames in a row came on time (at most 0.8 s), so
+  /// the fade is drawn evenly. The first page of a book is laid out,
+  /// its translation put back and its settings sent just then; a fade
+  /// begun at that moment lost most of its frames.
+  void _leaveOpening() {
+    if (_openingGone || _calm != null || widget.opening == null) return;
+    if (!(_shown && _openingSeen)) return;
+    if (kIsWeb || AppMotion.reduced(context)) {
+      _openingLeft();
+      return;
+    }
+    _calm = EvenFrames(onEven: _openingLeft)..start();
+  }
+
+  @override
   void dispose() {
-    _saveNow();
+    _wayIn?.removeStatusListener(_onWayIn);
+    _calm?.dispose();
+    _framesTimer?.cancel();
+    _logOpeningFrames();
+    _saveNow(leaving: true);
     // What was read and translated goes to the other devices.
     SyncService.instance.arrived.removeListener(_onSyncArrived);
     redoMarks.removeListener(_onRedoMarked);
@@ -230,6 +353,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     unawaited(_studyTranslator?.dispose());
     _lifecycle?.dispose();
     _saveTimer?.cancel();
+    _openingTimer?.cancel();
     _settingsTimer?.cancel();
     GlossaryService.instance.removeListener(_onGlossaryChanged);
     _translation?.removeListener(_onTranslationChanged);
@@ -262,6 +386,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     final saved = await MyLibraryDb.instance
         .getBookState(widget.fileName)
         .catchError((_) => null);
+    _finished = await MyLibraryDb.instance
+        .isCompleted(widget.fileName)
+        .catchError((_) => false);
     final String url;
     try {
       url = await _host!.bookUrl();
@@ -299,6 +426,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         unawaited(_restoreTranslation());
         _lastStudyJson = null;
         unawaited(_pushStudy());
+        // Which way the book is written is known now: a wide screen's
+        // two pages are for text that runs across.
+        if (!kIsWeb && _layoutWidth >= 600) unawaited(_pushSettings());
       case 'relocate':
         final cfi = msg['cfi'] as String?;
         final fraction = (msg['fraction'] as num?)?.toDouble() ?? _fraction;
@@ -322,7 +452,19 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
         }
 
         seen ? setState(take) : take();
+        _leaveOpening();
         _saveSoon();
+        // The last page: the book is finished (a short book's last page
+        // starts well before 99.5%, so the page says when it is the end).
+        final sections = (msg['sections'] as num?)?.toInt() ?? 0;
+        final lastPage = sections > 0 &&
+            _section == sections - 1 &&
+            (msg['atEnd'] == true || _fixedLayout);
+        if (!_finished &&
+            (lastPage || fraction >= BookReading.finishedFraction)) {
+          _finished = true;
+          _saveNow(finished: true);
+        }
         if (_speechWaitsForSection) _continueSpeechInSection();
       case 'paragraphs':
         final section = (msg['section'] as num).toInt();
@@ -410,23 +552,37 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
     _saveTimer = Timer(const Duration(seconds: 1), _saveNow);
   }
 
-  void _saveNow() {
+  /// Saves where the reader is. [leaving]: the reader is going away (or
+  /// the app is), so the library and the widgets are told once the
+  /// position is written - asked before, they would read the one saved a
+  /// page ago. [finished]: the end was just reached.
+  void _saveNow({bool leaving = false, bool finished = false}) {
     _saveTimer?.cancel();
     if (_unsavedChars > 0) {
       StudyStore.instance.count(StudyDay(chars: _unsavedChars));
       _unsavedChars = 0;
     }
     final cfi = _cfi;
-    if (cfi == null || cfi.isEmpty) return;
+    if (cfi == null || cfi.isEmpty) {
+      if (leaving) MyLibraryDb.readingChanged.value++;
+      return;
+    }
+    final db = MyLibraryDb.instance;
+    final file = widget.fileName;
+    final fraction = _fraction.clamp(0, 1).toStringAsFixed(4);
     // How far that is, for a library that lists the book without its
     // file (written first: saving the position starts the sync).
-    unawaited(MyLibraryDb.instance
-        .setSyncState(
-            'frac:${widget.fileName}', _fraction.clamp(0, 1).toStringAsFixed(4))
+    unawaited(db
+        .setSyncState('frac:$file', fraction)
         .catchError((_) {})
-        .then((_) => saveEpubState(
-            widget.fileName, '$bookReaderPositionPrefix$cfi', ref))
-        .catchError((_) {}));
+        .then((_) => db.saveBookState(file, '$bookReaderPositionPrefix$cfi'))
+        .catchError((_) {})
+        .then((_) =>
+            finished ? db.setCompleted(file, true) : Future<void>.value())
+        .catchError((_) {})
+        .whenComplete(() {
+      if (leaving) MyLibraryDb.readingChanged.value++;
+    }));
   }
 
   // ------------------------------------------------------------------
@@ -471,7 +627,6 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
   Future<Map<String, Object?>> _jsSettings() async {
     final s = _settings;
     final palette = _palette();
-    final scheme = Theme.of(context).colorScheme;
     final fonts = ReaderFonts.instance;
     // The chosen fonts, the shown script's first; none chosen keeps the
     // book's own.
@@ -494,8 +649,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       'background': _css(palette.background),
       'foreground': _css(palette.text),
       'secondary': _css(palette.secondaryText),
-      'link':
-          _css(palette.dark ? scheme.primary.withAlpha(230) : scheme.primary),
+      'link': _css(palette.accent),
       'dark': palette.dark,
       'fontSize': s.fontSize,
       'lineHeight': s.lineHeight,
@@ -515,7 +669,33 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       // scrolling, two side by side when turning pages).
       if (kIsWeb) 'maxInlineSize': 760,
       if (kIsWeb) 'maxColumns': s.layout == ReaderLayout.scroll ? 1 : 2,
+      if (!kIsWeb) ..._wideLayout(s),
     };
+  }
+
+  /// The window's width the page was last laid out for.
+  double _layoutWidth = 0;
+
+  /// On a wide screen (an unfolded phone, a tablet): two pages side by
+  /// side when pages are turned and the text runs across - they meet in
+  /// the middle, where a foldable folds - and one column no wider than a
+  /// line reads well when scrolling. A phone's width, and text written
+  /// down the page: as the page lays itself out.
+  Map<String, Object?> _wideLayout(ReaderSettingsData s) {
+    final width = _layoutWidth;
+    // (Written down the page: by the reader's choice, or the book's own
+    // way when the reader leaves it to the book.)
+    final writing = _writing;
+    final vertical = writing == ReaderWriting.vertical ||
+        (writing == ReaderWriting.auto && _bookIsVertical);
+    if (width < 600 || vertical) return const {};
+    if (s.layout == ReaderLayout.scroll) {
+      return const {'maxInlineSize': 680, 'maxColumns': 1};
+    }
+    if (!s.twoPages) return const {'maxColumns': 1};
+    // (The page counts its columns as the width over this, rounded up:
+    // anything from half the width to all of it makes two.)
+    return {'maxInlineSize': (width * 0.6).round(), 'maxColumns': 2};
   }
 
   void _onSettingsChanged() {
@@ -1270,7 +1450,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                   style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: Theme.of(context).colorScheme.primary)),
+                      color: palette.accent)),
             ),
           ],
         ],
@@ -1317,9 +1497,7 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: iconColor))
                     : Icon(_translateOn ? Icons.g_translate : Icons.translate,
-                        color: _translateOn
-                            ? Theme.of(context).colorScheme.primary
-                            : iconColor),
+                        color: _translateOn ? palette.accent : iconColor),
                 onPressed:
                     _fixedLayout ? null : () => _setTranslation(!_translateOn),
               ),
@@ -1416,7 +1594,14 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                 ],
               ),
               SliderTheme(
+                // The page's colours, not the app's: a thumb in the app
+                // theme's colour was white on a paper page, or black on
+                // a night one.
                 data: SliderTheme.of(context).copyWith(
+                  activeTrackColor: palette.accent,
+                  inactiveTrackColor: palette.text.withAlpha(40),
+                  thumbColor: palette.accent,
+                  overlayColor: palette.accent.withAlpha(40),
                   trackHeight: 3,
                   thumbShape:
                       const RoundSliderThumbShape(enabledThumbRadius: 7),
@@ -1622,6 +1807,18 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
 
   Widget _page(ReaderPalette palette, AppLocalizations l10n,
       SystemUiOverlayStyle overlay) {
+    // Unfolded or folded while reading: the page is laid out again for
+    // the room there is now (two pages, or one).
+    final width = MediaQuery.sizeOf(context).width;
+    if (width != _layoutWidth) {
+      final known = _layoutWidth != 0;
+      _layoutWidth = width;
+      if (known && !kIsWeb) {
+        _settingsTimer?.cancel();
+        _settingsTimer =
+            Timer(const Duration(milliseconds: 160), _pushSettings);
+      }
+    }
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: overlay.copyWith(
           statusBarColor: Colors.transparent,
@@ -1638,7 +1835,9 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
                 child: SafeArea(
                   child: _error != null
                       ? _errorView(palette, l10n)
-                      : _webViewWidget,
+                      : _hostAllowed
+                          ? _webViewWidget
+                          : const SizedBox.expand(),
                 ),
               ),
               if (!_opened && _error == null && widget.opening == null)
@@ -1699,10 +1898,14 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
               if (widget.opening case final opening?)
                 Positioned.fill(
                   child: AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 280),
-                    child: _shown || _error != null
+                    duration: const Duration(milliseconds: 260),
+                    switchOutCurve: Curves.easeOut,
+                    // A plain fade of one flat layer: the picture behind
+                    // it is a picture (nothing is blurred as it goes),
+                    // and nothing in it changes size.
+                    child: _openingGone || _error != null
                         ? const SizedBox.shrink()
-                        : _onPage(opening(context)),
+                        : RepaintBoundary(child: _onPage(opening(context))),
                   ),
                 ),
             ],
@@ -1711,4 +1914,37 @@ class _BookReaderPageState extends ConsumerState<BookReaderPage> {
       ),
     );
   }
+}
+
+/// Frames of one part of a book's opening, counted for the log.
+class _FrameCount {
+  _FrameCount(this.name);
+
+  final String name;
+  int frames = 0;
+  int late = 0;
+  int worstWait = 0;
+  int worstBuild = 0;
+  int worstRaster = 0;
+  int worstTotal = 0;
+
+  void add(ui.FrameTiming t) {
+    frames++;
+    final total = t.totalSpan.inMilliseconds;
+    // (Late: more than a frame of a 60 Hz screen and a little.)
+    if (total > 20) late++;
+    if (total > worstTotal) worstTotal = total;
+    // (Waiting: from the screen's tick to the frame being begun - the
+    // thread was busy with something else, the page's work for one.)
+    final wait = t.vsyncOverhead.inMilliseconds;
+    if (wait > worstWait) worstWait = wait;
+    final build = t.buildDuration.inMilliseconds;
+    if (build > worstBuild) worstBuild = build;
+    final raster = t.rasterDuration.inMilliseconds;
+    if (raster > worstRaster) worstRaster = raster;
+  }
+
+  String get summary => '$frames frames, $late over 20 ms '
+      '(worst $worstTotal ms; waited $worstWait, build $worstBuild, '
+      'raster $worstRaster)';
 }

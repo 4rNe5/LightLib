@@ -4,6 +4,13 @@
 import sys, os, io, json, zipfile, hashlib, random, colorsys
 from PIL import Image, ImageDraw, ImageFont
 out = sys.argv[1]; n = int(sys.argv[2])
+# A third argument "series": the first books are the volumes of a few
+# series (some short, one longer than a row), grouped as a phone would
+# have grouped them (the account's "series" setting); the rest stand alone.
+with_series = len(sys.argv) > 3 and sys.argv[3] == 'series'
+plan = [('霧の町の探偵', 6), ('風待ちの丘', 4), ('星を拾う少年', 2), ('白い猫と時計塔', 3),
+        ('七番目の扉', 2), ('海辺の古書店', 11), ('夏空と自転車', 2)] if with_series else []
+volumes = [(name, k + 1) for name, count in plan for k in range(count)]
 os.makedirs(f'{out}/files', exist_ok=True)
 random.seed(7)
 serif = '/usr/share/fonts/opentype/noto/NotoSerifCJK-Bold.ttc'
@@ -37,7 +44,10 @@ def cover(title, author, i):
     return buf.getvalue(), sb.getvalue()
 rows = []
 for i in range(n):
-    title = titles[i % len(titles)] + ('' if i < len(titles) else f' {i // len(titles) + 1}')
+    if i < len(volumes):
+        title = f'{volumes[i][0]} {volumes[i][1]}'
+    else:
+        title = titles[i % len(titles)] + ('' if i < len(titles) else f' {i // len(titles) + 1}')
     author = authors[i % len(authors)]
     full, small = cover(title, author, i)
     body = '\n'.join(f'<p>{p}</p>' for p in paras * (6 + i % 5))
@@ -96,5 +106,13 @@ for i, frac in [(0, 0.42), (3, 0.08), (5, 1.0), (8, 0.77)]:
                          'updated_at': f'2026-11-10T1{i}:00:00+00:00'})
 translations = [{'md5': rows[i]['md5'], 'lang': 'ko', 'style': 'shared', 'entry_count': c, 'updated_at': '2026-11-10T09:00:00+00:00', 'entries': {}}
                 for i, c in [(0, 1234), (8, 87)] if i < n]
-json.dump({'books': rows, 'progress': progress, 'translations': translations}, open(f'{out}/library.json', 'w'), ensure_ascii=False, indent=1)
+settings = []
+if volumes:
+    grouped = {}
+    for i, (name, _) in enumerate(volumes[:n]):
+        grouped.setdefault(name, []).append(rows[i]['md5'])
+    settings.append({'name': 'series', 'device': 'android', 'updated_at': '2026-11-10T08:00:00+00:00',
+                     'value': json.dumps({k: sorted(v) for k, v in sorted(grouped.items())}, ensure_ascii=False, separators=(',', ':'))})
+json.dump({'books': rows, 'progress': progress, 'translations': translations, 'settings': settings},
+          open(f'{out}/library.json', 'w'), ensure_ascii=False, indent=1)
 print(n, 'books', sum(r['size_bytes'] for r in rows) // 1024, 'KB')

@@ -288,10 +288,21 @@ class ContinueReadingWidget : AppWidgetProvider() {
 
         if (cover != null) views.setImageViewBitmap(R.id.cover, cover)
         else views.setImageViewResource(R.id.cover, R.drawable.widget_cover_placeholder)
+        // How far the book was read (the app says: a percent, and what to
+        // write beside the bar); nothing for a book not opened yet.
+        val percent = hero.optInt("percent", -1)
+        val progressText = hero.optString("progressText")
+        val showProgress = percent >= 0 && progressText.isNotEmpty()
+        if (showProgress) {
+            views.setProgressBar(R.id.progress, 100, percent.coerceIn(0, 100), false)
+            views.setTextViewText(R.id.progress_text, progressText)
+        }
         if (tall) {
             views.setInt(R.id.title, "setMaxLines", if (height >= 160) 2 else 1)
             views.setViewVisibility(R.id.author,
                 if (author.isEmpty() || height < 200) View.GONE else View.VISIBLE)
+            views.setViewVisibility(R.id.progress_row,
+                if (showProgress && height >= 160) View.VISIBLE else View.GONE)
             return views
         }
 
@@ -304,6 +315,8 @@ class ContinueReadingWidget : AppWidgetProvider() {
         views.setViewVisibility(R.id.author,
             if (author.isEmpty() || height < 80) View.GONE else View.VISIBLE)
         views.setTextViewText(R.id.label, labels?.optString("hero") ?: "")
+        views.setViewVisibility(R.id.progress_row,
+            if (showProgress && height >= 100) View.VISIBLE else View.GONE)
 
         val next = data.optJSONObject("next")
         if (next != null && height >= 150) {

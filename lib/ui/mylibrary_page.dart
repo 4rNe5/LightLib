@@ -19,13 +19,18 @@ import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
+import 'package:openlib/ui/components/app_nav_bar.dart' show AppNavRail;
+import 'package:openlib/ui/components/book_tag_editor.dart';
 import 'package:openlib/ui/components/error_widget.dart';
 import 'package:openlib/ui/components/glossary_sheet.dart';
-import 'package:openlib/ui/components/hide_cover_controls.dart';
 import 'package:openlib/services/reading_recap.dart';
 import 'package:openlib/ui/components/library_recap.dart';
 import 'package:openlib/ui/components/library_tiles.dart';
 import 'package:openlib/ui/components/series_name_dialog.dart';
+import 'package:openlib/ui/adaptive.dart';
+import 'package:openlib/ui/book_navigation.dart';
+import 'package:openlib/ui/components/book_detail.dart';
+import 'package:openlib/ui/components/motion.dart';
 import 'package:openlib/ui/mybook_page.dart';
 import 'package:openlib/ui/study_page.dart';
 
@@ -202,12 +207,20 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  l10n.navMyLibrary,
-                  style: const TextStyle(
-                      fontSize: 30,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5),
+                // (One line, also in the narrow pane beside a book's
+                // page: it gets smaller before it breaks.)
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: AlignmentDirectional.centerStart,
+                  child: Text(
+                    l10n.navMyLibrary,
+                    maxLines: 1,
+                    softWrap: false,
+                    style: const TextStyle(
+                        fontSize: 30,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5),
+                  ),
                 ),
                 Text(
                   l10n.libraryBookCount(count),
@@ -382,15 +395,32 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     );
   }
 
-  void _openBook(LibraryBook book) {
-    Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) {
-      return BookPage(id: book.id);
-    })).then((_) {
-      // Reading moved the position, maybe finished the book, and added
-      // a reading day: refresh statuses, the bento and the recap.
-      if (mounted) ref.invalidate(libraryBooksProvider);
-    });
+  /// The book's page: beside the shelf where there is room for both,
+  /// over it otherwise ([heroTag]: its cover flies there).
+  void _openBook(LibraryBook book, {Object? heroTag}) {
+    if (useTwoPanes(context)) {
+      ref.read(libraryDetailProvider.notifier).state = book.id;
+      return;
+    }
+    pushBookPage(Navigator.of(context), book.id, heroTag: heroTag);
   }
+
+  /// Straight on with [book], its page under the reader: "back" from the
+  /// reader is the book's page, then the shelf.
+  void _continueBook(LibraryBook book) {
+    final tag = LibraryBentoPanel.heroTagOf(book);
+    if (useTwoPanes(context)) {
+      ref.read(libraryDetailProvider.notifier).state = book.id;
+      openBookReader(context, ref, book);
+      return;
+    }
+    pushBookPage(Navigator.of(context), book.id, heroTag: tag);
+    openBookReader(context, ref, book);
+  }
+
+  /// When this page came up: tiles built in its first moments rise into
+  /// place one after the other; those scrolled to later are just there.
+  final DateTime _shownAt = DateTime.now();
 
   void _toggleSelected(LibraryBook book) {
     // (A message still showing would lie over the bar of the chosen
@@ -403,14 +433,24 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
 
   /// A tile of [book]: opened by a tap, chosen by a long press - and,
   /// while books are being chosen, by a tap.
-  Widget _tile(LibraryBook book) => LibraryGridTile(
-        key: ValueKey('libraryBook-${book.id}'),
-        book: book,
-        selected: _selected.isEmpty ? null : _selected.contains(book.id),
-        onTap: () =>
-            _selected.isEmpty ? _openBook(book) : _toggleSelected(book),
-        onLongPress: () => _toggleSelected(book),
-      );
+  Widget _tile(LibraryBook book, {int index = 0}) {
+    final wide = useTwoPanes(context);
+    final tag = wide ? null : 'tileCover:${book.id}';
+    final tile = LibraryGridTile(
+      key: ValueKey('libraryBook-${book.id}'),
+      book: book,
+      heroTag: tag,
+      shown: wide && ref.watch(libraryDetailProvider) == book.id,
+      selected: _selected.isEmpty ? null : _selected.contains(book.id),
+      onTap: () => _selected.isEmpty
+          ? _openBook(book, heroTag: tag)
+          : _toggleSelected(book),
+      onLongPress: () => _toggleSelected(book),
+    );
+    final fresh =
+        DateTime.now().difference(_shownAt) < const Duration(milliseconds: 700);
+    return fresh ? Appear.staggered(index, child: tile) : tile;
+  }
 
   /// Puts the chosen books in a series the reader names (or in one that
   /// exists, by its name).
@@ -602,8 +642,9 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
               padding: const EdgeInsets.only(right: 12),
               itemCount: series.volumes.length,
               separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, i) =>
-                  SizedBox(width: tileWidth, child: _tile(series.volumes[i])),
+              itemBuilder: (context, i) => SizedBox(
+                  width: tileWidth,
+                  child: _tile(series.volumes[i], index: i)),
             ),
           ),
         ],
@@ -611,13 +652,14 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
     );
   }
 
-  /// Cover grid: as many columns as fit (at least three on phones), each
-  /// tile a 2:3 cover plus its caption.
+  /// Cover grid: as many columns as fit (three on a phone, two in the
+  /// narrow pane beside a book's page), each tile a 2:3 cover plus its
+  /// caption.
   Widget _buildGrid(List<LibraryBook> books) {
     return SliverLayoutBuilder(builder: (context, constraints) {
       const spacing = 14.0;
       final width = constraints.crossAxisExtent;
-      final columns = (width / 150).floor().clamp(3, 8);
+      final columns = width < 300 ? 2 : (width / 150).floor().clamp(3, 8);
       final tileWidth = (width - spacing * (columns - 1)) / columns;
       return SliverGrid(
         gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -627,30 +669,110 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
           mainAxisExtent: tileWidth * 1.5 + LibraryGridTile.captionHeight,
         ),
         delegate: SliverChildBuilderDelegate(
-          (context, index) => _tile(books[index]),
+          (context, index) => _tile(books[index], index: index),
           childCount: books.length,
         ),
       );
     });
   }
 
-  void _openTagEditor(LibraryBook item) {
-    showModalBottomSheet<void>(
-      context: context,
-      isScrollControlled: true,
-      useSafeArea: true,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(28))),
-      backgroundColor:
-          modernSurfaceTheme(Theme.of(context)).colorScheme.surfaceContainerLow,
-      builder: (BuildContext sheetContext) {
-        return Theme(
-          data: modernSurfaceTheme(Theme.of(sheetContext)),
-          child: _TagEditorSheet(
-              bookId: item.id, title: item.title, genre: item.genre),
-        );
-      },
+  void _openTagEditor(LibraryBook item) => showBookTagEditor(context,
+      bookId: item.id, title: item.title, genre: item.genre);
+
+  bool? _wasWide;
+
+  /// The window changed between one pane and two (a phone unfolded or
+  /// folded): the book that was on screen stays on screen. Folded with a
+  /// book in the pane, its page comes up over the shelf (unfolding is
+  /// the page's own part: it steps back into the pane).
+  void _followWidth(bool wide, String? shown) {
+    final was = _wasWide;
+    _wasWide = wide;
+    if (was != true || wide || shown == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || useTwoPanes(context)) return;
+      // (Only with the shelf itself on screen: under a reader, the
+      // reader stays what "back" leaves.)
+      if (ModalRoute.of(context)?.isCurrent != true) return;
+      Navigator.of(context).push(PageRouteBuilder<void>(
+        settings: RouteSettings(name: bookRouteName(shown)),
+        transitionDuration: Duration.zero,
+        pageBuilder: (_, __, ___) => BookPage(id: shown),
+      ));
+    });
+  }
+
+  /// Beside the shelf on a wide screen: the page of the book tapped
+  /// there, or - with none - what is being read and the reading record.
+  Widget _buildPane(
+      BuildContext context, List<LibraryBook> data, String? shown) {
+    final scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
+    final reduce = AppMotion.reduced(context);
+    final Widget content = shown != null
+        ? BookDetail(
+            key: ValueKey('paneBook-$shown'),
+            bookId: shown,
+            pane: true,
+            leading: IconButton(
+              key: const ValueKey('libraryPaneClose'),
+              tooltip: l10n.libraryBackToOverview,
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () =>
+                  ref.read(libraryDetailProvider.notifier).state = null,
+            ),
+            onGone: () =>
+                ref.read(libraryDetailProvider.notifier).state = null,
+          )
+        : SingleChildScrollView(
+            key: const ValueKey('libraryOverview'),
+            padding: const EdgeInsets.fromLTRB(14, 6, 14, 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _sectionTitle(
+                    context,
+                    continueReading(data).isEmpty
+                        ? l10n.libraryRecentlyAdded
+                        : l10n.libraryNowReading),
+                LibraryNowReading(
+                  key: const ValueKey('libraryBento'),
+                  books: data,
+                  onOpen: _openBook,
+                  onLongPress: _openTagEditor,
+                  onContinue:
+                      continueReading(data).isEmpty ? null : _continueBook,
+                ),
+                const LibraryRecapSection(narrow: true),
+              ],
+            ),
+          );
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 12, 0, 14),
+      child: Material(
+        key: const ValueKey('libraryPane'),
+        color: scheme.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(28),
+        clipBehavior: Clip.antiAlias,
+        child: AnimatedSwitcher(
+          duration: reduce ? Duration.zero : AppMotion.standard,
+          switchInCurve: AppMotion.enter,
+          switchOutCurve: AppMotion.exit,
+          layoutBuilder: (current, previous) => Stack(
+            fit: StackFit.expand,
+            children: [...previous, if (current != null) current],
+          ),
+          transitionBuilder: (child, animation) => FadeTransition(
+            opacity: animation,
+            child: SlideTransition(
+              position: Tween(begin: const Offset(0.04, 0), end: Offset.zero)
+                  .animate(animation),
+              child: child,
+            ),
+          ),
+          child: content,
+        ),
+      ),
     );
   }
 
@@ -685,109 +807,136 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
         _selected.removeWhere((id) => !data.any((b) => b.id == id));
         if (data.isNotEmpty) {
           final l10n = AppLocalizations.of(context);
-          return PopScope(
-            // Back leaves the choosing first.
-            canPop: _selected.isEmpty,
-            onPopInvokedWithResult: (didPop, _) {
-              if (!didPop) setState(_selected.clear);
-            },
-            child: Stack(children: [
-              RefreshIndicator(
-                onRefresh: () => _refreshLibrary(),
-                child: CustomScrollView(
-                  controller: _scrollController,
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  slivers: <Widget>[
+          final wide = useTwoPanes(context);
+          final shownId = ref.watch(libraryDetailProvider);
+          final shown = shownId != null && data.any((b) => b.id == shownId)
+              ? shownId
+              : null;
+          _followWidth(wide, shown);
+          final shelf = Stack(children: [
+            RefreshIndicator(
+              onRefresh: () => _refreshLibrary(),
+              child: CustomScrollView(
+                controller: _scrollController,
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: <Widget>[
+                  SliverPadding(
+                    padding: EdgeInsets.fromLTRB(16, 12, wide ? 6 : 16, 0),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        const ActiveDownloadsWidget(),
+                        _buildHeader(context, data.length),
+                        _buildSearchField(context),
+                        const SizedBox(height: 8),
+                        if (data.length > 1 || anyFilterActive)
+                          _buildFilterChips(context, data),
+                        // What is being read and the reading record: at
+                        // the top of the shelf on a phone, in the pane
+                        // beside it on a wide screen.
+                        if (!anyFilterActive && !wide) ...[
+                          const SizedBox(height: 10),
+                          LibraryBentoPanel(
+                            key: const ValueKey('libraryBento'),
+                            books: data,
+                            heroTags: true,
+                            onOpen: (book) => _openBook(book,
+                                heroTag: LibraryBentoPanel.heroTagOf(book)),
+                            onLongPress: _openTagEditor,
+                            onContinue: continueReading(data).isEmpty
+                                ? null
+                                : _continueBook,
+                          ),
+                          const LibraryRecapSection(),
+                        ],
+                        if (series.isNotEmpty) ...[
+                          _sectionTitle(context, l10n.seriesSection,
+                              trailing: '${series.length}'),
+                          for (final s in series) _buildSeriesRow(context, s),
+                        ],
+                        if (loose.isNotEmpty || series.isEmpty)
+                          _sectionTitle(
+                            context,
+                            l10n.libraryAllBooks,
+                            trailing: '${loose.length}',
+                          ),
+                      ]),
+                    ),
+                  ),
+                  if (organized.isEmpty && anyFilterActive)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(32),
+                        child: Center(
+                          child: Text(
+                            l10n.libraryNoMatches,
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 13),
+                          ),
+                        ),
+                      ),
+                    )
+                  else
                     SliverPadding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      sliver: SliverList(
-                        delegate: SliverChildListDelegate([
-                          const ActiveDownloadsWidget(),
-                          _buildHeader(context, data.length),
-                          _buildSearchField(context),
-                          const SizedBox(height: 8),
-                          if (data.length > 1 || anyFilterActive)
-                            _buildFilterChips(context, data),
-                          if (!anyFilterActive) ...[
-                            const SizedBox(height: 10),
-                            LibraryBentoPanel(
-                              key: const ValueKey('libraryBento'),
-                              books: data,
-                              onOpen: _openBook,
-                              onLongPress: _openTagEditor,
-                            ),
-                            const LibraryRecapSection(),
-                          ],
-                          if (series.isNotEmpty) ...[
-                            _sectionTitle(context, l10n.seriesSection,
-                                trailing: '${series.length}'),
-                            for (final s in series) _buildSeriesRow(context, s),
-                          ],
-                          if (loose.isNotEmpty || series.isEmpty)
-                            _sectionTitle(
-                              context,
-                              l10n.libraryAllBooks,
-                              trailing: '${loose.length}',
-                            ),
-                        ]),
+                      // (Room for the bar of the chosen books.)
+                      padding: EdgeInsets.fromLTRB(16, 0, wide ? 6 : 16,
+                          _selected.isEmpty ? 24 : 96),
+                      sliver: _buildGrid(loose),
+                    ),
+                  // Add scroll-to-refresh hint for desktop
+                  if (PlatformUtils.isDesktop)
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Center(
+                          child: _isRefreshing
+                              ? SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color:
+                                        Theme.of(context).colorScheme.secondary,
+                                  ),
+                                )
+                              : Text(
+                                  "Scroll down to sync library",
+                                  style: TextStyle(
+                                    color: Colors.grey[500],
+                                    fontSize: 12,
+                                  ),
+                                ),
+                        ),
                       ),
                     ),
-                    if (organized.isEmpty && anyFilterActive)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32),
-                          child: Center(
-                            child: Text(
-                              l10n.libraryNoMatches,
-                              style: const TextStyle(
-                                  color: Colors.grey, fontSize: 13),
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      SliverPadding(
-                        // (Room for the bar of the chosen books.)
-                        padding: EdgeInsets.fromLTRB(
-                            16, 0, 16, _selected.isEmpty ? 24 : 96),
-                        sliver: _buildGrid(loose),
-                      ),
-                    // Add scroll-to-refresh hint for desktop
-                    if (PlatformUtils.isDesktop)
-                      SliverToBoxAdapter(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Center(
-                            child: _isRefreshing
-                                ? SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .secondary,
-                                    ),
-                                  )
-                                : Text(
-                                    "Scroll down to sync library",
-                                    style: TextStyle(
-                                      color: Colors.grey[500],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
+                ],
               ),
-              if (_selected.isNotEmpty)
-                Align(
-                  alignment: Alignment.bottomCenter,
-                  child: _buildSelectionBar(context, data),
-                ),
-            ]),
+            ),
+            if (_selected.isNotEmpty)
+              Align(
+                alignment: Alignment.bottomCenter,
+                child: _buildSelectionBar(context, data),
+              ),
+          ]);
+          return PopScope(
+            // Back leaves the choosing first, then the book in the pane.
+            canPop: _selected.isEmpty && !(wide && shown != null),
+            onPopInvokedWithResult: (didPop, _) {
+              if (didPop) return;
+              if (_selected.isNotEmpty) {
+                setState(_selected.clear);
+              } else {
+                ref.read(libraryDetailProvider.notifier).state = null;
+              }
+            },
+            child: wide
+                ? TwoPane(
+                    // (The tabs' rail stands between this page and the
+                    // screen's right edge.)
+                    trailing: AppNavRail.width,
+                    start: shelf,
+                    end: _buildPane(context, data, shown),
+                  )
+                : shelf,
           );
         } else {
           return RefreshIndicator(
@@ -887,191 +1036,6 @@ class _MyLibraryPageState extends ConsumerState<MyLibraryPage> {
             color: Theme.of(context).colorScheme.secondary,
           ),
         ));
-      },
-    );
-  }
-}
-
-/// Bottom sheet to manage one book's tags: toggle existing tags, create
-/// new ones inline, and see the book's current set at a glance.
-class _TagEditorSheet extends ConsumerStatefulWidget {
-  const _TagEditorSheet(
-      {required this.bookId, required this.title, this.genre});
-
-  final String bookId;
-  final String title;
-  final BookGenre? genre;
-
-  @override
-  ConsumerState<_TagEditorSheet> createState() => _TagEditorSheetState();
-}
-
-class _TagEditorSheetState extends ConsumerState<_TagEditorSheet> {
-  late Future<Set<String>> _bookTags;
-  late BookGenre? _genre = widget.genre;
-
-  @override
-  void initState() {
-    super.initState();
-    _bookTags = dataBase.getTags(widget.bookId);
-  }
-
-  Future<void> _setGenre(BookGenre? genre) async {
-    setState(() => _genre = genre);
-    await dataBase.setGenre(widget.bookId, genre?.key);
-    // The filter would hide the book whose genre just changed.
-    final filter = ref.read(libraryGenreFilterProvider);
-    if (filter != null && filter != genre) {
-      final books = await dataBase.getGenresForAll();
-      if (!books.values.contains(filter.key)) {
-        ref.read(libraryGenreFilterProvider.notifier).state = null;
-      }
-    }
-    ref.invalidate(libraryBooksProvider);
-  }
-
-  void _reload() {
-    setState(() {
-      _bookTags = dataBase.getTags(widget.bookId);
-    });
-    ref.invalidate(myLibraryProvider);
-    ref.invalidate(libraryBooksProvider);
-    ref.invalidate(libraryTagsProvider);
-  }
-
-  Future<void> _addTag(String rawTag) async {
-    final tag = rawTag.trim();
-    if (tag.isEmpty) return;
-    await dataBase.addTag(widget.bookId, tag);
-    _reload();
-  }
-
-  Future<void> _removeTag(String tag) async {
-    await dataBase.removeTag(widget.bookId, tag);
-    // Drop the tag from active filters if it just vanished everywhere.
-    final remaining = await dataBase.getAllTags();
-    if (!remaining.contains(tag)) {
-      final filter = Set<String>.of(ref.read(libraryTagFilterProvider));
-      filter.remove(tag);
-      ref.read(libraryTagFilterProvider.notifier).state = filter;
-    }
-    _reload();
-  }
-
-  Future<void> _createTag() async {
-    final controller = TextEditingController();
-    final dialogL10n = AppLocalizations.of(context);
-    final name = await showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(dialogL10n.newCollection),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          decoration: InputDecoration(hintText: dialogL10n.collectionNameHint),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(dialogL10n.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, controller.text),
-            child: Text(dialogL10n.add),
-          ),
-        ],
-      ),
-    );
-    if (name != null && name.trim().isNotEmpty) {
-      await _addTag(name);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final allTags =
-        ref.watch(libraryTagsProvider).valueOrNull ?? const <String>{};
-    return FutureBuilder<Set<String>>(
-      future: _bookTags,
-      builder: (context, snapshot) {
-        final bookTags = snapshot.data ?? const <String>{};
-        final l10n = AppLocalizations.of(context);
-        final labelStyle = Theme.of(context).textTheme.labelLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600);
-        return SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.title,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                      fontSize: 18, fontWeight: FontWeight.w700),
-                ),
-                const SizedBox(height: 8),
-                HideCoverSwitch(bookId: widget.bookId),
-                const SizedBox(height: 8),
-                Text(l10n.bookGenre, style: labelStyle),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    ChoiceChip(
-                      key: const ValueKey('genreChoice-none'),
-                      label: Text(l10n.genreNone,
-                          style: const TextStyle(fontSize: 12)),
-                      selected: _genre == null,
-                      onSelected: (_) => _setGenre(null),
-                    ),
-                    for (final genre in BookGenre.values)
-                      ChoiceChip(
-                        key: ValueKey('genreChoice-${genre.key}'),
-                        avatar: Icon(genreIcon(genre), size: 15),
-                        label: Text(genreLabel(l10n, genre),
-                            style: const TextStyle(fontSize: 12)),
-                        selected: _genre == genre,
-                        showCheckmark: false,
-                        onSelected: (_) => _setGenre(genre),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 20),
-                Text(l10n.bookCollections, style: labelStyle),
-                const SizedBox(height: 4),
-                Text(
-                  l10n.manageCollectionsHint,
-                  style: const TextStyle(fontSize: 11, color: Colors.grey),
-                ),
-                const SizedBox(height: 10),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
-                  children: [
-                    for (final tag in allTags)
-                      FilterChip(
-                        label: Text(tag, style: const TextStyle(fontSize: 12)),
-                        selected: bookTags.contains(tag),
-                        onSelected: (selected) =>
-                            selected ? _addTag(tag) : _removeTag(tag),
-                      ),
-                    ActionChip(
-                      label: Text(AppLocalizations.of(context).newCollection,
-                          style: const TextStyle(fontSize: 12)),
-                      avatar: const Icon(Icons.add, size: 15),
-                      onPressed: _createTag,
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
       },
     );
   }

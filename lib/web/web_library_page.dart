@@ -20,6 +20,7 @@ import 'package:file_picker/file_picker.dart';
 
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
+import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/library_organization.dart'
     show suggestedSeriesName;
 import 'package:openlib/services/local_book_import.dart';
@@ -34,6 +35,7 @@ import 'package:openlib/web/web_book_dialog.dart';
 import 'package:openlib/web/web_book_opening.dart';
 import 'package:openlib/web/web_cover.dart';
 import 'package:openlib/web/web_library.dart';
+import 'package:openlib/web/web_series_bento.dart';
 import 'package:openlib/web/web_settings_page.dart';
 
 /// From this width the library is laid out for a desktop window.
@@ -65,6 +67,10 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   /// The books chosen (by [WebBook.key]) to put in a series or take out
   /// of one. While any is, a tap on a tile chooses instead of opening.
   final Set<String> _selected = {};
+
+  /// The series whose card shows all its volumes (a long one shows a
+  /// line of them until opened).
+  final Set<String> _openSeries = {};
   StreamSubscription<SyncReport>? _finished;
   VoidCallback? _stopDrops;
 
@@ -72,6 +78,12 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   void initState() {
     super.initState();
     _sync.onLocalChanges = _reload;
+    // A reader was left: where its book is shows at once. (The page that
+    // opens a book hands over to the reader and is done by then, so
+    // waiting for that page says when a book was opened, not when it
+    // was closed - and the reader's last position is written after it
+    // is gone.)
+    MyLibraryDb.readingChanged.addListener(_reload);
     _finished = _sync.finished.listen(_onSynced);
     _stopDrops = Browser.onFilesDropped((files) => unawaited(_addFiles([
           for (final f in files)
@@ -93,6 +105,7 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_onKey);
     if (_sync.onLocalChanges == _reload) _sync.onLocalChanges = null;
+    MyLibraryDb.readingChanged.removeListener(_reload);
     _finished?.cancel();
     _stopDrops?.call();
     if (widget.library == null) _library.dispose();
@@ -844,30 +857,32 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
         if (series.isNotEmpty)
           SliverPadding(
             padding: EdgeInsets.fromLTRB(side, 14, side, 0),
-            sliver: SliverList.list(children: [
-              for (final s in series)
-                _SeriesRow(
-                  key: ValueKey('webSeries:${s.name}'),
+            sliver: SliverToBoxAdapter(
+              child: WebSeriesBento(
+                series: series,
+                wide: wide,
+                expanded: _openSeries,
+                onExpand: (name) => setState(() => _openSeries.contains(name)
+                    ? _openSeries.remove(name)
+                    : _openSeries.add(name)),
+                header: (s) => _SeriesHeader(
                   name: s.name,
                   count: l10n.seriesVolumes(s.volumes.length),
-                  tileWidth: wide ? 132 : 100,
                   onRename: () => _rename(s.name, s.volumes),
                   onDissolve: () => _ungroup(s.volumes),
                   onGlossary: () => _seriesGlossary(s.name, s.volumes),
-                  children: [
-                    for (final b in s.volumes)
-                      _BookTile(
-                        key: ValueKey('webBook:${b.key}'),
-                        book: b,
-                        selected: _selected.isEmpty
-                            ? null
-                            : _selected.contains(b.key),
-                        onOpen: () => _tapped(b),
-                        onMenu: (at) => _menu(b, at),
-                      ),
-                  ],
                 ),
-            ]),
+                tile: (b, caption) => _BookTile(
+                  key: ValueKey('webBook:${b.key}'),
+                  book: b,
+                  caption: caption,
+                  selected:
+                      _selected.isEmpty ? null : _selected.contains(b.key),
+                  onOpen: () => _tapped(b),
+                  onMenu: (at) => _menu(b, at),
+                ),
+              ),
+            ),
           ),
         if (shown.isEmpty && series.isNotEmpty)
           const SliverToBoxAdapter(child: SizedBox(height: 48))
@@ -917,14 +932,12 @@ class _WebLibraryPageState extends State<WebLibraryPage> {
   }
 }
 
-/// A series: its name, and its volumes in one row.
-class _SeriesRow extends StatelessWidget {
-  const _SeriesRow({
-    super.key,
+/// A series' card's name line: its name, how many volumes, and its menu
+/// (the glossary its volumes share, another name, its books out of it).
+class _SeriesHeader extends StatelessWidget {
+  const _SeriesHeader({
     required this.name,
     required this.count,
-    required this.tileWidth,
-    required this.children,
     this.onRename,
     this.onDissolve,
     this.onGlossary,
@@ -932,86 +945,59 @@ class _SeriesRow extends StatelessWidget {
 
   final String name;
   final String count;
-  final double tileWidth;
-  final List<Widget> children;
-
-  /// Another name for the series; its books out of it.
   final VoidCallback? onRename;
   final VoidCallback? onDissolve;
-
-  /// The glossary its volumes share.
   final VoidCallback? onGlossary;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      padding: const EdgeInsets.fromLTRB(14, 12, 0, 4),
-      decoration: BoxDecoration(
-        color: scheme.onSurface.withAlpha(12),
-        borderRadius: BorderRadius.circular(18),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 14, bottom: 10),
-            child: Row(
-              children: [
-                Icon(Icons.collections_bookmark_outlined,
-                    size: 16, color: scheme.primary),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 15, fontWeight: FontWeight.w700)),
-                ),
-                Text(count,
-                    style: TextStyle(
-                        fontSize: 12, color: scheme.onSurface.withAlpha(150))),
-                if (onRename != null || onDissolve != null)
-                  PopupMenuButton<int>(
-                    key: ValueKey('webSeriesMenu:$name'),
-                    tooltip: AppLocalizations.of(context).webMore,
-                    padding: EdgeInsets.zero,
-                    iconSize: 18,
-                    icon: const Icon(Icons.more_horiz),
-                    onSelected: (v) =>
-                        [onRename, onDissolve, onGlossary][v]?.call(),
-                    itemBuilder: (context) {
-                      final l10n = AppLocalizations.of(context);
-                      return [
-                        if (onGlossary != null)
-                          PopupMenuItem(
-                              value: 2, child: Text(l10n.glossaryTitle)),
-                        if (onRename != null)
-                          PopupMenuItem(
-                              value: 0, child: Text(l10n.seriesRename)),
-                        if (onDissolve != null)
-                          PopupMenuItem(
-                              value: 1, child: Text(l10n.seriesDissolve)),
-                      ];
-                    },
-                  ),
-              ],
-            ),
-          ),
-          SizedBox(
-            // The cover, then two lines of title and one of author.
-            height: tileWidth / 0.7 + 68,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.only(right: 14),
-              itemCount: children.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 14),
-              itemBuilder: (context, i) =>
-                  SizedBox(width: tileWidth, child: children[i]),
-            ),
-          ),
+    // (A card of two covers on a phone is about 150 wide: the name and
+    // the menu; how many volumes, the covers say.)
+    return LayoutBuilder(
+      builder: (context, constraints) => Row(
+      children: [
+        Icon(Icons.collections_bookmark_outlined,
+            size: 16, color: scheme.secondary),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(name,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style:
+                  const TextStyle(fontSize: 14.5, fontWeight: FontWeight.w700)),
+        ),
+        if (constraints.maxWidth >= 200) ...[
+          const SizedBox(width: 6),
+          Text(count,
+              style: TextStyle(
+                  fontSize: 12, color: scheme.onSurface.withAlpha(150))),
         ],
+        if (onRename != null || onDissolve != null)
+          SizedBox(
+            width: 30,
+            child: PopupMenuButton<int>(
+              key: ValueKey('webSeriesMenu:$name'),
+              tooltip: AppLocalizations.of(context).webMore,
+              padding: EdgeInsets.zero,
+              iconSize: 18,
+              icon: Icon(Icons.more_horiz,
+                  color: scheme.onSurface.withAlpha(190)),
+              onSelected: (v) => [onRename, onDissolve, onGlossary][v]?.call(),
+              itemBuilder: (context) {
+                final l10n = AppLocalizations.of(context);
+                return [
+                  if (onGlossary != null)
+                    PopupMenuItem(value: 2, child: Text(l10n.glossaryTitle)),
+                  if (onRename != null)
+                    PopupMenuItem(value: 0, child: Text(l10n.seriesRename)),
+                  if (onDissolve != null)
+                    PopupMenuItem(value: 1, child: Text(l10n.seriesDissolve)),
+                ];
+              },
+            ),
+          ),
+      ],
       ),
     );
   }
@@ -1378,11 +1364,16 @@ class _BookTile extends StatefulWidget {
     required this.onOpen,
     required this.onMenu,
     this.selected,
+    this.caption,
   });
 
   final WebBook book;
   final VoidCallback onOpen;
   final void Function(Offset at) onMenu;
+
+  /// In a series' card: one line under the cover (the volume), in place
+  /// of the title and the author.
+  final String? caption;
 
   /// Whether it is among the books being chosen; null while none is.
   final bool? selected;
@@ -1516,13 +1507,22 @@ class _BookTileState extends State<_BookTile> {
                 ),
               ),
             ),
-            const SizedBox(height: 10),
-            Text(book.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                    fontSize: 13.5, height: 1.3, fontWeight: FontWeight.w700)),
-            if (book.author.isNotEmpty)
+            if (widget.caption case final caption?) ...[
+              const SizedBox(height: 7),
+              Text(caption,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 12.5, height: 1.2, fontWeight: FontWeight.w700)),
+            ] else ...[
+              const SizedBox(height: 10),
+              Text(book.title,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                      fontSize: 13.5, height: 1.3, fontWeight: FontWeight.w700)),
+            ],
+            if (widget.caption == null && book.author.isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 2),
                 child: Text(book.author,

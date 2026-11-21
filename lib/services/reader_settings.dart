@@ -42,6 +42,12 @@ class ReaderPalette {
     required this.dark,
     this.forceBold = false,
   });
+
+  /// What stands out on this page - a link, a switch that is on, a word
+  /// to tap: pink, light on a dark page and deep on a light one. (The
+  /// app's own accent is the app's theme's, and the page's theme is the
+  /// reader's: in white on a paper page it was not seen.)
+  Color get accent => dark ? const Color(0xFFFF9EBD) : const Color(0xFFC2185B);
 }
 
 ReaderPalette paletteFor(ReaderThemeId theme, {required bool appDark}) {
@@ -131,6 +137,11 @@ class ReaderSettingsData {
   final ReaderLayout layout;
   final ReaderWriting writing;
 
+  /// Two pages side by side where the screen is wide enough for both
+  /// (an unfolded phone, a tablet), when pages are turned and the text
+  /// runs across.
+  final bool twoPages;
+
   const ReaderSettingsData({
     this.fontSize = 17,
     this.lineHeight = 1.7,
@@ -141,6 +152,7 @@ class ReaderSettingsData {
     this.theme = ReaderThemeId.original,
     this.layout = ReaderLayout.scroll,
     this.writing = ReaderWriting.auto,
+    this.twoPages = true,
   });
 
   ReaderSettingsData copyWith({
@@ -153,6 +165,7 @@ class ReaderSettingsData {
     ReaderThemeId? theme,
     ReaderLayout? layout,
     ReaderWriting? writing,
+    bool? twoPages,
   }) {
     return ReaderSettingsData(
       fontSize: (fontSize ?? this.fontSize).clamp(minFontSize, maxFontSize),
@@ -166,12 +179,13 @@ class ReaderSettingsData {
       theme: theme ?? this.theme,
       layout: layout ?? this.layout,
       writing: writing ?? this.writing,
+      twoPages: twoPages ?? this.twoPages,
     );
   }
 
   /// Everything except the layout and theme back to defaults.
-  ReaderSettingsData resetTypography() =>
-      ReaderSettingsData(theme: theme, layout: layout, writing: writing);
+  ReaderSettingsData resetTypography() => ReaderSettingsData(
+      theme: theme, layout: layout, writing: writing, twoPages: twoPages);
 
   Map<String, Object> toJson() => {
         'fontSize': fontSize,
@@ -183,6 +197,7 @@ class ReaderSettingsData {
         'theme': theme.name,
         'layout': layout.name,
         'writing': writing.name,
+        'twoPages': twoPages,
       };
 
   static ReaderSettingsData fromJson(Map<String, dynamic> json) {
@@ -212,6 +227,7 @@ class ReaderSettingsData {
       theme: ReaderThemeId.fromName(str('theme')),
       layout: ReaderLayout.fromName(str('layout')),
       writing: ReaderWriting.fromName(str('writing')),
+      twoPages: b('twoPages'),
     );
   }
 

@@ -20,11 +20,16 @@ translation, library with widgets and series. Owner: 4rNe5. Reports go to the ow
 ```bash
 export ANDROID_HOME=/opt/android-sdk          # cloud sessions
 /opt/flutter/bin/flutter analyze --no-pub     # 13 known issues, all in third_party/epubx
-/opt/flutter/bin/flutter test --no-pub        # ~530 tests, ~2.5 min
+/opt/flutter/bin/flutter test --no-pub        # ~890 tests, ~3 min
 /opt/flutter/bin/flutter gen-l10n             # after editing lib/l10n/*.arb
 /opt/flutter/bin/flutter build apk --release --split-per-abi --target-platform android-arm64   # ~7 min
 /opt/flutter/bin/flutter build web --release -t lib/main_web.dart   # the web app, ~2 min
+flutter test --no-pub tool/ui_shots/shots_test.dart   # pictures of the screens, phone and unfolded (its README)
 ```
+A cloud session whose container was replaced has no Flutter and no SDK:
+the release `flutter_linux_<version>-stable.tar.xz` (the workflow's
+`FLUTTER_VERSION`) into `/opt`, and the SDK's command-line tools with
+`platforms;android-36` and `build-tools;36.0.0` into `/opt/android-sdk`.
 Without `android/key.properties` a local release build is signed with the
 debug key (only CI signs releases).
 
@@ -41,6 +46,9 @@ debug key (only CI signs releases).
   the release before it and the next release over the beta. The app offers
   betas only with Settings → Include Beta Updates. To ship a beta: push
   the work to `beta`; when it holds up, merge into `main`.
+- A pull request into `main` is merged with a merge commit (or rebased),
+  never squashed: a squash writes every commit's message into one, its
+  `[skip ci]` with them, and the release, Pages and Cloudflare all skip.
 - The app reads its build from the versionCode (`AppBuild.buildOf`: 2048 →
   48); builds before 52 read 2048 and never saw an update.
 - Signing: package `dev.arne5.lightlib`, certificate `CN=LightLib, O=4rNe5`;
@@ -52,6 +60,9 @@ debug key (only CI signs releases).
 - Web app = `lib/main_web.dart` (library, the same reader, Gemini or
   Claude):
   Vercel project `lightlib` builds it on every push that touches the app
+  since its last deployment on that branch (`tool/vercel_ignore.sh`; it
+  once looked at the last commit only, and a branch moved forward by many
+  commits whose last one touched notes alone was never built)
   (`vercel.json`, `tool/vercel_build.sh`; CSP in `vercel.json` - test a
   new outside host against it; no inline script, so `web/splash.js`). Not
   built: search/downloads, the device model, widgets, updates.
@@ -148,11 +159,18 @@ debug key (only CI signs releases).
 | Area | Where |
 |---|---|
 | App start, tabs, home widgets update | `lib/main.dart` |
+| One pane or two (width classes, the fold of a foldable) | `lib/ui/adaptive.dart` (`useTwoPanes` from 600 dp, `verticalFoldOf`, `TwoPane`: the end pane starts just past the fold, `trailing` = the tabs' rail beside it) |
+| The tabs' bar / rail | `lib/ui/components/app_nav_bar.dart` (a phone: the pill at the foot; from 600 dp: the same pill on end in the lower right corner, `AppNavRail.width` wide) |
+| A library book: opening it, its page, the order of screens | `lib/ui/book_navigation.dart` (`openBookReader`, `pushBookPage`, `showBookFromOutside`, `libraryDetailProvider`), `lib/ui/components/book_detail.dart` (`BookDetail`: a page on a phone - `mybook_page.dart` - and the pane beside the shelf on a wide screen), `lib/ui/components/book_opening.dart` (the picture while a book opens) |
+| How far a book was read, finished, read last | `MyLibraryDb.readingOf`, `setCompleted`, `readingChanged`; `LibraryBook.fraction/readAt/percent`, `continueReading` (`library_organization.dart`); the reader's `_saveNow(leaving:, finished:)` |
+| Motion | `lib/ui/components/motion.dart` (`AppMotion`, `Pressable`, `Appear`, `ProgressBar`, `CountUp`, `FadeThroughRoute`; `EvenFrames`: what is to move right after heavy work waits for frames to come on time) - everything stands still with the system's "remove animations" |
+| The pane beside the shelf (wide screens) | `LibraryNowReading` in `library_tiles.dart` (the book read last as a poster, the others and two numbers on equal columns), `LibraryRecapBento(narrow: true)`; a phone's shelf keeps `LibraryBentoPanel` |
+| The reader's settings | `lib/services/reader_settings.dart` (`ReaderSettings.instance`, one store), `reader_settings_sheet.dart`: the reader's "Aa" sheet, and the same widget `embedded` in Settings under reading ("Reader defaults", `_ReaderDefaultsGroup`) |
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
 | Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
 | Relay to the sync project (Cloudflare) | `cloudflare/` (`relay.js`, `worker.js` + `wrangler.jsonc`, `functions/sb/[[path]].js` for Pages, `test/`), `tool/cloudflare_build.sh`, `tool/cloudflare_headers.py` |
-| Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
+| Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_series_bento` the series packed into rows, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
 | Sync | `lib/services/sync/` (`sync_engine`, `supabase_remote`, `library_sync_local`, `sync_service`); settings `lib/ui/components/sync_section.dart` |
 | Files the app keeps (web: IndexedDB) | `lib/services/storage/` (`AppFiles`) |
 | Older reader | `lib/ui/epub_viewer.dart` |
@@ -171,7 +189,8 @@ debug key (only CI signs releases).
 | A glossary outside the reader | `lib/ui/components/glossary_sheet.dart` (`showGlossarySheet`: a book's, or with `series` what its volumes have between them; a word set right asks which paragraphs to translate again - none, this book, the whole series): from a book's page (`mybook_page.dart`), a series' row in the library (`mylibrary_page.dart`), and on the web a book's card and a series' row menu |
 | Series the reader makes | table `bookseries` (`MyLibraryDb.setSeries`), `library_organization.dart` (`librarySeries`: volumes by the number in their titles; `suggestedSeriesName`), `lib/ui/mylibrary_page.dart` (a long press chooses books, the bar over the foot of the list, a row per series; its books leave the grid unless something is searched), `series_glossary.dart` (`sameSeries`: titles and the reader's grouping, which has the last word; `passOnToSeries` an edit to the other volumes, `shareWithinSeries` on grouping; pref `seriesGlossaryShare`, on unless turned off); between devices `lib/services/sync/series_sync.dart` and `LibrarySyncLocal._reconcileSeries` |
 | Translated EPUB export | `translated_epub.dart` |
-| Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*` |
+| Home-screen widgets | `android/app/src/main/kotlin/dev/arne5/lightlib/HomeWidgets.kt`, `res/layout/widget_*`; what they show is written by `lib/services/home_widgets.dart` (`widgetSnapshot`: the book read last, its percent) when the library's books change |
+| Pictures of the screens without a device | `tool/ui_shots/` (its README) |
 | Hidden covers | `lib/services/hidden_covers.dart` |
 | Z-Library account (its download limit) | `lib/services/zlibrary_account.dart` (session = two cookies, in `zlibrary_session` in the private folder; not in backups or sync), `ZlibraryProvider.signIn` / `accountLimits` (`/eapi/user/login`, `/eapi/user/profile`) and `_AsAccount` (book pages, `/dl/`, `/eapi` only) in `search_manager.dart`; UI `components/zlibrary_account_sheet.dart`, browser sign-in `zlibrary_login_page.dart` |
 | Search | `lib/ui/search_page.dart` (field, suggestions: BOOK☆WALKER `suggest`, Google `hl=ja`, history; Korean → Japanese title via `original_title.dart`), filters in `components/search_filter_sheet.dart` (default Japanese + EPUB); results `results_page.dart` grouped by `search_results.dart` (series/volume from titles, best file per volume — only what the libraries returned); catalogs in `search_manager.dart` |
@@ -460,6 +479,102 @@ debug key (only CI signs releases).
   `debugSet`/`debugShow` hooks, and do not `await` database writes inside
   `testWidgets`.
 
+- "Back" from a reader landed in another book's reader: a home-screen
+  widget's tap pushed its book's page on whatever was on screen, so the
+  stack became shelf → book A → reader A → book B → reader B. Screens
+  round a book have one order (`book_navigation.dart`): the tabs, the
+  book's page, the reader. A book asked for from outside closes what is
+  open first (`showBookFromOutside`: routes are named `book:<id>`,
+  `reader:<id>`; the very book already on screen is left alone).
+- The web's library did not show where a book was left: it reloaded
+  when the future of the page it pushed completed - and that page (the
+  one that fetches the book) hands over to the reader with
+  `pushReplacement`, which completes the future as the reader *opens*.
+  A replaced route's future says nothing about the route that took its
+  place. Whoever shows reading state listens to
+  `MyLibraryDb.readingChanged`, which the reader counts up after its last
+  position is written (a reader's `dispose` saves without waiting; a
+  reload at the pop reads the position of a page ago).
+- No book was ever "finished" in the app: `setCompleted` had no caller,
+  a saved position reset the mark (`INSERT OR REPLACE` of the row) and
+  the mark wiped the position. The reader marks a book at its last page
+  (`atEnd` of the last section - a short book's last page starts well
+  before 99.5% of it - or 99.5%, the web's rule), a book's page has the
+  button both ways, the mark and the position each keep the other. A
+  book read to its end on another device counts by its share alone.
+- "Continue reading" was the newest book among those being read, not the
+  one read last: `continueReading` orders by `pos:<file>` (when the
+  position was saved, here or on the device it came from).
+- Two panes on a foldable: the fold is at half the screen, the tabs'
+  rail stands on the right, so the end pane is narrower than the start
+  one (289 dp on a Z Fold 7: 750 − 375 − 6 − 80). What goes there must
+  fit a 290 dp column - two buttons side by side become one under the
+  other (`book_detail.dart`), the reading record's row has a floor of
+  124 dp. `MediaQuery.displayFeatures` is in logical pixels, in tests
+  too (`tester.view.displayFeatures`).
+- A widget test's window is 800 x 600: wide. A test of a phone's layout
+  sets `tester.view.physicalSize`; one that pushes a book's page on that
+  window sees it step into the pane and leave the stack (`BookPage`
+  does that when a phone is unfolded).
+- A provider read to build a menu item started a fetch: the "open in
+  site" address needs the mirror that is up
+  (`annaArchiveBaseUrlProvider`), and watching it in `build` asked the
+  network whenever a book's page was shown (in a widget test: a timer
+  left pending). It is asked when the item is tapped.
+- The way into a book stuttered on the owner's Z Fold 7 ("like a
+  low-end phone"). Nothing here can time a phone's frames, so what was
+  found is what the code did during that second, all of it changed and
+  none of it measured: (1) the web view was made and the book loaded
+  with the route - on Android that work is on the thread frames are
+  drawn on - while the cover flew in; the reader now makes its page when
+  the way in has ended (`_hostAllowed`). (2) The opening picture kept
+  its cover drifting, a frame every 8 ms all through the loading; it
+  stands still now (`test/motion_test.dart`). (3) Its backdrop was a
+  blur as a layer (`ImageFiltered`, in a `RepaintBoundary`) over the
+  whole screen, faded and scaled as it left; `BookCoverBackdrop` now
+  blurs a 48 px copy once into a picture of its own (`toImageSync`) and
+  stretches that. (4) It left the moment the first page was up, in the
+  middle of the page's own work; it waits for frames to come evenly
+  (`EvenFrames`: five on time, or 0.8 s) and goes as a plain fade.
+  (5) A cover was decoded at the very width it was shown, so a cover
+  flying from a tile to a page was decoded anew every frame of the way:
+  `coverDecodeWidth` (a few steps), `gaplessPlayback`. The reader now
+  writes what it drew into the log - "Opening frames": for the way in,
+  the loading and the picture leaving, how many frames, how many over
+  20 ms, the worst one (waited for the thread / build / raster). If it
+  still stutters, read that line in the owner's log before changing
+  anything else.
+- The store's covers are thumbnails (`bookwalker.jp/thumbnail…`): the
+  first of a ranking shown twice as large came out blurred, and its row
+  did not line up with the captions beside it. Every cover of the home
+  lists is one size; no numbers on them either (the owner's word, twice).
+- The light theme's `primary` was white (`themes.dart`, from Openlib):
+  whatever Material draws in it - a switch that is on, a checkbox, a
+  slider, a spinner, a text button, an icon given the primary colour -
+  was white on white. The web's settings had three switches nobody could
+  see, a "sign out" button and a link that were not there, the reader's
+  links and its "translation on" icon vanished on a light page. It is
+  near black now (as white is in the dark theme); the screens under
+  `modernSurfaceTheme` were never affected. What sits on the reader's
+  page takes the page's colours (`ReaderPalette.accent`), not the app's:
+  the app may be light and the page "night". Look with
+  `tool/web_check/themes.mjs light` and `SHOT_THEME=light` in
+  `tool/ui_shots` - white on white shows only in a picture.
+- The web listed each series as a full-width row of covers, mostly
+  empty: seven series took three screens. `web_series_bento.dart` packs
+  them - a card as wide as its volumes, the first row with room
+  (`packSeries`), each row's covers grown alike to reach the edge, a
+  series longer than a line folded to a line and "+N"; one line under a
+  cover (the volume: `volumeCaption`).
+- `dart format` on a whole file of this repository rewrites it (most
+  files were formatted by an older formatter: `settings_page.dart` came
+  back with 770 lines changed). Format what is new by hand, or a new
+  file.
+- A `GlobalKey` above `MaterialApp` moves the whole app, navigator and
+  all, to wherever the key is pumped next: a "new" app in the same test
+  kept the old one's pages (`tool/ui_shots`: the fresh key goes on
+  `MaterialApp` itself).
+
 ## Open plans (owner's order)
 1. Translation on the owner's MacBook: largest Gemma 4 the Mac's memory
    allows (MLX or llama-server, OpenAI-compatible), reachable only by the
@@ -471,8 +586,11 @@ debug key (only CI signs releases).
    build compiles but saved only ~10% of the download). No public relay
    for shadow-library search/downloads.
 3. Smaller: `[n]`→`n.` numbering, token-budget batches, translator-note
-   stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB,
-   two-page spread on unfolded screens.
+   stripping, tok/s + heat logs, per-book genre detection, bilingual EPUB.
+   Foldables, not done: the reader half open on a table (the page on the
+   upper half, its controls on the lower) - nothing here can show a web
+   view folded, so it waits for the owner's device; two pages for text
+   written down the page.
    Translation quality, not done yet (project doc
    `claude/translation-quality-status.md`,
    `claude/translation-engines-status.md`): Gemini 3.5 Flash measured

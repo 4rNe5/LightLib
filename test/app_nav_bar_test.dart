@@ -88,9 +88,9 @@ void main() {
   Widget rail(int selected, ValueChanged<int> onSelected) => MaterialApp(
         home: Scaffold(
           body: Row(children: [
+            const Expanded(child: SizedBox()),
             AppNavRail(
                 items: _items, selectedIndex: selected, onSelected: onSelected),
-            const Expanded(child: SizedBox()),
           ]),
         ),
       );
@@ -104,7 +104,8 @@ void main() {
     expect(find.text('Search'), findsOneWidget);
     expect(find.text('Home'), findsNothing);
     expect(find.byKey(const ValueKey('navRailIndicator')), findsOneWidget);
-    // Centred top to bottom, in order, on the left edge.
+    // In order, in the lower right corner: down the right edge, at its
+    // foot.
     final home = tester.getCenter(find.byKey(const ValueKey('navRailTab-0')));
     final library =
         tester.getCenter(find.byKey(const ValueKey('navRailTab-2')));
@@ -113,8 +114,9 @@ void main() {
     final pill = tester.getRect(find.descendant(
         of: find.byKey(const ValueKey('navRail')),
         matching: find.byType(BackdropFilter)));
-    expect(pill.center.dy, closeTo(screen.center.dy, 1));
-    expect(pill.left, 12);
+    expect(pill.right, closeTo(screen.right - 10, 0.01));
+    expect(pill.bottom, closeTo(screen.bottom - 14, 0.01));
+    expect(pill.top, greaterThan(screen.center.dy));
     expect(pill.width, AppNavRail.pillWidth);
     await tester.tap(find.byKey(const ValueKey('navRailTab-1')));
     await tester.tap(find.byKey(const ValueKey('navRailTab-2')));

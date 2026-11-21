@@ -2,7 +2,7 @@
 import 'dart:io';
 
 // Flutter imports:
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show ValueNotifier, kIsWeb;
 
 // Package imports:
 import 'package:path/path.dart';
@@ -211,6 +211,13 @@ class MyLibraryDb {
   /// sends it on).
   static void Function(String fileName)? onPositionSaved;
 
+  /// Counts up when what the library shows of a book's reading has
+  /// settled: a reader was left (its last position is saved by then), a
+  /// book was marked finished or not. The library, a book's page and the
+  /// home-screen widgets listen; pages turned while reading do not count
+  /// (nothing that shows them is on screen).
+  static final ValueNotifier<int> readingChanged = ValueNotifier<int>(0);
+
   /// Most recent searches kept; older ones drop off.
   static const searchHistoryLimit = 50;
 
@@ -297,11 +304,18 @@ class MyLibraryDb {
 
   Future<void> saveBookState(String fileName, String position) async {
     final dbInstance = await instance.database;
-    await dbInstance.insert(
-      'bookposition',
-      {'fileName': fileName, 'position': position},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    // The row's finished mark stays as it is: a finished book read again
+    // (or turned back a page) is still finished.
+    final changed = await dbInstance.update(
+        'bookposition', {'position': position},
+        where: 'fileName = ?', whereArgs: [fileName]);
+    if (changed == 0) {
+      await dbInstance.insert(
+        'bookposition',
+        {'fileName': fileName, 'position': position},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
     await _positionChanged(fileName);
     // Saving a position means the book was read today.
     await recordReadingDay().catchError((_) {});
@@ -612,15 +626,20 @@ class MyLibraryDb {
   // ------------------------------------------------------------------
 
   /// Marks (or unmarks) a book as finished. The fileName key matches
-  /// the bookposition table.
+  /// the bookposition table. Where the reader was in it stays.
   Future<void> setCompleted(String fileName, bool completed,
       [DateTime? now]) async {
     final dbInstance = await instance.database;
-    await dbInstance.insert(
-      'bookposition',
-      {'fileName': fileName, 'position': '', 'completed': completed ? 1 : 0},
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    final changed = await dbInstance.update(
+        'bookposition', {'completed': completed ? 1 : 0},
+        where: 'fileName = ?', whereArgs: [fileName]);
+    if (changed == 0) {
+      await dbInstance.insert(
+        'bookposition',
+        {'fileName': fileName, 'position': '', 'completed': completed ? 1 : 0},
+        conflictAlgorithm: ConflictAlgorithm.replace,
+      );
+    }
     await _positionChanged(fileName);
     if (completed) {
       await dbInstance.insert(
@@ -635,6 +654,7 @@ class MyLibraryDb {
       await dbInstance
           .delete('completions', where: 'fileName = ?', whereArgs: [fileName]);
     }
+    readingChanged.value++;
   }
 
   /// True when the book is flagged completed.
@@ -664,6 +684,22 @@ class MyLibraryDb {
     return {
       for (final row in rows) row['fileName'].toString(): row['completed'] == 1
     };
+  }
+
+  /// How far [fileName] has been read, as the library shows it: the
+  /// share of the book behind the reader (null where the viewer does not
+  /// say), when it was last read, and whether it is finished.
+  Future<BookReading> readingOf(String fileName) async {
+    final row = await getBookRow(fileName);
+    final fraction =
+        double.tryParse(await getSyncState('frac:$fileName') ?? '');
+    final at = int.tryParse(await getSyncState('pos:$fileName') ?? '');
+    return BookReading(
+      started: row != null && (row.position.isNotEmpty || row.completed),
+      completed: row?.completed ?? false,
+      fraction: fraction?.clamp(0.0, 1.0),
+      readAt: at == null ? null : DateTime.fromMillisecondsSinceEpoch(at),
+    );
   }
 
   Future<void> deleteBookState(String fileName) async {
@@ -753,4 +789,26 @@ class MyLibraryDb {
       return "";
     }
   }
+}
+
+/// A book's reading as the library shows it ([MyLibraryDb.readingOf]).
+class BookReading {
+  const BookReading({
+    this.started = false,
+    this.completed = false,
+    this.fraction,
+    this.readAt,
+  });
+
+  final bool started;
+  final bool completed;
+  final double? fraction;
+  final DateTime? readAt;
+
+  /// Read to the end: marked so, or the last page reached.
+  bool get finished => completed || (fraction ?? 0) >= finishedFraction;
+
+  /// From here on a book counts as read to the end (its last pages are
+  /// the colophon and the publisher's other books).
+  static const finishedFraction = 0.995;
 }

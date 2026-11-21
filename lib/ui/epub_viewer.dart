@@ -40,55 +40,69 @@ import 'package:openlib/state/state.dart'
         openEpubWithExternalAppProvider;
 import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/platform_utils.dart';
+import 'package:openlib/ui/components/motion.dart' show FadeThroughRoute;
 import 'package:openlib/ui/components/reader_help_overlay.dart';
 import 'package:openlib/ui/book_reader_page.dart';
 
+/// Opens the EPUB [fileName]; completes when the reader is left (at
+/// once where another app shows the book). [opening]: what is on screen
+/// until the book's first page is up, in place of a spinner.
 Future<void> launchEpubViewer({
   required String fileName,
   required BuildContext context,
   required WidgetRef ref,
+  WidgetBuilder? opening,
+  RouteSettings? settings,
 }) async {
+  final String path;
   try {
-    String path = await getFilePath(fileName);
-    bool openWithExternalApp = ref.watch(openEpubWithExternalAppProvider);
-
-    // Check if user wants external app
-    if (openWithExternalApp) {
-      await OpenFile.open(path,
-          linuxByProcess: true, type: "application/epub+zip");
-    } else {
-      try {
-        // The web-view renderer where the platform has one; the
-        // Flutter-drawn reader elsewhere, and as its fallback.
-        if (context.mounted) {
-          Navigator.push(context,
-              MaterialPageRoute(builder: (BuildContext routeContext) {
-            if (!bookReaderSupported()) {
-              return EpubViewerWidget(fileName: fileName);
-            }
-            return BookReaderPage(
-              fileName: fileName,
-              filePath: path,
-              onFallback: () => Navigator.pushReplacement(
-                routeContext,
-                MaterialPageRoute(
-                    builder: (_) => EpubViewerWidget(fileName: fileName)),
-              ),
-            );
-          }));
-        }
-      } catch (e) {
-        if (context.mounted) {
-          showSnackBar(context: context, message: "Unable to open epub!");
-        }
-      }
-    }
+    path = await getFilePath(fileName);
   } catch (e) {
     // File doesn't exist or can't be accessed
     if (context.mounted) {
       showSnackBar(
           context: context,
           message: "File not found. The download may have failed.");
+    }
+    return;
+  }
+  // Check if user wants external app
+  if (ref.read(openEpubWithExternalAppProvider)) {
+    await OpenFile.open(path,
+        linuxByProcess: true, type: "application/epub+zip");
+    return;
+  }
+  if (!context.mounted) return;
+  // The web-view renderer where the platform has one; the Flutter-drawn
+  // reader elsewhere, and as its fallback.
+  Widget page(BuildContext routeContext) {
+    if (!bookReaderSupported()) {
+      return EpubViewerWidget(fileName: fileName);
+    }
+    return BookReaderPage(
+      fileName: fileName,
+      filePath: path,
+      opening: opening,
+      onFallback: () => Navigator.pushReplacement(
+        routeContext,
+        MaterialPageRoute(
+            settings: settings,
+            builder: (_) => EpubViewerWidget(fileName: fileName)),
+      ),
+    );
+  }
+
+  try {
+    await Navigator.push(
+        context,
+        // With a picture of the book up while it opens, the page fades
+        // in around the cover as it flies to its place.
+        opening == null
+            ? MaterialPageRoute<void>(settings: settings, builder: page)
+            : FadeThroughRoute<void>(settings: settings, builder: page));
+  } catch (e) {
+    if (context.mounted) {
+      showSnackBar(context: context, message: "Unable to open epub!");
     }
   }
 }
@@ -113,7 +127,7 @@ class _EpubViewState extends ConsumerState<EpubViewerWidget> {
       error: (error, stack) {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(AppLocalizations.of(context).appTitle),
             titleTextStyle: Theme.of(context).textTheme.displayLarge,
           ),
@@ -123,7 +137,7 @@ class _EpubViewState extends ConsumerState<EpubViewerWidget> {
       loading: () {
         return Scaffold(
           appBar: AppBar(
-            backgroundColor: Theme.of(context).colorScheme.primary,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             title: Text(AppLocalizations.of(context).appTitle),
             titleTextStyle: Theme.of(context).textTheme.displayLarge,
           ),
@@ -736,6 +750,9 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
   @override
   void dispose() {
     SharedTranslationEngine.instance.leaveReader();
+    // The library shows where this book was left (its position is saved
+    // as the reader moves).
+    MyLibraryDb.readingChanged.value++;
     _lifecycle?.dispose();
     _pagedRevisionTimer?.cancel();
     _settingsRelayoutTimer?.cancel();
@@ -819,9 +836,7 @@ class _EpubViewerState extends ConsumerState<EpubViewer> {
                   )
                 : Icon(
                     _translateOn ? Icons.g_translate : Icons.translate,
-                    color: _translateOn
-                        ? Theme.of(context).colorScheme.primary
-                        : iconColor,
+                    color: _translateOn ? palette.accent : iconColor,
                   ),
             onPressed: () => _setTranslation(!_translateOn),
           ),

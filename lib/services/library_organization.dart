@@ -97,6 +97,13 @@ class LibraryBook {
   /// The series the reader put it in, if any.
   final String? series;
 
+  /// How much of the book is behind the reader, 0..1. Null: not opened
+  /// yet, or read in a viewer that does not say.
+  final double? fraction;
+
+  /// When it was last read (a position saved here or on another device).
+  final DateTime? readAt;
+
   const LibraryBook({
     required this.book,
     this.tags = const {},
@@ -104,11 +111,44 @@ class LibraryBook {
     this.fileSizeBytes,
     this.genre,
     this.series,
+    this.fraction,
+    this.readAt,
   });
 
   String get id => book.id;
   String get title => book.title;
   String get author => book.author ?? '';
+
+  /// What a progress bar shows: full for a finished book, nothing for one
+  /// not opened, the share read otherwise (null when it is not known).
+  double? get progress => switch (status) {
+        ReadingStatus.completed => 1,
+        ReadingStatus.unread => 0,
+        ReadingStatus.inProgress => fraction,
+      };
+
+  /// 1..99 while it is being read and how far is known.
+  int? get percent {
+    final f = fraction;
+    if (status != ReadingStatus.inProgress || f == null) return null;
+    return (f * 100).round().clamp(1, 99);
+  }
+}
+
+/// The books being read, the one read last first (those with no time
+/// known after, in the library's order).
+List<LibraryBook> continueReading(Iterable<LibraryBook> books) {
+  final reading = [
+    for (final b in books)
+      if (b.status == ReadingStatus.inProgress) b,
+  ];
+  final never = DateTime.fromMillisecondsSinceEpoch(0);
+  final order = {for (var i = 0; i < reading.length; i++) reading[i].id: i};
+  reading.sort((a, b) {
+    final c = (b.readAt ?? never).compareTo(a.readAt ?? never);
+    return c != 0 ? c : order[a.id]!.compareTo(order[b.id]!);
+  });
+  return reading;
 }
 
 /// A series the reader made, its volumes in reading order.

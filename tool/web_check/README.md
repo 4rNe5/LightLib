@@ -9,6 +9,7 @@ called).
 ```bash
 cd tool/web_check && npm install          # puppeteer-core; Chrome at $CHROME or /usr/bin/google-chrome
 python3 make_library.py /tmp/lib24 24     # 24 made-up EPUBs with covers, and the account's rows
+python3 make_library.py /tmp/libS 40 series   # the first 30 the volumes of 7 series (one of 11), grouped on the account
 python3 make_epub.py /tmp/haru.epub       # one small vertical book without a cover
 
 node serve.mjs ../../build/web 8094 ../../vercel.json &   # like Vercel: its headers (CSP), brotli
@@ -31,7 +32,7 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 
 | Script | What it shows |
 |---|---|
-| `library.mjs` | Signed in: every book listed without one file fetched; a book's card; "Read" fetches that one file with its progress; the reader; back in the library the book is here and read a little; search, the side bar, the right-click menu, settings |
+| `library.mjs` | Signed in: every book listed without one file fetched; a book's card; "Read" fetches that one file with its progress; the reader; back in the library the book is here and how far it was read shows at once; search, the side bar, the right-click menu, settings |
 | `account.mjs` | The Gemini key typed in one browser is on the account and in a second browser; a book added here goes up with its details and small cover; this browser's copy goes while the account keeps the book; a deletion reaches the account |
 | `claude.mjs` | Signed in to an account a phone put its Claude key on: the key comes with the first sync, Settings has its switch, Claude is chosen, a book is translated by it - every request saying it comes from a browser, none refused by the site's policy, none to Gemini |
 | `series.mjs` | Signed in: two of the account's books (neither in this browser) chosen from a tile's menu and by a click, named, grouped; the row shows and the account has the series under their MD5s, sent from the web |
@@ -39,6 +40,7 @@ node busy.mjs http://127.0.0.1:8094/ http://127.0.0.1:8099 after
 | `translate.mjs` | Not signed in: an EPUB added, opened, translated (stand-in), kept over a reload, shown without a key |
 | `reader_taps.mjs` | A phone: the reader's bars, a sheet over the page and a message's button take real taps |
 | `desktop_reading.mjs` | A horizontal book in a wide window: the column's width when scrolling, two pages when turning, keys and wheel |
+| `themes.mjs` | Pictures of every screen in one colour scheme (`light`/`dark`, desktop or mobile) on a library with series: the library, its menus, a book's card, each page of the settings, the reader, its bars and "Aa" sheet - an icon or a switch white on white shows only in a picture |
 | `drop.mjs` | An EPUB dropped on the window is added |
 | `relayed.mjs` | The relayed site, the project unreachable by its own address: Google's button signs in, the library lists, a book comes and opens, all through `/sb` |
 | `covers.mjs` | An account without small covers: every book's real cover shows without one book fetched (read out of each file by byte ranges), and is kept for the other devices |

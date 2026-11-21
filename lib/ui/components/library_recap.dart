@@ -17,20 +17,30 @@ import 'package:openlib/ui/components/library_tiles.dart'
 
 /// Loads the recap and lays it out; nothing while loading or on error.
 class LibraryRecapSection extends ConsumerWidget {
-  const LibraryRecapSection({super.key});
+  const LibraryRecapSection({super.key, this.narrow = false});
+
+  /// In a narrow column (the pane beside the shelf): see
+  /// [LibraryRecapBento.narrow].
+  final bool narrow;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recap = ref.watch(readingRecapProvider).valueOrNull;
     if (recap == null || recap.total == 0) return const SizedBox.shrink();
-    return LibraryRecapBento(recap: recap);
+    return LibraryRecapBento(recap: recap, narrow: narrow);
   }
 }
 
 class LibraryRecapBento extends StatelessWidget {
-  const LibraryRecapBento({super.key, required this.recap});
+  const LibraryRecapBento(
+      {super.key, required this.recap, this.narrow = false});
 
   final ReadingRecap recap;
+
+  /// A column under 300 dp wide: cards as wide as the column or half of
+  /// it, on the same two columns as what stands over them - not the
+  /// two-thirds and a third of a phone's width, where a third is 80 dp.
+  final bool narrow;
 
   @override
   Widget build(BuildContext context) {
@@ -51,7 +61,9 @@ class LibraryRecapBento extends StatelessWidget {
         LayoutBuilder(builder: (context, constraints) {
           const gap = 10.0;
           final unit = (constraints.maxWidth - 2 * gap) / 3;
-          final rowHeight = (unit * 1.12).clamp(118.0, 156.0);
+          // (124: what the checkpoints' card needs in the narrow pane
+          // beside the shelf.)
+          final rowHeight = (unit * 1.12).clamp(124.0, 156.0);
           Widget row(Widget wide, Widget narrow) => SizedBox(
                 height: rowHeight,
                 child: Row(
@@ -63,6 +75,32 @@ class LibraryRecapBento extends StatelessWidget {
                   ],
                 ),
               );
+          if (narrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(height: 124, child: _MilestoneCard(recap: recap)),
+                const SizedBox(height: gap),
+                SizedBox(
+                  height: 112,
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _StreakCard(recap: recap)),
+                      const SizedBox(width: gap),
+                      Expanded(child: _MonthCard(recap: recap)),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: gap),
+                SizedBox(height: 116, child: _ActivityCard(recap: recap)),
+                if (recap.genres.isNotEmpty) ...[
+                  const SizedBox(height: gap),
+                  _GenreMixCard(recap: recap),
+                ],
+              ],
+            );
+          }
           return Column(
             children: [
               row(_MilestoneCard(recap: recap), _StreakCard(recap: recap)),
@@ -117,11 +155,16 @@ class _CardLabel extends StatelessWidget {
         Icon(icon, size: 15, color: fg),
         const SizedBox(width: 5),
         Expanded(
-          child: Text(text,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 11.5, fontWeight: FontWeight.w700, color: fg)),
+          // (A narrow card - the pane beside the shelf on a foldable -
+          // shows the whole label a little smaller, not a cut one.)
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(text,
+                maxLines: 1,
+                style: TextStyle(
+                    fontSize: 11.5, fontWeight: FontWeight.w700, color: fg)),
+          ),
         ),
       ],
     );
@@ -470,13 +513,16 @@ class _MonthCard extends StatelessWidget {
                     color: scheme.onSecondaryContainer)),
           ),
           const SizedBox(height: 3),
-          Text(l10n.recapFinishedThisMonth,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: scheme.onSecondaryContainer)),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(l10n.recapFinishedThisMonth,
+                maxLines: 1,
+                style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: scheme.onSecondaryContainer)),
+          ),
           Text(l10n.recapReadingDays(recap.readingDaysThisMonth),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,

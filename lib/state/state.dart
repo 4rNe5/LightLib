@@ -555,22 +555,34 @@ final libraryBooksProvider = FutureProvider<List<LibraryBook>>((ref) async {
   final completed = await dataBase.getCompletedForAll();
   final genres = await dataBase.getGenresForAll();
   final series = await dataBase.getSeriesForAll();
+  // How far each book was read and when (kept beside the positions: the
+  // reader writes them, sync carries them between devices).
+  final fractions = await dataBase.getSyncStates('frac:');
+  final times = await dataBase.getSyncStates('pos:');
   // Full-quality covers from the EPUB files, made in the background.
   unawaited(BookCovers.instance.ensure(books));
-  return [
-    for (final book in books)
-      LibraryBook(
-        book: book,
-        tags: tags[book.id] ?? const {},
-        status: _readingStatus(
-          position: positions[book.getFileName()],
-          completed: completed[book.getFileName()] ?? false,
-        ),
-        fileSizeBytes: await _fileSizeOf(book),
-        genre: BookGenre.fromKey(genres[book.id]),
-        series: series[book.id],
+  final result = <LibraryBook>[];
+  for (final book in books) {
+    final file = book.getFileName();
+    final fraction = double.tryParse(fractions['frac:$file'] ?? '');
+    final at = int.tryParse(times['pos:$file'] ?? '');
+    result.add(LibraryBook(
+      book: book,
+      tags: tags[book.id] ?? const {},
+      status: _readingStatus(
+        position: positions[file],
+        // Read to the last page on a device that did not mark it.
+        completed: (completed[file] ?? false) ||
+            (fraction ?? 0) >= BookReading.finishedFraction,
       ),
-  ];
+      fileSizeBytes: await _fileSizeOf(book),
+      genre: BookGenre.fromKey(genres[book.id]),
+      series: series[book.id],
+      fraction: fraction?.clamp(0.0, 1.0).toDouble(),
+      readAt: at == null ? null : DateTime.fromMillisecondsSinceEpoch(at),
+    ));
+  }
+  return result;
 });
 
 ReadingStatus _readingStatus({String? position, required bool completed}) {
@@ -679,9 +691,18 @@ Future<void> savePdfState(String fileName, WidgetRef ref) async {
 
 /// Position save for the pdfrx viewer, which knows its page directly
 /// and no longer goes through the pdfCurrentPage provider.
-Future<void> savePdfPosition(String fileName, int page) async {
+Future<void> savePdfPosition(String fileName, int page, {int pages = 0}) async {
   if (page < 1) return;
+  // How far that is, where the page count is known; the last page is
+  // the end of the book.
+  if (pages > 0) {
+    await dataBase.setSyncState('frac:$fileName',
+        (page >= pages ? 1.0 : (page - 1) / pages).toStringAsFixed(4));
+  }
   await dataBase.saveBookState(fileName, page.toString());
+  if (pages > 1 && page >= pages && !await dataBase.isCompleted(fileName)) {
+    await dataBase.setCompleted(fileName, true);
+  }
 }
 
 Future<void> saveEpubState(

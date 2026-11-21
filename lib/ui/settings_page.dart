@@ -1,4 +1,5 @@
 // Dart imports:
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -10,9 +11,15 @@ import 'package:openlib/ui/components/zlibrary_account_sheet.dart';
 import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/backup_service.dart';
 import 'package:openlib/ui/components/sync_section.dart';
+import 'package:openlib/services/reader_fonts.dart';
+import 'package:openlib/services/reader_settings.dart';
+import 'package:openlib/ui/components/reader_settings_sheet.dart';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
+import 'package:openlib/ui/adaptive.dart';
+import 'package:openlib/ui/components/app_nav_bar.dart' show AppNavRail;
+import 'package:openlib/ui/components/motion.dart';
 
 // Package imports:
 import 'package:device_info_plus/device_info_plus.dart';
@@ -229,6 +236,278 @@ class _SettingsSectionHeader extends StatelessWidget {
   }
 }
 
+/// Which kind of settings the pane shows on a wide screen.
+final settingsCategoryProvider = StateProvider<int>((ref) => 0);
+
+/// The settings by kind, for a wide screen: a name, and which of the
+/// page's groups (by their place in the phone's one list) belong to it.
+class _Category {
+  const _Category(this.icon, this.color, this.title, this.parts, this.groups);
+
+  final IconData icon;
+  final Color color;
+  final String title;
+
+  /// What is in it, as the line under its name.
+  final List<String> parts;
+  final List<int> groups;
+}
+
+List<_Category> _categories(AppLocalizations l10n) => [
+      _Category(Icons.travel_explore, _Hue.search, l10n.settingsCatSearch, [
+        l10n.searchProvidersSection,
+        l10n.searchHistorySection,
+        l10n.libraryInstancesSection,
+        l10n.advancedSection,
+      ], const [
+        0,
+        1,
+        2,
+        7
+      ]),
+      _Category(Icons.palette_outlined, _Hue.appearance, l10n.appearanceSection,
+          [l10n.themeTitle, l10n.fontSizeTitle], const [3]),
+      _Category(
+          Icons.auto_stories_outlined, _Hue.reader, l10n.settingsCatReading, [
+        l10n.settingsReaderDefaults,
+        l10n.readerFonts,
+        l10n.translationSettingsTitle,
+      ], const [
+        5,
+        6
+      ]),
+      _Category(
+          Icons.cloud_sync_outlined,
+          _Hue.backup,
+          l10n.settingsCatStorage,
+          [l10n.generalSection, l10n.syncTitle, l10n.backupSection],
+          const [4, 8, 9]),
+      _Category(Icons.info_outline, _Hue.about, l10n.settingsCatApp,
+          [l10n.updatesSection, l10n.aboutSection], const [10, 11, 12]),
+    ];
+
+/// How every book opens: the reader's own settings (its "Aa" sheet) set
+/// from here too - text size, theme, scrolling or pages, two pages on a
+/// wide screen, spacing. One store ([ReaderSettings]): an open reader
+/// follows what is changed here, and the other way round.
+class _ReaderDefaultsGroup extends StatefulWidget {
+  const _ReaderDefaultsGroup();
+
+  @override
+  State<_ReaderDefaultsGroup> createState() => _ReaderDefaultsGroupState();
+}
+
+class _ReaderDefaultsGroupState extends State<_ReaderDefaultsGroup> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(ReaderSettings.instance.load());
+    unawaited(ReaderFonts.instance.load());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      key: const ValueKey('settingsReaderDefaults'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SettingsSectionHeader(l10n.settingsReaderDefaults),
+        Material(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ReaderSettingsSheet(
+                  script: FontScript.japanese,
+                  settings: ReaderSettings.instance,
+                  fonts: ReaderFonts.instance,
+                  bookLayout: true,
+                  embedded: true,
+                ),
+                const SizedBox(height: 10),
+                Text(l10n.settingsReaderDefaultsHint,
+                    style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+      ],
+    );
+  }
+}
+
+/// The settings page laid out: one list on a phone; on a wide screen the
+/// kinds of settings on one side and the chosen kind's groups on the
+/// other (the same groups, the same order - split where the screen
+/// folds).
+class _SettingsLayout extends ConsumerWidget {
+  const _SettingsLayout({required this.title, required this.groups});
+
+  final String title;
+  final List<Widget> groups;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final heading = LargeTitle(title,
+        padding: const EdgeInsets.fromLTRB(4, 4, 0, 18));
+    if (!useTwoPanes(context)) {
+      return SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [heading, ...groups],
+        ),
+      );
+    }
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final categories = _categories(l10n);
+    final chosen =
+        ref.watch(settingsCategoryProvider).clamp(0, categories.length - 1);
+    final reduce = AppMotion.reduced(context);
+    return TwoPane(
+      trailing: AppNavRail.width,
+      endShare: 0.54,
+      maxEnd: 520,
+      start: SingleChildScrollView(
+        padding: const EdgeInsets.fromLTRB(16, 8, 4, 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            heading,
+            Material(
+              color: scheme.surfaceContainerLow,
+              borderRadius: BorderRadius.circular(20),
+              clipBehavior: Clip.antiAlias,
+              child: Column(
+                children: [
+                  for (var i = 0; i < categories.length; i++)
+                    _CategoryRow(
+                      key: ValueKey('settingsCategory-$i'),
+                      category: categories[i],
+                      selected: i == chosen,
+                      onTap: () => ref
+                          .read(settingsCategoryProvider.notifier)
+                          .state = i,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+      end: AnimatedSwitcher(
+        duration: reduce ? Duration.zero : AppMotion.standard,
+        switchInCurve: AppMotion.enter,
+        switchOutCurve: AppMotion.exit,
+        layoutBuilder: (current, previous) => Stack(
+          alignment: Alignment.topCenter,
+          fit: StackFit.expand,
+          children: [...previous, if (current != null) current],
+        ),
+        transitionBuilder: (child, animation) => FadeTransition(
+          opacity: animation,
+          child: SlideTransition(
+            position: Tween(begin: const Offset(0.03, 0), end: Offset.zero)
+                .animate(animation),
+            child: child,
+          ),
+        ),
+        child: SingleChildScrollView(
+          key: ValueKey('settingsPane-$chosen'),
+          padding: const EdgeInsets.fromLTRB(0, 24, 0, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
+                child: Text(categories[chosen].title,
+                    style: const TextStyle(
+                        fontSize: 22, fontWeight: FontWeight.w800)),
+              ),
+              for (final g in categories[chosen].groups)
+                if (g < groups.length) groups[g],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CategoryRow extends StatelessWidget {
+  const _CategoryRow({
+    super.key,
+    required this.category,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _Category category;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return AnimatedContainer(
+      duration:
+          AppMotion.reduced(context) ? Duration.zero : AppMotion.standard,
+      curve: AppMotion.enter,
+      color: selected
+          ? scheme.primaryContainer.withValues(alpha: 0.55)
+          : Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 12, 12, 12),
+          child: Row(
+            children: [
+              _IconBadge(category.icon, category.color),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(category.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: scheme.onSurface)),
+                    const SizedBox(height: 2),
+                    Text(category.parts.join(' · '),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 12,
+                            height: 1.3,
+                            color: scheme.onSurfaceVariant)),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  size: 20,
+                  color: selected ? scheme.primary : scheme.outline),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// The text column of a row.
 class _RowText extends StatelessWidget {
   const _RowText(this.title, this.subtitle);
@@ -430,13 +709,9 @@ class SettingsPage extends ConsumerWidget {
 
         MyLibraryDb dataBase = MyLibraryDb.instance;
 
-        return SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              LargeTitle(l10n.settingsTitle,
-                  padding: const EdgeInsets.fromLTRB(4, 4, 0, 18)),
+        // The groups, in the order a phone lists them ([_categories]
+        // names them by their place here).
+        final groups = <Widget>[
               const _SearchProvidersWidget(),
               _SettingsGroup(
                 title: l10n.searchHistorySection,
@@ -616,6 +891,7 @@ class SettingsPage extends ConsumerWidget {
                   ),
                 ],
               ),
+              const _ReaderDefaultsGroup(),
               _SettingsGroup(
                 title: l10n.readerSection,
                 children: [
@@ -794,10 +1070,10 @@ class SettingsPage extends ConsumerWidget {
                   return const SizedBox.shrink();
                 },
               ),
-            ],
-          ),
-        );
+        ];
+        return _SettingsLayout(title: l10n.settingsTitle, groups: groups);
       });
+
   void _showDonationKeyDialog(
       BuildContext context, WidgetRef ref, MyLibraryDb dataBase) {
     final dialogL10n = AppLocalizations.of(context);

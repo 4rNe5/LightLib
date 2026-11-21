@@ -16,7 +16,6 @@ import 'package:openlib/ui/pdf_viewer.dart' show launchPdfViewer;
 // Providers may report uppercase extensions (e.g. Z-Library's "EPUB").
 enum BookOpenTarget { pdf, epub, external }
 
-@visibleForTesting
 BookOpenTarget bookOpenTargetForFormat(String format) {
   switch (format.trim().toLowerCase()) {
     case 'pdf':
@@ -55,10 +54,10 @@ class FileOpenAndDeleteButtons extends ConsumerWidget {
           TextButton(
             style: TextButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.secondary,
-                textStyle: TextStyle(
+                foregroundColor: Colors.white,
+                textStyle: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w900,
-                  color: Theme.of(context).colorScheme.primary,
                 )),
             onPressed: () async {
               final target = bookOpenTargetForFormat(format);

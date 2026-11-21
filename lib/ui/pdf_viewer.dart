@@ -15,6 +15,7 @@ import 'package:open_file/open_file.dart';
 import 'package:pdfrx/pdfrx.dart';
 
 // Project imports:
+import 'package:openlib/services/database.dart' show MyLibraryDb;
 import 'package:openlib/services/files.dart' show getFilePath;
 import 'package:openlib/services/translation/translator.dart'
     show SharedTranslationEngine;
@@ -47,7 +48,8 @@ Future<void> launchPdfViewer(
       }
     }
   } else {
-    Navigator.push(context, MaterialPageRoute(builder: (BuildContext context) {
+    await Navigator.push(context,
+        MaterialPageRoute<void>(builder: (BuildContext context) {
       return PdfViewPage(fileName: fileName);
     }));
   }
@@ -95,6 +97,14 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
   void dispose() {
     SharedTranslationEngine.instance.leaveReader();
     _positionSaveTimer?.cancel();
+    // The page the reader leaves on, whatever the debounce says; then
+    // the library hears of it.
+    final page = _page, pages = _pageCount, file = widget.fileName;
+    unawaited((page < 1
+            ? Future<void>.value()
+            : savePdfPosition(file, page, pages: pages))
+        .catchError((_) {})
+        .whenComplete(() => MyLibraryDb.readingChanged.value++));
     super.dispose();
   }
 
@@ -106,7 +116,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
     if (now.difference(_lastSaved) < _saveDebounce) return;
     _lastSaved = now;
     try {
-      await savePdfPosition(widget.fileName, _page);
+      await savePdfPosition(widget.fileName, _page, pages: _pageCount);
     } catch (_) {
       // A failed position write never takes the reader down.
     }
@@ -115,14 +125,10 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
   @override
   Widget build(BuildContext context) {
     final filePath = ref.watch(filePathProvider(widget.fileName));
-    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       appBar: AppBar(
-        // Use surface color in dark mode so it's not white
-        backgroundColor: isDarkMode
-            ? Theme.of(context).colorScheme.surface
-            : Theme.of(context).colorScheme.primary,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         title: Text(AppLocalizations.of(context).appTitle),
         titleTextStyle: Theme.of(context).textTheme.displayLarge,
         leading: IconButton(
@@ -198,7 +204,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
         error: (error, stack) {
           return Scaffold(
             appBar: AppBar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               title: Text(AppLocalizations.of(context).appTitle),
               titleTextStyle: Theme.of(context).textTheme.displayLarge,
             ),
@@ -208,7 +214,7 @@ class _PdfViewPageState extends ConsumerState<PdfViewPage> {
         loading: () {
           return Scaffold(
             appBar: AppBar(
-              backgroundColor: Theme.of(context).colorScheme.primary,
+              backgroundColor: Theme.of(context).colorScheme.surface,
               title: Text(AppLocalizations.of(context).appTitle),
               titleTextStyle: Theme.of(context).textTheme.displayLarge,
             ),

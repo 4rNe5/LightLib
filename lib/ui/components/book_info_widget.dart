@@ -26,7 +26,6 @@ import 'package:openlib/ui/components/library_tiles.dart' show HiddenCover;
 /// for them lands on the error the user sees as "link expired". Those
 /// open their own source page instead. Null (a disabled button) only when
 /// neither target is available.
-@visibleForTesting
 String? openInSiteUrl({
   required String link,
   required String md5,

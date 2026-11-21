@@ -180,6 +180,48 @@ void main() {
     expect(asked.last, BookWalkerCategory.manga);
   });
 
+  // The store's pictures are thumbnails: one shown twice as large came
+  // out blurred on the owner's phone, and its row did not line up with
+  // the covers beside it. Every cover is the same size, in even rows.
+  for (final width in [411.0, 670.0]) {
+    testWidgets('the covers of a ranking: one size, even rows, at $width',
+        (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = Size(width, 900);
+      addTearDown(tester.view.reset);
+      final books = [
+        for (var i = 0; i < 12; i++)
+          BookWalkerBook(
+            title: 'A made-up book $i',
+            cover: '',
+            url: 'https://example.com/$i',
+          ),
+      ];
+      await tester.pumpWidget(ProviderScope(
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(body: BookWalkerGrid(books: books)),
+        ),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+      expect(tester.takeException(), isNull);
+      Rect tile(int i) => tester.getRect(find.byKey(ValueKey('bookwalker-$i')));
+      final columns = width < 520 ? 3 : 5;
+      for (var i = 1; i < 2 * columns; i++) {
+        expect(tile(i).width, closeTo(tile(0).width, 0.01), reason: 'tile $i');
+        expect(tile(i).height, closeTo(tile(0).height, 0.01),
+            reason: 'tile $i');
+        // Rows start where the first one does, columns under each other.
+        expect(tile(i).left, closeTo(tile(i % columns).left, 0.01),
+            reason: 'tile $i');
+        expect(tile(i).top, closeTo(tile(i - i % columns).top, 0.01),
+            reason: 'tile $i');
+      }
+      expect(tile(columns).top, greaterThan(tile(0).bottom));
+    });
+  }
+
   testWidgets('the genres: one tile each, named for the reader',
       (tester) async {
     await tester.pumpWidget(const ProviderScope(

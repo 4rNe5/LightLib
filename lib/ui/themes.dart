@@ -12,7 +12,14 @@ final secondaryColor = '#FF6B9D'.toColor();
 ThemeData lightTheme = ThemeData(
   primaryColor: Colors.white,
   colorScheme: ColorScheme.light(
-    primary: Colors.white,
+    // The colour things are drawn in - as white is in the dark theme.
+    // It was white here too, so whatever Material draws in it - a
+    // switch that is on, a checkbox, a slider, a spinner, a text
+    // button, an icon given the primary colour - was white on white.
+    primary: const Color(0xFF16181A),
+    onPrimary: Colors.white,
+    // (Elevated surfaces stay as they were, not tinted by that colour.)
+    surfaceTint: Colors.white,
     secondary: secondaryColor,
     tertiary: Colors.black,
     tertiaryContainer: '#F2F2F2'.toColor(),

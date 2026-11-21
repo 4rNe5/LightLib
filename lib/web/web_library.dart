@@ -105,6 +105,8 @@ class WebLibrary extends ChangeNotifier {
     final md5s = await _db.getSyncStates('md5:');
     final fractions = await _db.getSyncStates('frac:');
     final stamps = await _db.getSyncStates('pos:');
+    final finishedHere =
+        await _db.getCompletedForAll().catchError((_) => <String, bool>{});
     final series = sharedSeries(
         '${await _db.getPreference(seriesSharedPref).catchError((_) => null) ?? ''}');
     if (_disposed || generation != _generation) return;
@@ -115,6 +117,7 @@ class WebLibrary extends ChangeNotifier {
       md5Of: (b) => md5FromBookId(b.id) ?? md5s['md5:${b.getFileName()}'],
       fractionOf: (b) =>
           double.tryParse(fractions['frac:${b.getFileName()}'] ?? ''),
+      completedOf: (b) => finishedHere[b.getFileName()] ?? false,
       readAtOf: (b) {
         final ms = int.tryParse(stamps['pos:${b.getFileName()}'] ?? '');
         // 1 ms: a position from before sync kept times.
@@ -183,6 +186,7 @@ List<WebBook> mergeLibrary({
   required String? Function(MyBook book) md5Of,
   required double? Function(MyBook book) fractionOf,
   required DateTime? Function(MyBook book) readAtOf,
+  bool Function(MyBook book)? completedOf,
   Map<String, String> series = const {},
 }) {
   final rows = {for (final b in remote.books) b.md5: b};
@@ -201,7 +205,10 @@ List<WebBook> mergeLibrary({
       local: book,
       remote: md5 == null ? null : rows[md5],
       fraction: theirsNewer ? theirs.fraction : fractionOf(book),
-      completed: theirs?.completed ?? false,
+      // Finished on the account, or here (the reader marks a book whose
+      // last page was reached; the account hears at the next sync).
+      completed:
+          (theirs?.completed ?? false) || (completedOf?.call(book) ?? false),
       readAt: theirsNewer ? theirs.updatedAt : mine ?? _known(theirs),
       translated: remote.translated[md5] ?? const {},
       series: md5 == null ? null : series[md5],

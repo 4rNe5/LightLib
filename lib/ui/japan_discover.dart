@@ -2,6 +2,9 @@
 // novels, web novels in print, manga - a series at a time) and its
 // genres. A book opens a library search for its series.
 
+// Dart imports:
+import 'dart:io';
+
 // Flutter imports:
 import 'package:flutter/material.dart';
 
@@ -12,6 +15,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 // Project imports:
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:openlib/services/bookwalker.dart';
+import 'package:openlib/services/local_book_import.dart'
+    show isLocalImagePath, localImageFilePath;
 import 'package:openlib/state/state.dart'
     show
         enableFiltersState,
@@ -19,6 +24,7 @@ import 'package:openlib/state/state.dart'
         japanGenreProvider,
         japanPopularProvider;
 import 'package:openlib/ui/components/error_widget.dart';
+import 'package:openlib/ui/components/motion.dart';
 import 'package:openlib/ui/results_page.dart';
 
 String categoryLabel(AppLocalizations l10n, BookWalkerCategory c) =>
@@ -117,80 +123,166 @@ void _openSearch(BuildContext context, WidgetRef ref, BookWalkerBook book) {
           builder: (_) => ResultPage(searchQuery: book.searchQuery)));
 }
 
-/// Covers in three columns, each opening a search for its series.
+/// A store's cover: fetched and kept, or a picture file (the pictures
+/// of the app's screens are drawn without a network).
+class _StoreCover extends StatelessWidget {
+  const _StoreCover(this.url);
+
+  final String url;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    Widget empty([Widget? child]) => ColoredBox(
+        color: scheme.onSurface.withValues(alpha: 0.08),
+        child: Center(child: child));
+    if (isLocalImagePath(url)) {
+      return Image.file(File(localImageFilePath(url)),
+          fit: BoxFit.cover,
+          width: double.infinity,
+          height: double.infinity,
+          errorBuilder: (_, __, ___) => empty());
+    }
+    return CachedNetworkImage(
+      imageUrl: url,
+      fit: BoxFit.cover,
+      width: double.infinity,
+      height: double.infinity,
+      placeholder: (_, __) => empty(),
+      errorWidget: (_, __, ___) => empty(Icon(Icons.image_rounded,
+          color: scheme.onSurface.withValues(alpha: 0.3))),
+    );
+  }
+}
+
+/// A list of the store's books as covers, each opening a search for its
+/// series: three columns on a phone, more on a wider screen, every cover
+/// the same size. (The store's pictures are thumbnails: one shown large
+/// came out blurred, and its row did not line up with the ones beside
+/// it. No numbers on the covers either: they lay over the pictures.)
 class BookWalkerGrid extends ConsumerWidget {
   const BookWalkerGrid({super.key, required this.books, this.onRefresh});
 
   final List<BookWalkerBook> books;
   final Future<void> Function()? onRefresh;
 
-  static const double _coverHeight = 145;
-  static const double _coverWidth = 105;
+  static const _gap = 12.0;
+  static const _rowGap = 14.0;
+  static const _caption = 42.0;
+
+  /// A cover with its series' name under it.
+  Widget _tile(BuildContext context, WidgetRef ref, int i) {
+    final book = books[i];
+    final scheme = Theme.of(context).colorScheme;
+    return Pressable(
+      key: ValueKey('bookwalker-$i'),
+      onTap: () => _openSearch(context, ref, book),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(10),
+                boxShadow: [
+                  BoxShadow(
+                      color: Colors.black.withAlpha(40),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4)),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(10),
+                child: _StoreCover(book.cover),
+              ),
+            ),
+          ),
+          SizedBox(
+            height: _caption,
+            child: Padding(
+              padding: const EdgeInsets.only(top: 6, left: 2, right: 2),
+              child: Text(
+                book.searchQuery,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    fontSize: 12.5,
+                    height: 1.25,
+                    fontWeight: FontWeight.w700,
+                    color: scheme.onSurface),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final scheme = Theme.of(context).colorScheme;
-    final grid = GridView.builder(
-      padding: const EdgeInsets.fromLTRB(10, 10, 10, 24),
-      physics: const AlwaysScrollableScrollPhysics(),
-      // Three columns on a phone, more on a tablet or an unfolded phone.
-      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
-        maxCrossAxisExtent: 135,
-        mainAxisSpacing: 10,
-        crossAxisSpacing: 13,
-        mainAxisExtent: 205,
-      ),
-      itemCount: books.length,
-      itemBuilder: (context, i) {
-        final book = books[i];
-        return InkWell(
-          key: ValueKey('bookwalker-$i'),
-          borderRadius: BorderRadius.circular(6),
-          onTap: () => _openSearch(context, ref, book),
-          child: Column(
-            children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(5),
-                child: CachedNetworkImage(
-                  imageUrl: book.cover,
-                  height: _coverHeight,
-                  width: _coverWidth,
-                  fit: BoxFit.cover,
-                  placeholder: (_, __) => Container(
-                      height: _coverHeight,
-                      width: _coverWidth,
-                      color: scheme.surfaceContainerHighest),
-                  errorWidget: (_, __, ___) => Container(
-                    height: _coverHeight,
-                    width: _coverWidth,
-                    color: scheme.surfaceContainerHighest,
-                    child: const Icon(Icons.image_rounded),
-                  ),
-                ),
+    final view = LayoutBuilder(builder: (context, constraints) {
+      const side = 12.0;
+      final width = constraints.maxWidth - side * 2;
+      // Three columns on a phone, as many as fit a cover of about 120
+      // on a wider screen.
+      final columns = width < 520 ? 3 : (width / 128).floor().clamp(4, 8);
+      final tileWidth = (width - _gap * (columns - 1)) / columns;
+      final tileHeight = tileWidth / 0.7 + _caption;
+      final fresh = _GridAge.of(context);
+      Widget shown(int i, Widget child) =>
+          fresh ? Appear.staggered(i, child: child) : child;
+      return CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(side, 10, side, 24),
+            sliver: SliverGrid(
+              gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: columns,
+                crossAxisSpacing: _gap,
+                mainAxisSpacing: _rowGap,
+                mainAxisExtent: tileHeight,
               ),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: SizedBox(
-                    width: _coverWidth,
-                    child: Text(
-                      book.searchQuery,
-                      style: Theme.of(context).textTheme.displayMedium,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ),
+              delegate: SliverChildBuilderDelegate(
+                (context, i) => shown(i, _tile(context, ref, i)),
+                childCount: books.length,
               ),
-            ],
+            ),
           ),
-        );
-      },
-    );
+        ],
+      );
+    });
+    final grid = _GridAge(child: view);
     return onRefresh == null
         ? grid
         : RefreshIndicator(onRefresh: onRefresh!, child: grid);
   }
+}
+
+/// Whether the grid under it has only just come up: covers built in its
+/// first moments rise into place one after the other, those scrolled to
+/// later are simply there.
+class _GridAge extends StatefulWidget {
+  const _GridAge({required this.child});
+
+  final Widget child;
+
+  static bool of(BuildContext context) {
+    final state = context.findAncestorStateOfType<_GridAgeState>();
+    return state != null &&
+        DateTime.now().difference(state._since) <
+            const Duration(milliseconds: 700);
+  }
+
+  @override
+  State<_GridAge> createState() => _GridAgeState();
+}
+
+class _GridAgeState extends State<_GridAge> {
+  final DateTime _since = DateTime.now();
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 Widget _loading(BuildContext context) => Center(
