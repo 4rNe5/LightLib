@@ -2606,4 +2606,85 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get webGlossaryNoBooks =>
       'No volume of this series is in this browser yet. Open one first.';
+
+  @override
+  String get bookMarkFinished => 'Mark as finished';
+
+  @override
+  String get bookMarkUnfinished => 'Mark as not finished';
+
+  @override
+  String get bookReadAgain => 'Read again';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return 'Continue from $percent%';
+  }
+
+  @override
+  String get bookReadToday => 'Read today';
+
+  @override
+  String get bookReadYesterday => 'Read yesterday';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return 'Read $days days ago';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return 'Finished $date';
+  }
+
+  @override
+  String get bookAbout => 'About this book';
+
+  @override
+  String get bookNoDescription => 'No description.';
+
+  @override
+  String get bookMore => 'More';
+
+  @override
+  String get bookShare => 'Share';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return 'Opening at $percent%…';
+  }
+
+  @override
+  String get bookOpening => 'Opening the book…';
+
+  @override
+  String get libraryNowReading => 'Reading now';
+
+  @override
+  String get libraryAlsoReading => 'Also reading';
+
+  @override
+  String get libraryBackToOverview => 'Back to the overview';
+
+  @override
+  String get bookFinishedToast => 'Finished! Marked as read.';
+
+  @override
+  String get readerTwoPages => 'Two pages side by side';
+
+  @override
+  String get readerTwoPagesHint =>
+      'On an unfolded or wide screen, when turning pages';
+
+  @override
+  String get settingsCatSearch => 'Search & downloads';
+
+  @override
+  String get settingsCatReading => 'Reading & translation';
+
+  @override
+  String get settingsCatStorage => 'Storage & sync';
+
+  @override
+  String get settingsCatApp => 'App';
 }

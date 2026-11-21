@@ -3674,5 +3674,121 @@
   "webGlossaryNoBooks": "No volume of this series is in this browser yet. Open one first.",
   "@webGlossaryNoBooks": {
     "description": "webGlossaryNoBooks"
+  },
+  "bookMarkFinished": "Mark as finished",
+  "@bookMarkFinished": {
+    "description": "bookMarkFinished"
+  },
+  "bookMarkUnfinished": "Mark as not finished",
+  "@bookMarkUnfinished": {
+    "description": "bookMarkUnfinished"
+  },
+  "bookReadAgain": "Read again",
+  "@bookReadAgain": {
+    "description": "bookReadAgain"
+  },
+  "bookContinueFrom": "Continue from {percent}%",
+  "@bookContinueFrom": {
+    "description": "bookContinueFrom",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bookReadToday": "Read today",
+  "@bookReadToday": {
+    "description": "bookReadToday"
+  },
+  "bookReadYesterday": "Read yesterday",
+  "@bookReadYesterday": {
+    "description": "bookReadYesterday"
+  },
+  "bookReadDaysAgo": "Read {days} days ago",
+  "@bookReadDaysAgo": {
+    "description": "bookReadDaysAgo",
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "bookFinishedOn": "Finished {date}",
+  "@bookFinishedOn": {
+    "description": "bookFinishedOn",
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "bookAbout": "About this book",
+  "@bookAbout": {
+    "description": "bookAbout"
+  },
+  "bookNoDescription": "No description.",
+  "@bookNoDescription": {
+    "description": "bookNoDescription"
+  },
+  "bookMore": "More",
+  "@bookMore": {
+    "description": "bookMore"
+  },
+  "bookShare": "Share",
+  "@bookShare": {
+    "description": "bookShare"
+  },
+  "bookOpeningAt": "Opening at {percent}%…",
+  "@bookOpeningAt": {
+    "description": "bookOpeningAt",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "bookOpening": "Opening the book…",
+  "@bookOpening": {
+    "description": "bookOpening"
+  },
+  "libraryNowReading": "Reading now",
+  "@libraryNowReading": {
+    "description": "libraryNowReading"
+  },
+  "libraryAlsoReading": "Also reading",
+  "@libraryAlsoReading": {
+    "description": "libraryAlsoReading"
+  },
+  "libraryBackToOverview": "Back to the overview",
+  "@libraryBackToOverview": {
+    "description": "libraryBackToOverview"
+  },
+  "bookFinishedToast": "Finished! Marked as read.",
+  "@bookFinishedToast": {
+    "description": "bookFinishedToast"
+  },
+  "readerTwoPages": "Two pages side by side",
+  "@readerTwoPages": {
+    "description": "readerTwoPages"
+  },
+  "readerTwoPagesHint": "On an unfolded or wide screen, when turning pages",
+  "@readerTwoPagesHint": {
+    "description": "readerTwoPagesHint"
+  },
+  "settingsCatSearch": "Search & downloads",
+  "@settingsCatSearch": {
+    "description": "settingsCatSearch"
+  },
+  "settingsCatReading": "Reading & translation",
+  "@settingsCatReading": {
+    "description": "settingsCatReading"
+  },
+  "settingsCatStorage": "Storage & sync",
+  "@settingsCatStorage": {
+    "description": "settingsCatStorage"
+  },
+  "settingsCatApp": "App",
+  "@settingsCatApp": {
+    "description": "settingsCatApp"
   }
 }

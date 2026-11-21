@@ -2630,4 +2630,85 @@ class AppLocalizationsDe extends AppLocalizations {
   @override
   String get webGlossaryNoBooks =>
       'Kein Band dieser Reihe ist in diesem Browser. Zuerst einen öffnen.';
+
+  @override
+  String get bookMarkFinished => 'Als gelesen markieren';
+
+  @override
+  String get bookMarkUnfinished => 'Als nicht gelesen markieren';
+
+  @override
+  String get bookReadAgain => 'Noch einmal lesen';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return 'Weiterlesen ab $percent %';
+  }
+
+  @override
+  String get bookReadToday => 'Heute gelesen';
+
+  @override
+  String get bookReadYesterday => 'Gestern gelesen';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return 'Vor $days Tagen gelesen';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return 'Gelesen am $date';
+  }
+
+  @override
+  String get bookAbout => 'Über dieses Buch';
+
+  @override
+  String get bookNoDescription => 'Keine Beschreibung.';
+
+  @override
+  String get bookMore => 'Mehr';
+
+  @override
+  String get bookShare => 'Teilen';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return 'Öffne bei $percent %…';
+  }
+
+  @override
+  String get bookOpening => 'Buch wird geöffnet…';
+
+  @override
+  String get libraryNowReading => 'Lese ich gerade';
+
+  @override
+  String get libraryAlsoReading => 'Lese ich auch';
+
+  @override
+  String get libraryBackToOverview => 'Zurück zur Übersicht';
+
+  @override
+  String get bookFinishedToast => 'Fertig! Als gelesen markiert.';
+
+  @override
+  String get readerTwoPages => 'Zwei Seiten nebeneinander';
+
+  @override
+  String get readerTwoPagesHint =>
+      'Auf aufgeklapptem oder breitem Bildschirm beim Blättern';
+
+  @override
+  String get settingsCatSearch => 'Suche & Downloads';
+
+  @override
+  String get settingsCatReading => 'Lesen & Übersetzen';
+
+  @override
+  String get settingsCatStorage => 'Speicher & Sync';
+
+  @override
+  String get settingsCatApp => 'App';
 }

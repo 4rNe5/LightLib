@@ -2638,4 +2638,85 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get webGlossaryNoBooks =>
       'Aucun volume de cette série n’est dans ce navigateur. Ouvrez-en un d’abord.';
+
+  @override
+  String get bookMarkFinished => 'Marquer comme lu';
+
+  @override
+  String get bookMarkUnfinished => 'Marquer comme non lu';
+
+  @override
+  String get bookReadAgain => 'Relire';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return 'Reprendre à $percent %';
+  }
+
+  @override
+  String get bookReadToday => 'Lu aujourd\'hui';
+
+  @override
+  String get bookReadYesterday => 'Lu hier';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return 'Lu il y a $days jours';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return 'Terminé le $date';
+  }
+
+  @override
+  String get bookAbout => 'À propos du livre';
+
+  @override
+  String get bookNoDescription => 'Pas de description.';
+
+  @override
+  String get bookMore => 'Plus';
+
+  @override
+  String get bookShare => 'Partager';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return 'Ouverture à $percent %…';
+  }
+
+  @override
+  String get bookOpening => 'Ouverture du livre…';
+
+  @override
+  String get libraryNowReading => 'En cours de lecture';
+
+  @override
+  String get libraryAlsoReading => 'Aussi en cours';
+
+  @override
+  String get libraryBackToOverview => 'Retour à l\'aperçu';
+
+  @override
+  String get bookFinishedToast => 'Terminé ! Marqué comme lu.';
+
+  @override
+  String get readerTwoPages => 'Deux pages côte à côte';
+
+  @override
+  String get readerTwoPagesHint =>
+      'Sur un écran déplié ou large, en mode pages';
+
+  @override
+  String get settingsCatSearch => 'Recherche et téléchargements';
+
+  @override
+  String get settingsCatReading => 'Lecture et traduction';
+
+  @override
+  String get settingsCatStorage => 'Stockage et synchronisation';
+
+  @override
+  String get settingsCatApp => 'Application';
 }

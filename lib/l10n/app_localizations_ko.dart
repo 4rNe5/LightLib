@@ -2542,4 +2542,84 @@ class AppLocalizationsKo extends AppLocalizations {
   @override
   String get webGlossaryNoBooks =>
       '이 브라우저에 받은 권이 없어 용어집을 열 수 없습니다. 책을 한 번 열어 주세요.';
+
+  @override
+  String get bookMarkFinished => '완독 표시';
+
+  @override
+  String get bookMarkUnfinished => '완독 해제';
+
+  @override
+  String get bookReadAgain => '다시 읽기';
+
+  @override
+  String bookContinueFrom(int percent) {
+    return '$percent%부터 이어 읽기';
+  }
+
+  @override
+  String get bookReadToday => '오늘 읽음';
+
+  @override
+  String get bookReadYesterday => '어제 읽음';
+
+  @override
+  String bookReadDaysAgo(int days) {
+    return '$days일 전에 읽음';
+  }
+
+  @override
+  String bookFinishedOn(String date) {
+    return '$date 완독';
+  }
+
+  @override
+  String get bookAbout => '책 소개';
+
+  @override
+  String get bookNoDescription => '소개가 없습니다.';
+
+  @override
+  String get bookMore => '더 보기';
+
+  @override
+  String get bookShare => '공유';
+
+  @override
+  String bookOpeningAt(int percent) {
+    return '$percent% 지점을 펼치는 중…';
+  }
+
+  @override
+  String get bookOpening => '책을 펼치는 중…';
+
+  @override
+  String get libraryNowReading => '지금 읽는 책';
+
+  @override
+  String get libraryAlsoReading => '함께 읽는 책';
+
+  @override
+  String get libraryBackToOverview => '요약으로 돌아가기';
+
+  @override
+  String get bookFinishedToast => '완독! 다 읽은 책으로 표시했어요.';
+
+  @override
+  String get readerTwoPages => '두 쪽 나란히 보기';
+
+  @override
+  String get readerTwoPagesHint => '펼친 화면이나 넓은 화면에서 쪽 넘김으로 읽을 때';
+
+  @override
+  String get settingsCatSearch => '검색·다운로드';
+
+  @override
+  String get settingsCatReading => '읽기·번역';
+
+  @override
+  String get settingsCatStorage => '저장·동기화';
+
+  @override
+  String get settingsCatApp => '앱 정보';
 }
