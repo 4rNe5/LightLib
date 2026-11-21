@@ -2687,4 +2687,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsCatApp => 'App';
+
+  @override
+  String get settingsReaderDefaults => 'Reader defaults';
+
+  @override
+  String get settingsReaderDefaultsHint =>
+      'The same settings as Aa in the reader: what is changed here is how every book opens.';
 }

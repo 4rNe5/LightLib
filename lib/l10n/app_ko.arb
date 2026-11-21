@@ -774,5 +774,7 @@
   "settingsCatSearch": "검색·다운로드",
   "settingsCatReading": "읽기·번역",
   "settingsCatStorage": "저장·동기화",
-  "settingsCatApp": "앱 정보"
+  "settingsCatApp": "앱 정보",
+  "settingsReaderDefaults": "뷰어 기본 설정",
+  "settingsReaderDefaultsHint": "뷰어의 Aa 설정과 같은 값입니다. 여기서 바꾸면 모든 책이 그렇게 열립니다."
 }

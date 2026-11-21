@@ -4763,6 +4763,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'App'**
   String get settingsCatApp;
+
+  /// settingsReaderDefaults
+  ///
+  /// In en, this message translates to:
+  /// **'Reader defaults'**
+  String get settingsReaderDefaults;
+
+  /// settingsReaderDefaultsHint
+  ///
+  /// In en, this message translates to:
+  /// **'The same settings as Aa in the reader: what is changed here is how every book opens.'**
+  String get settingsReaderDefaultsHint;
 }
 
 class _AppLocalizationsDelegate

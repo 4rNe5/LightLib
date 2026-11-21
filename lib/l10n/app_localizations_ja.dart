@@ -2616,4 +2616,11 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get settingsCatApp => 'アプリ情報';
+
+  @override
+  String get settingsReaderDefaults => 'ビューアの基本設定';
+
+  @override
+  String get settingsReaderDefaultsHint =>
+      'ビューアの「Aa」と同じ設定です。ここで変えると、すべての本がその設定で開きます。';
 }

@@ -1,4 +1,5 @@
 // Dart imports:
+import 'dart:async';
 import 'dart:io';
 import 'dart:convert';
 import 'dart:typed_data';
@@ -10,6 +11,9 @@ import 'package:openlib/ui/components/zlibrary_account_sheet.dart';
 import 'package:openlib/services/app_release.dart';
 import 'package:openlib/services/backup_service.dart';
 import 'package:openlib/ui/components/sync_section.dart';
+import 'package:openlib/services/reader_fonts.dart';
+import 'package:openlib/services/reader_settings.dart';
+import 'package:openlib/ui/components/reader_settings_sheet.dart';
 
 // Flutter imports:
 import 'package:flutter/material.dart';
@@ -259,23 +263,88 @@ List<_Category> _categories(AppLocalizations l10n) => [
         0,
         1,
         2,
-        6
+        7
       ]),
       _Category(Icons.palette_outlined, _Hue.appearance, l10n.appearanceSection,
           [l10n.themeTitle, l10n.fontSizeTitle], const [3]),
-      _Category(Icons.auto_stories_outlined, _Hue.reader,
-          l10n.settingsCatReading, [
+      _Category(
+          Icons.auto_stories_outlined, _Hue.reader, l10n.settingsCatReading, [
+        l10n.settingsReaderDefaults,
         l10n.readerFonts,
         l10n.translationSettingsTitle,
       ], const [
-        5
+        5,
+        6
       ]),
-      _Category(Icons.cloud_sync_outlined, _Hue.backup, l10n.settingsCatStorage,
+      _Category(
+          Icons.cloud_sync_outlined,
+          _Hue.backup,
+          l10n.settingsCatStorage,
           [l10n.generalSection, l10n.syncTitle, l10n.backupSection],
-          const [4, 7, 8]),
+          const [4, 8, 9]),
       _Category(Icons.info_outline, _Hue.about, l10n.settingsCatApp,
-          [l10n.updatesSection, l10n.aboutSection], const [9, 10, 11]),
+          [l10n.updatesSection, l10n.aboutSection], const [10, 11, 12]),
     ];
+
+/// How every book opens: the reader's own settings (its "Aa" sheet) set
+/// from here too - text size, theme, scrolling or pages, two pages on a
+/// wide screen, spacing. One store ([ReaderSettings]): an open reader
+/// follows what is changed here, and the other way round.
+class _ReaderDefaultsGroup extends StatefulWidget {
+  const _ReaderDefaultsGroup();
+
+  @override
+  State<_ReaderDefaultsGroup> createState() => _ReaderDefaultsGroupState();
+}
+
+class _ReaderDefaultsGroupState extends State<_ReaderDefaultsGroup> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(ReaderSettings.instance.load());
+    unawaited(ReaderFonts.instance.load());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    return Column(
+      key: const ValueKey('settingsReaderDefaults'),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _SettingsSectionHeader(l10n.settingsReaderDefaults),
+        Material(
+          color: scheme.surfaceContainerLow,
+          borderRadius: BorderRadius.circular(20),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(14, 16, 14, 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                ReaderSettingsSheet(
+                  script: FontScript.japanese,
+                  settings: ReaderSettings.instance,
+                  fonts: ReaderFonts.instance,
+                  bookLayout: true,
+                  embedded: true,
+                ),
+                const SizedBox(height: 10),
+                Text(l10n.settingsReaderDefaultsHint,
+                    style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: scheme.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 22),
+      ],
+    );
+  }
+}
 
 /// The settings page laid out: one list on a phone; on a wide screen the
 /// kinds of settings on one side and the chosen kind's groups on the
@@ -822,6 +891,7 @@ class SettingsPage extends ConsumerWidget {
                   ),
                 ],
               ),
+              const _ReaderDefaultsGroup(),
               _SettingsGroup(
                 title: l10n.readerSection,
                 children: [

@@ -2622,4 +2622,11 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get settingsCatApp => '앱 정보';
+
+  @override
+  String get settingsReaderDefaults => '뷰어 기본 설정';
+
+  @override
+  String get settingsReaderDefaultsHint =>
+      '뷰어의 Aa 설정과 같은 값입니다. 여기서 바꾸면 모든 책이 그렇게 열립니다.';
 }

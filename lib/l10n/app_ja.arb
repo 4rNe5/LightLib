@@ -774,5 +774,7 @@
   "settingsCatSearch": "検索・ダウンロード",
   "settingsCatReading": "読書・翻訳",
   "settingsCatStorage": "保存・同期",
-  "settingsCatApp": "アプリ情報"
+  "settingsCatApp": "アプリ情報",
+  "settingsReaderDefaults": "ビューアの基本設定",
+  "settingsReaderDefaultsHint": "ビューアの「Aa」と同じ設定です。ここで変えると、すべての本がその設定で開きます。"
 }

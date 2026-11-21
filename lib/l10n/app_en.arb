@@ -3790,5 +3790,13 @@
   "settingsCatApp": "App",
   "@settingsCatApp": {
     "description": "settingsCatApp"
+  },
+  "settingsReaderDefaults": "Reader defaults",
+  "@settingsReaderDefaults": {
+    "description": "settingsReaderDefaults"
+  },
+  "settingsReaderDefaultsHint": "The same settings as Aa in the reader: what is changed here is how every book opens.",
+  "@settingsReaderDefaultsHint": {
+    "description": "settingsReaderDefaultsHint"
   }
 }

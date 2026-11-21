@@ -2711,4 +2711,11 @@ class AppLocalizationsDe extends AppLocalizations {
 
   @override
   String get settingsCatApp => 'App';
+
+  @override
+  String get settingsReaderDefaults => 'Standardeinstellungen des Readers';
+
+  @override
+  String get settingsReaderDefaultsHint =>
+      'Dieselben Einstellungen wie „Aa“ im Reader: Was hier geändert wird, gilt für jedes Buch.';
 }

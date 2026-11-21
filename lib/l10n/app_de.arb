@@ -780,5 +780,7 @@
   "settingsCatSearch": "Suche & Downloads",
   "settingsCatReading": "Lesen & Übersetzen",
   "settingsCatStorage": "Speicher & Sync",
-  "settingsCatApp": "App"
+  "settingsCatApp": "App",
+  "settingsReaderDefaults": "Standardeinstellungen des Readers",
+  "settingsReaderDefaultsHint": "Dieselben Einstellungen wie „Aa“ im Reader: Was hier geändert wird, gilt für jedes Buch."
 }

@@ -68,11 +68,17 @@ class ReaderSettingsSheet extends StatelessWidget {
     required this.settings,
     required this.fonts,
     this.bookLayout = false,
+    this.embedded = false,
   });
 
   /// The book renderer: pages follow the book's own direction (no manga
   /// option), and the writing direction can be chosen.
   final bool bookLayout;
+
+  /// On a page of its own (Settings), not in the reader's sheet: no
+  /// heading with a close button, no height of its own, and no font rows
+  /// (the page has the fonts beside it, for every script).
+  final bool embedded;
   final FontScript script;
   final ReaderSettings settings;
   final ReaderFonts fonts;
@@ -81,6 +87,12 @@ class ReaderSettingsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (embedded) {
+      return ListenableBuilder(
+        listenable: Listenable.merge([settings, fonts]),
+        builder: (context, _) => _content(context, settings.value),
+      );
+    }
     final maxHeight = MediaQuery.sizeOf(context).height * 0.82;
     return ConstrainedBox(
       constraints: BoxConstraints(maxHeight: maxHeight),
@@ -101,26 +113,28 @@ class ReaderSettingsSheet extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.readerThemesSettings,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleLarge
-                    ?.copyWith(fontWeight: FontWeight.w700),
+        if (!embedded) ...[
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.readerThemesSettings,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleLarge
+                      ?.copyWith(fontWeight: FontWeight.w700),
+                ),
               ),
-            ),
-            IconButton.filledTonal(
-              tooltip: l10n.close,
-              visualDensity: VisualDensity.compact,
-              onPressed: () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.close, size: 18),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
+              IconButton.filledTonal(
+                tooltip: l10n.close,
+                visualDensity: VisualDensity.compact,
+                onPressed: () => Navigator.of(context).pop(),
+                icon: const Icon(Icons.close, size: 18),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+        ],
         _SizeControl(
           size: s.fontSize,
           onChanged: (size) => _set(s.copyWith(fontSize: size)),
@@ -186,57 +200,72 @@ class ReaderSettingsSheet extends StatelessWidget {
         if (bookLayout) ...[
           const SizedBox(height: 16),
           _Label(l10n.readerWriting),
-          SizedBox(
-            width: double.infinity,
-            child: SegmentedButton<ReaderWriting>(
-              key: const ValueKey('readerWritingSegments'),
-              showSelectedIcon: false,
-              style: SegmentedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+          // (Three names with their pictures need 300 dp; in a narrower
+          // column - Settings beside its categories - the names alone.)
+          LayoutBuilder(builder: (context, constraints) {
+            final icons = constraints.maxWidth >= 300;
+            Widget name(String text) => Text(text,
+                maxLines: 1, softWrap: false, overflow: TextOverflow.fade);
+            return SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<ReaderWriting>(
+                key: const ValueKey('readerWritingSegments'),
+                showSelectedIcon: false,
+                style: SegmentedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  padding: icons
+                      ? null
+                      : const EdgeInsets.symmetric(horizontal: 6),
+                ),
+                segments: [
+                  ButtonSegment(
+                    value: ReaderWriting.auto,
+                    icon: icons ? const Icon(Icons.menu_book_outlined) : null,
+                    label: name(l10n.readerWritingAuto),
+                  ),
+                  ButtonSegment(
+                    value: ReaderWriting.horizontal,
+                    icon: icons ? const Icon(Icons.notes) : null,
+                    label: name(l10n.readerWritingHorizontal),
+                  ),
+                  ButtonSegment(
+                    value: ReaderWriting.vertical,
+                    icon: icons
+                        ? Transform.rotate(
+                            angle: 1.5708, child: const Icon(Icons.notes))
+                        : null,
+                    label: name(l10n.readerWritingVertical),
+                  ),
+                ],
+                selected: {s.writing},
+                onSelectionChanged: (v) =>
+                    _set(s.copyWith(writing: v.first)),
               ),
-              segments: [
-                ButtonSegment(
-                  value: ReaderWriting.auto,
-                  icon: const Icon(Icons.menu_book_outlined),
-                  label: Text(l10n.readerWritingAuto),
-                ),
-                ButtonSegment(
-                  value: ReaderWriting.horizontal,
-                  icon: const Icon(Icons.notes),
-                  label: Text(l10n.readerWritingHorizontal),
-                ),
-                ButtonSegment(
-                  value: ReaderWriting.vertical,
-                  icon: Transform.rotate(
-                      angle: 1.5708, child: const Icon(Icons.notes)),
-                  label: Text(l10n.readerWritingVertical),
-                ),
-              ],
-              selected: {s.writing},
-              onSelectionChanged: (v) => _set(s.copyWith(writing: v.first)),
-            ),
-          ),
+            );
+          }),
         ],
-        const SizedBox(height: 16),
-        _Group(children: [
-          ListTile(
-            key: const ValueKey('readerFontRow'),
-            leading: const Icon(Icons.text_fields),
-            title: Text(l10n.readerFont),
-            subtitle: Text(_fontName(l10n, fonts.choiceFor(script))),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => _pickFont(context),
-          ),
-          const Divider(height: 1, indent: 56),
-          ListTile(
-            leading: const Icon(Icons.translate),
-            title: Text(l10n.readerAllFonts),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => ReaderFontSettingsPage(fonts: fonts))),
-          ),
-        ]),
+        if (!embedded) ...[
+          const SizedBox(height: 16),
+          _Group(children: [
+            ListTile(
+              key: const ValueKey('readerFontRow'),
+              leading: const Icon(Icons.text_fields),
+              title: Text(l10n.readerFont),
+              subtitle: Text(_fontName(l10n, fonts.choiceFor(script))),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => _pickFont(context),
+            ),
+            const Divider(height: 1, indent: 56),
+            ListTile(
+              leading: const Icon(Icons.translate),
+              title: Text(l10n.readerAllFonts),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => ReaderFontSettingsPage(fonts: fonts))),
+            ),
+          ]),
+        ],
         const SizedBox(height: 16),
         Row(
           children: [

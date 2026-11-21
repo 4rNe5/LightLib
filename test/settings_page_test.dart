@@ -19,6 +19,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 // Project imports:
 import 'package:openlib/services/database.dart';
+import 'package:openlib/services/reader_settings.dart';
 import 'package:openlib/state/state.dart';
 import 'package:openlib/ui/settings_page.dart';
 import 'package:openlib/l10n/app_localizations.dart';
@@ -156,6 +157,55 @@ void main() {
       expect(tester.takeException(), isNull);
     }
     expect(find.text('Check for Updates'), findsOneWidget);
+  });
+
+  // How every book opens is set from Settings too: the reader's own
+  // settings (its "Aa" sheet), the same store.
+  testWidgets("the reader's defaults: in the list on a phone", (tester) async {
+    addTearDown(ReaderSettings.instance.resetForTest);
+    await pumpPage(tester);
+    final defaults = find.byKey(const ValueKey('settingsReaderDefaults'));
+    await tester.scrollUntilVisible(defaults, 300,
+        scrollable: find.byType(Scrollable).first);
+    expect(find.descendant(of: defaults, matching: find.text('Reader defaults')),
+        findsOneWidget);
+    // No heading with a close button, no font rows: this is a page.
+    expect(find.byKey(const ValueKey('readerFontRow')), findsNothing);
+    expect(find.byTooltip('Close'), findsNothing);
+
+    final twoPages = find.byKey(const ValueKey('twoPages'));
+    await tester.scrollUntilVisible(twoPages, 200,
+        scrollable: find.byType(Scrollable).first);
+    expect(ReaderSettings.instance.value.twoPages, isTrue);
+    await tester.tap(twoPages);
+    await tester.pump();
+    expect(ReaderSettings.instance.value.twoPages, isFalse);
+    expect(tester.widget<SwitchListTile>(twoPages).value, isFalse);
+
+    // Text size: the same control as in the reader.
+    final size = ReaderSettings.instance.value.fontSize;
+    final larger = find.byTooltip('Increase font size');
+    await tester.scrollUntilVisible(larger, -200,
+        scrollable: find.byType(Scrollable).first);
+    await tester.tap(larger);
+    await tester.pump();
+    expect(ReaderSettings.instance.value.fontSize, greaterThan(size));
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets("the reader's defaults: under reading, in a narrow pane",
+      (tester) async {
+    addTearDown(ReaderSettings.instance.resetForTest);
+    await pumpPage(tester, wide: true);
+    expect(find.byKey(const ValueKey('settingsReaderDefaults')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('settingsCategory-2')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+    expect(
+        find.byKey(const ValueKey('settingsReaderDefaults')), findsOneWidget);
+    // (The fonts and translation are under it, as before.)
+    expect(find.text('Fonts'), findsWidgets);
+    expect(tester.takeException(), isNull);
   });
 
   test('setTheme persists the selected mode', () async {
