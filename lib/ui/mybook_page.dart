@@ -1,132 +1,68 @@
 // Flutter imports:
 import 'package:flutter/material.dart';
-import 'package:openlib/l10n/app_localizations.dart';
 
 // Package imports:
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // Project imports:
-import 'package:openlib/services/database.dart';
-import 'package:openlib/services/share_book.dart';
-import 'package:openlib/ui/components/snack_bar_widget.dart';
-import 'package:openlib/ui/components/book_info_widget.dart';
-import 'package:openlib/ui/components/file_buttons_widget.dart';
-import 'package:openlib/ui/components/glossary_sheet.dart';
-import 'package:openlib/ui/components/hide_cover_controls.dart';
-import 'package:openlib/ui/components/priority_translation_card.dart';
+import 'package:openlib/ui/adaptive.dart';
+import 'package:openlib/ui/book_navigation.dart';
+import 'package:openlib/ui/components/book_detail.dart';
 
-class BookPage extends StatelessWidget {
-  const BookPage({super.key, required this.id});
+/// A library book's page ([BookDetail]) on a screen of its own: where a
+/// phone goes from the shelf, and from where the book is opened.
+class BookPage extends ConsumerStatefulWidget {
+  const BookPage({super.key, required this.id, this.heroTag});
 
   final String id;
 
+  /// The cover's tag on the shelf (it flies from there).
+  final Object? heroTag;
+
+  @override
+  ConsumerState<BookPage> createState() => _BookPageState();
+}
+
+class _BookPageState extends ConsumerState<BookPage> {
+  bool _stepping = false;
+
+  /// The window grew wide enough for the shelf and a book side by side
+  /// (the phone was unfolded): this page steps into the pane beside the
+  /// shelf - the same book, where it now belongs - and leaves the stack
+  /// without a move, also from under a reader.
+  void _stepIntoPane() {
+    if (_stepping) return;
+    _stepping = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _stepping = false;
+      if (!mounted || !useTwoPanes(context)) return;
+      final route = ModalRoute.of(context);
+      if (route == null || !route.isActive) return;
+      ref.read(libraryDetailProvider.notifier).state = widget.id;
+      Navigator.of(context).removeRoute(route);
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    MyLibraryDb dataBase = MyLibraryDb.instance;
-    final bookInfo = dataBase.getId(id);
-
+    if (useTwoPanes(context)) _stepIntoPane();
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        title: Text(AppLocalizations.of(context).appTitle),
-        titleTextStyle: Theme.of(context).textTheme.displayLarge,
-        actions: [
-          HideCoverButton(bookId: id),
-          FutureBuilder(
-              future: bookInfo,
-              builder: (BuildContext context, AsyncSnapshot<MyBook?> snapshot) {
-                if (snapshot.hasData &&
-                    snapshot.data?.title != null &&
-                    snapshot.data?.link != null) {
-                  return IconButton(
-                    icon: Icon(
-                      Icons.share_sharp,
-                      color: Theme.of(context).colorScheme.tertiary,
-                    ),
-                    iconSize: 19.0,
-                    onPressed: () async {
-                      final outcome = await shareBook(snapshot.data!.title,
-                          snapshot.data!.link, snapshot.data?.thumbnail ?? '',
-                          fileName: snapshot.data?.fileName,
-                          format: snapshot.data?.format);
-                      if (context.mounted &&
-                          outcome == ShareOutcome.pathCopied) {
-                        showSnackBar(
-                            context: context,
-                            message:
-                                AppLocalizations.of(context).copiedBookPath);
-                      }
-                    },
-                  );
-                } else {
-                  return const SizedBox.shrink();
-                }
-              })
-        ],
-      ),
-      body: Consumer(
-        builder: (BuildContext context, WidgetRef ref, _) {
-          return FutureBuilder(
-              future: bookInfo,
-              builder: (BuildContext context, AsyncSnapshot<MyBook?> snapshot) {
-                if (snapshot.hasData) {
-                  final book = snapshot.data!;
-                  return BookInfoWidget(
-                      data: book,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          FileOpenAndDeleteButtons(
-                            id: book.id,
-                            format: book.format!,
-                            fileName: book.fileName,
-                            onDelete: () {
-                              Navigator.of(context).pop();
-                            },
-                          ),
-                          if ((book.format ?? '').toLowerCase() == 'epub') ...[
-                            PriorityTranslationCard(
-                                fileName: book.getFileName(),
-                                title: book.title),
-                            // The glossary without opening the book: a
-                            // word set right there has its paragraphs
-                            // translated again, in this book or in the
-                            // whole series.
-                            Padding(
-                              padding:
-                                  const EdgeInsets.fromLTRB(16, 4, 16, 8),
-                              child: Align(
-                                alignment: AlignmentDirectional.centerStart,
-                                child: OutlinedButton.icon(
-                                  key: const ValueKey('bookGlossary'),
-                                  onPressed: () => showGlossarySheet(context,
-                                      bookFile: book.getFileName()),
-                                  icon: const Icon(Icons.menu_book_outlined,
-                                      size: 18),
-                                  label: Text(AppLocalizations.of(context)
-                                      .glossaryTitle),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ));
-                } else if (snapshot.hasError) {
-                  return Center(
-                    child: Text(snapshot.toString()),
-                  );
-                } else {
-                  return Center(
-                      child: SizedBox(
-                    width: 25,
-                    height: 25,
-                    child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.secondary,
-                    ),
-                  ));
-                }
-              });
-        },
+      // (The cover's colours run up under the status bar; the page's
+      // own parts keep below it.)
+      body: SafeArea(
+        top: false,
+        bottom: false,
+        child: BookDetail(
+          bookId: widget.id,
+          heroTag: widget.heroTag,
+          leading: IconButton(
+            key: const ValueKey('bookPageBack'),
+            tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.of(context).maybePop(),
+          ),
+          onGone: () => Navigator.of(context).maybePop(),
+        ),
       ),
     );
   }

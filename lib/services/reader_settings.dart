@@ -131,6 +131,11 @@ class ReaderSettingsData {
   final ReaderLayout layout;
   final ReaderWriting writing;
 
+  /// Two pages side by side where the screen is wide enough for both
+  /// (an unfolded phone, a tablet), when pages are turned and the text
+  /// runs across.
+  final bool twoPages;
+
   const ReaderSettingsData({
     this.fontSize = 17,
     this.lineHeight = 1.7,
@@ -141,6 +146,7 @@ class ReaderSettingsData {
     this.theme = ReaderThemeId.original,
     this.layout = ReaderLayout.scroll,
     this.writing = ReaderWriting.auto,
+    this.twoPages = true,
   });
 
   ReaderSettingsData copyWith({
@@ -153,6 +159,7 @@ class ReaderSettingsData {
     ReaderThemeId? theme,
     ReaderLayout? layout,
     ReaderWriting? writing,
+    bool? twoPages,
   }) {
     return ReaderSettingsData(
       fontSize: (fontSize ?? this.fontSize).clamp(minFontSize, maxFontSize),
@@ -166,12 +173,13 @@ class ReaderSettingsData {
       theme: theme ?? this.theme,
       layout: layout ?? this.layout,
       writing: writing ?? this.writing,
+      twoPages: twoPages ?? this.twoPages,
     );
   }
 
   /// Everything except the layout and theme back to defaults.
-  ReaderSettingsData resetTypography() =>
-      ReaderSettingsData(theme: theme, layout: layout, writing: writing);
+  ReaderSettingsData resetTypography() => ReaderSettingsData(
+      theme: theme, layout: layout, writing: writing, twoPages: twoPages);
 
   Map<String, Object> toJson() => {
         'fontSize': fontSize,
@@ -183,6 +191,7 @@ class ReaderSettingsData {
         'theme': theme.name,
         'layout': layout.name,
         'writing': writing.name,
+        'twoPages': twoPages,
       };
 
   static ReaderSettingsData fromJson(Map<String, dynamic> json) {
@@ -212,6 +221,7 @@ class ReaderSettingsData {
       theme: ReaderThemeId.fromName(str('theme')),
       layout: ReaderLayout.fromName(str('layout')),
       writing: ReaderWriting.fromName(str('writing')),
+      twoPages: b('twoPages'),
     );
   }
 

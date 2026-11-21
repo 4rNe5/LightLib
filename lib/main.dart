@@ -34,7 +34,7 @@ import 'package:openlib/ui/themes.dart';
 import 'package:openlib/ui/onboarding/onboarding_page.dart';
 import 'package:openlib/ui/challenge_solver_page.dart';
 import 'package:openlib/ui/whats_new_page.dart';
-import 'package:openlib/ui/mybook_page.dart' show BookPage;
+import 'package:openlib/ui/book_navigation.dart';
 import 'package:openlib/services/home_widgets.dart';
 import 'package:openlib/services/hidden_covers.dart';
 import 'package:openlib/services/reading_recap.dart';
@@ -342,6 +342,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
     WidgetsBinding.instance.addObserver(this);
     // A tap on a home-screen widget opens its book or the library.
     HomeWidgets.instance.pending.addListener(_onWidgetAction);
+    MyLibraryDb.readingChanged.addListener(_onReadingChanged);
     unawaited(HomeWidgets.instance.init());
     WidgetsBinding.instance.addPostFrameCallback((_) => _onWidgetAction());
     // Request notification permission after first frame (only on mobile)
@@ -384,6 +385,7 @@ class _MainScreenState extends ConsumerState<MainScreen>
   @override
   void dispose() {
     HomeWidgets.instance.pending.removeListener(_onWidgetAction);
+    MyLibraryDb.readingChanged.removeListener(_onReadingChanged);
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -396,12 +398,18 @@ class _MainScreenState extends ConsumerState<MainScreen>
     ref.read(selectedIndexProvider.notifier).state = 2;
     final id = action.bookId;
     if (id != null) {
-      Navigator.of(context)
-          .push(MaterialPageRoute(builder: (_) => BookPage(id: id)))
-          .then((_) {
-        if (mounted) ref.invalidate(libraryBooksProvider);
-      });
+      // In place of whatever book is open, never on top of it.
+      showBookFromOutside(context, ref, id);
+    } else {
+      Navigator.of(context).popUntil((route) => route.isFirst);
     }
+  }
+
+  /// A reader was left, a book marked finished: the library, the books'
+  /// pages and the home-screen widgets show it.
+  void _onReadingChanged() {
+    if (!mounted) return;
+    ref.invalidate(libraryBooksProvider);
   }
 
   /// The home-screen widgets show the library as it is now.
@@ -578,20 +586,20 @@ class _MainScreenState extends ConsumerState<MainScreen>
     // No shared app bar: each tab draws its own large title (Home,
     // Search, My Library, Settings) and pushed pages carry the title of
     // what they show.
-    // A wide screen (unfolded, a tablet, on its side): the tabs down the
-    // left edge.
+    // A wide screen (unfolded, a tablet, on its side): the tabs in the
+    // lower right corner, the page beside them.
     if (useNavRail(context)) {
       return Scaffold(
         body: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Expanded(
+              child: SafeArea(right: false, child: page),
+            ),
             AppNavRail(
               selectedIndex: selectedIndex,
               onSelected: select,
               items: items,
-            ),
-            Expanded(
-              child: SafeArea(left: false, child: page),
             ),
           ],
         ),
