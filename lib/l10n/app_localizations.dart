@@ -1024,6 +1024,12 @@ abstract class AppLocalizations {
   /// **'No mirrors available!'**
   String get noMirrors;
 
+  /// Shown when the manual download page gave no link before its time ran out
+  ///
+  /// In en, this message translates to:
+  /// **'Could not fetch download links. Try again or pick another source.'**
+  String get downloadLinksFailed;
+
   /// Button saving the book to the library
   ///
   /// In en, this message translates to:
@@ -2661,18 +2667,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Written as'**
   String get glossaryKorean;
-
-  /// Home: Japanese books (BOOK☆WALKER)
-  ///
-  /// In en, this message translates to:
-  /// **'Japan'**
-  String get homeRegionJapan;
-
-  /// Home: English-language books (Goodreads and others)
-  ///
-  /// In en, this message translates to:
-  /// **'English'**
-  String get homeRegionWestern;
 
   /// Home: Japanese light novels
   ///

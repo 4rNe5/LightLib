@@ -22,13 +22,9 @@ import 'package:openlib/services/platform_utils.dart';
 import 'package:openlib/services/libgen_service.dart';
 import 'package:openlib/services/search_manager.dart';
 import 'package:openlib/services/files.dart';
-import 'package:openlib/services/open_library.dart';
-import 'package:openlib/services/goodreads.dart';
 import 'package:openlib/services/instance_manager.dart';
 import 'package:openlib/services/library_organization.dart';
 import 'package:openlib/services/download_manager.dart';
-// Assuming OpenLibrary, Goodreads, PenguinRandomHouse, BookDigits, and SubCategoriesTypeList are defined
-// or are simple placeholder services/models that work as intended.
 
 MyLibraryDb dataBase = MyLibraryDb.instance;
 
@@ -214,34 +210,6 @@ class ThemeModeNotifier extends StateNotifier<ThemeMode> {
 final selectedIndexProvider = StateProvider<int>((ref) => 0);
 final homePageSelectedIndexProvider = StateProvider<int>((ref) => 0);
 
-/// Whose books the home page shows: Japan's (BOOK☆WALKER, the default)
-/// or the English-speaking world's (Goodreads and others).
-enum HomeRegion { japan, western }
-
-class HomeRegionNotifier extends StateNotifier<HomeRegion> {
-  HomeRegionNotifier() : super(HomeRegion.japan) {
-    MyLibraryDb.instance
-        .getPreference(_pref)
-        .then((v) {
-          if (v == 'western' && mounted) state = HomeRegion.western;
-        })
-        .catchError((_) {});
-  }
-
-  static const _pref = 'homeRegion';
-
-  void set(HomeRegion region) {
-    state = region;
-    MyLibraryDb.instance
-        .savePreference(_pref, region.name)
-        .catchError((_) {});
-  }
-}
-
-final homeRegionProvider =
-    StateNotifierProvider<HomeRegionNotifier, HomeRegion>(
-        (ref) => HomeRegionNotifier());
-
 /// The kind of Japanese books the home page shows.
 final japanCategoryProvider =
     StateProvider<BookWalkerCategory>((ref) => BookWalkerCategory.lightNovel);
@@ -376,46 +344,6 @@ final getYearValue = Provider.autoDispose<String>((ref) {
 // ====================================================================
 // ASYNCHRONOUS DATA (FUTURE) PROVIDERS
 // ====================================================================
-
-// Provider for Trending Books
-final getTrendingBooks = FutureProvider<List<TrendingBookData>>((ref) async {
-  // NOTE: Assuming TrendingBookData and the service classes exist and are functional
-  GoodReads goodReads = GoodReads();
-  // Assuming these classes are available from your project imports
-  // ignore: prefer_const_constructors
-  final penguinTrending = PenguinRandomHouse();
-  // ignore: prefer_const_constructors
-  final bookDigits = BookDigits();
-
-  List<TrendingBookData> trendingBooks =
-      await Future.wait<List<TrendingBookData>>([
-    goodReads.trendingBooks(),
-    penguinTrending.trendingBooks(),
-    // openLibrary.trendingBooks(), // Commented out as in the original
-    bookDigits.trendingBooks(),
-  ]).then((List<List<TrendingBookData>> listOfData) =>
-          listOfData.expand((element) => element).toList());
-
-  if (trendingBooks.isEmpty) {
-    throw Exception(
-        'Nothing Trending Today :('); // Use Exception instead of String
-  }
-  trendingBooks.shuffle();
-  return trendingBooks;
-});
-
-// Provider for Sub Category Books
-final getSubCategoryTypeList = FutureProvider.family
-    .autoDispose<List<CategoryBookData>, String>((ref, url) async {
-  // NOTE: Assuming CategoryBookData and SubCategoriesTypeList exist
-  // ignore: prefer_const_constructors
-  SubCategoriesTypeList subCategoriesTypeList = SubCategoriesTypeList();
-  List<CategoryBookData> subCategories =
-      await subCategoriesTypeList.categoriesBooks(url: url);
-  List<CategoryBookData> uniqueArray = subCategories.toSet().toList();
-  uniqueArray.shuffle();
-  return uniqueArray;
-});
 
 /// One page of search results: the query and the 1-based page number
 /// ride together as the family key so page 2 of "docker" and page 1 of

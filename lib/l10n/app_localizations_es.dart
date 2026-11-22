@@ -515,6 +515,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noMirrors => '¡No hay espejos disponibles!';
 
   @override
+  String get downloadLinksFailed =>
+      'No se pudieron obtener los enlaces de descarga. Inténtalo de nuevo o elige otra fuente.';
+
+  @override
   String get addToMyLibrary => 'Añadir a mi biblioteca';
 
   @override
@@ -1451,12 +1455,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get glossaryKorean => 'Se escribe';
-
-  @override
-  String get homeRegionJapan => 'Japón';
-
-  @override
-  String get homeRegionWestern => 'Inglés';
 
   @override
   String get japanLightNovels => 'Novelas ligeras';

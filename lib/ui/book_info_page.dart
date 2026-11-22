@@ -181,6 +181,27 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
     );
   }
 
+  /// A manual download, from the links the WebView found (or the file
+  /// link itself), started in the background.
+  Future<void> _startManual(List<String> mirrors) async {
+    final task = DownloadTask(
+      id: '${widget.data.md5}_${DateTime.now().millisecondsSinceEpoch}',
+      md5: widget.data.md5,
+      title: widget.data.title,
+      author: widget.data.author,
+      thumbnail: widget.data.thumbnail,
+      publisher: widget.data.publisher,
+      info: widget.data.info,
+      format: widget.data.format!,
+      description: widget.data.description,
+      link: widget.data.link,
+      mirrors: mirrors,
+    );
+    await ref.read(downloadManagerProvider).addDownload(task);
+    if (mounted) _showStarted(fast: false);
+    ref.invalidate(myLibraryProvider);
+  }
+
   void _showNotStarted(String reason) {
     final l10n = AppLocalizations.of(context);
     showDownloadOutcomeSheet(
@@ -251,8 +272,7 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
 
                     // Libgen serves its files directly (get.php -> CDN);
                     // no mirror scraping or donation key applies.
-                    var isDirectLink = downloadUrl != null &&
-                        downloadUrl.contains('/get.php?');
+                    var isDirectLink = isDirectFileUrl(downloadUrl);
                     if (isDirectLink) {
                       isFastDownload = true;
                     }
@@ -459,45 +479,33 @@ class _ActionButtonWidgetState extends ConsumerState<ActionButtonWidget> {
                       ),
                     ),
                     onPressed: () async {
-                      if (widget.data.mirror != null &&
-                          widget.data.mirror != '') {
-                        // Navigate to webview page
-                        final List<String>? mirrors = await Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (BuildContext context) =>
-                                Webview(url: widget.data.mirror!),
-                          ),
-                        );
-
-                        if (mirrors != null &&
-                            mirrors.isNotEmpty &&
-                            context.mounted) {
-                          // Start download in background with fetched mirrors
-                          final downloadManager =
-                              ref.read(downloadManagerProvider);
-                          final task = DownloadTask(
-                            id: '${widget.data.md5}_${DateTime.now().millisecondsSinceEpoch}',
-                            md5: widget.data.md5,
-                            title: widget.data.title,
-                            author: widget.data.author,
-                            thumbnail: widget.data.thumbnail,
-                            publisher: widget.data.publisher,
-                            info: widget.data.info,
-                            format: widget.data.format!,
-                            description: widget.data.description,
-                            link: widget.data.link,
-                            mirrors: mirrors, // Use manually fetched mirrors
-                          );
-
-                          await downloadManager.addDownload(task);
-
-                          if (context.mounted) _showStarted(fast: false);
-                          ref.invalidate(myLibraryProvider);
-                        }
-                      } else {
+                      final mirror = widget.data.mirror;
+                      if (mirror == null || mirror.isEmpty) {
                         _showNotStarted(
                             AppLocalizations.of(context).noMirrors);
+                        return;
+                      }
+                      // A file link cannot be read in a WebView (see
+                      // isDirectFileUrl): the download manager takes it.
+                      if (isDirectFileUrl(mirror)) {
+                        await _startManual([mirror]);
+                        return;
+                      }
+                      final List<String>? mirrors = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (BuildContext context) =>
+                              Webview(url: mirror),
+                        ),
+                      );
+                      if (!context.mounted) return;
+                      if (mirrors != null && mirrors.isNotEmpty) {
+                        await _startManual(mirrors);
+                      } else if (mirrors != null) {
+                        // The page gave no link before its time ran out:
+                        // said, not a silent return to the book's page.
+                        _showNotStarted(
+                            AppLocalizations.of(context).downloadLinksFailed);
                       }
                     },
                     child: Text(

@@ -167,7 +167,7 @@ debug key (only CI signs releases).
 | The pane beside the shelf (wide screens) | `LibraryNowReading` in `library_tiles.dart` (the book read last as a poster, the others and two numbers on equal columns), `LibraryRecapBento(narrow: true)`; a phone's shelf keeps `LibraryBentoPanel` |
 | The reader's settings | `lib/services/reader_settings.dart` (`ReaderSettings.instance`, one store), `reader_settings_sheet.dart`: the reader's "Aa" sheet, and the same widget `embedded` in Settings under reading ("Reader defaults", `_ReaderDefaultsGroup`) |
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
-| Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
+| Home: what sells on BOOK☆WALKER and its genres (the English lists - Goodreads and others - were taken out, the owner's word) | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
 | Relay to the sync project (Cloudflare) | `cloudflare/` (`relay.js`, `worker.js` + `wrangler.jsonc`, `functions/sb/[[path]].js` for Pages, `test/`), `tool/cloudflare_build.sh`, `tool/cloudflare_headers.py` |
 | Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_series_bento` the series packed into rows, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |
@@ -465,6 +465,17 @@ debug key (only CI signs releases).
   `1.EPUB`. A title that lost characters gets the book's id in its name
   (`generateBookFileName`). Positions and translations are kept by file
   name: two books must never share one.
+- DiamWall's newer gate answers a 307 back to the same page with a
+  `__diamwall` cookie (then the page, or 517 "Access Denied"). Dio keeps
+  no cookies and called it a redirect loop, so the mirror was given up.
+  Z-Library's GETs go through `_getPastGate` (redirects by hand, the
+  gate's cookie back to that host only, the account's cookies never to
+  another host; a `/dl/` link follows only the gate's own 307, its 302
+  to the file is the answer) and a 517 goes to the next mirror.
+- This repository's history starts anew (2026-10-25, at OpenlibExtended
+  v1.7.2 `c5ae926`): no common commit with upstream, so what upstream
+  added since is compared by content, and what is taken names its
+  commit in a comment.
 - Z-Library's id is not an MD5: nothing to hold a file's checksum against
   (`_isMd5`).
 - Z-Library's book page, signed in, shows the account's picture first,

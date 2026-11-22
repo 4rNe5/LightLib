@@ -45,3 +45,17 @@ DownloadTarget chooseDownloadTarget({
   if (fast) return DownloadTarget(url: usable, fast: true);
   return DownloadTarget(refusal: refusal);
 }
+
+/// True when [url] answers with the file itself, not a page a WebView
+/// could read links from: libgen's `get.php` is a 307 to a CDN answer
+/// with `Content-Disposition: attachment`, which Android's WebView hands
+/// to its download listener instead of loading - the manual download's
+/// "Preparing download..." then waited for good. Such a link goes to the
+/// download manager as it is. (OpenlibExtended c0f432d.)
+bool isDirectFileUrl(String? url) {
+  if (url == null || url.isEmpty) return false;
+  final uri = Uri.tryParse(url);
+  if (uri == null) return false;
+  return uri.path.endsWith('/get.php') &&
+      uri.queryParameters.containsKey('md5');
+}

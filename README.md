@@ -59,7 +59,7 @@
 - **Your books, at a glance** — full-quality covers from the books themselves, how far each is read, tags and genres, search and filters, and a reading record: checkpoints, streaks, four weeks of activity, the month and your genre mix.
 - **Series** — choose volumes with a long press and group them; a series is one row in the library, its volumes in order, and the grouping follows you to your other devices and the web.
 - **Hide a cover** — for any book, on the library, the book's page and the widgets.
-- **Discover** — what sells on BOOK☆WALKER now (light novels, web novels in print, manga, and their genres), and popular English titles.
+- **Discover** — what sells on BOOK☆WALKER now (light novels, web novels in print, manga, and their genres).
 - **Home-screen widgets** — *Continue reading* (with the book's progress) and *Reading record*, laid out for every size from 1×1 up, folded or unfolded.
 
 ### On the web, in sync

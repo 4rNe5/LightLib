@@ -499,6 +499,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noMirrors => '利用できるミラーがありません!';
 
   @override
+  String get downloadLinksFailed =>
+      'ダウンロードリンクを取得できませんでした。もう一度試すか、別のソースを選んでください。';
+
+  @override
   String get addToMyLibrary => 'マイライブラリに追加';
 
   @override
@@ -1386,12 +1390,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get glossaryKorean => '翻訳での表記';
-
-  @override
-  String get homeRegionJapan => '日本';
-
-  @override
-  String get homeRegionWestern => '英語圏';
 
   @override
   String get japanLightNovels => 'ライトノベル';
