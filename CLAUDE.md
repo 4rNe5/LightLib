@@ -465,6 +465,17 @@ debug key (only CI signs releases).
   `1.EPUB`. A title that lost characters gets the book's id in its name
   (`generateBookFileName`). Positions and translations are kept by file
   name: two books must never share one.
+- DiamWall's newer gate answers a 307 back to the same page with a
+  `__diamwall` cookie (then the page, or 517 "Access Denied"). Dio keeps
+  no cookies and called it a redirect loop, so the mirror was given up.
+  Z-Library's GETs go through `_getPastGate` (redirects by hand, the
+  gate's cookie back to that host only, the account's cookies never to
+  another host; a `/dl/` link follows only the gate's own 307, its 302
+  to the file is the answer) and a 517 goes to the next mirror.
+- This repository's history starts anew (2026-10-25, at OpenlibExtended
+  v1.7.2 `c5ae926`): no common commit with upstream, so what upstream
+  added since is compared by content, and what is taken names its
+  commit in a comment.
 - Z-Library's id is not an MD5: nothing to hold a file's checksum against
   (`_isMd5`).
 - Z-Library's book page, signed in, shows the account's picture first,

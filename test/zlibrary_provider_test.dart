@@ -152,6 +152,165 @@ void main() {
     });
   });
 
+  // DiamWall's newer gate (as OpenlibExtended 5991d46 found it): a 307
+  // back to the same address with a __diamwall cookie, then the page -
+  // or a 517 "Access Denied". Dio keeps no cookies and called the 307 a
+  // redirect loop, and the mirror was given up.
+  group('DiamWallSolver.looksLikeBlock', () {
+    test('recognizes the 517 Access Denied page', () {
+      final solver = DiamWallSolver();
+      expect(solver.looksLikeBlock(517, ''), isTrue);
+      expect(
+          solver.looksLikeBlock(
+              200,
+              '<title>Access Denied | DiamWall</title>'
+              '<p>unusual traffic from your computer network</p>'),
+          isTrue);
+      expect(solver.looksLikeBlock(200, results), isFalse);
+    });
+  });
+
+  group('DiamWall 307 back to the same page', () {
+    /// A mirror behind the gate: without its cookie a 307 to the same
+    /// path (no query, as the gate sends it) and the cookie; with it,
+    /// [page] (or [blocked]).
+    Future<HttpServer> gate(
+        {required List<HttpRequest> seen,
+        String Function(Uri uri)? page,
+        bool blocked = false}) async {
+      final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      server.listen((request) async {
+        seen.add(request);
+        final passed =
+            request.headers.value('cookie')?.contains('__diamwall=') == true;
+        if (!passed) {
+          request.response
+            ..statusCode = 307
+            ..headers.set('location', request.uri.path)
+            ..headers.add('set-cookie', '__diamwall=0xabc; Path=/');
+        } else if (blocked) {
+          request.response
+            ..statusCode = 517
+            ..write('<title>Access Denied | DiamWall</title>');
+        } else {
+          request.response.write(page?.call(request.uri) ?? results);
+        }
+        await request.response.close();
+      });
+      return server;
+    }
+
+    test('sends the cookie back, keeps the filters, reads the page',
+        () async {
+      final seen = <HttpRequest>[];
+      final server = await gate(
+          seen: seen,
+          page: (_) => '<z-bookcard href="/book/1/x" language="English" '
+              'extension="pdf"><div slot="title">A book</div></z-bookcard>');
+      addTearDown(() => server.close(force: true));
+      final provider =
+          ZlibraryProvider(mirrors: ['http://127.0.0.1:${server.port}']);
+
+      final books = await provider.search(const SearchQuery(
+          text: 'flutter',
+          language: 'en',
+          fileType: 'pdf',
+          filtersEnabled: true));
+
+      expect(books, isNotEmpty);
+      expect(seen, hasLength(2));
+      expect(seen.last.headers.value('cookie'), contains('__diamwall=0xabc'));
+      // The gate's 307 dropped the query; the search kept its filters.
+      expect(seen.last.uri.queryParameters['languages[]'], 'english');
+      expect(seen.last.uri.queryParameters['extensions[]'], 'PDF');
+    });
+
+    test('a 517 block goes to the next mirror, not round and round',
+        () async {
+      final seen = <HttpRequest>[];
+      final server = await gate(seen: seen, blocked: true);
+      addTearDown(() => server.close(force: true));
+      final provider =
+          ZlibraryProvider(mirrors: ['http://127.0.0.1:${server.port}']);
+
+      final books = await provider.search(const SearchQuery(text: 'flutter'));
+
+      expect(books, isEmpty);
+      expect(seen, hasLength(2));
+    });
+
+    test('a download link behind the gate still gives the file address',
+        () async {
+      final seen = <HttpRequest>[];
+      final bookPage =
+          File('test/fixtures/zlib_book_page.html').readAsStringSync();
+      late final HttpServer server;
+      server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
+      addTearDown(() => server.close(force: true));
+      final cdn = 'http://127.0.0.1:${server.port}/cdn/book.epub';
+      server.listen((request) async {
+        seen.add(request);
+        final passed =
+            request.headers.value('cookie')?.contains('__diamwall=') == true;
+        if (!passed) {
+          request.response
+            ..statusCode = 307
+            ..headers.set('location', request.uri.path)
+            ..headers.add('set-cookie', '__diamwall=0xabc; Path=/');
+        } else if (request.uri.path.startsWith('/dl/')) {
+          // The answer is this redirect itself: it is not followed.
+          request.response
+            ..statusCode = HttpStatus.found
+            ..headers.set('location', cdn);
+        } else {
+          request.response
+            ..headers.contentType = ContentType.html
+            ..write(bookPage);
+        }
+        await request.response.close();
+      });
+      final provider =
+          ZlibraryProvider(mirrors: ['http://127.0.0.1:${server.port}']);
+
+      final result = await provider
+          .resolveBookDownload('http://127.0.0.1:${server.port}/book/x/y.html');
+
+      expect(result.url, cdn);
+      expect(seen.where((r) => r.uri.path.startsWith('/cdn/')), isEmpty);
+    });
+
+    test('a redirect to another host carries no cookie of this one',
+        () async {
+      final seenThere = <HttpRequest>[];
+      final there = await gate(
+          seen: seenThere, page: (_) => results); // asks for its own cookie
+      addTearDown(() => there.close(force: true));
+      final here = await HttpServer.bind(InternetAddress.loopbackIPv6, 0)
+          .catchError((_) => HttpServer.bind('localhost', 0));
+      addTearDown(() => here.close(force: true));
+      here.listen((request) async {
+        request.response
+          ..statusCode = HttpStatus.found
+          ..headers.set('location',
+              'http://127.0.0.1:${there.port}${request.uri.path}')
+          ..headers.add('set-cookie', '__diamwall=here; Path=/');
+        await request.response.close();
+      });
+      final host = here.address.type == InternetAddressType.IPv6
+          ? '[::1]'
+          : 'localhost';
+      final provider =
+          ZlibraryProvider(mirrors: ['http://$host:${here.port}']);
+
+      final books = await provider.search(const SearchQuery(text: 'flutter'));
+
+      expect(books, isNotEmpty);
+      expect(seenThere.first.headers.value('cookie'), isNull);
+      // That host's own gate is passed with its own cookie.
+      expect(seenThere.last.headers.value('cookie'), '__diamwall=0xabc');
+    });
+  });
+
   group('DiamWallSolver.solve', () {
     test('solves the captured challenge and returns c_token/c_time', () async {
       final solver = DiamWallSolver();
