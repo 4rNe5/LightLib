@@ -153,6 +153,7 @@
   "cancelDownload": "ダウンロードをキャンセル",
   "copiedBookLink": "本のリンクをクリップボードにコピーしました",
   "noMirrors": "利用できるミラーがありません!",
+  "downloadLinksFailed": "ダウンロードリンクを取得できませんでした。もう一度試すか、別のソースを選んでください。",
   "addToMyLibrary": "マイライブラリに追加",
   "downloadStartedBackground": "バックグラウンドでダウンロードを開始しました",
   "bookDownloaded": "本をダウンロードしました!",

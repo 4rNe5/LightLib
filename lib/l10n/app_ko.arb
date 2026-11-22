@@ -153,6 +153,7 @@
   "cancelDownload": "다운로드 취소",
   "copiedBookLink": "책 링크를 클립보드에 복사했습니다",
   "noMirrors": "사용 가능한 미러가 없습니다!",
+  "downloadLinksFailed": "다운로드 링크를 받지 못했습니다. 다시 시도하거나 다른 소스를 고르세요.",
   "addToMyLibrary": "내 서재에 추가",
   "downloadStartedBackground": "백그라운드에서 다운로드를 시작했습니다",
   "bookDownloaded": "책을 내려받았습니다!",

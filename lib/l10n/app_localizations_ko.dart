@@ -499,6 +499,9 @@ class AppLocalizationsKo extends AppLocalizations {
   String get noMirrors => '사용 가능한 미러가 없습니다!';
 
   @override
+  String get downloadLinksFailed => '다운로드 링크를 받지 못했습니다. 다시 시도하거나 다른 소스를 고르세요.';
+
+  @override
   String get addToMyLibrary => '내 서재에 추가';
 
   @override

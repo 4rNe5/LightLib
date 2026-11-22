@@ -680,6 +680,10 @@
   "@noMirrors": {
     "description": "Snackbar when no mirror can serve the book"
   },
+  "downloadLinksFailed": "Could not fetch download links. Try again or pick another source.",
+  "@downloadLinksFailed": {
+    "description": "Shown when the manual download page gave no link before its time ran out"
+  },
   "addToMyLibrary": "Add To My Library",
   "@addToMyLibrary": {
     "description": "Button saving the book to the library"

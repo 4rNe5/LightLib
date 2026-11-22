@@ -499,6 +499,10 @@ class AppLocalizationsJa extends AppLocalizations {
   String get noMirrors => '利用できるミラーがありません!';
 
   @override
+  String get downloadLinksFailed =>
+      'ダウンロードリンクを取得できませんでした。もう一度試すか、別のソースを選んでください。';
+
+  @override
   String get addToMyLibrary => 'マイライブラリに追加';
 
   @override

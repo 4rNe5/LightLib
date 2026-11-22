@@ -43,7 +43,15 @@ class _WebviewState extends ConsumerState<Webview> {
   bool _linksFound = false;
   final List<String> _capturedDownloadLinks = [];
   Timer? _pollingTimer;
+  Timer? _overlayTimeout;
   desktop_webview.Webview? _desktopWebview;
+
+  /// How long the overlay waits for a page that carries a download link
+  /// before it gives up. A page that never finished loading - or a file
+  /// link the WebView hands to its download listener instead of loading
+  /// it - left "Preparing download..." up forever. (OpenlibExtended
+  /// c0f432d, issue #117 there.)
+  static const Duration overlayTimeout = Duration(seconds: 60);
 
   @override
   void initState() {
@@ -54,7 +62,19 @@ class _WebviewState extends ConsumerState<Webview> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _openDesktopWebview();
       });
+    } else if (widget.showOverlay) {
+      // The overlay hides the page: nothing on it can be acted on, so it
+      // never stays up for good.
+      _overlayTimeout = Timer(overlayTimeout, _giveUpOnLinks);
     }
+  }
+
+  void _giveUpOnLinks() {
+    if (_linksFound || !mounted) return;
+    _linksFound = true;
+    _logger.warning('No download links found before the timeout',
+        tag: 'WebView', metadata: {'url': widget.url});
+    Navigator.pop(context, const <String>[]);
   }
 
   Future<void> _openDesktopWebview() async {
@@ -261,6 +281,7 @@ class _WebviewState extends ConsumerState<Webview> {
     if (_capturedDownloadLinks.isNotEmpty && !_linksFound && mounted) {
       _linksFound = true;
       _pollingTimer?.cancel();
+      _overlayTimeout?.cancel();
       _logger.info("Returning download links",
           tag: "WebView", metadata: {"count": _capturedDownloadLinks.length});
 
@@ -282,6 +303,7 @@ class _WebviewState extends ConsumerState<Webview> {
   @override
   void dispose() {
     _pollingTimer?.cancel();
+    _overlayTimeout?.cancel();
     // Don't close the webview - let it remain open to avoid OpenGL crash
     // The user will close it manually
     super.dispose();
@@ -379,6 +401,20 @@ class _WebviewState extends ConsumerState<Webview> {
                 webViewController = controller;
               },
               onLoadStart: (controller, url) {},
+              // A file link (libgen's get.php -> a CDN answer with
+              // Content-Disposition: attachment) never reaches onLoadStop:
+              // Android hands it to the download listener. It is the link
+              // this page was opened for.
+              onDownloadStartRequest: (controller, request) {
+                final url = request.url.toString();
+                if (!url.startsWith('http')) return;
+                _logger.info('WebView started a file download',
+                    tag: 'WebView', metadata: {'mimeType': request.mimeType});
+                if (!_capturedDownloadLinks.contains(url)) {
+                  _capturedDownloadLinks.add(url);
+                }
+                _returnLinksAndClose();
+              },
               onLoadStop: (controller, url) async {
                 // Extract and store cookies after page load
                 try {
@@ -404,6 +440,10 @@ class _WebviewState extends ConsumerState<Webview> {
                       tag: 'WebView', metadata: {'error': e.toString()});
                 }
 
+                // The timeout or a download that started may have answered
+                // while the cookies were read.
+                if (!mounted || _linksFound) return;
+
                 List<String> bookDownloadLinks = [];
                 if (url.toString().contains("slow_download")) {
                   String query =
@@ -416,16 +456,25 @@ class _WebviewState extends ConsumerState<Webview> {
                 } else {
                   String query =
                       """var ipfsLinkTags=document.querySelectorAll('ul>li>a');var ipfsLinks=[];var getIpfsLinks=()=>{ipfsLinkTags.forEach(e=>{ipfsLinks.push(e.href)});return ipfsLinks};getIpfsLinks();""";
-                  List<dynamic> mirrorLinks = await webViewController
+                  final mirrorLinks = await webViewController
                       ?.evaluateJavascript(source: query);
-                  bookDownloadLinks = mirrorLinks.cast<String>();
+                  if (mirrorLinks is List) {
+                    bookDownloadLinks = mirrorLinks.whereType<String>().toList();
+                  }
                 }
 
                 if (bookDownloadLinks.isNotEmpty) {
-                  Future.delayed(const Duration(milliseconds: 70), () {
-                    // ignore: use_build_context_synchronously
-                    Navigator.pop(context, bookDownloadLinks);
-                  });
+                  for (final link in bookDownloadLinks) {
+                    if (link.startsWith('http') &&
+                        !_capturedDownloadLinks.contains(link)) {
+                      _capturedDownloadLinks.add(link);
+                    }
+                  }
+                  // One way out: the timeout or a started download may
+                  // have left already, and a second pop would close the
+                  // book's page under this one.
+                  Future.delayed(
+                      const Duration(milliseconds: 70), _returnLinksAndClose);
                 }
               },
             ),
