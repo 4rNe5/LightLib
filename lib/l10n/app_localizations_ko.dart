@@ -1393,12 +1393,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get glossaryKorean => '번역 표기';
 
   @override
-  String get homeRegionJapan => '일본';
-
-  @override
-  String get homeRegionWestern => '영미권';
-
-  @override
   String get japanLightNovels => '라이트노벨';
 
   @override

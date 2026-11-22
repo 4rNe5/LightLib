@@ -1933,14 +1933,6 @@
   "@glossaryKorean": {
     "description": "Glossary edit: the target form"
   },
-  "homeRegionJapan": "Japan",
-  "@homeRegionJapan": {
-    "description": "Home: Japanese books (BOOK☆WALKER)"
-  },
-  "homeRegionWestern": "English",
-  "@homeRegionWestern": {
-    "description": "Home: English-language books (Goodreads and others)"
-  },
   "japanLightNovels": "Light novels",
   "@japanLightNovels": {
     "description": "Home: Japanese light novels"

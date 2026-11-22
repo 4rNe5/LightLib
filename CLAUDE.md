@@ -167,7 +167,7 @@ debug key (only CI signs releases).
 | The pane beside the shelf (wide screens) | `LibraryNowReading` in `library_tiles.dart` (the book read last as a poster, the others and two numbers on equal columns), `LibraryRecapBento(narrow: true)`; a phone's shelf keeps `LibraryBentoPanel` |
 | The reader's settings | `lib/services/reader_settings.dart` (`ReaderSettings.instance`, one store), `reader_settings_sheet.dart`: the reader's "Aa" sheet, and the same widget `embedded` in Settings under reading ("Reader defaults", `_ReaderDefaultsGroup`) |
 | Settings / prefs DB (sqflite) | `lib/services/database.dart` (`MyLibraryDb`, `savePreference`) |
-| Home: BOOK☆WALKER (Japan, default) / English lists | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
+| Home: what sells on BOOK☆WALKER and its genres (the English lists - Goodreads and others - were taken out, the owner's word) | `lib/services/bookwalker.dart`, `lib/ui/japan_discover.dart`; 202 WAF → `browser_page_reader.dart` |
 | Reader (foliate-js in a WebView) | `lib/ui/book_reader_page.dart`, `reader_web/` (built with `build.mjs`); the page's host `lib/ui/reader_host/` (WebView on devices, iframe + postMessage on the web) |
 | Relay to the sync project (Cloudflare) | `cloudflare/` (`relay.js`, `worker.js` + `wrangler.jsonc`, `functions/sb/[[path]].js` for Pages, `test/`), `tool/cloudflare_build.sh`, `tool/cloudflare_headers.py` |
 | Web app | `lib/main_web.dart`, `lib/web/` (`web_library_page` shell and grid, `web_series_bento` the series packed into rows, `web_book_dialog` a book's card, `web_book_opening` fetching a book, `web_cover`, `web_settings_page`, `browser` drops and storage), `web/index.html` + `splash.js` |

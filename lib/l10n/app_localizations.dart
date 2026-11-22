@@ -2668,18 +2668,6 @@ abstract class AppLocalizations {
   /// **'Written as'**
   String get glossaryKorean;
 
-  /// Home: Japanese books (BOOK☆WALKER)
-  ///
-  /// In en, this message translates to:
-  /// **'Japan'**
-  String get homeRegionJapan;
-
-  /// Home: English-language books (Goodreads and others)
-  ///
-  /// In en, this message translates to:
-  /// **'English'**
-  String get homeRegionWestern;
-
   /// Home: Japanese light novels
   ///
   /// In en, this message translates to:

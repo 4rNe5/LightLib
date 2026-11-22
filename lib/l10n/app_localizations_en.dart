@@ -1439,12 +1439,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get glossaryKorean => 'Written as';
 
   @override
-  String get homeRegionJapan => 'Japan';
-
-  @override
-  String get homeRegionWestern => 'English';
-
-  @override
   String get japanLightNovels => 'Light novels';
 
   @override

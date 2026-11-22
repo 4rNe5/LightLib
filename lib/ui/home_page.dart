@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:openlib/l10n/app_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:openlib/state/state.dart';
-import 'package:openlib/ui/categories_page.dart';
 import 'package:openlib/ui/components/active_downloads_widget.dart';
 import 'package:openlib/ui/components/page_title_widget.dart';
-import 'package:openlib/ui/trending_page.dart';
+import 'package:openlib/ui/japan_discover.dart';
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -15,9 +14,11 @@ class HomePage extends ConsumerStatefulWidget {
 }
 
 class _HomePageState extends ConsumerState<HomePage> {
+  // What sells on BOOK☆WALKER now, and its genres. (The English lists -
+  // Goodreads and others - were taken out: the owner's word.)
   final List<Widget> _pages = const [
-    TrendingPage(),
-    GenresPage(),
+    JapanTrendingView(),
+    JapanGenresView(),
   ];
 
   @override
@@ -46,7 +47,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               ),
             ),
           ),
-          const _RegionSwitch(),
           Expanded(child: _pages[selectedIndex]), // Display the selected page
         ],
       ),
@@ -168,95 +168,6 @@ class PelletContainer extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Japan (the default) or the English-speaking world.
-class _RegionSwitch extends ConsumerWidget {
-  const _RegionSwitch();
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context);
-    final region = ref.watch(homeRegionProvider);
-    // Text tabs with a bar under the chosen one: lighter than a second
-    // row of buttons above the category chips.
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
-      child: Row(
-        key: const ValueKey('homeRegion'),
-        children: [
-          for (final r in HomeRegion.values)
-            _RegionTab(
-              key: ValueKey('homeRegion-${r.name}'),
-              label: r == HomeRegion.japan
-                  ? l10n.homeRegionJapan
-                  : l10n.homeRegionWestern,
-              selected: r == region,
-              onTap: () => ref.read(homeRegionProvider.notifier).set(r),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _RegionTab extends StatelessWidget {
-  const _RegionTab({
-    super.key,
-    required this.label,
-    required this.selected,
-    required this.onTap,
-  });
-
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    return Semantics(
-      selected: selected,
-      button: true,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(8),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(2, 6, 14, 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              AnimatedDefaultTextStyle(
-                duration: const Duration(milliseconds: 200),
-                style: (theme.textTheme.titleMedium ?? const TextStyle())
-                    .copyWith(
-                  fontSize: 17,
-                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                  color: selected
-                      ? scheme.onSurface
-                      : scheme.onSurface.withValues(alpha: 0.45),
-                ),
-                child: Text(label),
-              ),
-              const SizedBox(height: 4),
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                curve: Curves.easeOut,
-                height: 3,
-                width: selected ? 20 : 0,
-                decoration: BoxDecoration(
-                  color: scheme.secondary,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ],
-          ),
-        ),
       ),
     );
   }
