@@ -50,7 +50,12 @@ class BookInfoWidget extends ConsumerWidget {
 
   /// The book's cover from its file or the web.
   Widget _cover() {
-    return isLocalImagePath(data.thumbnail?.toString())
+    // A libgen result can have no cover at all: the page crashed on it
+    // ("type 'Null' is not a subtype of type 'String'"). (Found by
+    // OpenlibExtended, 5991d46.)
+    final thumbnail = data.thumbnail?.toString() ?? '';
+    if (thumbnail.isEmpty || thumbnail == 'null') return _noCover();
+    return isLocalImagePath(thumbnail)
         // Imported books keep their cover as a file.
         ? Container(
             height: 230,
@@ -59,8 +64,7 @@ class BookInfoWidget extends ConsumerWidget {
               borderRadius: const BorderRadius.all(Radius.circular(10)),
               color: Colors.grey,
               image: DecorationImage(
-                image: FileImage(
-                    File(localImageFilePath(data.thumbnail.toString()))),
+                image: FileImage(File(localImageFilePath(thumbnail))),
                 fit: BoxFit.fill,
               ),
             ),
@@ -68,11 +72,11 @@ class BookInfoWidget extends ConsumerWidget {
         : CachedNetworkImage(
             height: 230,
             width: 170,
-            imageUrl: data.thumbnail,
+            imageUrl: thumbnail,
             // libgen.li serves /covers/ only with an ads.php
             // Referer; the book page itself is a valid one.
-            httpHeaders: data.thumbnail.contains('libgen')
-                ? {'Referer': data.link}
+            httpHeaders: thumbnail.contains('libgen') && data.link != null
+                ? {'Referer': data.link.toString()}
                 : null,
             imageBuilder: (context, imageProvider) => Container(
               decoration: BoxDecoration(
@@ -91,21 +95,23 @@ class BookInfoWidget extends ConsumerWidget {
               height: 230,
               width: 170,
             ),
-            errorWidget: (context, url, error) {
-              return Container(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10),
-                  color: Colors.grey,
-                ),
-                height: 230,
-                width: 170,
-                child: const Center(
-                  child: Icon(Icons.image_rounded),
-                ),
-              );
-            },
+            errorWidget: (context, url, error) => _noCover(),
           );
   }
+
+  /// Where a cover would be, when there is none (or it failed).
+  Widget _noCover() => Container(
+        key: const ValueKey('bookInfoNoCover'),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: Colors.grey,
+        ),
+        height: 230,
+        width: 170,
+        child: const Center(
+          child: Icon(Icons.image_rounded),
+        ),
+      );
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
