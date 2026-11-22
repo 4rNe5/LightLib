@@ -150,10 +150,23 @@ class ActiveDownloadsWidget extends ConsumerWidget {
                   ),
                   itemBuilder: (context, index) {
                     final task = downloads.values.elementAt(index);
-                    return _DownloadItem(
+                    final item = _DownloadItem(
+                      key: ValueKey(task.id),
                       task: task,
                       bytesToFileSize: _bytesToFileSize,
                       getStatusText: _getStatusText,
+                    );
+                    if (task.status != DownloadStatus.failed) return item;
+                    // A failed download stayed in the list for good: it
+                    // is swiped away, or closed (below). (From
+                    // OpenlibExtended 90aed49.)
+                    return Dismissible(
+                      key: ValueKey('failed-${task.id}'),
+                      direction: DismissDirection.horizontal,
+                      onDismissed: (_) => ref
+                          .read(downloadManagerProvider)
+                          .removeDownload(task.id),
+                      child: item,
                     );
                   },
                 ),
@@ -174,6 +187,7 @@ class _DownloadItem extends ConsumerStatefulWidget {
   final String Function(DownloadStatus) getStatusText;
 
   const _DownloadItem({
+    super.key,
     required this.task,
     required this.bytesToFileSize,
     required this.getStatusText,
@@ -430,6 +444,19 @@ class _DownloadItemState extends ConsumerState<_DownloadItem> {
                   constraints: const BoxConstraints(),
                   tooltip:
                       AppLocalizations.of(context).cancelDownload,
+                ),
+              if (task.status == DownloadStatus.failed)
+                IconButton(
+                  icon: Icon(
+                    Icons.close_rounded,
+                    size: 20,
+                    color:
+                        Theme.of(context).colorScheme.tertiary.withAlpha(170),
+                  ),
+                  onPressed: () => downloadManager.removeDownload(task.id),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                  tooltip: AppLocalizations.of(context).close,
                 ),
             ],
           ),
